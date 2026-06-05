@@ -16,11 +16,15 @@
 // --comment posts the top deductions as ONE Figma comment, but only with the
 // explicit --comment flag AND --yes (a non-interactive confirmation). Without
 // --yes we refuse and still report — never write to Figma on a guess.
+import { appendFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { cwd } from "node:process";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import { parseFigmaUrl } from "../engines/handoff/parse-url.js";
 import {
 	type ReadinessReport,
+	type RuleId,
 	scoreReadiness,
 } from "../engines/handoff/score.js";
 import {
@@ -56,6 +60,54 @@ interface HandoffOptions {
 	format: string;
 	comment: boolean;
 	yes: boolean;
+	/** Commander maps the negatable `--no-history` flag to `history: false`. */
+	history: boolean;
+}
+
+/** How many top deductions are recorded in the history line. */
+const HISTORY_DEDUCTION_LIMIT = 3;
+
+/**
+ * One appended handoff history record (read back by `report` for the readiness
+ * gauge). Mirrors the tokens-check / lint append pattern. The deductions carry
+ * only the rule + points (the report maps the rule to a human-readable reason).
+ */
+interface HandoffHistoryRecord {
+	at: string;
+	kind: "handoff";
+	score: number;
+	frameName: string;
+	deductions: { rule: RuleId; points: number }[];
+}
+
+/**
+ * Append ONE handoff history line to <cwd>/.ds-bridge/history.jsonl.
+ *
+ * The directory is the process working directory (documented: the project the
+ * user runs `ds-bridge handoff` from, the same place `report` reads). Suppressed
+ * by `--no-history`. The record keeps the top {@link HISTORY_DEDUCTION_LIMIT}
+ * deductions (the report already sorts worst-first).
+ */
+function appendHandoffHistory(
+	report: ReadinessReport,
+	frameName: string,
+): void {
+	const stateDir = join(cwd(), ".ds-bridge");
+	const record: HandoffHistoryRecord = {
+		at: new Date().toISOString(),
+		kind: "handoff",
+		score: report.score,
+		frameName,
+		deductions: report.deductions
+			.slice(0, HISTORY_DEDUCTION_LIMIT)
+			.map((d) => ({ rule: d.rule, points: d.points })),
+	};
+	mkdirSync(stateDir, { recursive: true });
+	appendFileSync(
+		join(stateDir, "history.jsonl"),
+		`${JSON.stringify(record)}\n`,
+		"utf8",
+	);
 }
 
 /** Print a fatal operational error and set exit code 2. */
@@ -298,6 +350,12 @@ async function runHandoff(url: string, options: HandoffOptions): Promise<void> {
 
 	const report = scoreReadiness(fetched.root);
 
+	// History: record the score for the dashboard readiness gauge (suppressible
+	// with --no-history). The frame name is the scored root node's name.
+	if (options.history) {
+		appendHandoffHistory(report, fetched.root.name);
+	}
+
 	if (format === "json") {
 		process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 	} else {
@@ -355,6 +413,10 @@ export function registerHandoffCommand(program: Command): void {
 			"--yes",
 			"confirm writing the --comment to Figma without an interactive prompt",
 			false,
+		)
+		.option(
+			"--no-history",
+			"do not append a readiness record to .ds-bridge/history.jsonl in the current directory",
 		)
 		.action((url: string, options: HandoffOptions) => {
 			void runHandoff(url, options);

@@ -22,7 +22,14 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { platform } from "node:process";
 import type { Command } from "commander";
-import type { DriftTrendPoint, LintSummary } from "../engines/report/types.js";
+import { buildParity, toParitySection } from "../engines/registry/parity.js";
+import type { RegistryFile } from "../engines/registry/persist.js";
+import type {
+	DriftTrendPoint,
+	LintSummary,
+	Parity,
+	Readiness,
+} from "../engines/report/types.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 
 /** A typed operational failure, translated to exit code 2 + stderr at the edge. */
@@ -55,10 +62,31 @@ interface LintRecord {
 	};
 }
 
+/** One `handoff` history record carrying the readiness score + top deductions. */
+interface HandoffRecord {
+	at: string;
+	kind: "handoff";
+	score: number;
+	frameName: string;
+	deductions: { rule: string; points: number }[];
+}
+
+/**
+ * Human-readable reason per deduction rule (the readiness gauge shows reasons,
+ * not raw rule ids). Mirrors the labels handoff.ts uses for its term report.
+ */
+const RULE_REASON: Record<string, string> = {
+	"var-binding": "Variable binding",
+	"auto-layout": "Auto layout",
+	component: "Component usage",
+	naming: "Naming",
+};
+
 /** Aggregated, render-ready sections derived from the history log. */
 interface Aggregation {
 	driftTrend: DriftTrendPoint[];
 	lintSummary: LintSummary | undefined;
+	readiness: Readiness | undefined;
 }
 
 function asNumber(value: unknown): number {
@@ -81,11 +109,12 @@ function aggregateHistory(
 	try {
 		text = readFileSync(historyPath, "utf8");
 	} catch {
-		return { driftTrend: [], lintSummary: undefined };
+		return { driftTrend: [], lintSummary: undefined, readiness: undefined };
 	}
 
 	const driftTrend: DriftTrendPoint[] = [];
 	let lint: LintSummary | undefined;
+	let readiness: Readiness | undefined;
 
 	const lines = text.split("\n");
 	for (let index = 0; index < lines.length; index += 1) {
@@ -126,12 +155,59 @@ function aggregateHistory(
 				},
 				topOffenders: [],
 			};
+			continue;
+		}
+
+		if (record.kind === "handoff") {
+			const r = record as Partial<HandoffRecord>;
+			const deductions = Array.isArray(r.deductions) ? r.deductions : [];
+			// Last handoff record wins — it reflects the most recent QA run. The
+			// rule id is mapped to a human-readable reason for the gauge.
+			readiness = {
+				score: asNumber(r.score),
+				frameName: typeof r.frameName === "string" ? r.frameName : "",
+				deductions: deductions.map((d) => ({
+					reason: RULE_REASON[d.rule] ?? d.rule,
+					points: asNumber(d.points),
+				})),
+			};
 		}
 
 		// Unknown kinds (including missing kind) are skipped silently.
 	}
 
-	return { driftTrend, lintSummary: lint };
+	return { driftTrend, lintSummary: lint, readiness };
+}
+
+/**
+ * Read <stateDir>/registry.json and project it into the dashboard's Parity
+ * section. Absent file → undefined (the renderer shows the empty state).
+ * Unreadable / non-JSON registry → undefined with one stderr warning (a
+ * corrupt registry never crashes the report).
+ */
+function readParity(
+	stateDir: string,
+	onWarning: (message: string) => void,
+): Parity | undefined {
+	const registryPath = join(stateDir, "registry.json");
+	let text: string;
+	try {
+		text = readFileSync(registryPath, "utf8");
+	} catch {
+		return undefined; // absent registry → empty-state, as before
+	}
+	let registry: RegistryFile;
+	try {
+		registry = JSON.parse(text) as RegistryFile;
+	} catch {
+		onWarning(`warning: skipping unreadable registry ${registryPath}`);
+		return undefined;
+	}
+	// buildParity/toParitySection are pure and never throw on a malformed
+	// registry; they degrade to empty buckets.
+	const section = toParitySection(buildParity(registry));
+	if (section.rows.length === 0) return undefined;
+	return section;
 }
 
 /** Render the dashboard and write it to `outPath`, or fail with exit code 2. */
@@ -203,13 +279,16 @@ function runReport(path: string, options: ReportOptions): void {
 	}
 
 	const stateDir = join(targetDir, ".ds-bridge");
-	const aggregation = aggregateHistory(stateDir, (message) => {
+	const warn = (message: string): void => {
 		process.stderr.write(`${message}\n`);
-	});
+	};
+	const aggregation = aggregateHistory(stateDir, warn);
+	const parity = readParity(stateDir, warn);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
-	// `lintSummary` is only set when present so `exactOptionalPropertyTypes`
-	// keeps an absent section a genuine "not provided" rather than `undefined`.
+	// Optional sections are only spread in when present so
+	// `exactOptionalPropertyTypes` keeps an absent section a genuine "not
+	// provided" rather than an explicit `undefined`.
 	const generatedAt = new Date().toISOString();
 	const html = renderDashboard({
 		generatedAt,
@@ -218,6 +297,10 @@ function runReport(path: string, options: ReportOptions): void {
 		...(aggregation.lintSummary !== undefined
 			? { lintSummary: aggregation.lintSummary }
 			: {}),
+		...(aggregation.readiness !== undefined
+			? { readiness: aggregation.readiness }
+			: {}),
+		...(parity !== undefined ? { parity } : {}),
 	});
 
 	const outPath =

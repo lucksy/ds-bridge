@@ -86,6 +86,53 @@ function tokensCheckLine(
 	});
 }
 
+/** A well-formed handoff history record (the T5.5b append shape). */
+function handoffLine(
+	at: string,
+	score: number,
+	frameName: string,
+	deductions: { rule: string; points: number }[],
+): string {
+	return JSON.stringify({ at, kind: "handoff", score, frameName, deductions });
+}
+
+/** Write <dir>/.ds-bridge/registry.json with the given contents. */
+async function seedRegistry(dir: string, registry: unknown): Promise<void> {
+	const stateDir = join(dir, ".ds-bridge");
+	await mkdir(stateDir, { recursive: true });
+	await writeFile(
+		join(stateDir, "registry.json"),
+		`${JSON.stringify(registry, null, 2)}\n`,
+		"utf8",
+	);
+}
+
+/** A minimal, hand-written registry.json with one match + one gap each side. */
+function sampleRegistry(): unknown {
+	return {
+		schemaVersion: 1,
+		generatedAt: "2026-06-05T10:00:00.000Z",
+		matches: [
+			{
+				codeName: "Button",
+				importPath: "src/Button.tsx",
+				figmaName: "Button / Primary",
+				nodeId: "1:2",
+				score: 0.95,
+			},
+		],
+		unmatchedCode: [
+			{ name: "Spinner", importPath: "src/Spinner.tsx", candidates: [] },
+		],
+		unmatchedFigma: [{ name: "Chip", nodeId: "3:4", candidates: [] }],
+	};
+}
+
+/** Count occurrences of "<svg" in the HTML — one per populated chart section. */
+function countSvgs(html: string): number {
+	return html.split("<svg").length - 1;
+}
+
 describe("ds-bridge report (built dist/cli.mjs)", () => {
 	beforeAll(async () => {
 		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
@@ -260,5 +307,102 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const { code, stderr } = await runCli(["report", dir, "--out", outFile]);
 		expect(code).toBe(2);
 		expect(stderr.length).toBeGreaterThan(0);
+	});
+
+	it("T5.5b: a handoff history line populates the readiness section (no empty state)", async () => {
+		const dir = await freshTmp("ds-report-readiness-");
+		await seedHistory(dir, [
+			handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", [
+				{ rule: "var-binding", points: 8 },
+				{ rule: "auto-layout", points: 6 },
+			]),
+		]);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The readiness gauge is drawn (an SVG) and the frame name is rendered.
+		expect(html).toContain("<svg");
+		expect(html).toContain("Card / Primary");
+		// A human-readable deduction reason (mapped from the rule) is shown.
+		expect(html).toContain("Variable binding");
+	});
+
+	it("T5.5b: the LAST handoff line wins for the readiness section", async () => {
+		const dir = await freshTmp("ds-report-readiness-last-");
+		await seedHistory(dir, [
+			handoffLine("2026-06-03T10:00:00.000Z", 50, "Old Frame", []),
+			handoffLine("2026-06-04T10:00:00.000Z", 88, "New Frame", []),
+		]);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("New Frame");
+		expect(html).not.toContain("Old Frame");
+	});
+
+	it("T5.5b: a hand-written registry.json populates the parity heat-grid", async () => {
+		const dir = await freshTmp("ds-report-parity-");
+		await seedRegistry(dir, sampleRegistry());
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The parity matrix renders its heat grid (an SVG) listing the components.
+		expect(html).toContain("<svg");
+		expect(html).toContain("Button");
+		expect(html).toContain("Spinner");
+		expect(html).toContain("Chip");
+	});
+
+	it("T5.5b ACCEPTANCE (C5): all four artifacts present → FOUR svg charts", async () => {
+		const dir = await freshTmp("ds-report-four-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
+			tokensCheckLine("2026-06-02T10:00:00.000Z", 0, 2, 1),
+			JSON.stringify({
+				at: "2026-06-03T10:00:00.000Z",
+				kind: "lint",
+				byKind: { exact: 3, near: 2, offSystem: 1 },
+			}),
+			handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", [
+				{ rule: "var-binding", points: 8 },
+			]),
+		]);
+		await seedRegistry(dir, sampleRegistry());
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// Drift trend, lint-by-type, readiness gauge, parity heat-grid: one each.
+		expect(countSvgs(html)).toBe(4);
+		// None of the four sections falls back to the empty state.
+		expect(html).not.toContain("No data yet");
+	});
+
+	it("T5.5b: with no handoff line and no registry, readiness + parity stay empty", async () => {
+		const dir = await freshTmp("ds-report-empty-sections-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// Readiness + parity still show their empty-state panels.
+		expect(html).toContain("No data yet");
+		// Drift section is populated, but readiness + parity are not → only ONE svg.
+		expect(countSvgs(html)).toBe(1);
 	});
 });

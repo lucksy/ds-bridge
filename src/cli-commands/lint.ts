@@ -9,7 +9,9 @@
 import { spawnSync } from "node:child_process";
 import type { Dirent } from "node:fs";
 import {
+	appendFileSync,
 	existsSync,
+	mkdirSync,
 	readdirSync,
 	readFileSync,
 	statSync,
@@ -76,6 +78,54 @@ const KIND_SEVERITY: Record<LiteralMatch["kind"], Severity> = {
 	near: "warn",
 	"off-system": "info",
 };
+
+/**
+ * One appended lint history record (read back by `report` for the lint-by-type
+ * section). Mirrors the tokens-check append pattern in tokens.ts.
+ */
+interface LintHistoryRecord {
+	at: string;
+	kind: "lint";
+	byKind: {
+		exact: number;
+		near: number;
+		offSystem: number;
+	};
+}
+
+/** Tally findings into the by-kind history shape (offSystem is camelCased). */
+function countByKind(findings: ReportFinding[]): LintHistoryRecord["byKind"] {
+	const byKind = { exact: 0, near: 0, offSystem: 0 };
+	for (const finding of findings) {
+		if (finding.match.kind === "exact") byKind.exact += 1;
+		else if (finding.match.kind === "near") byKind.near += 1;
+		else byKind.offSystem += 1;
+	}
+	return byKind;
+}
+
+/**
+ * Append ONE lint history line to <targetDir>/.ds-bridge/history.jsonl.
+ *
+ * Only called for a DIRECTORY lint — a single-file lint (the PostToolUse hook,
+ * which fires on every edit) stays side-effect-free so the log is not polluted
+ * with per-keystroke noise. A `--fix` run appends its POST-fix state (the
+ * findings after fixes are applied) so the log reflects the file on disk.
+ */
+function appendLintHistory(targetDir: string, findings: ReportFinding[]): void {
+	const stateDir = join(targetDir, ".ds-bridge");
+	const record: LintHistoryRecord = {
+		at: new Date().toISOString(),
+		kind: "lint",
+		byKind: countByKind(findings),
+	};
+	mkdirSync(stateDir, { recursive: true });
+	appendFileSync(
+		join(stateDir, "history.jsonl"),
+		`${JSON.stringify(record)}\n`,
+		"utf8",
+	);
+}
 
 /** Process-level outcome of a lint run, before exit-code translation. */
 interface LintCommandError {
@@ -597,12 +647,16 @@ export function registerLintCommand(program: Command): void {
 			}
 
 			// --fix: apply fixable exact edits, then re-lint to compute exit code.
+			// A directory --fix run records its POST-fix state inside runFix.
 			if (options.fix) {
-				runFix(files, tokens, linted.findings);
+				runFix(files, tokens, linted.findings, isFile ? undefined : targetDir);
 				return;
 			}
 
 			emitReport(linted.findings, format);
+			// History: only a DIRECTORY lint records a line — a single-file lint
+			// (the PostToolUse hook) must stay side-effect-free.
+			if (!isFile) appendLintHistory(targetDir, linted.findings);
 			process.exitCode = linted.findings.length > 0 ? 1 : 0;
 		});
 }
@@ -624,11 +678,16 @@ function emitReport(findings: ReportFinding[], format: LintFormat): void {
 	process.stdout.write(`${renderTerm(findings, color)}\n`);
 }
 
-/** Apply fixes, report files changed, then re-lint for the exit code. */
+/**
+ * Apply fixes, report files changed, then re-lint for the exit code. When
+ * `historyDir` is set (a directory run, not a single file) the POST-fix
+ * re-linted state is appended to the history log.
+ */
 function runFix(
 	files: { abs: string; rel: string }[],
 	tokens: TokenContext,
 	findings: ReportFinding[],
+	historyDir: string | undefined,
 ): void {
 	// planFixes works on relative-path literals; map edits back to absolute paths.
 	const relToAbs = new Map(files.map((f) => [f.rel, f.abs]));
@@ -667,5 +726,10 @@ function runFix(
 	// near/off-system always count as remaining; composite exacts are unfixable
 	// (planFixes skips them) so any leftover exact also keeps the exit non-zero.
 	const hasRemaining = remaining.length > 0 || stillExact.length > 0;
+	// History: one POST-fix line for a directory run (single-file runs pass
+	// undefined and stay side-effect-free).
+	if (historyDir !== undefined) {
+		appendLintHistory(historyDir, relinted.findings);
+	}
 	process.exitCode = hasRemaining ? 1 : 0;
 }

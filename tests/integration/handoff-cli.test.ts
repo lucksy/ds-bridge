@@ -11,8 +11,10 @@
 //   GET  /v1/files/UNAUTHORIZED/... -> 401              (token failure route)
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -139,6 +141,79 @@ async function runCli(
 	}
 }
 
+/** Run the CLI with an explicit working directory (for cwd-relative history). */
+async function runCliIn(
+	cwd: string,
+	args: string[],
+	extraEnv?: NodeJS.ProcessEnv,
+): Promise<{ code: number; stdout: string; stderr: string }> {
+	const env: NodeJS.ProcessEnv = {
+		...process.env,
+		FIGMA_API_BASE: baseUrl,
+		FIGMA_TOKEN: TOKEN,
+		...extraEnv,
+	};
+	try {
+		const { stdout, stderr } = await execFileAsync(
+			process.execPath,
+			[cliPath, ...args],
+			{ encoding: "utf8", env, cwd },
+		);
+		return { code: 0, stdout, stderr };
+	} catch (error) {
+		if (!isExecError(error)) throw error;
+		return { code: error.code, stdout: error.stdout, stderr: error.stderr };
+	}
+}
+
+const tmpDirs: string[] = [];
+
+async function freshTmp(prefix: string): Promise<string> {
+	const dir = await mkdtemp(join(tmpdir(), prefix));
+	tmpDirs.push(dir);
+	return dir;
+}
+
+/** One parsed handoff history record (the T5.5b append shape). */
+interface HandoffHistoryRecord {
+	at: string;
+	kind: string;
+	score: number;
+	frameName: string;
+	deductions: { rule: string; points: number }[];
+}
+
+/** Read + parse the handoff records in <dir>/.ds-bridge/history.jsonl (or []). */
+async function readHandoffHistory(
+	dir: string,
+): Promise<HandoffHistoryRecord[]> {
+	const historyPath = join(dir, ".ds-bridge", "history.jsonl");
+	let text: string;
+	try {
+		text = await readFile(historyPath, "utf8");
+	} catch {
+		return [];
+	}
+	const records: HandoffHistoryRecord[] = [];
+	for (const line of text.split("\n")) {
+		const trimmed = line.trim();
+		if (trimmed === "") continue;
+		const record = JSON.parse(trimmed) as HandoffHistoryRecord;
+		if (record.kind === "handoff") records.push(record);
+	}
+	return records;
+}
+
+/** True when <dir>/.ds-bridge/history.jsonl exists. */
+async function historyExists(dir: string): Promise<boolean> {
+	try {
+		await access(join(dir, ".ds-bridge", "history.jsonl"));
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 function fileUrl(key: string, nodeId?: string): string {
 	const base = `https://www.figma.com/design/${key}/Demo`;
 	return nodeId === undefined ? base : `${base}?node-id=${nodeId}`;
@@ -159,6 +234,9 @@ describe("ds-bridge handoff (built dist/cli.mjs)", () => {
 		await new Promise<void>((resolve) => {
 			server.close(() => resolve());
 		});
+		await Promise.all(
+			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),
+		);
 	});
 
 	it("scores the full file deterministically (90) and exits 0 at threshold 80", async () => {
@@ -279,5 +357,60 @@ describe("ds-bridge handoff (built dist/cli.mjs)", () => {
 		expect(result.stdout).toContain("90");
 		expect(lastComment()).toBeUndefined();
 		expect(result.stderr.toLowerCase()).toContain("--yes");
+	});
+
+	it("T5.5b: writes a handoff history line (score 90) under cwd/.ds-bridge", async () => {
+		const dir = await freshTmp("ds-handoff-hist-");
+		const result = await runCliIn(dir, [
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"80",
+		]);
+		expect(result.code).toBe(0);
+
+		const records = await readHandoffHistory(dir);
+		expect(records.length).toBe(1);
+		const record = records[0];
+		expect(record?.kind).toBe("handoff");
+		expect(record?.score).toBe(90);
+		// The scored root is the file document.
+		expect(record?.frameName).toBe("Document");
+		// Top 3 deductions, each carrying a rule + points; the worst is "component".
+		expect(record?.deductions.length).toBeGreaterThan(0);
+		expect(record?.deductions.length).toBeLessThanOrEqual(3);
+		expect(record?.deductions[0]?.rule).toBe("component");
+		expect(typeof record?.deductions[0]?.points).toBe("number");
+		expect(typeof record?.at).toBe("string");
+		expect(record?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+	});
+
+	it("T5.5b: a node-id URL records the subtree frame name", async () => {
+		const dir = await freshTmp("ds-handoff-hist-node-");
+		const result = await runCliIn(dir, [
+			"handoff",
+			fileUrl(FILE_KEY, "1-2"),
+			"--threshold",
+			"0",
+		]);
+		expect(result.code).toBe(0);
+
+		const records = await readHandoffHistory(dir);
+		expect(records.length).toBe(1);
+		expect(records[0]?.frameName).toBe("Card / Primary");
+	});
+
+	it("T5.5b: --no-history suppresses the history append", async () => {
+		const dir = await freshTmp("ds-handoff-nohist-");
+		const result = await runCliIn(dir, [
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"80",
+			"--no-history",
+		]);
+		expect(result.code).toBe(0);
+		// Nothing written to disk.
+		expect(await historyExists(dir)).toBe(false);
 	});
 });
