@@ -26,3 +26,6 @@ npm-debug.log*
 website/.next/
 website/out/
 website/node_modules/
+
+# ds-bridge CLI state (test/capture residue in this dev repo; user projects commit theirs)
+.ds-bridge/
