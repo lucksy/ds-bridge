@@ -1,6 +1,6 @@
 {
 	"name": "ds-bridge",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Claude Code plugin connecting design-system Figma libraries to codebases: token drift, DS-aware linting, design-to-code, handoff QA",
 	"type": "module",
 	"private": true,

@@ -1,6 +1,6 @@
 {
 	"name": "ds-bridge",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Connect your design system's Figma library to your codebase: token drift detection, DS-aware linting, design-to-code, and pre-handoff QA.",
 	"author": {
 		"name": "lucksy"
