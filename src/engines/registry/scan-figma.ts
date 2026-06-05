@@ -1,0 +1,282 @@
+// T5.2 — Figma component model (the registry's design side). PURE: no
+// fs/network/process. Given the recorded published-components list (the REST
+// `/v1/files/:key/components` `meta.components` shape) and/or the file
+// `document` tree (the `/v1/files/:key` document shape), produce a
+// deterministic, deduped list of component models.
+//
+// Two sources feed the model:
+//   - "published": entries from the REST components endpoint. Plain names map
+//     straight through with empty variantProps; variant names ("Size=sm,
+//     Tone=info") parse into variantProps and merge — by their shared
+//     `containing_frame` name — into a single model per component set.
+//   - "inline": unpublished COMPONENT / COMPONENT_SET nodes walked out of the
+//     file document tree, EXCLUDING any node id already published. A
+//     COMPONENT_SET's variant children supply its variantProps.
+//
+// Dedup is by nodeId with published winning. The result is sorted by name. The
+// engine never throws — malformed/missing inputs degrade to [].
+//
+// SPEC §1 caveat: the REST `/components` endpoint lists PUBLISHED components
+// only; inline (unpublished) components only ever appear in the file tree.
+
+// ── Output model ──
+
+export interface FigmaComponentModel {
+	name: string;
+	nodeId: string;
+	description: string;
+	/** Variant axis -> sorted, deduped values, e.g. { Size: ["md", "sm"] }. */
+	variantProps: Record<string, string[]>;
+	source: "published" | "inline";
+}
+
+// ── Structural input shapes (only the fields we reason about) ──
+
+/** A published component as listed by GET /v1/files/:key/components. */
+interface PublishedComponent {
+	node_id?: unknown;
+	name?: unknown;
+	description?: unknown;
+	containing_frame?: { name?: unknown } | null;
+}
+
+/** The `meta.components` envelope of the components endpoint. */
+interface PublishedComponentsInput {
+	meta?: { components?: PublishedComponent[] };
+}
+
+/** A node in the file document tree (the io FigmaNode is assignable to this). */
+interface DocumentNode {
+	id?: unknown;
+	name?: unknown;
+	type?: unknown;
+	description?: unknown;
+	children?: DocumentNode[];
+}
+
+export interface BuildFigmaComponentModelInput {
+	published?: PublishedComponentsInput;
+	fileDocument?: DocumentNode;
+}
+
+// ── Helpers ──
+
+function isString(value: unknown): value is string {
+	return typeof value === "string";
+}
+
+function asString(value: unknown): string {
+	return isString(value) ? value : "";
+}
+
+/**
+ * Parse a variant name like "Size=sm, Tone=info" into { Size: ["sm"], Tone:
+ * ["info"] }. Keys/values are trimmed. A name with no "=" pair yields {} (the
+ * caller treats such a name as a plain, non-variant name).
+ */
+function parseVariantName(name: string): Record<string, string[]> {
+	const props: Record<string, string[]> = {};
+	if (!name.includes("=")) return props;
+	for (const pair of name.split(",")) {
+		const eq = pair.indexOf("=");
+		if (eq === -1) continue;
+		const key = pair.slice(0, eq).trim();
+		const value = pair.slice(eq + 1).trim();
+		if (key.length === 0) continue;
+		const existing = props[key];
+		if (existing === undefined) {
+			props[key] = [value];
+		} else {
+			existing.push(value);
+		}
+	}
+	return props;
+}
+
+/** Sort + dedup each axis's values; return a fresh record (deterministic). */
+function normalizeVariantProps(
+	props: Record<string, string[]>,
+): Record<string, string[]> {
+	const out: Record<string, string[]> = {};
+	for (const key of Object.keys(props).sort()) {
+		const values = props[key] ?? [];
+		out[key] = [...new Set(values)].sort();
+	}
+	return out;
+}
+
+/** Merge `from` into `into`, accumulating values per axis. */
+function mergeVariantProps(
+	into: Record<string, string[]>,
+	from: Record<string, string[]>,
+): void {
+	for (const key of Object.keys(from)) {
+		const incoming = from[key] ?? [];
+		const existing = into[key];
+		if (existing === undefined) {
+			into[key] = [...incoming];
+		} else {
+			existing.push(...incoming);
+		}
+	}
+}
+
+/** Compare two node ids as strings (stable ascending). */
+function compareIds(a: string, b: string): number {
+	return a < b ? -1 : a > b ? 1 : 0;
+}
+
+// ── Published side ──
+
+interface PublishedAccumulator {
+	name: string;
+	nodeId: string;
+	description: string;
+	variantProps: Record<string, string[]>;
+}
+
+function buildPublished(input: PublishedComponentsInput | undefined): {
+	models: FigmaComponentModel[];
+	ids: Set<string>;
+} {
+	const components = input?.meta?.components;
+	const ids = new Set<string>();
+	if (!Array.isArray(components)) return { models: [], ids };
+
+	// Group entries by their merge key: the containing_frame name when the entry
+	// is a variant child of a set, otherwise a unique key per standalone entry.
+	const sets = new Map<string, PublishedAccumulator>();
+	const standalone: PublishedAccumulator[] = [];
+
+	for (const component of components) {
+		const nodeId = asString(component.node_id);
+		if (nodeId.length === 0) continue;
+		ids.add(nodeId);
+
+		const rawName = asString(component.name);
+		const description = asString(component.description);
+		const variantProps = parseVariantName(rawName);
+		const isVariant = Object.keys(variantProps).length > 0;
+		const setName = isString(component.containing_frame?.name)
+			? component.containing_frame.name
+			: undefined;
+
+		if (isVariant && setName !== undefined) {
+			const existing = sets.get(setName);
+			if (existing === undefined) {
+				sets.set(setName, {
+					name: setName,
+					nodeId,
+					description,
+					variantProps: { ...variantProps },
+				});
+			} else {
+				mergeVariantProps(existing.variantProps, variantProps);
+				// Keep the lowest child nodeId as the set's representative id.
+				if (compareIds(nodeId, existing.nodeId) < 0) existing.nodeId = nodeId;
+				if (existing.description.length === 0 && description.length > 0) {
+					existing.description = description;
+				}
+			}
+		} else {
+			standalone.push({ name: rawName, nodeId, description, variantProps });
+		}
+	}
+
+	const models: FigmaComponentModel[] = [];
+	for (const acc of [...sets.values(), ...standalone]) {
+		models.push({
+			name: acc.name,
+			nodeId: acc.nodeId,
+			description: acc.description,
+			variantProps: normalizeVariantProps(acc.variantProps),
+			source: "published",
+		});
+	}
+	return { models, ids };
+}
+
+// ── Inline side ──
+
+function variantPropsFromChildren(
+	children: DocumentNode[] | undefined,
+): Record<string, string[]> {
+	const props: Record<string, string[]> = {};
+	if (!Array.isArray(children)) return props;
+	for (const child of children) {
+		if (child.type !== "COMPONENT") continue;
+		mergeVariantProps(props, parseVariantName(asString(child.name)));
+	}
+	return props;
+}
+
+function buildInline(
+	document: DocumentNode | undefined,
+	publishedIds: Set<string>,
+): FigmaComponentModel[] {
+	if (document === undefined) return [];
+
+	const byId = new Map<string, FigmaComponentModel>();
+	const stack: DocumentNode[] = [document];
+
+	while (stack.length > 0) {
+		// Non-null: guarded by stack.length > 0.
+		const node = stack.pop() as DocumentNode;
+		const type = node.type;
+
+		if (type === "COMPONENT_SET" || type === "COMPONENT") {
+			const nodeId = asString(node.id);
+			if (nodeId.length > 0 && !publishedIds.has(nodeId) && !byId.has(nodeId)) {
+				const variantProps =
+					type === "COMPONENT_SET"
+						? variantPropsFromChildren(node.children)
+						: {};
+				byId.set(nodeId, {
+					name: asString(node.name),
+					nodeId,
+					description: asString(node.description),
+					variantProps: normalizeVariantProps(variantProps),
+					source: "inline",
+				});
+			}
+			// A COMPONENT_SET's COMPONENT children describe variants of the set, not
+			// standalone components — do NOT descend into a set's children.
+			if (type === "COMPONENT_SET") continue;
+		}
+
+		const children = node.children;
+		if (Array.isArray(children)) {
+			for (let i = children.length - 1; i >= 0; i -= 1) {
+				const child = children[i];
+				if (child !== undefined) stack.push(child);
+			}
+		}
+	}
+
+	return [...byId.values()];
+}
+
+// ── Entry point ──
+
+export function buildFigmaComponentModel(
+	input: BuildFigmaComponentModelInput,
+): FigmaComponentModel[] {
+	const { models: publishedModels, ids } = buildPublished(input.published);
+	const inlineModels = buildInline(input.fileDocument, ids);
+
+	// Dedup by nodeId: published already populated `ids`, so inline never
+	// collides with a published id. Within published, set merging already
+	// collapsed variant children; standalone published ids are unique by source.
+	const byId = new Map<string, FigmaComponentModel>();
+	for (const model of publishedModels) {
+		if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+	}
+	for (const model of inlineModels) {
+		if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+	}
+
+	return [...byId.values()].sort((a, b) => {
+		if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+		return compareIds(a.nodeId, b.nodeId);
+	});
+}
