@@ -1,6 +1,7 @@
 // CLI entry — commander wiring only, no logic (SPEC §4).
 import { createRequire } from "node:module";
 import { Command } from "commander";
+import { registerLintCommand } from "./cli-commands/lint.js";
 import { registerTokensCommand } from "./cli-commands/tokens.js";
 
 const require = createRequire(import.meta.url);
@@ -16,6 +17,7 @@ export function buildProgram(): Command {
 		.version(pkg.version);
 
 	registerTokensCommand(program);
+	registerLintCommand(program);
 
 	return program;
 }
