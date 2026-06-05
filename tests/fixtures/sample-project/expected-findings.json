@@ -1,0 +1,64 @@
+[
+	{
+		"file": "src/button.css",
+		"line": 2,
+		"col": 9,
+		"raw": "#3b82f6",
+		"property": "color",
+		"kind": "exact",
+		"expectedToken": "color.brand.primary"
+	},
+	{
+		"file": "src/button.css",
+		"line": 3,
+		"col": 14,
+		"raw": "#3a81f5",
+		"property": "background",
+		"kind": "near",
+		"expectedCandidates": ["color.brand.primary"]
+	},
+	{
+		"file": "src/button.css",
+		"line": 4,
+		"col": 11,
+		"raw": "17px",
+		"property": "padding",
+		"kind": "near",
+		"expectedCandidates": ["space.md"]
+	},
+	{
+		"file": "src/card.module.css",
+		"line": 6,
+		"col": 24,
+		"raw": "#11182733",
+		"property": "box-shadow",
+		"kind": "exact",
+		"expectedToken": "shadow.card"
+	},
+	{
+		"file": "src/Banner.tsx",
+		"line": 9,
+		"col": 24,
+		"raw": "\"#3b82f6\"",
+		"property": "color",
+		"kind": "exact",
+		"expectedToken": "color.brand.primary"
+	},
+	{
+		"file": "src/Banner.tsx",
+		"line": 9,
+		"col": 44,
+		"raw": "17",
+		"property": "padding",
+		"kind": "near",
+		"expectedCandidates": ["space.md"]
+	},
+	{
+		"file": "src/Hero.tsx",
+		"line": 4,
+		"col": 9,
+		"raw": "#ff00aa",
+		"property": "color",
+		"kind": "off-system"
+	}
+]

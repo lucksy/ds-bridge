@@ -1,0 +1,13 @@
+.card {
+	display: flex;
+	flex-direction: column;
+	padding: var(--space-md);
+	background: var(--color-brand-surface);
+	box-shadow: 0 2px 8px #11182733;
+	border-radius: var(--radius-sm);
+}
+
+.card__title {
+	font-weight: var(--font-weight-bold);
+	color: var(--color-base-gray-900);
+}
