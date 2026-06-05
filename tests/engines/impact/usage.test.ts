@@ -1,0 +1,243 @@
+// T7.8 — usage mapper (blast-radius) test. TDD: the contract first.
+//
+// mapUsage({ registry, changedFigmaNames, projectDir }) answers: for each changed
+// Figma component name, which code component does the registry map it to, and
+// where in the project is that code component imported? It returns one entry per
+// requested Figma name, in the input order de-duplicated, each carrying:
+//   { figmaName, codeName?, importPath?, resolution, usages: [{file, line, importName}], count }
+// where `resolution` is "matched" | "unmatched" | "not-in-registry".
+//
+// Usage sites are discovered by ts-morph: an import declaration in any project
+// .tsx whose module resolves to the matched component's file, capturing the
+// imported identifier (importName) and the 1-based line. Paths are relative to
+// projectDir with forward slashes. Ordering is deterministic (file asc, line asc).
+//
+// Acceptance data: tests/fixtures/sample-project (components/** + the additive
+// app/** importers added by this task). Impure edge (reads .tsx), never throws.
+import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import {
+	type ComponentUsage,
+	mapUsage,
+} from "../../../src/engines/impact/usage.js";
+import type {
+	RegistryFile,
+	RegistryMatch,
+} from "../../../src/engines/registry/persist.js";
+
+// ts-morph's first project load is slow under coverage + parallel load.
+vi.setConfig({ testTimeout: 60_000 });
+
+const projectDir = join(
+	import.meta.dirname,
+	"..",
+	"..",
+	"fixtures",
+	"sample-project",
+);
+
+function match(partial: Partial<RegistryMatch>): RegistryMatch {
+	return {
+		codeName: "Button",
+		importPath: "components/button.tsx",
+		figmaName: "Button / Primary",
+		nodeId: "10:42",
+		score: 0.95,
+		...partial,
+	};
+}
+
+function registry(matches: RegistryMatch[]): RegistryFile {
+	return {
+		schemaVersion: 1,
+		generatedAt: "2026-06-06T00:00:00.000Z",
+		matches,
+		unmatchedCode: [],
+		unmatchedFigma: [],
+	};
+}
+
+function find(
+	usages: ComponentUsage[],
+	figmaName: string,
+): ComponentUsage | undefined {
+	return usages.find((u) => u.figmaName === figmaName);
+}
+
+describe("mapUsage (T7.8)", () => {
+	it("maps a changed Figma name to its code component's import sites", () => {
+		const reg = registry([match({})]);
+		const result = mapUsage({
+			registry: reg,
+			changedFigmaNames: ["Button / Primary"],
+			projectDir,
+		});
+		expect(result).toHaveLength(1);
+		const button = find(result, "Button / Primary");
+		expect(button?.resolution).toBe("matched");
+		expect(button?.codeName).toBe("Button");
+		expect(button?.importPath).toBe("components/button.tsx");
+		// Button is imported in app/PrimaryCta.tsx and app/Dashboard.tsx.
+		const files = button?.usages.map((u) => u.file) ?? [];
+		expect(files).toContain("app/PrimaryCta.tsx");
+		expect(files).toContain("app/Dashboard.tsx");
+	});
+
+	it("counts each import declaration once and records importName + line", () => {
+		const reg = registry([match({})]);
+		const button = find(
+			mapUsage({
+				registry: reg,
+				changedFigmaNames: ["Button / Primary"],
+				projectDir,
+			}),
+			"Button / Primary",
+		);
+		// Two importing files => two usage sites (one import decl per file).
+		expect(button?.count).toBe(2);
+		expect(button?.usages.length).toBe(2);
+		for (const usage of button?.usages ?? []) {
+			expect(usage.importName).toBe("Button");
+			expect(usage.line).toBeGreaterThan(0);
+			expect(Number.isInteger(usage.line)).toBe(true);
+		}
+	});
+
+	it("returns usages ordered by file asc, then line asc (deterministic)", () => {
+		const reg = registry([match({})]);
+		const button = find(
+			mapUsage({
+				registry: reg,
+				changedFigmaNames: ["Button / Primary"],
+				projectDir,
+			}),
+			"Button / Primary",
+		);
+		const files = button?.usages.map((u) => u.file) ?? [];
+		const sorted = [...files].sort();
+		expect(files).toEqual(sorted);
+		// Dashboard sorts before PrimaryCta.
+		expect(files).toEqual(["app/Dashboard.tsx", "app/PrimaryCta.tsx"]);
+	});
+
+	it("resolves a different changed component (Card) to its own sites", () => {
+		const reg = registry([
+			match({}),
+			match({
+				codeName: "Card",
+				importPath: "components/card.tsx",
+				figmaName: "Card / Default",
+				nodeId: "10:90",
+			}),
+		]);
+		const card = find(
+			mapUsage({
+				registry: reg,
+				changedFigmaNames: ["Card / Default"],
+				projectDir,
+			}),
+			"Card / Default",
+		);
+		expect(card?.resolution).toBe("matched");
+		expect(card?.codeName).toBe("Card");
+		// Card is only used in app/Dashboard.tsx.
+		expect(card?.usages.map((u) => u.file)).toEqual(["app/Dashboard.tsx"]);
+		expect(card?.count).toBe(1);
+	});
+
+	it("reports zero usages for a matched component nobody imports", () => {
+		const reg = registry([
+			match({
+				codeName: "IconButton",
+				importPath: "components/icon-button.tsx",
+				figmaName: "Icon Button",
+				nodeId: "10:99",
+			}),
+		]);
+		const entry = find(
+			mapUsage({
+				registry: reg,
+				changedFigmaNames: ["Icon Button"],
+				projectDir,
+			}),
+			"Icon Button",
+		);
+		expect(entry?.resolution).toBe("matched");
+		expect(entry?.usages).toEqual([]);
+		expect(entry?.count).toBe(0);
+	});
+
+	it("flags a changed name absent from the registry as not-in-registry", () => {
+		const reg = registry([match({})]);
+		const entry = find(
+			mapUsage({
+				registry: reg,
+				changedFigmaNames: ["Ghost / Unknown"],
+				projectDir,
+			}),
+			"Ghost / Unknown",
+		);
+		expect(entry?.resolution).toBe("not-in-registry");
+		expect(entry?.codeName).toBeUndefined();
+		expect(entry?.usages).toEqual([]);
+		expect(entry?.count).toBe(0);
+	});
+
+	it("flags an unmatched-figma changed name as unmatched (no code to scan)", () => {
+		const reg: RegistryFile = {
+			schemaVersion: 1,
+			generatedAt: "2026-06-06T00:00:00.000Z",
+			matches: [],
+			unmatchedCode: [],
+			unmatchedFigma: [{ name: "Toolbar", nodeId: "10:50", candidates: [] }],
+		};
+		const entry = find(
+			mapUsage({
+				registry: reg,
+				changedFigmaNames: ["Toolbar"],
+				projectDir,
+			}),
+			"Toolbar",
+		);
+		expect(entry?.resolution).toBe("unmatched");
+		expect(entry?.usages).toEqual([]);
+		expect(entry?.count).toBe(0);
+	});
+
+	it("dedups repeated changed names and preserves first-seen order", () => {
+		const reg = registry([
+			match({}),
+			match({
+				codeName: "Card",
+				importPath: "components/card.tsx",
+				figmaName: "Card / Default",
+				nodeId: "10:90",
+			}),
+		]);
+		const result = mapUsage({
+			registry: reg,
+			changedFigmaNames: [
+				"Card / Default",
+				"Button / Primary",
+				"Card / Default",
+			],
+			projectDir,
+		});
+		expect(result.map((u) => u.figmaName)).toEqual([
+			"Card / Default",
+			"Button / Primary",
+		]);
+	});
+
+	it("never throws on a missing project dir (empty usages)", () => {
+		const reg = registry([match({})]);
+		const result = mapUsage({
+			registry: reg,
+			changedFigmaNames: ["Button / Primary"],
+			projectDir: join(projectDir, "does-not-exist-xyz"),
+		});
+		expect(result[0]?.resolution).toBe("matched");
+		expect(result[0]?.usages).toEqual([]);
+		expect(result[0]?.count).toBe(0);
+	});
+});
