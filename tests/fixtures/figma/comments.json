@@ -1,0 +1,48 @@
+{
+	"comments": [
+		{
+			"id": "3001",
+			"uuid": "c0ffee00-1111-2222-3333-444455556666",
+			"file_key": "ABcdEFghIJklMNopQRstUV",
+			"parent_id": "",
+			"message": "The card padding here looks off-system — should this map to space.4?",
+			"client_meta": {
+				"node_id": "1:2",
+				"node_offset": {
+					"x": 12,
+					"y": 8
+				}
+			},
+			"created_at": "2026-06-04T19:01:30Z",
+			"resolved_at": null,
+			"order_id": "1",
+			"user": {
+				"id": "773311220099",
+				"handle": "Devon Okafor",
+				"img_url": "https://s3-alpha.figma.com/profile/devon.png"
+			}
+		},
+		{
+			"id": "3002",
+			"uuid": "c0ffee00-7777-8888-9999-aaaabbbbcccc",
+			"file_key": "ABcdEFghIJklMNopQRstUV",
+			"parent_id": "3001",
+			"message": "Yes — bound it to space.4 in this version.",
+			"client_meta": {
+				"node_id": "1:2",
+				"node_offset": {
+					"x": 12,
+					"y": 8
+				}
+			},
+			"created_at": "2026-06-04T19:14:55Z",
+			"resolved_at": null,
+			"order_id": "2",
+			"user": {
+				"id": "884422110055",
+				"handle": "Avery Nakamura",
+				"img_url": "https://s3-alpha.figma.com/profile/avery.png"
+			}
+		}
+	]
+}

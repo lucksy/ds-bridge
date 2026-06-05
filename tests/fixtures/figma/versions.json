@@ -1,0 +1,30 @@
+{
+	"versions": [
+		{
+			"id": "5012345678901234567",
+			"created_at": "2026-06-04T18:22:10Z",
+			"label": "Button hover state",
+			"description": "Added hover + focus variants to Button / Primary.",
+			"user": {
+				"id": "884422110055",
+				"handle": "Avery Nakamura",
+				"img_url": "https://s3-alpha.figma.com/profile/avery.png"
+			}
+		},
+		{
+			"id": "5009876543210987654",
+			"created_at": "2026-05-30T13:05:42Z",
+			"label": "",
+			"description": "",
+			"user": {
+				"id": "773311220099",
+				"handle": "Devon Okafor",
+				"img_url": "https://s3-alpha.figma.com/profile/devon.png"
+			}
+		}
+	],
+	"pagination": {
+		"prev_page": null,
+		"next_page": null
+	}
+}

@@ -1,0 +1,162 @@
+{
+	"name": "DS Bridge — Demo Library",
+	"role": "editor",
+	"lastModified": "2026-06-04T18:22:10Z",
+	"editorType": "figma",
+	"thumbnailUrl": "https://s3-alpha.figma.com/thumbnails/demo-thumb.png",
+	"version": "5012345678901234567",
+	"document": {
+		"id": "0:0",
+		"name": "Document",
+		"type": "DOCUMENT",
+		"children": [
+			{
+				"id": "0:1",
+				"name": "Page 1",
+				"type": "CANVAS",
+				"backgroundColor": {
+					"r": 0.9607843160629272,
+					"g": 0.9607843160629272,
+					"b": 0.9607843160629272,
+					"a": 1
+				},
+				"children": [
+					{
+						"id": "1:2",
+						"name": "Card / Primary",
+						"type": "FRAME",
+						"layoutMode": "VERTICAL",
+						"itemSpacing": 12,
+						"paddingTop": 16,
+						"paddingBottom": 16,
+						"paddingLeft": 16,
+						"paddingRight": 16,
+						"absoluteBoundingBox": {
+							"x": 24,
+							"y": 24,
+							"width": 320,
+							"height": 180
+						},
+						"fills": [
+							{
+								"type": "SOLID",
+								"blendMode": "NORMAL",
+								"color": {
+									"r": 1,
+									"g": 1,
+									"b": 1,
+									"a": 1
+								}
+							}
+						],
+						"boundVariables": {
+							"fills": [
+								{
+									"type": "VARIABLE_ALIAS",
+									"id": "VariableID:1:2"
+								}
+							]
+						},
+						"children": [
+							{
+								"id": "1:3",
+								"name": "Background",
+								"type": "RECTANGLE",
+								"absoluteBoundingBox": {
+									"x": 24,
+									"y": 24,
+									"width": 320,
+									"height": 180
+								},
+								"fills": [
+									{
+										"type": "SOLID",
+										"blendMode": "NORMAL",
+										"color": {
+											"r": 0.23137255012989044,
+											"g": 0.5098039507865906,
+											"b": 0.9647058844566345,
+											"a": 1
+										}
+									}
+								],
+								"boundVariables": {
+									"fills": [
+										{
+											"type": "VARIABLE_ALIAS",
+											"id": "VariableID:1:5"
+										}
+									]
+								}
+							},
+							{
+								"id": "1:4",
+								"name": "Title",
+								"type": "TEXT",
+								"characters": "Get started",
+								"absoluteBoundingBox": {
+									"x": 40,
+									"y": 40,
+									"width": 240,
+									"height": 28
+								},
+								"style": {
+									"fontFamily": "Inter",
+									"fontPostScriptName": "Inter-SemiBold",
+									"fontWeight": 600,
+									"fontSize": 20,
+									"lineHeightPx": 28,
+									"textAlignHorizontal": "LEFT"
+								},
+								"fills": [
+									{
+										"type": "SOLID",
+										"blendMode": "NORMAL",
+										"color": {
+											"r": 0.10196078568696976,
+											"g": 0.10196078568696976,
+											"b": 0.11372549086809158,
+											"a": 1
+										}
+									}
+								],
+								"boundVariables": {
+									"fills": [
+										{
+											"type": "VARIABLE_ALIAS",
+											"id": "VariableID:1:9"
+										}
+									]
+								}
+							},
+							{
+								"id": "1:7",
+								"name": "Button / Primary",
+								"type": "INSTANCE",
+								"componentId": "10:42",
+								"absoluteBoundingBox": {
+									"x": 40,
+									"y": 120,
+									"width": 120,
+									"height": 40
+								},
+								"fills": [],
+								"boundVariables": {}
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"components": {
+		"10:42": {
+			"key": "9c1b8f4e2d6a7b3c5e0f1a2b3c4d5e6f7a8b9c0d",
+			"name": "Button / Primary",
+			"description": "Primary call-to-action button.",
+			"documentationLinks": []
+		}
+	},
+	"componentSets": {},
+	"styles": {}
+}
