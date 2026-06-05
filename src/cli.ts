@@ -3,6 +3,8 @@ import { createRequire } from "node:module";
 import { Command } from "commander";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
+import { registerParityCommand } from "./cli-commands/parity.js";
+import { registerRegistryCommand } from "./cli-commands/registry.js";
 import { registerReportCommand } from "./cli-commands/report.js";
 import { registerTokensCommand } from "./cli-commands/tokens.js";
 
@@ -22,6 +24,8 @@ export function buildProgram(): Command {
 	registerLintCommand(program);
 	registerReportCommand(program);
 	registerHandoffCommand(program);
+	registerRegistryCommand(program);
+	registerParityCommand(program);
 
 	return program;
 }
