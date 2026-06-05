@@ -3533,6 +3533,11 @@ var {
   Help
 } = import_index.default;
 
+// src/cli-commands/handoff.ts
+import { appendFileSync, mkdirSync } from "fs";
+import { join } from "path";
+import { cwd } from "process";
+
 // src/config.ts
 var REPORT_STYLES = ["html", "terminal", "both"];
 var DEFAULTS = {
@@ -4118,6 +4123,24 @@ var RULE_LABEL = {
   component: "Component usage",
   naming: "Naming"
 };
+var HISTORY_DEDUCTION_LIMIT = 3;
+function appendHandoffHistory(report, frameName) {
+  const stateDir = join(cwd(), ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "handoff",
+    score: report.score,
+    frameName,
+    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
+  };
+  mkdirSync(stateDir, { recursive: true });
+  appendFileSync(
+    join(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
 function fail(message) {
   process.stderr.write(`${message}
 `);
@@ -4302,6 +4325,9 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     return;
   }
   const report = scoreReadiness(fetched.root);
+  if (options.history) {
+    appendHandoffHistory(report, fetched.root.name);
+  }
   if (format === "json") {
     process.stdout.write(`${JSON.stringify(report, null, 2)}
 `);
@@ -4347,6 +4373,9 @@ function registerHandoffCommand(program2) {
     "--yes",
     "confirm writing the --comment to Figma without an interactive prompt",
     false
+  ).option(
+    "--no-history",
+    "do not append a readiness record to .ds-bridge/history.jsonl in the current directory"
   ).action((url, options) => {
     void runHandoff(url, options);
   });
@@ -4355,13 +4384,15 @@ function registerHandoffCommand(program2) {
 // src/cli-commands/lint.ts
 import { spawnSync } from "child_process";
 import {
+  appendFileSync as appendFileSync2,
   existsSync,
+  mkdirSync as mkdirSync2,
   readdirSync,
   readFileSync,
   statSync,
   writeFileSync
 } from "fs";
-import { isAbsolute, join, relative, resolve as resolve3, sep } from "path";
+import { isAbsolute, join as join2, relative, resolve as resolve3, sep } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -8888,6 +8919,30 @@ var KIND_SEVERITY = {
   near: "warn",
   "off-system": "info"
 };
+function countByKind(findings) {
+  const byKind = { exact: 0, near: 0, offSystem: 0 };
+  for (const finding of findings) {
+    if (finding.match.kind === "exact") byKind.exact += 1;
+    else if (finding.match.kind === "near") byKind.near += 1;
+    else byKind.offSystem += 1;
+  }
+  return byKind;
+}
+function appendLintHistory(targetDir, findings) {
+  const stateDir = join2(targetDir, ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "lint",
+    byKind: countByKind(findings)
+  };
+  mkdirSync2(stateDir, { recursive: true });
+  appendFileSync2(
+    join2(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
 function hasExtension(name) {
   const lower = name.toLowerCase();
   return LINTABLE_EXTENSIONS.some((ext) => lower.endsWith(ext));
@@ -8900,7 +8955,7 @@ function walkLintableFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join(dir, entry.name);
+    const full = join2(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS.has(entry.name)) continue;
       walkLintableFiles(full, acc);
@@ -8920,7 +8975,7 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join(targetDir, ".ds-bridge.json");
+  const configPath = join2(targetDir, ".ds-bridge.json");
   if (existsSync(configPath)) {
     let projectFileText;
     try {
@@ -8976,7 +9031,7 @@ function collectTokenCandidates(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join(dir, entry.name);
+    const full = join2(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS.has(entry.name)) continue;
       collectTokenCandidates(
@@ -9251,10 +9306,11 @@ function registerLintCommand(program2) {
       return;
     }
     if (options.fix) {
-      runFix(files, tokens, linted.findings);
+      runFix(files, tokens, linted.findings, isFile ? void 0 : targetDir);
       return;
     }
     emitReport(linted.findings, format);
+    if (!isFile) appendLintHistory(targetDir, linted.findings);
     process.exitCode = linted.findings.length > 0 ? 1 : 0;
   });
 }
@@ -9273,7 +9329,7 @@ function emitReport(findings, format) {
   process.stdout.write(`${renderTerm2(findings, color)}
 `);
 }
-function runFix(files, tokens, findings) {
+function runFix(files, tokens, findings, historyDir) {
   const relToAbs = new Map(files.map((f3) => [f3.rel, f3.abs]));
   const engineFindings = findings.map((f3) => ({
     literal: f3.literal,
@@ -9305,12 +9361,15 @@ function runFix(files, tokens, findings) {
   const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
   const stillExact = relinted.findings.filter((f3) => f3.match.kind === "exact");
   const hasRemaining = remaining.length > 0 || stillExact.length > 0;
+  if (historyDir !== void 0) {
+    appendLintHistory(historyDir, relinted.findings);
+  }
   process.exitCode = hasRemaining ? 1 : 0;
 }
 
 // src/cli-commands/parity.ts
 import { existsSync as existsSync2, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
-import { join as join2, resolve as resolvePath } from "path";
+import { join as join3, resolve as resolvePath } from "path";
 
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
@@ -9394,6 +9453,15 @@ function buildParity(registry) {
   }
   return { rows, summary };
 }
+function toParitySection(report) {
+  return {
+    columns: ["Status"],
+    rows: report.rows.map((row) => ({
+      component: row.component,
+      cells: [{ status: row.status }]
+    }))
+  };
+}
 
 // src/cli-commands/parity.ts
 function fail3(message) {
@@ -9416,7 +9484,7 @@ function statusSeverity(status) {
   }
 }
 function loadRegistry(targetDir) {
-  const registryPath = join2(targetDir, ".ds-bridge", "registry.json");
+  const registryPath = join3(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync2(registryPath)) {
     fail3(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -9525,7 +9593,7 @@ function renderMarkdown(report) {
 }
 function hasRegistry(candidate) {
   return existsSync2(
-    join2(resolvePath(candidate), ".ds-bridge", "registry.json")
+    join3(resolvePath(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate(component, path) {
@@ -9586,12 +9654,12 @@ function registerParityCommand(program2) {
 // src/cli-commands/registry.ts
 import {
   existsSync as existsSync3,
-  mkdirSync,
+  mkdirSync as mkdirSync3,
   readFileSync as readFileSync3,
   statSync as statSync3,
   writeFileSync as writeFileSync2
 } from "fs";
-import { dirname, join as join3, resolve as resolvePath2 } from "path";
+import { dirname, join as join4, resolve as resolvePath2 } from "path";
 import { fileURLToPath } from "url";
 
 // src/engines/registry/match.ts
@@ -10121,10 +10189,10 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join3(targetDir, ".ds-bridge");
-  const registryPath = join3(stateDir, "registry.json");
+  const stateDir = join4(targetDir, ".ds-bridge");
+  const registryPath = join4(stateDir, "registry.json");
   try {
-    mkdirSync(stateDir, { recursive: true });
+    mkdirSync3(stateDir, { recursive: true });
     writeFileSync2(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
@@ -10174,7 +10242,7 @@ function renderBuildSummary(registry, registryPath) {
   return lines.join("\n");
 }
 function loadRegistry2(targetDir) {
-  const registryPath = join3(targetDir, ".ds-bridge", "registry.json");
+  const registryPath = join4(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync3(registryPath)) {
     fail4(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -10256,12 +10324,12 @@ function registerRegistryCommand(program2) {
 import { spawn } from "child_process";
 import {
   existsSync as existsSync4,
-  mkdirSync as mkdirSync2,
+  mkdirSync as mkdirSync4,
   readFileSync as readFileSync4,
   statSync as statSync4,
   writeFileSync as writeFileSync3
 } from "fs";
-import { basename, dirname as dirname2, join as join4, resolve as resolve4 } from "path";
+import { basename, dirname as dirname2, join as join5, resolve as resolve4 } from "path";
 import { platform } from "process";
 
 // src/render/html/charts.ts
@@ -10720,19 +10788,26 @@ function renderDashboard(data) {
 }
 
 // src/cli-commands/report.ts
+var RULE_REASON = {
+  "var-binding": "Variable binding",
+  "auto-layout": "Auto layout",
+  component: "Component usage",
+  naming: "Naming"
+};
 function asNumber(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join4(stateDir, "history.jsonl");
+  const historyPath = join5(stateDir, "history.jsonl");
   let text;
   try {
     text = readFileSync4(historyPath, "utf8");
   } catch {
-    return { driftTrend: [], lintSummary: void 0 };
+    return { driftTrend: [], lintSummary: void 0, readiness: void 0 };
   }
   const driftTrend = [];
   let lint;
+  let readiness;
   const lines = text.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
     const trimmed = (lines[index] ?? "").trim();
@@ -10768,13 +10843,45 @@ function aggregateHistory(stateDir, onWarning) {
         },
         topOffenders: []
       };
+      continue;
+    }
+    if (record.kind === "handoff") {
+      const r2 = record;
+      const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
+      readiness = {
+        score: asNumber(r2.score),
+        frameName: typeof r2.frameName === "string" ? r2.frameName : "",
+        deductions: deductions.map((d) => ({
+          reason: RULE_REASON[d.rule] ?? d.rule,
+          points: asNumber(d.points)
+        }))
+      };
     }
   }
-  return { driftTrend, lintSummary: lint };
+  return { driftTrend, lintSummary: lint, readiness };
+}
+function readParity(stateDir, onWarning) {
+  const registryPath = join5(stateDir, "registry.json");
+  let text;
+  try {
+    text = readFileSync4(registryPath, "utf8");
+  } catch {
+    return void 0;
+  }
+  let registry;
+  try {
+    registry = JSON.parse(text);
+  } catch {
+    onWarning(`warning: skipping unreadable registry ${registryPath}`);
+    return void 0;
+  }
+  const section = toParitySection(buildParity(registry));
+  if (section.rows.length === 0) return void 0;
+  return section;
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync2(dirname2(outPath), { recursive: true });
+    mkdirSync4(dirname2(outPath), { recursive: true });
     writeFileSync3(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
@@ -10823,19 +10930,23 @@ function runReport(path, options) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const stateDir = join4(targetDir, ".ds-bridge");
-  const aggregation = aggregateHistory(stateDir, (message) => {
+  const stateDir = join5(targetDir, ".ds-bridge");
+  const warn = (message) => {
     process.stderr.write(`${message}
 `);
-  });
+  };
+  const aggregation = aggregateHistory(stateDir, warn);
+  const parity = readParity(stateDir, warn);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const html = renderDashboard({
     generatedAt,
     project: basename(targetDir),
     driftTrend: aggregation.driftTrend,
-    ...aggregation.lintSummary !== void 0 ? { lintSummary: aggregation.lintSummary } : {}
+    ...aggregation.lintSummary !== void 0 ? { lintSummary: aggregation.lintSummary } : {},
+    ...aggregation.readiness !== void 0 ? { readiness: aggregation.readiness } : {},
+    ...parity !== void 0 ? { parity } : {}
   });
-  const outPath = options.out !== void 0 ? resolve4(options.out) : join4(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve4(options.out) : join5(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -10863,15 +10974,15 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync,
+  appendFileSync as appendFileSync3,
   existsSync as existsSync5,
-  mkdirSync as mkdirSync3,
+  mkdirSync as mkdirSync5,
   readdirSync as readdirSync2,
   readFileSync as readFileSync5,
   statSync as statSync5,
   writeFileSync as writeFileSync4
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join5, relative as relative2, resolve as resolve5, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute2, join as join6, relative as relative2, resolve as resolve5, sep as sep2 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -11186,7 +11297,7 @@ function walkOutputFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join5(dir, entry.name);
+    const full = join6(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       walkOutputFiles(full, acc);
@@ -11213,7 +11324,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join5(dir, entry.name);
+    const full = join6(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       collectTokenCandidates2(
@@ -11263,7 +11374,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join5(targetDir, ".ds-bridge.json");
+  const configPath = join6(targetDir, ".ds-bridge.json");
   if (existsSync5(configPath)) {
     let projectFileText;
     try {
@@ -11370,7 +11481,7 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   );
   return { values, warnings };
 }
-function countByKind(result) {
+function countByKind2(result) {
   let stale = 0;
   let missing = 0;
   let orphan = 0;
@@ -11407,7 +11518,7 @@ function severityColorless(kind) {
   return kind;
 }
 function renderCheckTerm(result, color) {
-  const { stale, missing, orphan } = countByKind(result);
+  const { stale, missing, orphan } = countByKind2(result);
   const countRows = [
     [severityColor("error", "stale-output", { color }), String(stale)],
     [severityColor("warn", "missing-output", { color }), String(missing)],
@@ -11435,16 +11546,16 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync3(stateDir, { recursive: true });
-  appendFileSync(
-    join5(stateDir, "history.jsonl"),
+  mkdirSync5(stateDir, { recursive: true });
+  appendFileSync3(
+    join6(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join5(stateDir, "history.jsonl");
+  const historyPath = join6(stateDir, "history.jsonl");
   let text;
   try {
     text = readFileSync5(historyPath, "utf8");
@@ -11479,10 +11590,10 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join5(stateDir, "reports");
-  mkdirSync3(reportsDir, { recursive: true });
+  const reportsDir = join6(stateDir, "reports");
+  mkdirSync5(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join5(reportsDir, `tokens-${date}.html`);
+  const reportPath = join6(reportsDir, `tokens-${date}.html`);
   writeFileSync4(reportPath, html, "utf8");
   return reportPath;
 }
@@ -11525,9 +11636,9 @@ function runCheck(path, options) {
 `);
   }
   const result = classifyDrift(loaded.map, values);
-  const { stale, missing, orphan } = countByKind(result);
+  const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join5(targetDir, ".ds-bridge");
+  const stateDir = join6(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
