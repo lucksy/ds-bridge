@@ -210,6 +210,29 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		expect(stderr.toLowerCase()).toContain("token");
 	});
 
+	it("a single FILE path lints only that file (exit 1), with token discovery from cwd", async () => {
+		// Pointing at one file must not walk the whole project: only button.css
+		// findings come back. Token source falls back to discovery from cwd when
+		// the path is a file (here provided explicitly via --tokens for isolation).
+		const buttonCss = join(sampleProject, "src", "button.css");
+		const { code, stdout } = await runCli([
+			"lint",
+			buttonCss,
+			"--format=json",
+			"--tokens",
+			sampleTokens,
+		]);
+		expect(code).toBe(1);
+		const actual = JSON.parse(stdout) as JsonFinding[];
+		// Every finding belongs to button.css — no Banner/Hero/card findings.
+		expect(actual.length).toBeGreaterThan(0);
+		for (const finding of actual) {
+			expect(finding.file).toContain("button.css");
+		}
+		// The seeded exact #3b82f6 finding is present.
+		expect(actual.some((f) => f.raw === "#3b82f6")).toBe(true);
+	});
+
 	it("--changed in a non-git directory exits 2 with actionable stderr", async () => {
 		const dir = await freshTmp("ds-lint-nogit-");
 		await cp(sampleTokens, join(dir, "tokens.json"));

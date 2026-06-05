@@ -518,7 +518,7 @@ export function registerLintCommand(program: Command): void {
 	program
 		.command("lint")
 		.description("Find raw values that should be design tokens")
-		.argument("[path]", "directory to lint", ".")
+		.argument("[path]", "file or directory to lint", ".")
 		.option("--fix", "rewrite fixable exact matches to var() in place", false)
 		.option("--format <format>", "output format: term | json", "term")
 		.option("--tokens <file>", "explicit token source file")
@@ -532,11 +532,24 @@ export function registerLintCommand(program: Command): void {
 				return;
 			}
 
-			const targetDir = resolve(path);
-			if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
-				fail(`Path "${targetDir}" is not a directory.`);
+			const targetPath = resolve(path);
+			if (!existsSync(targetPath)) {
+				fail(`Path "${targetPath}" does not exist.`);
 				return;
 			}
+
+			// A single FILE path lints just that file (used by the PostToolUse hook).
+			// Token discovery then bases on the user's cwd, not the file's parent —
+			// so an edited file deep in src/ still finds the project's tokens.
+			const stat = statSync(targetPath);
+			const isFile = stat.isFile();
+			if (isFile && !hasExtension(targetPath)) {
+				fail(
+					`Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`,
+				);
+				return;
+			}
+			const targetDir = isFile ? process.cwd() : targetPath;
 
 			// Token source resolution (flag > .ds-bridge.json > discovery).
 			const tokenSource = resolveTokenSource(targetDir, options.tokens);
@@ -557,9 +570,11 @@ export function registerLintCommand(program: Command): void {
 				compositeColors: buildCompositeColorLookup(loaded.map.tokens),
 			};
 
-			// File scope: walk lintable files, optionally restricted to --changed.
+			// File scope: a single file lints only itself; a directory walks for
+			// lintable files, optionally restricted to --changed.
 			const walked: string[] = [];
-			walkLintableFiles(targetDir, walked);
+			if (isFile) walked.push(targetPath);
+			else walkLintableFiles(targetDir, walked);
 
 			let inScope = walked;
 			if (options.changed) {
