@@ -183,6 +183,13 @@ export interface FigmaClient {
 export interface FigmaClientOptions {
 	/** Personal access token (Dev/Full seat). Sent as the X-Figma-Token header. */
 	token: string;
+	/**
+	 * API origin (no `/v1` suffix). Defaults to https://api.figma.com. Overridable
+	 * so callers (and integration tests) can point at a local recording server;
+	 * the CLI reads the FIGMA_API_BASE env var and passes it through. A trailing
+	 * slash is stripped so the joined URL never doubles up.
+	 */
+	baseUrl?: string;
 	/** Injectable fetch; defaults to the global fetch at the edge. */
 	fetch?: typeof fetch;
 	/** Injectable delay; defaults to a real setTimeout-based sleep at the edge. */
@@ -191,7 +198,7 @@ export interface FigmaClientOptions {
 	jitter?: () => number;
 }
 
-const BASE_URL = "https://api.figma.com/v1";
+const DEFAULT_BASE_URL = "https://api.figma.com";
 const MAX_RETRIES = 3;
 /** Fallback wait (seconds) when a 429 omits Retry-After. */
 const DEFAULT_RETRY_AFTER_SECONDS = 1;
@@ -231,6 +238,8 @@ export function createFigmaClient(options: FigmaClientOptions): FigmaClient {
 	const sleep = options.sleep ?? defaultSleep;
 	const jitter = options.jitter ?? Math.random;
 	const { token } = options;
+	const origin = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+	const BASE_URL = `${origin}/v1`;
 
 	const baseHeaders: Record<string, string> = { "X-Figma-Token": token };
 

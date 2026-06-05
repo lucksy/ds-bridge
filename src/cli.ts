@@ -1,6 +1,7 @@
 // CLI entry — commander wiring only, no logic (SPEC §4).
 import { createRequire } from "node:module";
 import { Command } from "commander";
+import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
 import { registerReportCommand } from "./cli-commands/report.js";
 import { registerTokensCommand } from "./cli-commands/tokens.js";
@@ -20,6 +21,7 @@ export function buildProgram(): Command {
 	registerTokensCommand(program);
 	registerLintCommand(program);
 	registerReportCommand(program);
+	registerHandoffCommand(program);
 
 	return program;
 }

@@ -471,6 +471,60 @@ describe("createFigmaClient — postComment", () => {
 	});
 });
 
+describe("createFigmaClient — baseUrl override (T4.5)", () => {
+	it("defaults to https://api.figma.com when no baseUrl is given", async () => {
+		const { fetch, calls } = singleFetch(jsonResponse(fileFixture));
+		await makeClient(fetch).getFile(FILE_KEY);
+		expect(calls[0]?.url).toBe(`https://api.figma.com/v1/files/${FILE_KEY}`);
+	});
+
+	it("uses a custom baseUrl for every method when provided", async () => {
+		const { fetch, calls } = singleFetch(jsonResponse(fileFixture));
+		const client = createFigmaClient({
+			token: TOKEN,
+			fetch,
+			baseUrl: "http://127.0.0.1:51234",
+		});
+		await client.getFile(FILE_KEY);
+		expect(calls[0]?.url).toBe(`http://127.0.0.1:51234/v1/files/${FILE_KEY}`);
+	});
+
+	it("strips a trailing slash from a custom baseUrl (no double slash)", async () => {
+		const { fetch, calls } = singleFetch(jsonResponse(fileNodesFixture));
+		const client = createFigmaClient({
+			token: TOKEN,
+			fetch,
+			baseUrl: "http://127.0.0.1:51234/",
+		});
+		await client.getFileNodes(FILE_KEY, ["1:2"]);
+		expect(calls[0]?.url).toBe(
+			`http://127.0.0.1:51234/v1/files/${FILE_KEY}/nodes?ids=1%3A2`,
+		);
+	});
+
+	it("routes postComment through the custom baseUrl", async () => {
+		const { fetch, calls } = singleFetch(
+			jsonResponse({
+				id: "c1",
+				message: "hi",
+				client_meta: null,
+				created_at: "2026-06-05T10:00:00Z",
+				resolved_at: null,
+				user: { id: "1", handle: "Bot", img_url: "" },
+			}),
+		);
+		const client = createFigmaClient({
+			token: TOKEN,
+			fetch,
+			baseUrl: "http://127.0.0.1:51234",
+		});
+		await client.postComment(FILE_KEY, "hi");
+		expect(calls[0]?.url).toBe(
+			`http://127.0.0.1:51234/v1/files/${FILE_KEY}/comments`,
+		);
+	});
+});
+
 describe("createFigmaClient — defaults at the edge", () => {
 	it("works without injected fetch/sleep/jitter (uses defaults) when fetch provided only", async () => {
 		// The factory must not require sleep/jitter; defaults exist at the edge.

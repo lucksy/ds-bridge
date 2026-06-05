@@ -1,0 +1,283 @@
+// T4.5 — integration: the built CLI's `handoff <url>` command.
+// Spawns dist/cli.mjs (acceptance is against the bundle, like report-cli.test.ts)
+// against a local node:http server that serves the recorded Figma fixtures
+// (tests/fixtures/figma/*.json) — never the live network. FIGMA_API_BASE points
+// the client at the local server and FIGMA_TOKEN supplies the PAT.
+//
+// Routes:
+//   GET  /v1/files/:key            -> file.json        (full document)
+//   GET  /v1/files/:key/nodes      -> file-nodes.json  (node subtree)
+//   POST /v1/files/:key/comments   -> 200 { id: "c1" } (echoes the body for asserts)
+//   GET  /v1/files/UNAUTHORIZED/... -> 401              (token failure route)
+import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+const execFileAsync = promisify(execFile);
+const repoRoot = join(import.meta.dirname, "..", "..");
+const cliPath = join(repoRoot, "dist", "cli.mjs");
+const fixturesDir = join(repoRoot, "tests", "fixtures", "figma");
+
+const fileFixture = readFileSync(join(fixturesDir, "file.json"), "utf8");
+const fileNodesFixture = readFileSync(
+	join(fixturesDir, "file-nodes.json"),
+	"utf8",
+);
+
+const FILE_KEY = "ABcdEFghIJklMNopQRstUV";
+const UNAUTHORIZED_KEY = "UNAUTHORIZED";
+const TOKEN = "figd-test-token";
+
+interface ExecError {
+	code: number;
+	stdout: string;
+	stderr: string;
+}
+
+function isExecError(value: unknown): value is ExecError {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"code" in value &&
+		"stderr" in value
+	);
+}
+
+/** The last comment POST body the server received, for assertion. */
+interface CommentCapture {
+	body: { message?: string } | undefined;
+}
+const captured: CommentCapture = { body: undefined };
+
+/** Read the captured body through a function so flow analysis keeps the full type. */
+function lastComment(): { message?: string } | undefined {
+	return captured.body;
+}
+
+function makeServer(): Server {
+	return createServer((req, res) => {
+		const url = req.url ?? "";
+		const method = req.method ?? "GET";
+
+		// 401 route: any request whose key is UNAUTHORIZED.
+		if (url.includes(`/v1/files/${UNAUTHORIZED_KEY}`)) {
+			res.writeHead(401, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ err: "Invalid token" }));
+			return;
+		}
+
+		if (method === "POST" && url === `/v1/files/${FILE_KEY}/comments`) {
+			const chunks: Buffer[] = [];
+			req.on("data", (chunk: Buffer) => chunks.push(chunk));
+			req.on("end", () => {
+				const raw = Buffer.concat(chunks).toString("utf8");
+				try {
+					captured.body = JSON.parse(raw) as { message?: string };
+				} catch {
+					captured.body = undefined;
+				}
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(
+					JSON.stringify({
+						id: "c1",
+						message: captured.body?.message ?? "",
+						client_meta: null,
+						created_at: "2026-06-05T10:00:00Z",
+						resolved_at: null,
+						user: { id: "1", handle: "Bot", img_url: "" },
+					}),
+				);
+			});
+			return;
+		}
+
+		if (method === "GET" && url.startsWith(`/v1/files/${FILE_KEY}/nodes`)) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(fileNodesFixture);
+			return;
+		}
+
+		if (method === "GET" && url === `/v1/files/${FILE_KEY}`) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(fileFixture);
+			return;
+		}
+
+		res.writeHead(404, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ err: "Not found" }));
+	});
+}
+
+let server: Server;
+let baseUrl: string;
+
+/** Run the CLI; resolve with code/stdout/stderr whether it exits 0 or not. */
+async function runCli(
+	args: string[],
+	extraEnv?: NodeJS.ProcessEnv,
+): Promise<{ code: number; stdout: string; stderr: string }> {
+	const env: NodeJS.ProcessEnv = {
+		...process.env,
+		FIGMA_API_BASE: baseUrl,
+		FIGMA_TOKEN: TOKEN,
+		...extraEnv,
+	};
+	try {
+		const { stdout, stderr } = await execFileAsync(
+			process.execPath,
+			[cliPath, ...args],
+			{ encoding: "utf8", env },
+		);
+		return { code: 0, stdout, stderr };
+	} catch (error) {
+		if (!isExecError(error)) throw error;
+		return { code: error.code, stdout: error.stdout, stderr: error.stderr };
+	}
+}
+
+function fileUrl(key: string, nodeId?: string): string {
+	const base = `https://www.figma.com/design/${key}/Demo`;
+	return nodeId === undefined ? base : `${base}?node-id=${nodeId}`;
+}
+
+describe("ds-bridge handoff (built dist/cli.mjs)", () => {
+	beforeAll(async () => {
+		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
+		server = makeServer();
+		await new Promise<void>((resolve) => {
+			server.listen(0, "127.0.0.1", () => resolve());
+		});
+		const address = server.address() as AddressInfo;
+		baseUrl = `http://127.0.0.1:${address.port}`;
+	}, 120_000);
+
+	afterAll(async () => {
+		await new Promise<void>((resolve) => {
+			server.close(() => resolve());
+		});
+	});
+
+	it("scores the full file deterministically (90) and exits 0 at threshold 80", async () => {
+		const result = await runCli([
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"80",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("90");
+	});
+
+	it("threshold 95 fails the gate (exit 1) on a score of 90", async () => {
+		const result = await runCli([
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"95",
+		]);
+		expect(result.code).toBe(1);
+	});
+
+	it("--format=json emits a ReadinessReport with score, deductions, and stats", async () => {
+		const result = await runCli([
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"80",
+			"--format=json",
+		]);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as {
+			score: number;
+			deductions: { rule: string; nodeId: string; points: number }[];
+			stats: { totalNodes: number; instanceCount: number };
+		};
+		expect(parsed.score).toBe(90);
+		expect(parsed.stats.totalNodes).toBe(6);
+		expect(parsed.stats.instanceCount).toBe(1);
+		expect(parsed.deductions.length).toBeGreaterThan(0);
+		expect(parsed.deductions[0]?.rule).toBe("component");
+	});
+
+	it("a node-id URL scores the subtree via getFileNodes", async () => {
+		// file-nodes.json node 1:2 is Card/Primary FRAME + one bound RECTANGLE.
+		const result = await runCli([
+			"handoff",
+			fileUrl(FILE_KEY, "1-2"),
+			"--threshold",
+			"0",
+			"--format=json",
+		]);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as {
+			stats: { totalNodes: number };
+		};
+		// Subtree has fewer nodes than the full 6-node document.
+		expect(parsed.stats.totalNodes).toBe(2);
+	});
+
+	it("a 401 from the API exits 2 with an auth message", async () => {
+		const result = await runCli(["handoff", fileUrl(UNAUTHORIZED_KEY)]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("auth");
+	});
+
+	it("an invalid URL exits 2 with an actionable message", async () => {
+		const result = await runCli(["handoff", "https://example.com/not-figma"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("figma");
+	});
+
+	it("a missing token exits 2 with PAT setup guidance", async () => {
+		const result = await runCli(["handoff", fileUrl(FILE_KEY)], {
+			FIGMA_TOKEN: "",
+			CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN: "",
+		});
+		expect(result.code).toBe(2);
+		const lower = result.stderr.toLowerCase();
+		expect(lower).toContain("token");
+		// Mentions the required scopes and the Dev/Full seat caveat.
+		expect(lower).toContain("file_content:read");
+		expect(lower).toContain("seat");
+	});
+
+	it("--comment --yes posts the deductions as one Figma comment", async () => {
+		captured.body = undefined;
+		const result = await runCli([
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"95",
+			"--comment",
+			"--yes",
+		]);
+		// The gate still drives the exit code (score 90 < 95 -> exit 1).
+		expect(result.code).toBe(1);
+		const posted = lastComment();
+		expect(posted).toBeDefined();
+		const message = posted?.message ?? "";
+		// The comment carries the score and at least the top deduction's rule/fix.
+		expect(message).toContain("90");
+		expect(message.toLowerCase()).toContain("component");
+	});
+
+	it("--comment without --yes in non-TTY refuses to comment but still reports", async () => {
+		captured.body = undefined;
+		const result = await runCli([
+			"handoff",
+			fileUrl(FILE_KEY),
+			"--threshold",
+			"80",
+			"--comment",
+		]);
+		// Reports (exit 0 at threshold 80) but does NOT post.
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("90");
+		expect(lastComment()).toBeUndefined();
+		expect(result.stderr.toLowerCase()).toContain("--yes");
+	});
+});
