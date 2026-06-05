@@ -1,0 +1,50 @@
+{
+	"format": "tokens-studio",
+	"tokens": [
+		{
+			"name": "action.on-primary",
+			"type": "color",
+			"value": "#ffffff",
+			"aliasOf": "colors.white",
+			"group": "semantic"
+		},
+		{
+			"name": "action.primary",
+			"type": "color",
+			"value": "#3b82f6",
+			"aliasOf": "colors.blue.500",
+			"group": "semantic"
+		},
+		{
+			"name": "colors.blue.500",
+			"type": "color",
+			"value": "#3b82f6",
+			"description": "Primary blue",
+			"group": "global"
+		},
+		{
+			"name": "colors.white",
+			"type": "color",
+			"value": "#ffffff",
+			"group": "global"
+		},
+		{
+			"name": "fontWeights.bold",
+			"type": "fontWeight",
+			"value": "700",
+			"group": "global"
+		},
+		{
+			"name": "spacing.md",
+			"type": "dimension",
+			"value": "16",
+			"group": "global"
+		},
+		{
+			"name": "spacing.sm",
+			"type": "dimension",
+			"value": "8",
+			"group": "global"
+		}
+	]
+}

@@ -1,0 +1,99 @@
+{
+	"format": "w3c",
+	"tokens": [
+		{
+			"name": "color.base.blue-500",
+			"type": "color",
+			"value": "#3b82f6",
+			"description": "Primary blue, mid scale",
+			"group": "color"
+		},
+		{
+			"name": "color.base.gray-100",
+			"type": "color",
+			"value": "#f3f4f6",
+			"group": "color"
+		},
+		{
+			"name": "color.base.gray-900",
+			"type": "color",
+			"value": "#111827",
+			"group": "color"
+		},
+		{
+			"name": "color.brand.on-primary",
+			"type": "color",
+			"value": "#ffffff",
+			"group": "color"
+		},
+		{
+			"name": "color.brand.primary",
+			"type": "color",
+			"value": "#3b82f6",
+			"aliasOf": "color.base.blue-500",
+			"group": "color"
+		},
+		{
+			"name": "color.brand.surface",
+			"type": "color",
+			"value": "#f3f4f6",
+			"aliasOf": "color.base.gray-100",
+			"group": "color"
+		},
+		{
+			"name": "font.family.sans",
+			"type": "fontFamily",
+			"value": "Inter, system-ui, sans-serif",
+			"group": "font"
+		},
+		{
+			"name": "font.weight.bold",
+			"type": "fontWeight",
+			"value": 700,
+			"group": "font"
+		},
+		{
+			"name": "font.weight.regular",
+			"type": "fontWeight",
+			"value": 400,
+			"group": "font"
+		},
+		{
+			"name": "motion.duration.fast",
+			"type": "duration",
+			"value": "150ms",
+			"group": "motion"
+		},
+		{
+			"name": "shadow.card",
+			"type": "shadow",
+			"value": {
+				"color": "#11182733",
+				"offsetX": "0px",
+				"offsetY": "2px",
+				"blur": "8px",
+				"spread": "0px"
+			},
+			"description": "Resting card elevation",
+			"group": "shadow"
+		},
+		{
+			"name": "space.lg",
+			"type": "dimension",
+			"value": "24px",
+			"group": "space"
+		},
+		{
+			"name": "space.md",
+			"type": "dimension",
+			"value": "16px",
+			"group": "space"
+		},
+		{
+			"name": "space.sm",
+			"type": "dimension",
+			"value": "8px",
+			"group": "space"
+		}
+	]
+}

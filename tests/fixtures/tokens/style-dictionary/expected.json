@@ -1,0 +1,55 @@
+{
+	"format": "style-dictionary",
+	"tokens": [
+		{
+			"name": "asset.icon.logo",
+			"type": "other",
+			"value": "assets/logo.svg",
+			"group": "asset"
+		},
+		{
+			"name": "color.base.blue",
+			"type": "color",
+			"value": "#3b82f6",
+			"description": "Primary blue",
+			"group": "color"
+		},
+		{
+			"name": "color.base.gray",
+			"type": "color",
+			"value": "#f3f4f6",
+			"group": "color"
+		},
+		{
+			"name": "color.brand.primary",
+			"type": "color",
+			"value": "#3b82f6",
+			"aliasOf": "color.base.blue",
+			"group": "color"
+		},
+		{
+			"name": "size.font.base",
+			"type": "dimension",
+			"value": "1rem",
+			"group": "size"
+		},
+		{
+			"name": "size.spacing.md",
+			"type": "dimension",
+			"value": "16px",
+			"group": "size"
+		},
+		{
+			"name": "size.spacing.sm",
+			"type": "dimension",
+			"value": "8px",
+			"group": "size"
+		},
+		{
+			"name": "time.duration.fast",
+			"type": "duration",
+			"value": "150ms",
+			"group": "time"
+		}
+	]
+}
