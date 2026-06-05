@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { registerA11yCommand } from "./cli-commands/a11y.js";
+import { registerChangelogCommand } from "./cli-commands/changelog.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerImpactCommand } from "./cli-commands/impact.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
@@ -30,6 +31,7 @@ export function buildProgram(): Command {
 	registerParityCommand(program);
 	registerA11yCommand(program);
 	registerImpactCommand(program);
+	registerChangelogCommand(program);
 
 	return program;
 }
