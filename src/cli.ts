@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { registerLintCommand } from "./cli-commands/lint.js";
+import { registerReportCommand } from "./cli-commands/report.js";
 import { registerTokensCommand } from "./cli-commands/tokens.js";
 
 const require = createRequire(import.meta.url);
@@ -18,6 +19,7 @@ export function buildProgram(): Command {
 
 	registerTokensCommand(program);
 	registerLintCommand(program);
+	registerReportCommand(program);
 
 	return program;
 }
