@@ -10,6 +10,10 @@ Hand-authored June 2026, shaped after the three formats' official docs:
   `value`/`type`, `$themes` + `$metadata.tokenSetOrder`). Aliases use `{path.in.merged.sets}`.
 - **`style-dictionary/`** — Style Dictionary v3 source (`value` leaves, `comment`,
   `{path.value}` references, no explicit types).
+- **`a11y-modes.tokens.json`** (T7.3) — Tokens Studio export with two themes
+  (`light`, `dark`) carrying mode-specific `text.*` / `surface.canvas` colors.
+  The `light` mode passes AA contrast; the `dark` mode has a guaranteed-failing
+  `text.muted` pair. Drives the `ds-bridge a11y` mode-aware integration test.
 
 Each source file has an `expected.json` twin: the exact `TokenMap` (see
 `src/engines/tokens/types.ts`) its parser must produce.

@@ -1,6 +1,7 @@
 // CLI entry — commander wiring only, no logic (SPEC §4).
 import { createRequire } from "node:module";
 import { Command } from "commander";
+import { registerA11yCommand } from "./cli-commands/a11y.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
 import { registerParityCommand } from "./cli-commands/parity.js";
@@ -26,6 +27,7 @@ export function buildProgram(): Command {
 	registerHandoffCommand(program);
 	registerRegistryCommand(program);
 	registerParityCommand(program);
+	registerA11yCommand(program);
 
 	return program;
 }

@@ -1,0 +1,35 @@
+{
+	"light": {
+		"text": {
+			"primary": { "value": "#111827", "type": "color" },
+			"muted": { "value": "#6b7280", "type": "color" }
+		},
+		"surface": {
+			"canvas": { "value": "#ffffff", "type": "color" }
+		}
+	},
+	"dark": {
+		"text": {
+			"primary": { "value": "#f9fafb", "type": "color" },
+			"muted": { "value": "#4b5563", "type": "color" }
+		},
+		"surface": {
+			"canvas": { "value": "#111827", "type": "color" }
+		}
+	},
+	"$themes": [
+		{
+			"id": "light-id",
+			"name": "light",
+			"selectedTokenSets": { "light": "enabled" }
+		},
+		{
+			"id": "dark-id",
+			"name": "dark",
+			"selectedTokenSets": { "dark": "enabled" }
+		}
+	],
+	"$metadata": {
+		"tokenSetOrder": ["light", "dark"]
+	}
+}
