@@ -1,0 +1,41 @@
+{
+	"name": "ds-bridge",
+	"version": "0.0.1",
+	"description": "Connect your design system's Figma library to your codebase: token drift detection, DS-aware linting, design-to-code, and pre-handoff QA.",
+	"author": {
+		"name": "lucksy"
+	},
+	"userConfig": {
+		"figma_file_key": {
+			"type": "string",
+			"title": "Figma library file key",
+			"description": "Key from the library file URL",
+			"required": false
+		},
+		"figma_token": {
+			"type": "string",
+			"title": "Figma personal access token",
+			"description": "Dev/Full-seat PAT; scopes: file_content:read, library_content:read, file_versions:read, file_comments:read+write",
+			"sensitive": true
+		},
+		"token_source": {
+			"type": "file",
+			"title": "Design token source file",
+			"description": "W3C/Tokens Studio/Style Dictionary entry file. Auto-detected if unset"
+		},
+		"report_style": {
+			"type": "string",
+			"title": "Report output",
+			"description": "html | terminal | both",
+			"default": "both"
+		},
+		"readiness_threshold": {
+			"type": "number",
+			"title": "Handoff readiness gate",
+			"description": "Minimum readiness score (0-100) for /ds-bridge:handoff-qa to pass a frame",
+			"default": 80,
+			"min": 0,
+			"max": 100
+		}
+	}
+}
