@@ -1,0 +1,13 @@
+{
+	"color": {
+		"$type": "color",
+		"brand": {
+			"primary": { "$value": "#3b82f6" },
+			"surface": { "$value": "#f3f4f6" }
+		}
+	},
+	"space": {
+		"$type": "dimension",
+		"md": { "$value": "16px" }
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"color": {
+		"$type": "color",
+		"text": {
+			"default": { "$value": "#111827" },
+			"muted": { "$value": "#6b7280" }
+		}
+	}
+}
