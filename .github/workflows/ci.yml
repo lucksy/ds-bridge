@@ -78,3 +78,48 @@ jobs:
         env:
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
           SMOKE_FILE_KEY: ${{ secrets.SMOKE_FILE_KEY }}
+
+  # T6.2 — headless E2E suite (plugin loads + lint hook fires in a real
+  # `claude -p` session). Runs nightly (cron above) and on manual
+  # workflow_dispatch ONLY — never on push/PR (same `if` gate as figma-smoke).
+  #
+  # Self-skip semantics differ from figma-smoke. The tests gate on DS_BRIDGE_E2E
+  # (describe.skipIf), but DS_BRIDGE_E2E=1 + no auth would make `claude -p` fail
+  # auth → RED, not skip. So the test STEP is gated in shell on ANTHROPIC_API_KEY:
+  # when the secret is absent the step prints "skipped (no key)" and exits 0
+  # (GitHub does not support `secrets` in step/job `if`). With the key present,
+  # both DS_BRIDGE_E2E and ANTHROPIC_API_KEY are exported and the suite runs for
+  # real (plugin-load uses `--bare`; lint-hook never does — `--bare` skips hooks).
+  e2e:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (locked)
+        run: npm ci
+
+      - name: Build bundle
+        # The lint hook spawns dist/cli.mjs, so the bundle must exist before the
+        # headless run exercises it.
+        run: npm run build
+
+      - name: Headless E2E (skips without ANTHROPIC_API_KEY)
+        # No package.json script (T6.2 owns no package.json edit): invoke vitest
+        # directly with the dedicated e2e config. The shell guard makes a missing
+        # key a clean skip (exit 0) instead of a live-auth RED.
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "skipped (no ANTHROPIC_API_KEY secret configured)"
+            exit 0
+          fi
+          npx vitest run --config vitest.e2e.config.ts \
+            e2e/plugin-load.test.ts e2e/lint-hook.test.ts
+        env:
+          DS_BRIDGE_E2E: "1"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
