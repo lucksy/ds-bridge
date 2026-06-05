@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output (committed only at release tags)
+dist/
+
+# Test coverage
+coverage/
+
+# Environment & secrets
+.env
+.env.*
+
+# OS noise
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.idea/
+.vscode/
+
+# Next.js (website/)
+website/.next/
+website/out/
+website/node_modules/
