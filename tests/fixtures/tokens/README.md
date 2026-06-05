@@ -24,7 +24,8 @@ Each source file has an `expected.json` twin: the exact `TokenMap` (see
    normalization (hex case, px/rem, oklch) is T1.5's job, not the parsers'.
 5. Tokens Studio type mapping: `spacing|sizing|borderRadius|borderWidth|dimension` →
    `dimension`, `fontWeights` → `fontWeight`, `fontFamilies` → `fontFamily`,
-   `color` → `color`, else → `other`.
+   `color` → `color`, `opacity|number` → `number`, `boxShadow` → `shadow`,
+   `typography` → `typography`, else → `other` (full table authoritative per T1.3).
 6. Style Dictionary has no explicit types: category (first segment) heuristics —
    `color` → `color`, `size|space|spacing` → `dimension`, `time` → `duration`,
    unknown → `other`. SD references `{a.b.value}` strip the trailing `.value` for `aliasOf`.
