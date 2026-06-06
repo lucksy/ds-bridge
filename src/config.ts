@@ -1,5 +1,10 @@
 // Config resolution: CLI flags > env (CLAUDE_PLUGIN_OPTION_*, FIGMA_TOKEN)
-// > .ds-bridge.json > userConfig defaults (SPEC §8). Pure — all sources injected.
+// > .ds-bridge.json > userConfig defaults (SPEC §8). resolveConfig is pure —
+// all sources injected. writeProjectConfig (M1.1) is the one I/O edge here:
+// the sanctioned, atomic, order-preserving writer for the project file.
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { type ArtifactId, lookupArtifact } from "./engines/report/catalog.js";
 
 export type ReportStyle = "html" | "terminal" | "both";
 
@@ -13,6 +18,14 @@ export interface ResolvedConfig {
 	tokenSource: string | undefined;
 	reportStyle: ReportStyle;
 	readinessThreshold: number;
+	/**
+	 * Dashboard composer selection (SPEC-measure §3). At most one is set —
+	 * the project file rejects both. `dashboardView` is validated syntactically
+	 * here (any string); preset-name semantics live in resolveView (M0.2).
+	 * `dashboardArtifacts` is validated semantically here (every id real).
+	 */
+	dashboardView: string | undefined;
+	dashboardArtifacts: ArtifactId[] | undefined;
 }
 
 export interface ConfigFlags {
@@ -46,6 +59,8 @@ interface ProjectFileValues {
 	tokenSource?: string;
 	reportStyle?: ReportStyle;
 	readinessThreshold?: number;
+	dashboardView?: string;
+	dashboardArtifacts?: ArtifactId[];
 	hadFigmaToken: boolean;
 }
 
@@ -104,6 +119,56 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 			};
 		}
 		values.readinessThreshold = n;
+	}
+
+	// Dashboard composer keys (SPEC-measure §3): mutually exclusive.
+	if (
+		obj.dashboard_view !== undefined &&
+		obj.dashboard_artifacts !== undefined
+	) {
+		return {
+			kind: "invalid",
+			message:
+				"dashboard_view and dashboard_artifacts are mutually exclusive — set one, not both",
+		};
+	}
+	if (obj.dashboard_view !== undefined) {
+		// Syntactic check only — preset-name validation lives in resolveView (M0.2).
+		if (typeof obj.dashboard_view !== "string") {
+			return { kind: "invalid", message: "dashboard_view must be a string" };
+		}
+		values.dashboardView = obj.dashboard_view;
+	}
+	if (obj.dashboard_artifacts !== undefined) {
+		if (!Array.isArray(obj.dashboard_artifacts)) {
+			return {
+				kind: "invalid",
+				message: "dashboard_artifacts must be an array of artifact ids",
+			};
+		}
+		const artifacts: ArtifactId[] = [];
+		for (const entry of obj.dashboard_artifacts) {
+			if (typeof entry !== "string") {
+				return {
+					kind: "invalid",
+					message: `dashboard_artifacts must contain only strings, got ${JSON.stringify(entry)}`,
+				};
+			}
+			// Semantic check HERE: every id must resolve in the frozen catalog.
+			const lookup = lookupArtifact(entry);
+			if (lookup.kind === "unknown") {
+				const hint =
+					lookup.suggestions.length > 0
+						? ` — did you mean ${lookup.suggestions.join(", ")}?`
+						: "";
+				return {
+					kind: "invalid",
+					message: `dashboard_artifacts has an unknown artifact id ${JSON.stringify(entry)}${hint}`,
+				};
+			}
+			artifacts.push(lookup.artifact.id);
+		}
+		values.dashboardArtifacts = artifacts;
 	}
 
 	return { kind: "ok", values };
@@ -179,7 +244,74 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 			envThreshold ??
 			project.readinessThreshold ??
 			DEFAULTS.readinessThreshold,
+		// Dashboard selection comes only from the project file (SPEC-measure §3:
+		// no env vars, no userConfig). The flags > config > `everything` default
+		// is applied downstream by resolveView (M0.2), not here.
+		dashboardView: project.dashboardView,
+		dashboardArtifacts: project.dashboardArtifacts,
 	};
 
 	return { kind: "ok", config, warnings };
+}
+
+/** Name of the project config file, beside which the temp file is written. */
+const PROJECT_FILE_NAME = ".ds-bridge.json";
+
+/** A JSON value a patch may set on the project file. */
+export type JsonPatchValue =
+	| string
+	| number
+	| boolean
+	| null
+	| readonly JsonPatchValue[]
+	| { readonly [key: string]: JsonPatchValue };
+
+/**
+ * Atomic, order-preserving writer for `.ds-bridge.json` (SPEC-measure §3 write
+ * contract). The sanctioned writer (wizard + `dashboard set`); `parseProjectFile`
+ * is NOT a round-trip path (it extracts only known keys), so preservation lives
+ * entirely here.
+ *
+ * Behavior:
+ * - Reads the existing file if present and parses it as a plain JSON object,
+ *   preserving its keys AND their insertion order (parse → spread → apply patch).
+ * - Each patch entry overwrites or adds a key; a value of `undefined` DELETES the
+ *   key — needed when `set --view` replaces an artifacts list and vice versa.
+ * - Genuinely-new keys are appended last (JS object insertion order).
+ * - Output is `JSON.stringify(obj, null, 2) + "\n"` (the repo's seeding convention).
+ * - Writes to a temp file in the SAME directory, then renames over the target so a
+ *   reader never sees a partially-written file; creates the file when absent.
+ */
+export function writeProjectConfig(
+	dir: string,
+	patch: Record<string, JsonPatchValue | undefined>,
+): void {
+	const filePath = join(dir, PROJECT_FILE_NAME);
+
+	let existing: Record<string, unknown> = {};
+	if (existsSync(filePath)) {
+		const raw = JSON.parse(readFileSync(filePath, "utf8")) as unknown;
+		if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+			existing = raw as Record<string, unknown>;
+		}
+	}
+
+	// Spread preserves existing key order; patch keys overwrite in place,
+	// new keys land at the end, `undefined` deletes.
+	const merged: Record<string, unknown> = { ...existing };
+	for (const [key, value] of Object.entries(patch)) {
+		if (value === undefined) {
+			delete merged[key];
+		} else {
+			merged[key] = value;
+		}
+	}
+
+	const text = `${JSON.stringify(merged, null, 2)}\n`;
+
+	// Atomic: write a same-dir temp file, then rename over the target. A unique
+	// name avoids collisions between concurrent writers; rename is the swap.
+	const tempPath = join(dir, `${PROJECT_FILE_NAME}.${process.pid}.tmp`);
+	writeFileSync(tempPath, text, "utf8");
+	renameSync(tempPath, filePath);
 }
