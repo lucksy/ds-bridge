@@ -96,6 +96,28 @@ function handoffLine(
 	return JSON.stringify({ at, kind: "handoff", score, frameName, deductions });
 }
 
+/** A well-formed a11y history record (the T7.22 append shape). */
+function a11yLine(
+	at: string,
+	level: "AA" | "AAA",
+	modes: { mode: string; passed: number; failed: number }[],
+): string {
+	return JSON.stringify({ at, kind: "a11y", level, modes });
+}
+
+/** A well-formed impact history record (the T7.22 append shape). */
+function impactLine(
+	at: string,
+	counts: {
+		breaking: number;
+		additive: number;
+		cosmetic: number;
+		touchedCallSites: number;
+	},
+): string {
+	return JSON.stringify({ at, kind: "impact", ...counts });
+}
+
 /** Write <dir>/.ds-bridge/registry.json with the given contents. */
 async function seedRegistry(dir: string, registry: unknown): Promise<void> {
 	const stateDir = join(dir, ".ds-bridge");
@@ -358,8 +380,8 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("Chip");
 	});
 
-	it("T5.5b ACCEPTANCE (C5): all four artifacts present → FOUR svg charts", async () => {
-		const dir = await freshTmp("ds-report-four-");
+	it("T7.22 ACCEPTANCE (C7): all six artifacts present → SIX svg charts", async () => {
+		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
 			tokensCheckLine("2026-06-02T10:00:00.000Z", 0, 2, 1),
@@ -371,6 +393,16 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 			handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", [
 				{ rule: "var-binding", points: 8 },
 			]),
+			a11yLine("2026-06-05T10:00:00.000Z", "AA", [
+				{ mode: "light", passed: 9, failed: 1 },
+				{ mode: "dark", passed: 8, failed: 2 },
+			]),
+			impactLine("2026-06-06T10:00:00.000Z", {
+				breaking: 2,
+				additive: 3,
+				cosmetic: 1,
+				touchedCallSites: 14,
+			}),
 		]);
 		await seedRegistry(dir, sampleRegistry());
 
@@ -379,10 +411,72 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// Drift trend, lint-by-type, readiness gauge, parity heat-grid: one each.
-		expect(countSvgs(html)).toBe(4);
-		// None of the four sections falls back to the empty state.
+		// Drift, lint, readiness, parity, contrast, impact: one chart each.
+		expect(countSvgs(html)).toBe(6);
+		// None of the six sections falls back to the empty state.
 		expect(html).not.toContain("No data yet");
+	});
+
+	it("T7.22: an a11y history line populates the contrast section", async () => {
+		const dir = await freshTmp("ds-report-a11y-");
+		await seedHistory(dir, [
+			a11yLine("2026-06-05T10:00:00.000Z", "AAA", [
+				{ mode: "light", passed: 5, failed: 3 },
+			]),
+		]);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("5 passed");
+		expect(html).toContain("3 failed");
+		expect(html).toContain("AAA");
+		expect(html).not.toContain("ds-bridge a11y</code>");
+	});
+
+	it("T7.22: the LAST a11y line wins for the contrast section", async () => {
+		const dir = await freshTmp("ds-report-a11y-last-");
+		await seedHistory(dir, [
+			a11yLine("2026-06-04T10:00:00.000Z", "AA", [
+				{ mode: "light", passed: 1, failed: 9 },
+			]),
+			a11yLine("2026-06-05T10:00:00.000Z", "AA", [
+				{ mode: "light", passed: 9, failed: 0 },
+			]),
+		]);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("9 passed");
+		expect(html).not.toContain("9 failed");
+	});
+
+	it("T7.22: an impact history line populates the change-impact section", async () => {
+		const dir = await freshTmp("ds-report-impact-");
+		await seedHistory(dir, [
+			impactLine("2026-06-05T10:00:00.000Z", {
+				breaking: 1,
+				additive: 0,
+				cosmetic: 0,
+				touchedCallSites: 7,
+			}),
+		]);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Touches 7 call sites");
+		expect(html).not.toContain("ds-bridge impact</code>");
 	});
 
 	it("T5.5b: with no handoff line and no registry, readiness + parity stay empty", async () => {

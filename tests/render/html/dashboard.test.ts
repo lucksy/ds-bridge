@@ -33,6 +33,19 @@ const fullData: ReportData = {
 			{ reason: "Hard-coded color", points: 8 },
 		],
 	},
+	a11y: {
+		level: "AA",
+		modes: [
+			{ mode: "light", passed: 12, failed: 2 },
+			{ mode: "dark", passed: 10, failed: 4 },
+		],
+	},
+	impact: {
+		breaking: 3,
+		additive: 5,
+		cosmetic: 2,
+		touchedCallSites: 37,
+	},
 	parity: {
 		columns: ["variant", "size", "icon"],
 		rows: [
@@ -118,15 +131,32 @@ describe("renderDashboard — self-containment (offline safe)", () => {
 describe("renderDashboard — full data", () => {
 	const html = renderDashboard(fullData);
 
-	it("renders all four section titles", () => {
+	it("renders all six section titles", () => {
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
 		expect(html).toMatch(/Readiness/i);
 		expect(html).toMatch(/Parity/i);
 	});
 
-	it("emits exactly four <svg> charts (one per section)", () => {
-		expect(countMatches(html, /<svg\b/g)).toBe(4);
+	it("emits exactly six <svg> charts (one per section)", () => {
+		expect(countMatches(html, /<svg\b/g)).toBe(6);
+	});
+
+	it("includes a11y mode labels and failure counts (T7.22)", () => {
+		expect(html).toMatch(/Contrast/i);
+		expect(html).toContain("light");
+		expect(html).toContain("dark");
+		expect(html).toContain("12 passed");
+		expect(html).toContain("4 failed");
+		expect(html).toContain("AA");
+	});
+
+	it("includes impact severity bars and the call-site blast radius (T7.22)", () => {
+		expect(html).toMatch(/Change impact/i);
+		expect(html).toMatch(/Breaking/);
+		expect(html).toMatch(/Additive/);
+		expect(html).toMatch(/Cosmetic/);
+		expect(html).toContain("37 call site");
 	});
 
 	it("shows no empty-state placeholder copy when all sections present", () => {
@@ -161,23 +191,25 @@ describe("renderDashboard — full data", () => {
 describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
-	it("renders all four empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(4);
+	it("renders all six empty-state panels", () => {
+		expect(countMatches(html, /No data yet/gi)).toBe(6);
 	});
 
 	it("emits zero <svg> charts", () => {
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
 	});
 
-	it("still renders all four section titles", () => {
+	it("still renders all six section titles", () => {
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
 		expect(html).toMatch(/Readiness/i);
 		expect(html).toMatch(/Parity/i);
+		expect(html).toMatch(/Contrast/i);
+		expect(html).toMatch(/Change impact/i);
 	});
 
 	it("mentions the ds-bridge command in each empty state", () => {
-		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(4);
+		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(6);
 	});
 });
 
@@ -191,9 +223,9 @@ describe("renderDashboard — partial mixes", () => {
 			],
 			readiness: { score: 70, frameName: "Frame", deductions: [] },
 		});
-		// two charts present, two empty states.
+		// two charts present, four empty states.
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(2);
+		expect(countMatches(html, /No data yet/gi)).toBe(4);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -208,7 +240,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(3);
+		expect(countMatches(html, /No data yet/gi)).toBe(5);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -218,7 +250,27 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(4);
+		expect(countMatches(html, /No data yet/gi)).toBe(6);
+	});
+
+	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
+		const html = renderDashboard({
+			generatedAt: emptyData.generatedAt,
+			project: "partial",
+			a11y: { level: "AA", modes: [] },
+		});
+		expect(countMatches(html, /<svg\b/g)).toBe(0);
+		expect(countMatches(html, /No data yet/gi)).toBe(6);
+	});
+
+	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
+		const html = renderDashboard({
+			generatedAt: emptyData.generatedAt,
+			project: "partial",
+			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
+		});
+		expect(countMatches(html, /<svg\b/g)).toBe(1);
+		expect(countMatches(html, /No data yet/gi)).toBe(5);
 	});
 });
 

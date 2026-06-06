@@ -1,6 +1,8 @@
 // T7.3 — integration: the built CLI's `a11y [path]` command. Spawns
 // dist/cli.mjs against token fixtures and asserts exit codes + JSON shape.
 import { execFile } from "node:child_process";
+import { copyFile, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
@@ -145,5 +147,49 @@ describe("ds-bridge a11y (built dist/cli.mjs)", () => {
 		const result = await run(["a11y", modesFixture, "--modes=nope"]);
 		expect(result.code).toBe(2);
 		expect(result.stderr.toLowerCase()).toContain("mode");
+	});
+
+	it("T7.22: a directory run appends one a11y history line", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "ds-a11y-history-"));
+		try {
+			await copyFile(modesFixture, join(dir, "tokens.json"));
+			const result = await run(["a11y", dir, "--format=json"]);
+			expect(result.code).toBe(1);
+
+			const text = await readFile(
+				join(dir, ".ds-bridge", "history.jsonl"),
+				"utf8",
+			);
+			const lines = text.trim().split("\n");
+			expect(lines).toHaveLength(1);
+			const record = JSON.parse(lines[0] ?? "") as {
+				at: string;
+				kind: string;
+				level: string;
+				modes: { mode: string; passed: number; failed: number }[];
+			};
+			expect(record.kind).toBe("a11y");
+			expect(record.level).toBe("AA");
+			expect(record.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+			const dark = record.modes.find((m) => m.mode === "dark");
+			expect(dark?.failed).toBeGreaterThan(0);
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("T7.22: a single-file run appends NO history (fixtures stay clean)", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "ds-a11y-nohistory-"));
+		try {
+			const file = join(dir, "tokens.json");
+			await copyFile(modesFixture, file);
+			const result = await run(["a11y", file, "--format=json"]);
+			expect(result.code).toBe(1);
+			await expect(
+				readFile(join(dir, ".ds-bridge", "history.jsonl"), "utf8"),
+			).rejects.toMatchObject({ code: "ENOENT" });
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
 	});
 });

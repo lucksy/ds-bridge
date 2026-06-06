@@ -10,10 +10,17 @@
 //   1  at least one pair fails
 //   2  operational error (bad path, no token source, unknown flag, bad modes)
 //
-// NOTE: history.jsonl + dashboard integration is the separate shared task
-// T7.22 — this command deliberately writes no state and no HTML.
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+// State: a DIRECTORY run appends one a11y line to .ds-bridge/history.jsonl for
+// the dashboard (T7.22); a single-file run stays side-effect-free. HTML lives
+// in `ds-bridge report`.
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	statSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
 import type { Command } from "commander";
 import {
 	type AuditReport,
@@ -317,6 +324,62 @@ function renderTerm(report: AuditReport, color: boolean): string {
 }
 
 /** Execute the `a11y` command. */
+/**
+ * One appended a11y history record (read back by `report` for the contrast
+ * section — T7.22). Mirrors the lint/tokens-check append pattern.
+ */
+interface A11yHistoryRecord {
+	at: string;
+	kind: "a11y";
+	level: ContrastLevel;
+	modes: { mode: string; passed: number; failed: number }[];
+}
+
+/**
+ * Tally findings into per-mode pass/fail counts. Unparseable findings are data
+ * problems (surfaced by the CLI), not contrast failures — they are excluded.
+ * Mode order follows first appearance in the report (already deterministic).
+ */
+function modeTallies(report: AuditReport): A11yHistoryRecord["modes"] {
+	const byMode = new Map<
+		string,
+		{ mode: string; passed: number; failed: number }
+	>();
+	for (const finding of report.findings) {
+		let tally = byMode.get(finding.mode);
+		if (tally === undefined) {
+			tally = { mode: finding.mode, passed: 0, failed: 0 };
+			byMode.set(finding.mode, tally);
+		}
+		if (finding.status === "pass") tally.passed += 1;
+		else if (finding.status === "fail") tally.failed += 1;
+	}
+	return [...byMode.values()];
+}
+
+/**
+ * Append ONE a11y history line to <targetDir>/.ds-bridge/history.jsonl.
+ *
+ * Only called for a DIRECTORY target (a project-level audit) — a single-file
+ * run stays side-effect-free so ad-hoc file checks never pollute a project's
+ * history (mirrors lint's directory-only append rule).
+ */
+function appendA11yHistory(targetDir: string, report: AuditReport): void {
+	const stateDir = join(targetDir, ".ds-bridge");
+	const record: A11yHistoryRecord = {
+		at: new Date().toISOString(),
+		kind: "a11y",
+		level: report.level,
+		modes: modeTallies(report),
+	};
+	mkdirSync(stateDir, { recursive: true });
+	appendFileSync(
+		join(stateDir, "history.jsonl"),
+		`${JSON.stringify(record)}\n`,
+		"utf8",
+	);
+}
+
 async function runA11y(path: string, options: A11yOptions): Promise<void> {
 	const format = options.format as A11yFormat;
 	if (format !== "json" && format !== "term") {
@@ -349,6 +412,12 @@ async function runA11y(path: string, options: A11yOptions): Promise<void> {
 	}
 
 	const report = auditContrast(filtered.modes, { level });
+
+	// History only for a directory target (project-level audit) — T7.22.
+	const resolvedTarget = resolve(path);
+	if (existsSync(resolvedTarget) && statSync(resolvedTarget).isDirectory()) {
+		appendA11yHistory(resolvedTarget, report);
+	}
 
 	if (format === "json") {
 		process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

@@ -30,7 +30,13 @@
 //   2  operational error (missing token / file key, API error, bad flag)
 //
 // NO history.jsonl writing and NO dashboard/HTML — that is the shared T7.22 task.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { cwd, env as processEnv } from "node:process";
 import { fileURLToPath } from "node:url";
@@ -205,6 +211,66 @@ function hasBreaking(diff: ComponentDiff): boolean {
 	if (diff.removed.length > 0) return true;
 	if (diff.renamed.length > 0) return true;
 	return diff.changed.some((c) => c.impact === "breaking");
+}
+
+/**
+ * One appended impact history record (read back by `report` for the
+ * change-impact section — T7.22). Counts per classification + blast radius.
+ */
+interface ImpactHistoryRecord {
+	at: string;
+	kind: "impact";
+	breaking: number;
+	additive: number;
+	cosmetic: number;
+	touchedCallSites: number;
+}
+
+/** Tally every diff entry by its classification. */
+function countByImpact(
+	diff: ComponentDiff,
+): Pick<ImpactHistoryRecord, "breaking" | "additive" | "cosmetic"> {
+	const counts = { breaking: 0, additive: 0, cosmetic: 0 };
+	const all = [
+		...diff.added,
+		...diff.removed,
+		...diff.renamed,
+		...diff.changed,
+	];
+	for (const entry of all) {
+		if (entry.impact === "breaking") counts.breaking += 1;
+		else if (entry.impact === "additive") counts.additive += 1;
+		else counts.cosmetic += 1;
+	}
+	return counts;
+}
+
+/**
+ * Append ONE impact history line to <targetDir>/.ds-bridge/history.jsonl.
+ * Only diff runs append — a baseline capture has nothing to report yet.
+ */
+function appendImpactHistory(
+	targetDir: string,
+	diff: ComponentDiff,
+	usageByName: Map<string, ComponentUsage>,
+): void {
+	const stateDir = join(targetDir, ".ds-bridge");
+	let touchedCallSites = 0;
+	for (const usage of usageByName.values()) {
+		touchedCallSites += usage.usages.length;
+	}
+	const record: ImpactHistoryRecord = {
+		at: new Date().toISOString(),
+		kind: "impact",
+		...countByImpact(diff),
+		touchedCallSites,
+	};
+	mkdirSync(stateDir, { recursive: true });
+	appendFileSync(
+		join(stateDir, "history.jsonl"),
+		`${JSON.stringify(record)}\n`,
+		"utf8",
+	);
 }
 
 interface DiffRow {
@@ -476,6 +542,11 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 			`${renderTerm(diff, usageByName, registry !== undefined, color)}\n`,
 		);
 	}
+
+	// History line for the dashboard (diff runs only) — T7.22. Lands in the
+	// project's .ds-bridge (cwd), NOT the cursor cache location, so `report`
+	// finds it alongside the other history kinds.
+	appendImpactHistory(cwd(), diff, usageByName);
 
 	// Advance the cursor after a successful run (write after reporting).
 	if (!writeCursor(path, nextCursor)) {

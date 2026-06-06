@@ -25,7 +25,9 @@ import type { Command } from "commander";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import type {
+	A11ySummary,
 	DriftTrendPoint,
+	ImpactSummary,
 	LintSummary,
 	Parity,
 	Readiness,
@@ -71,6 +73,24 @@ interface HandoffRecord {
 	deductions: { rule: string; points: number }[];
 }
 
+/** One `a11y` history record carrying per-mode contrast tallies (T7.22). */
+interface A11yRecord {
+	at: string;
+	kind: "a11y";
+	level: "AA" | "AAA";
+	modes: { mode: string; passed: number; failed: number }[];
+}
+
+/** One `impact` history record carrying the blast-radius counts (T7.22). */
+interface ImpactRecord {
+	at: string;
+	kind: "impact";
+	breaking: number;
+	additive: number;
+	cosmetic: number;
+	touchedCallSites: number;
+}
+
 /**
  * Human-readable reason per deduction rule (the readiness gauge shows reasons,
  * not raw rule ids). Mirrors the labels handoff.ts uses for its term report.
@@ -87,6 +107,8 @@ interface Aggregation {
 	driftTrend: DriftTrendPoint[];
 	lintSummary: LintSummary | undefined;
 	readiness: Readiness | undefined;
+	a11y: A11ySummary | undefined;
+	impact: ImpactSummary | undefined;
 }
 
 function asNumber(value: unknown): number {
@@ -109,12 +131,20 @@ function aggregateHistory(
 	try {
 		text = readFileSync(historyPath, "utf8");
 	} catch {
-		return { driftTrend: [], lintSummary: undefined, readiness: undefined };
+		return {
+			driftTrend: [],
+			lintSummary: undefined,
+			readiness: undefined,
+			a11y: undefined,
+			impact: undefined,
+		};
 	}
 
 	const driftTrend: DriftTrendPoint[] = [];
 	let lint: LintSummary | undefined;
 	let readiness: Readiness | undefined;
+	let a11y: A11ySummary | undefined;
+	let impact: ImpactSummary | undefined;
 
 	const lines = text.split("\n");
 	for (let index = 0; index < lines.length; index += 1) {
@@ -171,12 +201,39 @@ function aggregateHistory(
 					points: asNumber(d.points),
 				})),
 			};
+			continue;
+		}
+
+		if (record.kind === "a11y") {
+			const r = record as Partial<A11yRecord>;
+			const modes = Array.isArray(r.modes) ? r.modes : [];
+			// Last a11y record wins — it reflects the most recent audit.
+			a11y = {
+				level: r.level === "AAA" ? "AAA" : "AA",
+				modes: modes.map((m) => ({
+					mode: typeof m.mode === "string" ? m.mode : "",
+					passed: asNumber(m.passed),
+					failed: asNumber(m.failed),
+				})),
+			};
+			continue;
+		}
+
+		if (record.kind === "impact") {
+			const r = record as Partial<ImpactRecord>;
+			// Last impact record wins — it reflects the most recent poll.
+			impact = {
+				breaking: asNumber(r.breaking),
+				additive: asNumber(r.additive),
+				cosmetic: asNumber(r.cosmetic),
+				touchedCallSites: asNumber(r.touchedCallSites),
+			};
 		}
 
 		// Unknown kinds (including missing kind) are skipped silently.
 	}
 
-	return { driftTrend, lintSummary: lint, readiness };
+	return { driftTrend, lintSummary: lint, readiness, a11y, impact };
 }
 
 /**
@@ -301,6 +358,8 @@ function runReport(path: string, options: ReportOptions): void {
 			? { readiness: aggregation.readiness }
 			: {}),
 		...(parity !== undefined ? { parity } : {}),
+		...(aggregation.a11y !== undefined ? { a11y: aggregation.a11y } : {}),
+		...(aggregation.impact !== undefined ? { impact: aggregation.impact } : {}),
 	});
 
 	const outPath =

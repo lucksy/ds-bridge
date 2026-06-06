@@ -276,10 +276,62 @@ function paritySection(data: ReportData): string {
 	);
 }
 
+/** Contrast audit → bar chart of failures by mode + per-mode tallies (T7.22). */
+function a11ySection(data: ReportData): string {
+	const a11y = data.a11y;
+	if (a11y === undefined || a11y.modes.length === 0) {
+		return panel("Contrast (a11y)", emptyState("a11y"));
+	}
+
+	const bars = a11y.modes.map((m) => ({
+		label: m.mode,
+		value: m.failed,
+	}));
+
+	const tallies = [
+		'<ul class="modes">',
+		...a11y.modes.map(
+			(m) =>
+				`<li><code>${escapeHtml(m.mode)}</code><span class="count">${escapeHtml(String(m.passed))} passed · ${escapeHtml(String(m.failed))} failed</span></li>`,
+		),
+		"</ul>",
+	].join("");
+
+	return panel(
+		"Contrast (a11y)",
+		[
+			`<div class="meta">Failures by mode · level ${escapeHtml(a11y.level)}</div>`,
+			`<div class="chart">${barChart(bars)}</div>`,
+			tallies,
+		].join(""),
+	);
+}
+
+/** Impact run → severity bar chart + call-site blast radius (T7.22). */
+function impactSection(data: ReportData): string {
+	const impact = data.impact;
+	if (impact === undefined) {
+		return panel("Change impact", emptyState("impact"));
+	}
+
+	const bars = [
+		{ label: "Breaking", value: impact.breaking },
+		{ label: "Additive", value: impact.additive },
+		{ label: "Cosmetic", value: impact.cosmetic },
+	];
+	const sites = impact.touchedCallSites;
+	const radius = `<div class="meta">Touches ${escapeHtml(String(sites))} call site${sites === 1 ? "" : "s"}</div>`;
+
+	return panel(
+		"Change impact",
+		`<div class="chart">${barChart(bars)}</div>${radius}`,
+	);
+}
+
 /**
  * Render the complete offline dashboard for a {@link ReportData}. Returns one
- * self-contained `<!DOCTYPE html>` document with inline styles and four
- * sections (drift trend, lint, readiness, parity), each falling back to a
+ * self-contained `<!DOCTYPE html>` document with inline styles and six
+ * sections (drift trend, lint, readiness, parity, contrast, impact), each falling back to a
  * styled empty state. All caller-supplied strings are HTML-escaped.
  */
 export function renderDashboard(data: ReportData): string {
@@ -297,6 +349,8 @@ export function renderDashboard(data: ReportData): string {
 		lintSection(data),
 		readinessSection(data),
 		paritySection(data),
+		a11ySection(data),
+		impactSection(data),
 		"</div>",
 		"</div>",
 	].join("");

@@ -278,6 +278,45 @@ describe("ds-bridge impact (built dist/cli.mjs)", () => {
 		expect(result.stdout).toContain("Card / Default");
 	});
 
+	it("T7.22: a diff run appends one impact history line; a baseline run appends none", async () => {
+		const dir = await freshTmp("ds-impact-history-");
+		await seedCursor(dir, {
+			fileKey: FILE_KEY,
+			versionId: "5009876543210987654",
+			capturedAt: "2026-06-01T00:00:00.000Z",
+			snapshot: beforeSnapshot(),
+		});
+		const result = await runCli(dir, ["impact", "--format=json"]);
+		expect(result.code).toBe(1);
+
+		const text = await readFile(
+			join(dir, ".ds-bridge", "history.jsonl"),
+			"utf8",
+		);
+		const lines = text.trim().split("\n");
+		expect(lines).toHaveLength(1);
+		const record = JSON.parse(lines[0] ?? "") as {
+			at: string;
+			kind: string;
+			breaking: number;
+			additive: number;
+			cosmetic: number;
+			touchedCallSites: number;
+		};
+		expect(record.kind).toBe("impact");
+		expect(record.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(record.breaking).toBeGreaterThan(0);
+		expect(record.touchedCallSites).toBe(0);
+
+		// Baseline run (fresh dir, no cursor) must NOT append history.
+		const baselineDir = await freshTmp("ds-impact-history-baseline-");
+		const baseline = await runCli(baselineDir, ["impact", "--format=json"]);
+		expect(baseline.code).toBe(0);
+		await expect(
+			readFile(join(baselineDir, ".ds-bridge", "history.jsonl"), "utf8"),
+		).rejects.toMatchObject({ code: "ENOENT" });
+	});
+
 	it("updates the cursor after a successful diff run", async () => {
 		const dir = await freshTmp("ds-impact-cursor-update-");
 		await seedCursor(dir, {

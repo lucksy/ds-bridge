@@ -61,6 +61,29 @@ export interface Parity {
 	rows: ParityRow[];
 }
 
+/** Contrast pass/fail tallies for one token mode (T7.22). */
+export interface A11yModeSummary {
+	mode: string;
+	passed: number;
+	failed: number;
+}
+
+/** Token-contrast audit summary across modes, from the latest a11y run. */
+export interface A11ySummary {
+	/** WCAG conformance level the run was evaluated against. */
+	level: "AA" | "AAA";
+	modes: A11yModeSummary[];
+}
+
+/** Library-change blast radius from the latest impact run (T7.22). */
+export interface ImpactSummary {
+	breaking: number;
+	additive: number;
+	cosmetic: number;
+	/** Code usage sites touched by the changed components (0 = none/unknown). */
+	touchedCallSites: number;
+}
+
 /**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
@@ -73,4 +96,6 @@ export interface ReportData {
 	lintSummary?: LintSummary;
 	readiness?: Readiness;
 	parity?: Parity;
+	a11y?: A11ySummary;
+	impact?: ImpactSummary;
 }
