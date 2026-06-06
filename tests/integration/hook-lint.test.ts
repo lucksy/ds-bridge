@@ -8,10 +8,8 @@ import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
-const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
 const hookScript = join(repoRoot, "scripts", "hook-lint.mjs");
 const sampleProject = join(repoRoot, "tests", "fixtures", "sample-project");
@@ -48,10 +46,6 @@ function runHook(
 }
 
 describe("ds-bridge PostToolUse lint hook (scripts/hook-lint.mjs)", () => {
-	beforeAll(async () => {
-		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
-	}, 120_000);
-
 	afterAll(async () => {
 		await Promise.all(
 			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),

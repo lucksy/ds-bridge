@@ -7,6 +7,8 @@ const enginesExist = existsSync(new URL("./src/engines", import.meta.url));
 export default defineConfig({
 	test: {
 		include: ["tests/**/*.test.ts"],
+		// Build dist/cli.mjs once for all integration tests (T7.23 — see tests/global-setup.ts)
+		globalSetup: ["tests/global-setup.ts"],
 		coverage: {
 			provider: "v8",
 			include: ["src/**/*.ts"],

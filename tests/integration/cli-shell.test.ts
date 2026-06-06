@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -16,12 +16,7 @@ const pkg = JSON.parse(
 };
 
 describe("ds-bridge CLI shell (built dist/cli.mjs)", () => {
-	beforeAll(async () => {
-		// Build the bundle the test exercises — acceptance is against dist, not src.
-		const { execFile: ef } = await import("node:child_process");
-		await promisify(ef)("npm", ["run", "build"], { cwd: repoRoot });
-	}, 120_000);
-
+	// dist/cli.mjs is built once per run in tests/global-setup.ts (T7.23).
 	it("--version prints the package version and exits 0", async () => {
 		const { stdout } = await execFileAsync(process.execPath, [
 			cliPath,

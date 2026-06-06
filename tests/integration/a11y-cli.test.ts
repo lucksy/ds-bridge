@@ -3,7 +3,7 @@
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -62,10 +62,6 @@ interface JsonReport {
 }
 
 describe("ds-bridge a11y (built dist/cli.mjs)", () => {
-	beforeAll(async () => {
-		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
-	}, 120_000);
-
 	it("--format=json over the modes fixture exits 1 (dark mode fails) with the report shape", async () => {
 		const result = await run([
 			"a11y",

@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -29,11 +29,6 @@ function isExecError(value: unknown): value is ExecError {
 const FIXTURES = ["w3c", "tokens-studio", "style-dictionary"] as const;
 
 describe("ds-bridge tokens parse (built dist/cli.mjs)", () => {
-	beforeAll(async () => {
-		// Build the bundle the test exercises — acceptance is against dist, not src.
-		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
-	}, 120_000);
-
 	describe("--format=json deep-equals the golden twin (checkpoint C1)", () => {
 		for (const fixture of FIXTURES) {
 			it(`${fixture}: JSON output matches expected.json`, async () => {

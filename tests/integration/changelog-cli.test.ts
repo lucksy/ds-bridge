@@ -130,7 +130,6 @@ const OFFLINE_ENV: NodeJS.ProcessEnv = {
 
 describe("ds-bridge changelog (built dist/cli.mjs)", () => {
 	beforeAll(async () => {
-		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
 		server = makeServer();
 		await new Promise<void>((resolve) => {
 			server.listen(0, "127.0.0.1", () => resolve());

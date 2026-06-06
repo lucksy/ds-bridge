@@ -205,7 +205,6 @@ function beforeSnapshot(): SnapshotModel[] {
 
 describe("ds-bridge impact (built dist/cli.mjs)", () => {
 	beforeAll(async () => {
-		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
 		server = makeServer();
 		await new Promise<void>((resolve) => {
 			server.listen(0, "127.0.0.1", () => resolve());

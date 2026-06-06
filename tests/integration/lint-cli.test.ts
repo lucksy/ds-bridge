@@ -7,7 +7,7 @@ import { access, cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -114,10 +114,6 @@ async function historyExists(dir: string): Promise<boolean> {
 }
 
 describe("ds-bridge lint (built dist/cli.mjs)", () => {
-	beforeAll(async () => {
-		await execFileAsync("npm", ["run", "build"], { cwd: repoRoot });
-	}, 120_000);
-
 	afterAll(async () => {
 		await Promise.all(
 			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),
