@@ -317,6 +317,60 @@ describe("ds-bridge impact (built dist/cli.mjs)", () => {
 		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
+	it("T7.24: a RENAMED component's call sites are looked up by its old name", async () => {
+		const dir = await freshTmp("ds-impact-renamed-usage-");
+		// Registry maps the figma name "Avatar" (the fromName of the seeded
+		// rename Avatar -> "Avatar / User") to a code component with one import.
+		await mkdir(join(dir, ".ds-bridge"), { recursive: true });
+		await writeFile(
+			join(dir, ".ds-bridge", "registry.json"),
+			`${JSON.stringify({
+				schemaVersion: 1,
+				generatedAt: "2026-06-01T00:00:00.000Z",
+				matches: [
+					{
+						codeName: "Avatar",
+						importPath: "components/avatar.tsx",
+						figmaName: "Avatar",
+						nodeId: "9:1",
+						score: 0.97,
+					},
+				],
+				unmatchedCode: [],
+				unmatchedFigma: [],
+			})}\n`,
+			"utf8",
+		);
+		await mkdir(join(dir, "components"), { recursive: true });
+		await writeFile(
+			join(dir, "components", "avatar.tsx"),
+			"export function Avatar() {\n\treturn null;\n}\n",
+			"utf8",
+		);
+		await mkdir(join(dir, "app"), { recursive: true });
+		await writeFile(
+			join(dir, "app", "Profile.tsx"),
+			'import { Avatar } from "../components/avatar";\n\nexport function Profile() {\n\treturn Avatar();\n}\n',
+			"utf8",
+		);
+		await seedCursor(dir, {
+			fileKey: FILE_KEY,
+			versionId: "5009876543210987654",
+			capturedAt: "2026-06-01T00:00:00.000Z",
+			snapshot: beforeSnapshot(),
+		});
+
+		const result = await runCli(dir, ["impact", "--format=term"]);
+		expect(result.code).toBe(1);
+		const renamedRow = result.stdout
+			.split("\n")
+			.find((line) => line.includes("renamed"));
+		expect(renamedRow).toBeDefined();
+		// The usage map is keyed by the fromName ("Avatar") — the renamed row
+		// must surface its call sites, not "no call sites".
+		expect(renamedRow).toContain("touches 1 call site");
+	}, 30_000); // ts-morph project load is slow under full-suite parallelism
+
 	it("updates the cursor after a successful diff run", async () => {
 		const dir = await freshTmp("ds-impact-cursor-update-");
 		await seedCursor(dir, {

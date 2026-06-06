@@ -275,6 +275,11 @@ function appendImpactHistory(
 
 interface DiffRow {
 	component: string;
+	/**
+	 * The name the usage map is keyed by (T7.24): for renamed rows the OLD
+	 * figma name — the registry knows components by their pre-rename name.
+	 */
+	lookupName: string;
 	category: string;
 	impact: string;
 	detail: string;
@@ -286,6 +291,7 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 	for (const r of diff.removed) {
 		rows.push({
 			component: r.name,
+			lookupName: r.name,
 			category: "removed",
 			impact: r.impact,
 			detail: "component removed from the library",
@@ -294,6 +300,7 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 	for (const r of diff.renamed) {
 		rows.push({
 			component: r.toName,
+			lookupName: r.fromName,
 			category: "renamed",
 			impact: r.impact,
 			detail: `renamed from "${r.fromName}"`,
@@ -310,6 +317,7 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 		}
 		rows.push({
 			component: c.name,
+			lookupName: c.name,
 			category: "changed",
 			impact: c.impact,
 			detail: parts.join(", "),
@@ -318,6 +326,7 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 	for (const a of diff.added) {
 		rows.push({
 			component: a.name,
+			lookupName: a.name,
 			category: "added",
 			impact: a.impact,
 			detail: "new component",
@@ -369,9 +378,7 @@ function renderTerm(
 	);
 
 	const tableRows = rows.map((row) => {
-		const usage = usageByName.get(
-			row.category === "renamed" ? row.component : row.component,
-		);
+		const usage = usageByName.get(row.lookupName);
 		const sites = usage?.count ?? 0;
 		const touches = registryPresent
 			? sites > 0
