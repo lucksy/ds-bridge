@@ -24,6 +24,7 @@ import {
 } from "../engines/report/catalog.js";
 import { resolveView } from "../engines/report/presets.js";
 import { renderTable } from "../render/terminal/index.js";
+import { runSetupWizard } from "./dashboard-wizard.js";
 
 type DashboardFormat = "json" | "term";
 
@@ -359,6 +360,32 @@ function runEdit(path: string, rawId: string, mode: "add" | "remove"): void {
 	process.exitCode = 0;
 }
 
+/**
+ * Execute `dashboard setup`: detect TTY, then drive the injected-stream wizard
+ * over the real process streams. Non-TTY is short-circuited to stderr + exit 2
+ * (pointing at `dashboard set`) so a piped/CI invocation gets the actionable
+ * message on the conventional error stream; the wizard's own non-TTY guard
+ * stays as the unit-tested fallback.
+ */
+async function runSetup(path: string): Promise<void> {
+	const isTTY = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
+	if (!isTTY) {
+		fail(
+			"The setup wizard needs an interactive terminal. " +
+				"Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead.",
+		);
+		return;
+	}
+	const targetDir = resolvePath(path);
+	const outcome = await runSetupWizard({
+		input: process.stdin,
+		output: process.stdout,
+		cwd: targetDir,
+		isTTY,
+	});
+	process.exitCode = outcome.exitCode;
+}
+
 /** Register the `dashboard` command group on the program. Wiring for cli.ts. */
 export function registerDashboardCommand(program: Command): void {
 	const dashboard = program
@@ -410,5 +437,13 @@ export function registerDashboardCommand(program: Command): void {
 		.argument("[path]", "project directory holding .ds-bridge.json", ".")
 		.action((artifact: string, path: string) => {
 			runEdit(path, artifact, "remove");
+		});
+
+	dashboard
+		.command("setup")
+		.description("Interactive wizard to compose and persist a dashboard view")
+		.argument("[path]", "project directory holding .ds-bridge.json", ".")
+		.action((path: string) => {
+			void runSetup(path);
 		});
 }
