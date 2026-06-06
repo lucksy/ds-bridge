@@ -13,7 +13,7 @@ Professional+** (the remote Figma MCP server is available on all plans).
 > **Status:** v0.4.0 — spec-driven, strict TDD. See [`SPEC.md`](./SPEC.md)
 > (contract), [`PLAN.md`](./PLAN.md) (build strategy), [`TASKS.md`](./TASKS.md)
 > (live task tracker). The marketing site under [`website/`](./website) is built
-> but not yet deployed (Vercel hookup pending).
+> but not yet deployed (Cloudflare Pages hookup pending).
 
 ## Who it serves
 
@@ -211,7 +211,7 @@ npm run check          # typecheck + lint + test + validate (pre-commit gate)
 ```
 
 The marketing site is its own package under [`website/`](./website) (Next.js
-static export); its tutorials are authored but go live once Vercel is connected.
+static export); its tutorials are authored but go live once Cloudflare Pages is connected.
 
 ## Live Figma smoke test
 
@@ -262,6 +262,6 @@ never failed.
   code via the registry + a structured gaps report) and headless E2E coverage
   that proves the plugin loads in `claude -p --bare`.
 - **Website:** authored tutorials and a landing page exist under `website/`;
-  they go live once the Vercel deployment is connected.
+  they go live once the Cloudflare Pages deployment is connected.
 
 License: [MIT](./LICENSE)
