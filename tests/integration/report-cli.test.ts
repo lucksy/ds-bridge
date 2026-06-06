@@ -496,3 +496,217 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(countSvgs(html)).toBe(1);
 	});
 });
+
+// ---------- M1.3 — config-resolved artifact selection + v1.0.0 golden ----------
+
+/** The repo-relative path to the recorded v1.0.0 no-config golden fixture. */
+const goldenPath = join(
+	repoRoot,
+	"tests",
+	"fixtures",
+	"report",
+	"golden-no-config.html",
+);
+
+/**
+ * Seed the EXACT T7.22 six-artifact acceptance history + registry (the bytes the
+ * golden was recorded against) into <dir>/.ds-bridge/. Identical literals to the
+ * "all six artifacts present" acceptance test above so the golden stays anchored.
+ */
+async function seedSixArtifacts(dir: string): Promise<void> {
+	await seedHistory(dir, [
+		tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
+		tokensCheckLine("2026-06-02T10:00:00.000Z", 0, 2, 1),
+		JSON.stringify({
+			at: "2026-06-03T10:00:00.000Z",
+			kind: "lint",
+			byKind: { exact: 3, near: 2, offSystem: 1 },
+		}),
+		handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", [
+			{ rule: "var-binding", points: 8 },
+		]),
+		a11yLine("2026-06-05T10:00:00.000Z", "AA", [
+			{ mode: "light", passed: 9, failed: 1 },
+			{ mode: "dark", passed: 8, failed: 2 },
+		]),
+		impactLine("2026-06-06T10:00:00.000Z", {
+			breaking: 2,
+			additive: 3,
+			cosmetic: 1,
+			touchedCallSites: 14,
+		}),
+	]);
+	await seedRegistry(dir, sampleRegistry());
+}
+
+/**
+ * The SAME single sentinel substitution the golden capture used: replace the
+ * fresh ISO timestamp after "Generated " with `__GENERATED_AT__`. No other
+ * normalization — byte equality everywhere else is the contract.
+ */
+function withSentinelTimestamp(html: string): string {
+	return html.replace(
+		/(<span class="generated">Generated )[^<]*(<\/span>)/,
+		"$1__GENERATED_AT__$2",
+	);
+}
+
+/** Write <dir>/.ds-bridge.json with the given object (the project config file). */
+async function seedProjectConfig(dir: string, config: unknown): Promise<void> {
+	await writeFile(
+		join(dir, ".ds-bridge.json"),
+		`${JSON.stringify(config, null, 2)}\n`,
+		"utf8",
+	);
+}
+
+describe("ds-bridge report — dashboard composer (M1.3)", () => {
+	it("no flags + no .ds-bridge.json → byte-identical to the v1.0.0 golden", async () => {
+		// The golden's project name is its directory basename ("report-golden"),
+		// so seed under a fixed-name subdir of a fresh tmp dir.
+		const base = await freshTmp("ds-report-golden-");
+		const dir = join(base, "report-golden");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		const golden = await readFile(goldenPath, "utf8");
+		expect(withSentinelTimestamp(html)).toBe(golden);
+	});
+
+	it("--view owner renders ONLY drift/parity/a11y (3 svgs) and names the view", async () => {
+		const dir = await freshTmp("ds-report-view-owner-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--view", "owner"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// owner = drift-trend · parity · a11y → exactly three populated charts.
+		expect(countSvgs(html)).toBe(3);
+		// The two omitted sections leave no trace (not even a title).
+		expect(html).not.toContain("Lint violations");
+		expect(html).not.toContain("Readiness");
+		expect(html).not.toContain("Change impact");
+		// The selected three are present.
+		expect(html).toContain("Drift trend");
+		expect(html).toContain("Parity matrix");
+		expect(html).toContain("Contrast (a11y)");
+		// The active view is named in the HTML header.
+		expect(html).toContain("owner");
+	});
+
+	it("--artifacts parity,a11y renders exactly two sections", async () => {
+		const dir = await freshTmp("ds-report-artifacts-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--artifacts", "parity,a11y"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(countSvgs(html)).toBe(2);
+		expect(html).toContain("Parity matrix");
+		expect(html).toContain("Contrast (a11y)");
+		expect(html).not.toContain("Drift trend");
+		expect(html).not.toContain("Change impact");
+	});
+
+	it(".ds-bridge.json dashboard_view=engineering is respected with no flags", async () => {
+		const dir = await freshTmp("ds-report-cfg-eng-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, { dashboard_view: "engineering" });
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// engineering = lint-summary · impact · drift-trend → three charts.
+		expect(countSvgs(html)).toBe(3);
+		expect(html).toContain("Lint violations");
+		expect(html).toContain("Change impact");
+		expect(html).toContain("Drift trend");
+		expect(html).not.toContain("Parity matrix");
+		expect(html).not.toContain("Readiness");
+		expect(html).toContain("engineering");
+	});
+
+	it("a --view flag beats a conflicting dashboard_view in config", async () => {
+		const dir = await freshTmp("ds-report-flag-wins-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, { dashboard_view: "engineering" });
+
+		const result = await runCli(["report", dir, "--view", "consumer"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// consumer = parity · impact → two charts, engineering's lint absent.
+		expect(countSvgs(html)).toBe(2);
+		expect(html).toContain("Parity matrix");
+		expect(html).toContain("Change impact");
+		expect(html).not.toContain("Lint violations");
+		expect(html).toContain("consumer");
+	});
+
+	it("--view and --artifacts together → exit 2 mentioning mutual exclusivity", async () => {
+		const dir = await freshTmp("ds-report-conflict-");
+		await seedSixArtifacts(dir);
+
+		const { code, stderr } = await runCli([
+			"report",
+			dir,
+			"--view",
+			"owner",
+			"--artifacts",
+			"parity,a11y",
+		]);
+		expect(code).toBe(2);
+		expect(stderr.toLowerCase()).toContain("mutually exclusive");
+	});
+
+	it("an unknown artifact id → exit 2 with a suggestion", async () => {
+		const dir = await freshTmp("ds-report-unknown-id-");
+		await seedSixArtifacts(dir);
+
+		const { code, stderr } = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"parityy",
+		]);
+		expect(code).toBe(2);
+		expect(stderr.toLowerCase()).toContain("parityy");
+		// Nearest-match suggestion is offered.
+		expect(stderr).toContain("parity");
+		expect(stderr.toLowerCase()).toMatch(/did you mean|suggestion/);
+	});
+
+	it("invalid .ds-bridge.json (both view + artifacts) → exit 2", async () => {
+		const dir = await freshTmp("ds-report-bad-cfg-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, {
+			dashboard_view: "owner",
+			dashboard_artifacts: ["parity", "a11y"],
+		});
+
+		const { code, stderr } = await runCli(["report", dir]);
+		expect(code).toBe(2);
+		expect(stderr.toLowerCase()).toContain("mutually exclusive");
+	});
+});

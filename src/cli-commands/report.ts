@@ -22,8 +22,11 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { platform } from "node:process";
 import type { Command } from "commander";
+import { resolveConfig } from "../config.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
+import type { ArtifactId } from "../engines/report/catalog.js";
+import { resolveView } from "../engines/report/presets.js";
 import type {
 	A11ySummary,
 	DriftTrendPoint,
@@ -320,6 +323,8 @@ function openReport(filePath: string, env: NodeJS.ProcessEnv): void {
 interface ReportOptions {
 	open: boolean;
 	out: string | undefined;
+	view: string | undefined;
+	artifacts: string | undefined;
 }
 
 function failReport(message: string): void {
@@ -327,11 +332,135 @@ function failReport(message: string): void {
 	process.exitCode = 2;
 }
 
+/** The resolved render selection: which artifacts, in order, plus a header label. */
+interface ResolvedSelection {
+	artifacts: ArtifactId[];
+	/** Header label to name the active view; absent for the no-config default. */
+	viewLabel?: string;
+}
+
+/** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
+function parseArtifactsFlag(raw: string | undefined): string[] | undefined {
+	if (raw === undefined) return undefined;
+	return raw
+		.split(",")
+		.map((id) => id.trim())
+		.filter((id) => id.length > 0);
+}
+
+/**
+ * Read <targetDir>/.ds-bridge.json (the project file whose config applies) and
+ * resolve the active artifact selection from flags → project config → default
+ * `everything`. Every domain failure (invalid project file, view/artifacts
+ * conflict, unknown view, unknown artifact id) is a typed error translated to a
+ * single exit-2 message with suggestions; never a thrown stack.
+ *
+ * The default `everything` source is given NO `viewLabel` so the no-config
+ * output stays byte-identical to the v1.0.0 golden — only an explicitly chosen
+ * view (preset or custom list) names itself in the header.
+ */
+function resolveSelection(
+	targetDir: string,
+	options: ReportOptions,
+): ResolvedSelection | ReportError {
+	let dashboardView: string | undefined;
+	let dashboardArtifacts: ArtifactId[] | undefined;
+
+	const configPath = join(targetDir, ".ds-bridge.json");
+	if (existsSync(configPath)) {
+		let projectFileText: string;
+		try {
+			projectFileText = readFileSync(configPath, "utf8");
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error);
+			return {
+				kind: "error",
+				message: `Could not read ${configPath}: ${detail}`,
+			};
+		}
+		const resolved = resolveConfig({ projectFileText });
+		if (resolved.kind === "invalid-project-file") {
+			return { kind: "error", message: resolved.message };
+		}
+		dashboardView = resolved.config.dashboardView;
+		dashboardArtifacts = resolved.config.dashboardArtifacts;
+	}
+
+	const flagArtifacts = parseArtifactsFlag(options.artifacts);
+	const outcome = resolveView(
+		{
+			...(options.view !== undefined ? { view: options.view } : {}),
+			...(flagArtifacts !== undefined ? { artifacts: flagArtifacts } : {}),
+		},
+		{
+			...(dashboardView !== undefined ? { view: dashboardView } : {}),
+			...(dashboardArtifacts !== undefined
+				? { artifacts: dashboardArtifacts }
+				: {}),
+		},
+	);
+
+	switch (outcome.kind) {
+		case "conflicting-selection":
+			return {
+				kind: "error",
+				message:
+					outcome.source === "flags"
+						? "--view and --artifacts are mutually exclusive — pass one, not both."
+						: "dashboard_view and dashboard_artifacts in .ds-bridge.json are mutually exclusive — set one, not both.",
+			};
+		case "unknown-view": {
+			const hint =
+				outcome.suggestions.length > 0
+					? ` — did you mean ${outcome.suggestions.join(", ")}?`
+					: "";
+			return {
+				kind: "error",
+				message: `Unknown view "${outcome.view}"${hint}`,
+			};
+		}
+		case "unknown-artifact": {
+			const hint =
+				outcome.suggestions.length > 0
+					? ` — did you mean ${outcome.suggestions.join(", ")}?`
+					: "";
+			return {
+				kind: "error",
+				message: `Unknown artifact id "${outcome.id}"${hint}`,
+			};
+		}
+		case "ok": {
+			// Surface any dedup notices (custom list with duplicate ids).
+			for (const notice of outcome.notices) {
+				process.stderr.write(`${notice}\n`);
+			}
+			// Name the chosen view; the default `everything` stays label-less so the
+			// no-config render is byte-identical to the golden.
+			const viewLabel =
+				outcome.source === "default"
+					? undefined
+					: (outcome.viewName ?? "custom");
+			return {
+				artifacts: outcome.artifacts,
+				...(viewLabel !== undefined ? { viewLabel } : {}),
+			};
+		}
+	}
+}
+
 /** Execute the `report` command. Exit codes: 0 success · 2 operational error. */
 function runReport(path: string, options: ReportOptions): void {
 	const targetDir = resolve(path);
 	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
 		failReport(`Path "${targetDir}" is not a directory.`);
+		return;
+	}
+
+	// Resolve which artifacts to render (flags > .ds-bridge.json > everything)
+	// before any history/registry work — a usage/config error should exit 2 fast.
+	const selection = resolveSelection(targetDir, options);
+	if ("kind" in selection) {
+		failReport(selection.message);
 		return;
 	}
 
@@ -347,20 +476,26 @@ function runReport(path: string, options: ReportOptions): void {
 	// `exactOptionalPropertyTypes` keeps an absent section a genuine "not
 	// provided" rather than an explicit `undefined`.
 	const generatedAt = new Date().toISOString();
-	const html = renderDashboard({
-		generatedAt,
-		project: basename(targetDir),
-		driftTrend: aggregation.driftTrend,
-		...(aggregation.lintSummary !== undefined
-			? { lintSummary: aggregation.lintSummary }
-			: {}),
-		...(aggregation.readiness !== undefined
-			? { readiness: aggregation.readiness }
-			: {}),
-		...(parity !== undefined ? { parity } : {}),
-		...(aggregation.a11y !== undefined ? { a11y: aggregation.a11y } : {}),
-		...(aggregation.impact !== undefined ? { impact: aggregation.impact } : {}),
-	});
+	const html = renderDashboard(
+		{
+			generatedAt,
+			project: basename(targetDir),
+			driftTrend: aggregation.driftTrend,
+			...(aggregation.lintSummary !== undefined
+				? { lintSummary: aggregation.lintSummary }
+				: {}),
+			...(aggregation.readiness !== undefined
+				? { readiness: aggregation.readiness }
+				: {}),
+			...(parity !== undefined ? { parity } : {}),
+			...(aggregation.a11y !== undefined ? { a11y: aggregation.a11y } : {}),
+			...(aggregation.impact !== undefined
+				? { impact: aggregation.impact }
+				: {}),
+		},
+		selection.artifacts,
+		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
+	);
 
 	const outPath =
 		options.out !== undefined
@@ -388,6 +523,14 @@ export function registerReportCommand(program: Command): void {
 		.command("report")
 		.description("Render an offline HTML dashboard from the project history")
 		.argument("[path]", "project directory to report on", ".")
+		.option(
+			"--view <preset>",
+			"render a persona preset: owner | engineering | design | consumer | everything",
+		)
+		.option(
+			"--artifacts <ids>",
+			"render a custom comma-separated artifact list (mutually exclusive with --view)",
+		)
 		.option(
 			"--out <file>",
 			"output file (default <path>/.ds-bridge/reports/dashboard.html)",
