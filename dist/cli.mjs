@@ -3533,1166 +3533,15 @@ var {
   Help
 } = import_index.default;
 
-// src/cli-commands/handoff.ts
-import { appendFileSync, mkdirSync } from "fs";
-import { join } from "path";
-import { cwd } from "process";
-
-// src/config.ts
-var REPORT_STYLES = ["html", "terminal", "both"];
-var DEFAULTS = {
-  reportStyle: "both",
-  readinessThreshold: 80
-};
-function parseProjectFile(text) {
-  let raw;
-  try {
-    raw = JSON.parse(text);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "invalid",
-      message: `.ds-bridge.json is not valid JSON: ${detail}`
-    };
-  }
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    return {
-      kind: "invalid",
-      message: ".ds-bridge.json must be a JSON object"
-    };
-  }
-  const obj = raw;
-  const values = { hadFigmaToken: "figma_token" in obj };
-  if (obj.figma_file_key !== void 0) {
-    if (typeof obj.figma_file_key !== "string") {
-      return { kind: "invalid", message: "figma_file_key must be a string" };
-    }
-    values.figmaFileKey = obj.figma_file_key;
-  }
-  if (obj.token_source !== void 0) {
-    if (typeof obj.token_source !== "string") {
-      return { kind: "invalid", message: "token_source must be a string" };
-    }
-    values.tokenSource = obj.token_source;
-  }
-  if (obj.report_style !== void 0) {
-    if (!REPORT_STYLES.includes(obj.report_style)) {
-      return {
-        kind: "invalid",
-        message: `report_style must be one of ${REPORT_STYLES.join(" | ")}, got ${JSON.stringify(obj.report_style)}`
-      };
-    }
-    values.reportStyle = obj.report_style;
-  }
-  if (obj.readiness_threshold !== void 0) {
-    const n = obj.readiness_threshold;
-    if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 100) {
-      return {
-        kind: "invalid",
-        message: `readiness_threshold must be a number between 0 and 100, got ${JSON.stringify(n)}`
-      };
-    }
-    values.readinessThreshold = n;
-  }
-  return { kind: "ok", values };
-}
-function resolveConfig(inputs) {
-  const { flags = {}, env = {} } = inputs;
-  const warnings = [];
-  let project = { hadFigmaToken: false };
-  if (inputs.projectFileText !== void 0) {
-    const parsed = parseProjectFile(inputs.projectFileText);
-    if (parsed.kind === "invalid") {
-      return { kind: "invalid-project-file", message: parsed.message };
-    }
-    project = parsed.values;
-  }
-  if (project.hadFigmaToken) {
-    warnings.push(
-      "figma_token in .ds-bridge.json is ignored \u2014 set it via the plugin config dialog or the FIGMA_TOKEN env var, never in a committed file"
-    );
-  }
-  let envThreshold;
-  const rawEnvThreshold = env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD;
-  if (rawEnvThreshold !== void 0) {
-    const n = Number(rawEnvThreshold);
-    if (Number.isFinite(n) && n >= 0 && n <= 100) {
-      envThreshold = n;
-    } else {
-      warnings.push(
-        `CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD is not a number between 0 and 100 (got ${JSON.stringify(rawEnvThreshold)}) \u2014 ignoring`
-      );
-    }
-  }
-  let envReportStyle;
-  const rawEnvReportStyle = env.CLAUDE_PLUGIN_OPTION_REPORT_STYLE;
-  if (rawEnvReportStyle !== void 0) {
-    if (REPORT_STYLES.includes(rawEnvReportStyle)) {
-      envReportStyle = rawEnvReportStyle;
-    } else {
-      warnings.push(
-        `CLAUDE_PLUGIN_OPTION_REPORT_STYLE must be one of ${REPORT_STYLES.join(" | ")} (got ${JSON.stringify(rawEnvReportStyle)}) \u2014 ignoring`
-      );
-    }
-  }
-  const tokenValue = flags.figmaToken ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN;
-  const config = {
-    figmaFileKey: flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? project.figmaFileKey,
-    figmaToken: tokenValue !== void 0 && tokenValue !== "" ? { kind: "present", value: tokenValue } : { kind: "missing" },
-    tokenSource: flags.tokenSource ?? env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ?? project.tokenSource,
-    reportStyle: flags.reportStyle ?? envReportStyle ?? project.reportStyle ?? DEFAULTS.reportStyle,
-    readinessThreshold: flags.readinessThreshold ?? envThreshold ?? project.readinessThreshold ?? DEFAULTS.readinessThreshold
-  };
-  return { kind: "ok", config, warnings };
-}
-
-// src/engines/handoff/parse-url.ts
-var KEY_PATH_TYPES = /* @__PURE__ */ new Set(["file", "design", "proto"]);
-function isFigmaHost(host) {
-  const lower = host.toLowerCase();
-  return lower === "figma.com" || lower.endsWith(".figma.com");
-}
-function normalizeNodeId(raw) {
-  let value = raw;
-  try {
-    value = decodeURIComponent(raw);
-  } catch {
-    value = raw;
-  }
-  if (value.length === 0) return void 0;
-  return value.replace(/-/g, ":");
-}
-var INVALID = (message) => ({
-  kind: "invalid-url",
-  message
-});
-function parseFigmaUrl(url) {
-  if (typeof url !== "string") return INVALID("URL must be a string.");
-  const trimmed = url.trim();
-  if (trimmed.length === 0) return INVALID("URL is empty.");
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  let parsed;
-  try {
-    parsed = new URL(withScheme);
-  } catch {
-    return INVALID(`Not a parseable URL: "${url}".`);
-  }
-  if (!isFigmaHost(parsed.hostname)) {
-    return INVALID(`Not a figma.com URL: "${url}".`);
-  }
-  const segments = parsed.pathname.split("/").filter((s) => s.length > 0);
-  if (segments.length === 0) {
-    return INVALID("Figma URL is missing a file key.");
-  }
-  const [pathType, ...rest] = segments;
-  if (pathType === void 0 || !KEY_PATH_TYPES.has(pathType)) {
-    return INVALID(`Unsupported Figma URL path "/${pathType ?? ""}".`);
-  }
-  const keySegment = rest[0];
-  if (keySegment === void 0 || keySegment.length === 0) {
-    return INVALID("Figma URL is missing a file key.");
-  }
-  let fileKey = keySegment;
-  const branchKey = rest[2];
-  if (rest[1] === "branch" && branchKey !== void 0 && branchKey.length > 0) {
-    fileKey = branchKey;
-  }
-  const nodeIdRaw = parsed.searchParams.get("node-id");
-  const nodeId = nodeIdRaw === null ? void 0 : normalizeNodeId(nodeIdRaw);
-  return nodeId === void 0 ? { kind: "ok", fileKey } : { kind: "ok", fileKey, nodeId };
-}
-
-// src/engines/handoff/score.ts
-var WEIGHT_BINDING = 40;
-var WEIGHT_AUTO_LAYOUT = 25;
-var WEIGHT_COMPONENT = 20;
-var WEIGHT_NAMING = 15;
-var BINDING_DEDUCTION_LIMIT = 10;
-var DEFAULT_NAME = /^(Frame|Rectangle|Group|Ellipse|Vector|Text) \d+$/;
-var MULTI_WORD_PASCAL = /^[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+$/;
-var COMPONENT_NOUNS = /* @__PURE__ */ new Set([
-  "Button",
-  "Chip",
-  "Input",
-  "Checkbox",
-  "Radio",
-  "Select",
-  "Badge",
-  "Avatar",
-  "Tooltip",
-  "Modal",
-  "Dialog",
-  "Tab",
-  "Tabs",
-  "Tag",
-  "Switch",
-  "Toggle",
-  "Dropdown",
-  "Menu",
-  "Toast",
-  "Alert",
-  "Accordion",
-  "Breadcrumb",
-  "Pagination",
-  "Slider",
-  "Stepper",
-  "Spinner"
-]);
-var FIX_BINDING = "Bind fills/strokes to a variable";
-var FIX_AUTO_LAYOUT = "Add auto layout";
-var FIX_COMPONENT = "Reattach to the published component or rename";
-var FIX_NAMING = "Rename meaningfully";
-function isStyleable(node) {
-  const hasFills = Array.isArray(node.fills) && node.fills.length > 0;
-  const hasStrokes = Array.isArray(node.strokes) && node.strokes.length > 0;
-  return hasFills || hasStrokes;
-}
-function isPaintBound(node) {
-  const bound = node.boundVariables;
-  if (bound === void 0) return false;
-  const fills = bound.fills;
-  const strokes = bound.strokes;
-  const boundFills = Array.isArray(fills) && fills.length > 0;
-  const boundStrokes = Array.isArray(strokes) && strokes.length > 0;
-  return boundFills || boundStrokes;
-}
-function isFrame(node) {
-  return node.type === "FRAME";
-}
-function hasAutoLayout(node) {
-  return node.layoutMode !== void 0 && node.layoutMode !== "NONE";
-}
-function isComponentName(name) {
-  return name.includes("/") || MULTI_WORD_PASCAL.test(name) || COMPONENT_NOUNS.has(name);
-}
-function isDefaultName(name) {
-  return DEFAULT_NAME.test(name);
-}
-function collect(root) {
-  const nodes = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    nodes.push(node);
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i -= 1) {
-        const child = children[i];
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-  return nodes;
-}
-function scoreReadiness(root) {
-  const nodes = collect(root);
-  const totalNodes = nodes.length;
-  const styleable = nodes.filter(isStyleable);
-  const unbound = styleable.filter((n) => !isPaintBound(n));
-  const boundCoverage = styleable.length === 0 ? 1 : 1 - unbound.length / styleable.length;
-  const frames = nodes.filter(isFrame);
-  const framesWithoutAutoLayout = frames.filter((n) => !hasAutoLayout(n));
-  const autoLayoutCoverage = frames.length === 0 ? 1 : 1 - framesWithoutAutoLayout.length / frames.length;
-  const instanceCount = nodes.filter((n) => n.type === "INSTANCE").length;
-  const suspectNodes = nodes.filter(
-    (n) => n.type !== "INSTANCE" && isComponentName(n.name)
-  );
-  const detachedSuspects = suspectNodes.length;
-  const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
-  const componentRatio = 1 - detachedSuspects / componentDenominator;
-  const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
-  const badNames = badNameNodes.length;
-  const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
-  const deductions = [];
-  if (unbound.length > 0) {
-    const lost = WEIGHT_BINDING * (unbound.length / styleable.length);
-    const perNode = lost / unbound.length;
-    const listed = [...unbound].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(0, BINDING_DEDUCTION_LIMIT);
-    for (const node of listed) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "var-binding",
-        points: perNode,
-        fix: FIX_BINDING
-      });
-    }
-  }
-  if (framesWithoutAutoLayout.length > 0) {
-    const lost = WEIGHT_AUTO_LAYOUT * (framesWithoutAutoLayout.length / frames.length);
-    const perNode = lost / framesWithoutAutoLayout.length;
-    for (const node of framesWithoutAutoLayout) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "auto-layout",
-        points: perNode,
-        fix: FIX_AUTO_LAYOUT
-      });
-    }
-  }
-  if (detachedSuspects > 0) {
-    const lost = WEIGHT_COMPONENT * (1 - componentRatio);
-    const perNode = lost / detachedSuspects;
-    for (const node of suspectNodes) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "component",
-        points: perNode,
-        fix: FIX_COMPONENT
-      });
-    }
-  }
-  if (badNames > 0) {
-    const lost = WEIGHT_NAMING * (badNames / totalNodes);
-    const perNode = lost / badNames;
-    for (const node of badNameNodes) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "naming",
-        points: perNode,
-        fix: FIX_NAMING
-      });
-    }
-  }
-  deductions.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    return a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0;
-  });
-  const rawScore = WEIGHT_BINDING * boundCoverage + WEIGHT_AUTO_LAYOUT * autoLayoutCoverage + WEIGHT_COMPONENT * componentRatio + WEIGHT_NAMING * namingRatio;
-  const score = Math.min(100, Math.max(0, Math.round(rawScore)));
-  return {
-    score,
-    deductions,
-    stats: {
-      totalNodes,
-      boundCoverage,
-      autoLayoutCoverage,
-      instanceCount,
-      detachedSuspects,
-      badNames
-    }
-  };
-}
-
-// src/io/figma/client.ts
-var DEFAULT_BASE_URL = "https://api.figma.com";
-var MAX_RETRIES = 3;
-var DEFAULT_RETRY_AFTER_SECONDS = 1;
-function defaultSleep(ms) {
-  return new Promise((resolve6) => setTimeout(resolve6, ms));
-}
-function joinIds(ids) {
-  return encodeURIComponent(ids.join(","));
-}
-function parseRetryAfter(headers) {
-  const raw = headers.get("Retry-After");
-  if (raw === null) return DEFAULT_RETRY_AFTER_SECONDS;
-  const seconds = Number.parseInt(raw, 10);
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS;
-}
-function mentionsScope(body) {
-  const text = typeof body === "string" ? body : JSON.stringify(body ?? "");
-  return /scope/i.test(text);
-}
-function createFigmaClient(options) {
-  const fetchImpl = options.fetch ?? fetch;
-  const sleep = options.sleep ?? defaultSleep;
-  const jitter = options.jitter ?? Math.random;
-  const { token } = options;
-  const origin = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-  const BASE_URL = `${origin}/v1`;
-  const baseHeaders = { "X-Figma-Token": token };
-  async function request(url, init) {
-    let lastRetryAfter = DEFAULT_RETRY_AFTER_SECONDS;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
-      let response;
-      try {
-        response = await fetchImpl(url, init);
-      } catch (error) {
-        return {
-          kind: "network-error",
-          message: error instanceof Error ? error.message : String(error)
-        };
-      }
-      const { status } = response;
-      if (status === 429) {
-        lastRetryAfter = parseRetryAfter(response.headers);
-        if (attempt < MAX_RETRIES) {
-          await sleep(lastRetryAfter * 1e3 * (1 + jitter()));
-          continue;
-        }
-        return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
-      }
-      if (status === 401) return { kind: "auth-error" };
-      if (status === 403) {
-        let body;
-        try {
-          body = await response.json();
-        } catch {
-          body = await response.text().catch(() => "");
-        }
-        if (mentionsScope(body)) {
-          const message = typeof body === "object" && body !== null && "err" in body && typeof body.err === "string" ? body.err : "Token is missing a required scope.";
-          return { kind: "scope-error", message };
-        }
-        return { kind: "auth-error" };
-      }
-      if (status === 404) return { kind: "not-found" };
-      if (!response.ok) {
-        return {
-          kind: "network-error",
-          message: `Figma API responded with status ${status}.`
-        };
-      }
-      try {
-        const data = await response.json();
-        return { kind: "ok", data };
-      } catch (error) {
-        return {
-          kind: "network-error",
-          message: error instanceof Error ? error.message : String(error)
-        };
-      }
-    }
-    return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
-  }
-  function get(url) {
-    return request(url, { method: "GET", headers: { ...baseHeaders } });
-  }
-  return {
-    getFile(key) {
-      return get(`${BASE_URL}/files/${key}`);
-    },
-    getFileNodes(key, ids) {
-      const url = `${BASE_URL}/files/${key}/nodes?ids=${joinIds(ids)}`;
-      return get(url);
-    },
-    getComponents(key) {
-      return get(
-        `${BASE_URL}/files/${key}/components`
-      );
-    },
-    getVersions(key) {
-      return get(`${BASE_URL}/files/${key}/versions`);
-    },
-    getComments(key) {
-      return get(`${BASE_URL}/files/${key}/comments`);
-    },
-    postComment(key, message, clientMeta) {
-      const body = clientMeta === void 0 ? { message } : { message, client_meta: clientMeta };
-      return request(`${BASE_URL}/files/${key}/comments`, {
-        method: "POST",
-        headers: {
-          ...baseHeaders,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
-    },
-    getImages(key, ids, opts) {
-      const parts = [`ids=${joinIds(ids)}`];
-      if (opts?.format !== void 0) parts.push(`format=${opts.format}`);
-      if (opts?.scale !== void 0) parts.push(`scale=${opts.scale}`);
-      if (opts?.svg_include_id !== void 0) {
-        parts.push(`svg_include_id=${opts.svg_include_id}`);
-      }
-      return get(
-        `${BASE_URL}/images/${key}?${parts.join("&")}`
-      );
-    }
-  };
-}
-
-// src/render/terminal/bar-chart.ts
-var import_picocolors = __toESM(require_picocolors(), 1);
-var colors = import_picocolors.default.createColors(true);
-var FULL_BLOCK = "\u2588";
-var PARTIAL_BLOCKS = ["", "\u258F", "\u258E", "\u258D", "\u258C", "\u258B", "\u258A", "\u2589"];
-function displayWidth(value) {
-  return [...value].length;
-}
-function buildBar(fraction, width) {
-  const eighths = Math.max(0, Math.round(fraction * width * 8));
-  const fullCount = Math.min(Math.floor(eighths / 8), width);
-  let bar = FULL_BLOCK.repeat(fullCount);
-  const remainder = eighths % 8;
-  if (fullCount < width && remainder > 0) {
-    bar += PARTIAL_BLOCKS[remainder];
-  }
-  return bar;
-}
-function renderBarChart(items, opts) {
-  const labelWidth = Math.max(0, ...items.map((i) => displayWidth(i.label)));
-  const valueStrings = items.map((i) => String(i.value));
-  const valueWidth = Math.max(0, ...valueStrings.map((v) => v.length));
-  const max = Math.max(0, ...items.map((i) => i.value));
-  return items.map((item, index) => {
-    const clamped = Math.max(0, item.value);
-    const fraction = max > 0 ? clamped / max : 0;
-    const bar = buildBar(fraction, opts.width);
-    const renderedBar = opts.color && bar.length > 0 ? colors.cyan(bar) : bar;
-    const label = item.label + " ".repeat(labelWidth - displayWidth(item.label));
-    const value = (valueStrings[index] ?? "").padStart(valueWidth);
-    return `${label} \u2502${renderedBar} ${value}`;
-  }).join("\n");
-}
-
-// src/render/terminal/severity.ts
-var import_picocolors2 = __toESM(require_picocolors(), 1);
-var colors2 = import_picocolors2.default.createColors(true);
-var PALETTE = {
-  error: (s) => colors2.red(s),
-  warn: (s) => colors2.yellow(s),
-  info: (s) => colors2.cyan(s),
-  ok: (s) => colors2.green(s)
-};
-function severityColor(level, text, opts) {
-  if (!opts.color) return text;
-  return PALETTE[level](text);
-}
-var FORCE_OFF = /* @__PURE__ */ new Set(["0", "false"]);
-function shouldColor(env, isTTY) {
-  const noColor = env.NO_COLOR;
-  if (noColor !== void 0 && noColor !== "") return false;
-  const force = env.FORCE_COLOR;
-  if (force !== void 0 && force !== "" && !FORCE_OFF.has(force)) return true;
-  if (env.CI !== void 0 && env.CI !== "") return false;
-  return isTTY;
-}
-
-// src/render/terminal/table.ts
-function isNumericCell(value) {
-  const trimmed = value.trim();
-  return trimmed !== "" && !Number.isNaN(Number(trimmed));
-}
-function displayWidth2(value) {
-  return [...value].length;
-}
-function pad(value, width, alignRight) {
-  const gap = Math.max(0, width - displayWidth2(value));
-  const filler = " ".repeat(gap);
-  return alignRight ? filler + value : value + filler;
-}
-function renderTable(headers, rows, _opts) {
-  const columnCount = headers.length;
-  const cellAt = (row, column) => row[column] ?? "";
-  const widths = [];
-  for (let c2 = 0; c2 < columnCount; c2++) {
-    let width = displayWidth2(headers[c2] ?? "");
-    for (const row of rows) {
-      width = Math.max(width, displayWidth2(cellAt(row, c2)));
-    }
-    widths.push(width);
-  }
-  const numericColumn = [];
-  for (let c2 = 0; c2 < columnCount; c2++) {
-    numericColumn.push(
-      rows.length > 0 && rows.every((row) => isNumericCell(cellAt(row, c2)))
-    );
-  }
-  const border = (left, mid, right) => left + widths.map((w) => "\u2500".repeat(w + 2)).join(mid) + right;
-  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell, c2) => {
-    const right = alignNumeric && (numericColumn[c2] ?? false);
-    return ` ${pad(cell, widths[c2] ?? 0, right)} `;
-  }).join("\u2502")}\u2502`;
-  const lines = [];
-  lines.push(border("\u250C", "\u252C", "\u2510"));
-  lines.push(dataRow(headers, false));
-  lines.push(border("\u251C", "\u253C", "\u2524"));
-  for (const row of rows) {
-    lines.push(
-      dataRow(
-        headers.map((_, c2) => cellAt(row, c2)),
-        true
-      )
-    );
-  }
-  lines.push(border("\u2514", "\u2534", "\u2518"));
-  return lines.join("\n");
-}
-
-// src/cli-commands/handoff.ts
-var DEDUCTION_LIMIT = 10;
-var DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
-var RULE_LABEL = {
-  "var-binding": "Variable binding",
-  "auto-layout": "Auto layout",
-  component: "Component usage",
-  naming: "Naming"
-};
-var HISTORY_DEDUCTION_LIMIT = 3;
-function appendHandoffHistory(report, frameName) {
-  const stateDir = join(cwd(), ".ds-bridge");
-  const record = {
-    at: (/* @__PURE__ */ new Date()).toISOString(),
-    kind: "handoff",
-    score: report.score,
-    frameName,
-    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
-  };
-  mkdirSync(stateDir, { recursive: true });
-  appendFileSync(
-    join(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-function fail(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function missingTokenMessage() {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Set one via the plugin config dialog (stored in the system keychain) or,",
-    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-    "",
-    "  export FIGMA_TOKEN=figd_your_token_here",
-    "",
-    "Create the token at figma.com \u2192 Settings \u2192 Security \u2192 Personal access",
-    "tokens, with these scopes:",
-    "  file_content:read, library_content:read, file_versions:read,",
-    "  file_comments:read, file_comments:write",
-    "",
-    "Note: the PAT must come from a Dev or Full seat \u2014 a View seat is rate-",
-    "limited to roughly a handful of requests per month and cannot be used here."
-  ].join("\n");
-}
-function clientErrorMessage(result) {
-  switch (result.kind) {
-    case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
-    case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read (and file_comments:write for --comment).`;
-    case "not-found":
-      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
-    case "rate-limited":
-      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
-    case "network-error":
-      return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-function formatPoints(points) {
-  return points.toFixed(1).replace(/\.0$/, "");
-}
-function ruleSeverity() {
-  return "error";
-}
-function renderTerm(report, threshold, color) {
-  const passed = report.score >= threshold;
-  const scoreSeverity = passed ? "ok" : "error";
-  const verdict = passed ? "PASS" : "BELOW THRESHOLD";
-  const scoreLine = severityColor(
-    scoreSeverity,
-    `Readiness ${report.score}/100 (threshold ${threshold}) \u2014 ${verdict}`,
-    { color }
-  );
-  const { stats } = report;
-  const statsRows = [
-    ["nodes", String(stats.totalNodes)],
-    ["bound coverage", `${Math.round(stats.boundCoverage * 100)}%`],
-    ["auto-layout coverage", `${Math.round(stats.autoLayoutCoverage * 100)}%`],
-    ["instances", String(stats.instanceCount)],
-    ["detached suspects", String(stats.detachedSuspects)],
-    ["default names", String(stats.badNames)]
-  ];
-  const statsTable = renderTable(["stat", "value"], statsRows, { color });
-  const lines = [scoreLine, "", statsTable];
-  if (report.deductions.length > 0) {
-    const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
-    const rows = listed.map((d) => [
-      severityColor(ruleSeverity(), RULE_LABEL[d.rule] ?? d.rule, { color }),
-      `${d.nodeName} (${d.nodeId})`,
-      `-${formatPoints(d.points)}`,
-      d.fix
-    ]);
-    const table = renderTable(["rule", "node", "points", "fix"], rows, {
-      color
-    });
-    lines.push("", `${report.deductions.length} deduction(s):`, table);
-    if (report.deductions.length > DEDUCTION_LIMIT) {
-      lines.push(`\u2026 ${report.deductions.length - DEDUCTION_LIMIT} more`);
-    }
-  } else {
-    lines.push("", "No deductions \u2014 this frame is handoff-ready.");
-  }
-  return lines.join("\n");
-}
-function commentBody(report, threshold) {
-  const verdict = report.score >= threshold ? "passes" : "is below";
-  const header = `Handoff readiness: ${report.score}/100 \u2014 ${verdict} the ${threshold} threshold.`;
-  if (report.deductions.length === 0) {
-    return `${header}
-No deductions \u2014 this frame is handoff-ready.`;
-  }
-  const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
-  const lines = listed.map(
-    (d) => `\u2022 ${RULE_LABEL[d.rule] ?? d.rule} (-${formatPoints(d.points)}): ${d.nodeName} \u2014 ${d.fix}`
-  );
-  const more = report.deductions.length > DEDUCTION_LIMIT ? [`\u2026 and ${report.deductions.length - DEDUCTION_LIMIT} more`] : [];
-  return [header, "Top deductions:", ...lines, ...more].join("\n");
-}
-function resolveThreshold(flag, configDefault) {
-  if (flag === void 0) return { kind: "ok", value: configDefault };
-  const n = Number(flag);
-  if (!Number.isFinite(n) || n < 0 || n > 100) {
-    return {
-      kind: "error",
-      message: `--threshold must be a number between 0 and 100 (got ${JSON.stringify(flag)}).`
-    };
-  }
-  return { kind: "ok", value: n };
-}
-function nodeFromFileNodes(nodes, nodeId) {
-  const direct = nodes[nodeId];
-  if (direct !== void 0) return direct.document;
-  const entries = Object.values(nodes).filter(
-    (v) => v !== void 0
-  );
-  return entries[0]?.document;
-}
-async function fetchRoot(client, fileKey, nodeId) {
-  if (nodeId !== void 0) {
-    const result2 = await client.getFileNodes(fileKey, [nodeId]);
-    if (result2.kind !== "ok") {
-      return { kind: "error", message: clientErrorMessage(result2) };
-    }
-    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
-    if (root === void 0) {
-      return {
-        kind: "error",
-        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
-      };
-    }
-    return { kind: "ok", root };
-  }
-  const result = await client.getFile(fileKey);
-  if (result.kind !== "ok") {
-    return { kind: "error", message: clientErrorMessage(result) };
-  }
-  return { kind: "ok", root: result.data.document };
-}
-async function runHandoff(url, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const parsed = parseFigmaUrl(url);
-  if (parsed.kind !== "ok") {
-    fail(
-      `${parsed.message}
-Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
-    );
-    return;
-  }
-  const resolved = resolveConfig({ env: process.env });
-  if (resolved.kind !== "ok") {
-    fail(resolved.message);
-    return;
-  }
-  for (const warning of resolved.warnings) {
-    process.stderr.write(`warning: ${warning}
-`);
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind === "missing") {
-    fail(missingTokenMessage());
-    return;
-  }
-  const threshold = resolveThreshold(
-    options.threshold,
-    config.readinessThreshold
-  );
-  if (threshold.kind === "error") {
-    fail(threshold.message);
-    return;
-  }
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE;
-  const client = createFigmaClient({
-    token: config.figmaToken.value,
-    baseUrl
-  });
-  const fetched = await fetchRoot(client, parsed.fileKey, parsed.nodeId);
-  if (fetched.kind !== "ok") {
-    fail(fetched.message);
-    return;
-  }
-  const report = scoreReadiness(fetched.root);
-  if (options.history) {
-    appendHandoffHistory(report, fetched.root.name);
-  }
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}
-`);
-  } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm(report, threshold.value, color)}
-`);
-  }
-  if (options.comment) {
-    if (!options.yes) {
-      process.stderr.write(
-        "refusing to comment without --yes (pass --comment --yes to write the summary to Figma)\n"
-      );
-    } else {
-      const clientMeta = parsed.nodeId !== void 0 ? { node_id: parsed.nodeId } : void 0;
-      const posted = await client.postComment(
-        parsed.fileKey,
-        commentBody(report, threshold.value),
-        clientMeta
-      );
-      if (posted.kind !== "ok") {
-        process.stderr.write(
-          `warning: could not post the Figma comment: ${clientErrorMessage(posted)}
-`
-        );
-      } else {
-        process.stdout.write(`Posted Figma comment ${posted.data.id}.
-`);
-      }
-    }
-  }
-  process.exitCode = report.score >= threshold.value ? 0 : 1;
-}
-function registerHandoffCommand(program2) {
-  program2.command("handoff").description("Score a Figma frame's pre-handoff machine-readability").argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
-    "--threshold <n>",
-    "readiness gate (0-100); exit 1 below it (default from config, 80)"
-  ).option("--format <format>", "output format: term | json", "term").option(
-    "--comment",
-    "post the score + top deductions as ONE Figma comment (requires --yes)",
-    false
-  ).option(
-    "--yes",
-    "confirm writing the --comment to Figma without an interactive prompt",
-    false
-  ).option(
-    "--no-history",
-    "do not append a readiness record to .ds-bridge/history.jsonl in the current directory"
-  ).action((url, options) => {
-    void runHandoff(url, options);
-  });
-}
-
-// src/cli-commands/lint.ts
-import { spawnSync } from "child_process";
+// src/cli-commands/a11y.ts
 import {
-  appendFileSync as appendFileSync2,
+  appendFileSync,
   existsSync,
-  mkdirSync as mkdirSync2,
-  readdirSync,
+  mkdirSync,
   readFileSync,
-  statSync,
-  writeFileSync
+  statSync
 } from "fs";
-import { isAbsolute, join as join2, relative, resolve as resolve3, sep } from "path";
-
-// src/engines/lint/extract.ts
-var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
-var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
-var DIM_RE = /-?\d+(?:\.\d+)?(?:px)?/;
-var SPACING_PREFIXES = ["padding", "margin", "inset"];
-var SPACING_EXACT = /* @__PURE__ */ new Set([
-  "gap",
-  "row-gap",
-  "column-gap",
-  "rowGap",
-  "columnGap",
-  "top",
-  "right",
-  "bottom",
-  "left"
-]);
-function isSpacingProperty(property) {
-  const lower = property.toLowerCase();
-  if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
-  for (const prefix of SPACING_PREFIXES) {
-    if (lower === prefix || lower.startsWith(prefix)) return true;
-  }
-  return false;
-}
-function blankComments(text) {
-  let out = "";
-  let i = 0;
-  while (i < text.length) {
-    if (text[i] === "/" && text[i + 1] === "*") {
-      const end = text.indexOf("*/", i + 2);
-      const stop = end === -1 ? text.length : end + 2;
-      for (let j = i; j < stop; j++) out += text[j] === "\n" ? "\n" : " ";
-      i = stop;
-    } else {
-      out += text[i];
-      i += 1;
-    }
-  }
-  return out;
-}
-function* scanValue(value, property) {
-  const spacing = isSpacingProperty(property);
-  let i = 0;
-  while (i < value.length) {
-    const rest = value.slice(i);
-    if (/^var\s*\(/i.test(rest)) {
-      const close = value.indexOf(")", i);
-      i = close === -1 ? value.length : close + 1;
-      continue;
-    }
-    const fn5 = COLOR_FN_RE.exec(rest);
-    if (fn5 !== null && fn5.index === 0) {
-      yield { offset: i, raw: fn5[0], valueKind: "color" };
-      i += fn5[0].length;
-      continue;
-    }
-    if (value[i] === "#") {
-      const hex2 = HEX_RE.exec(rest);
-      if (hex2 !== null && hex2.index === 0) {
-        yield { offset: i, raw: hex2[0], valueKind: "color" };
-        i += hex2[0].length;
-        continue;
-      }
-    }
-    if (spacing && (value[i] === "-" || /\d/.test(value[i] ?? ""))) {
-      const prev = value[i - 1] ?? " ";
-      if (!/[a-zA-Z0-9.#-]/.test(prev)) {
-        const dim = DIM_RE.exec(rest);
-        if (dim !== null && dim.index === 0) {
-          const px = Number.parseFloat(dim[0]);
-          if (Number.isFinite(px) && px !== 0) {
-            yield { offset: i, raw: dim[0], valueKind: "dimension" };
-          }
-          i += dim[0].length;
-          continue;
-        }
-      }
-    }
-    i += 1;
-  }
-}
-function extractCss(text, lineBase, colBase) {
-  const hits = [];
-  const cleaned = blankComments(text);
-  const lines = cleaned.split("\n");
-  for (let li = 0; li < lines.length; li++) {
-    const line = lines[li] ?? "";
-    const colShift = li === 0 ? colBase : 0;
-    const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
-    let m = decl.exec(line);
-    while (m !== null) {
-      const property = m[1] ?? "";
-      const value = m[2] ?? "";
-      const valueStart = m.index + m[0].length - value.length;
-      for (const hit of scanValue(value, property)) {
-        hits.push({
-          line: lineBase + li,
-          col: colShift + valueStart + hit.offset + 1,
-          raw: hit.raw,
-          property,
-          valueKind: hit.valueKind
-        });
-      }
-      m = decl.exec(line);
-    }
-  }
-  return hits;
-}
-function indexToLineCol(source, index) {
-  let line = 1;
-  let lineStart = 0;
-  for (let i = 0; i < index; i++) {
-    if (source[i] === "\n") {
-      line += 1;
-      lineStart = i + 1;
-    }
-  }
-  return { line, col: index - lineStart + 1 };
-}
-var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
-function extractTsx(source, file) {
-  const out = [];
-  const styleOpen = /style\s*=\s*\{\{/g;
-  let so = styleOpen.exec(source);
-  while (so !== null) {
-    const bodyStart = so.index + so[0].length;
-    const close = source.indexOf("}}", bodyStart);
-    const body = source.slice(bodyStart, close === -1 ? source.length : close);
-    STYLE_OBJ_PROP_RE.lastIndex = 0;
-    let pm = STYLE_OBJ_PROP_RE.exec(body);
-    while (pm !== null) {
-      const property = pm[1] ?? "";
-      const valueCapture = pm[2] ?? "";
-      const rawValue = valueCapture.trim();
-      const leading = valueCapture.length - valueCapture.trimStart().length;
-      const valueIndexInBody = pm.index + pm[0].length - valueCapture.length + leading;
-      const absValueIndex = bodyStart + valueIndexInBody;
-      const quoted = /^(["'])(.*)\1$/.exec(rawValue);
-      if (quoted !== null) {
-        const inner = quoted[2] ?? "";
-        if (isColorLiteral(inner)) {
-          const pos = indexToLineCol(source, absValueIndex);
-          out.push({
-            file,
-            line: pos.line,
-            col: pos.col,
-            raw: rawValue,
-            property,
-            valueKind: "color",
-            context: "style-object"
-          });
-        }
-      } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
-        if (isSpacingProperty(property)) {
-          const num3 = Number.parseFloat(rawValue);
-          if (Number.isFinite(num3) && num3 !== 0) {
-            const pos = indexToLineCol(source, absValueIndex);
-            out.push({
-              file,
-              line: pos.line,
-              col: pos.col,
-              raw: rawValue,
-              property,
-              valueKind: "dimension",
-              context: "style-object"
-            });
-          }
-        }
-      }
-      pm = STYLE_OBJ_PROP_RE.exec(body);
-    }
-    so = styleOpen.exec(source);
-  }
-  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
-  let st = styledOpen.exec(source);
-  while (st !== null) {
-    const backtickIndex = st.index + st[0].length - 1;
-    const bodyStart = backtickIndex + 1;
-    const close = source.indexOf("`", bodyStart);
-    const body = source.slice(bodyStart, close === -1 ? source.length : close);
-    const pos = indexToLineCol(source, bodyStart);
-    const cssHits = extractCss(body, pos.line, pos.col - 1);
-    for (const hit of cssHits) {
-      out.push({
-        file,
-        line: hit.line,
-        col: hit.col,
-        raw: hit.raw,
-        property: hit.property,
-        valueKind: hit.valueKind,
-        context: "styled-template"
-      });
-    }
-    st = styledOpen.exec(source);
-  }
-  return out;
-}
-var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
-var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
-function isColorLiteral(value) {
-  const v = value.trim();
-  return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
-}
-function extensionOf(path) {
-  const dot = path.lastIndexOf(".");
-  return dot === -1 ? "" : path.slice(dot).toLowerCase();
-}
-function byLineThenCol(a, b) {
-  if (a.line !== b.line) return a.line - b.line;
-  return a.col - b.col;
-}
-function extractLiterals(file) {
-  const ext = extensionOf(file.path);
-  let result = [];
-  try {
-    if (ext === ".css" || ext === ".scss") {
-      result = extractCss(file.content, 1, 0).map((hit) => ({
-        file: file.path,
-        line: hit.line,
-        col: hit.col,
-        raw: hit.raw,
-        property: hit.property,
-        valueKind: hit.valueKind,
-        context: "css-declaration"
-      }));
-    } else if (ext === ".tsx" || ext === ".jsx") {
-      result = extractTsx(file.content, file.path);
-    }
-  } catch {
-    return [];
-  }
-  return result.sort(byLineThenCol);
-}
-
-// src/engines/lint/fix.ts
-function isCompositeToken(token) {
-  return typeof token.value === "object" && token.value !== null;
-}
-function toCssVar(token) {
-  return `var(--${token.name.replaceAll(".", "-")})`;
-}
-function quoteOf(raw) {
-  const first = raw[0];
-  const last = raw[raw.length - 1];
-  if (raw.length >= 2 && (first === '"' || first === "'") && first === last) {
-    return first;
-  }
-  return void 0;
-}
-function replacementFor(literal, token) {
-  const cssVar = toCssVar(token);
-  if (literal.context !== "style-object") return cssVar;
-  const quote = quoteOf(literal.raw);
-  if (quote !== void 0) return `${quote}${cssVar}${quote}`;
-  return `"${cssVar}"`;
-}
-function compareEdits(a, b) {
-  if (a.file !== b.file) return a.file < b.file ? -1 : 1;
-  if (a.line !== b.line) return b.line - a.line;
-  return b.col - a.col;
-}
-function planFixes(findings) {
-  const edits = [];
-  for (const { literal, match } of findings) {
-    if (match.kind !== "exact") continue;
-    if (isCompositeToken(match.token)) continue;
-    edits.push({
-      file: literal.file,
-      line: literal.line,
-      col: literal.col,
-      length: literal.raw.length,
-      replacement: replacementFor(literal, match.token)
-    });
-  }
-  return edits.sort(compareEdits);
-}
-function applyEdits(content, edits) {
-  if (edits.length === 0) return content;
-  const lines = content.split("\n");
-  const byLine = /* @__PURE__ */ new Map();
-  for (const edit of edits) {
-    const bucket = byLine.get(edit.line);
-    if (bucket === void 0) byLine.set(edit.line, [edit]);
-    else bucket.push(edit);
-  }
-  for (const [line, lineEdits] of byLine) {
-    const index = line - 1;
-    const text = lines[index];
-    if (text === void 0) continue;
-    let next = text;
-    for (const edit of [...lineEdits].sort((a, b) => b.col - a.col)) {
-      const start = edit.col - 1;
-      if (start < 0 || start > next.length) continue;
-      next = next.slice(0, start) + edit.replacement + next.slice(start + edit.length);
-    }
-    lines[index] = next;
-  }
-  return lines.join("\n");
-}
+import { join as join2, resolve as resolve4 } from "path";
 
 // node_modules/culori/src/rgb/parseNumber.js
 var parseNumber = (color, len) => {
@@ -8188,123 +7037,151 @@ var xyz50 = useMode(definition_default26);
 var xyz65 = useMode(definition_default27);
 var yiq = useMode(definition_default28);
 
-// src/engines/tokens/normalize.ts
-function normalizeColor(raw) {
-  if (raw === "") return void 0;
-  const parsed = parse_default(raw);
-  if (parsed === void 0) return void 0;
-  const alpha = parsed.alpha ?? 1;
-  return alpha < 1 ? formatHex8(parsed) : formatHex(parsed);
+// src/engines/a11y/contrast.ts
+var THRESHOLDS = {
+  AA: { normal: 4.5, large: 3 },
+  AAA: { normal: 7, large: 4.5 }
+};
+function requiredRatio(level, size) {
+  return THRESHOLDS[level][size];
 }
-var PX_RE = /^(-?\d+(?:\.\d+)?)px$/;
-var REM_RE = /^(-?\d+(?:\.\d+)?)rem$/;
-var UNITLESS_RE = /^(-?\d+(?:\.\d+)?)$/;
-function normalizeDimension(raw, options) {
-  const remBase = options?.remBase ?? 16;
-  if (typeof raw === "number") {
-    return Number.isFinite(raw) ? { px: raw } : void 0;
-  }
-  const trimmed = raw.trim();
-  const px = PX_RE.exec(trimmed);
-  if (px?.[1] !== void 0) return { px: Number(px[1]) };
-  const rem = REM_RE.exec(trimmed);
-  if (rem?.[1] !== void 0) return { px: Number(rem[1]) * remBase };
-  const unitless = UNITLESS_RE.exec(trimmed);
-  if (unitless?.[1] !== void 0) return { px: Number(unitless[1]) };
-  return void 0;
+function linearize4(channel) {
+  return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+}
+function relativeLuminance(color) {
+  const parsed = parse_default(color);
+  if (parsed === void 0) return void 0;
+  const srgb = rgb2(parsed);
+  if (srgb === void 0) return void 0;
+  const r2 = linearize4(srgb.r);
+  const g = linearize4(srgb.g);
+  const b = linearize4(srgb.b);
+  return 0.2126 * r2 + 0.7152 * g + 0.0722 * b;
+}
+function contrastRatio(fg, bg) {
+  const lFg = relativeLuminance(fg);
+  const lBg = relativeLuminance(bg);
+  if (lFg === void 0 || lBg === void 0) return void 0;
+  const lighter = Math.max(lFg, lBg);
+  const darker = Math.min(lFg, lBg);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
-// src/engines/lint/match.ts
-var COLOR_NEAR_DELTA_E = 2.5;
-var DIMENSION_NEAR_PX = 1;
-var NEAR_LIMIT = 3;
-function pickPreferred(tokens) {
-  if (tokens.length === 0) return void 0;
-  const names = new Set(tokens.map((t) => t.name));
-  const semantic = tokens.find(
-    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
-  );
-  return semantic ?? tokens[0];
+// src/engines/a11y/audit.ts
+var FG_RE = /(^|[.\-/])(text|fg|foreground|on-[a-z0-9]+|on)([.\-/]|$)/i;
+var BG_RE = /(^|[.\-/])(bg|background|surface|fill)([.\-/]|$)/i;
+function isColor(token) {
+  return token.type === "color" && typeof token.value === "string";
 }
-function aliasRank(token) {
-  return token.aliasOf !== void 0 ? 0 : 1;
+function isForegroundRole(name) {
+  return FG_RE.test(name);
 }
-function stripQuotes(raw) {
-  const trimmed = raw.trim();
-  const quote = trimmed[0];
-  if (trimmed.length >= 2 && (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
+function isBackgroundRole(name) {
+  return BG_RE.test(name);
 }
-function matchColor(literal, index, options) {
-  const canonical2 = normalizeColor(stripQuotes(literal.raw));
-  if (canonical2 === void 0) return { kind: "off-system" };
-  const exact = index.byValue.get(canonical2);
-  if (exact !== void 0 && exact.length > 0) {
-    const token = pickPreferred(exact);
-    if (token !== void 0) return { kind: "exact", token };
-  }
-  const composite = options?.compositeColors?.get(canonical2);
-  if (composite !== void 0 && composite.length > 0) {
-    const token = pickPreferred(composite);
-    if (token !== void 0) return { kind: "exact", token };
-  }
-  const near = index.nearest(canonical2, {
-    maxDeltaE: COLOR_NEAR_DELTA_E,
-    limit: NEAR_LIMIT
-  });
-  if (near.length === 0) return { kind: "off-system" };
-  const candidates = near.map((m) => ({ token: m.token, distance: m.deltaE })).sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : aliasRank(a.token) - aliasRank(b.token)
-  ).slice(0, NEAR_LIMIT);
-  return { kind: "near", candidates };
+function byName(a, b) {
+  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
-function matchDimension(literal, index) {
-  const dim = normalizeDimension(stripQuotes(literal.raw));
-  if (dim === void 0) return { kind: "off-system" };
-  const bucket = index.byValue.get(`${dim.px}px`);
-  if (bucket !== void 0) {
-    const exact = bucket.find((t) => t.type === "dimension");
-    if (exact !== void 0) return { kind: "exact", token: exact };
-  }
-  const candidates = [];
-  for (const token of index.byName.values()) {
-    if (token.type !== "dimension") continue;
-    const tokenDim = normalizeDimension(
-      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
-    );
-    if (tokenDim === void 0) continue;
-    const distance = Math.abs(dim.px - tokenDim.px);
-    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
-    candidates.push({ token, distance });
-  }
-  if (candidates.length === 0) return { kind: "off-system" };
-  candidates.sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
-  );
-  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT) };
-}
-function matchLiteral(literal, index, options) {
-  return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
-}
-function buildCompositeColorLookup(tokens) {
-  const lookup = /* @__PURE__ */ new Map();
-  for (const token of tokens) {
-    const { value } = token;
-    if (typeof value !== "object" || value === null) continue;
-    const inner = value.color;
-    if (typeof inner !== "string") continue;
-    const canonical2 = normalizeColor(inner);
-    if (canonical2 === void 0) continue;
-    const bucket = lookup.get(canonical2);
-    if (bucket === void 0) {
-      lookup.set(canonical2, [token]);
-    } else {
-      bucket.push(token);
+function pairColorTokens(map) {
+  const colors3 = map.tokens.filter(isColor);
+  const foregrounds = colors3.filter((t) => isForegroundRole(t.name)).sort(byName);
+  const backgrounds = colors3.filter((t) => isBackgroundRole(t.name)).sort(byName);
+  const pairs = [];
+  for (const foreground of foregrounds) {
+    for (const background of backgrounds) {
+      if (foreground.name === background.name) continue;
+      pairs.push({ foreground, background });
     }
   }
-  return lookup;
+  return pairs;
+}
+var SUGGESTION_STEPS = 1e3;
+function suggestForeground(fg, bg, required) {
+  const parsed = parse_default(fg);
+  if (parsed === void 0) return { kind: "none" };
+  const base = oklch(parsed);
+  if (base === void 0) return { kind: "none" };
+  const bgLuminance = relativeLuminance(bg);
+  if (bgLuminance === void 0) return { kind: "none" };
+  const direction = bgLuminance > 0.5 ? -1 : 1;
+  const baseL = base.l;
+  for (let step = 0; step <= SUGGESTION_STEPS; step += 1) {
+    const lightness = Math.min(
+      1,
+      Math.max(0, baseL + direction * (step / SUGGESTION_STEPS))
+    );
+    const candidate = formatHex(rgb2({ ...base, l: lightness }));
+    if (candidate === void 0) continue;
+    const ratio = contrastRatio(candidate, bg);
+    if (ratio !== void 0 && ratio >= required) {
+      return { kind: "adjusted", value: candidate };
+    }
+  }
+  return { kind: "none" };
+}
+function auditPair(mode, pair, level) {
+  const fgValue = pair.foreground.value;
+  const bgValue = pair.background.value;
+  const required = requiredRatio(level, "normal");
+  const ratio = contrastRatio(fgValue, bgValue);
+  if (ratio === void 0) {
+    return {
+      mode,
+      foreground: pair.foreground.name,
+      background: pair.background.name,
+      foregroundValue: fgValue,
+      backgroundValue: bgValue,
+      required,
+      status: "unparseable"
+    };
+  }
+  if (ratio >= required) {
+    return {
+      mode,
+      foreground: pair.foreground.name,
+      background: pair.background.name,
+      foregroundValue: fgValue,
+      backgroundValue: bgValue,
+      ratio,
+      required,
+      status: "pass"
+    };
+  }
+  return {
+    mode,
+    foreground: pair.foreground.name,
+    background: pair.background.name,
+    foregroundValue: fgValue,
+    backgroundValue: bgValue,
+    ratio,
+    required,
+    status: "fail",
+    suggestion: suggestForeground(fgValue, bgValue, required)
+  };
+}
+function auditContrast(modes2, options) {
+  const findings = [];
+  for (const { mode, map } of modes2) {
+    for (const pair of pairColorTokens(map)) {
+      findings.push(auditPair(mode, pair, options.level));
+    }
+  }
+  findings.sort(
+    (a, b) => (a.mode < b.mode ? -1 : a.mode > b.mode ? 1 : 0) || (a.foreground < b.foreground ? -1 : a.foreground > b.foreground ? 1 : 0) || (a.background < b.background ? -1 : a.background > b.background ? 1 : 0)
+  );
+  let passed = 0;
+  let failed = 0;
+  let unparseable = 0;
+  for (const finding of findings) {
+    if (finding.status === "pass") passed += 1;
+    else if (finding.status === "fail") failed += 1;
+    else unparseable += 1;
+  }
+  return {
+    level: options.level,
+    findings,
+    summary: { total: findings.length, passed, failed, unparseable }
+  };
 }
 
 // src/engines/tokens/detect.ts
@@ -8379,7 +7256,7 @@ function aliasTarget(value) {
   if (inner === void 0) return void 0;
   return inner.endsWith(".value") ? inner.slice(0, -".value".length) : inner;
 }
-function collect2(node, path, raws, errors) {
+function collect(node, path, raws, errors) {
   if ("value" in node) {
     const name = path.join(".");
     const firstSegment = path[0] ?? "";
@@ -8406,7 +7283,7 @@ function collect2(node, path, raws, errors) {
   }
   for (const [key, child] of Object.entries(node)) {
     if (isObject2(child)) {
-      collect2(child, [...path, key], raws, errors);
+      collect(child, [...path, key], raws, errors);
     } else {
       const name = [...path, key].join(".");
       errors.push({
@@ -8417,7 +7294,7 @@ function collect2(node, path, raws, errors) {
     }
   }
 }
-function resolve(start, byName) {
+function resolve(start, byName2) {
   const seen = /* @__PURE__ */ new Set([start.name]);
   let current = start;
   while (current.aliasOf !== void 0) {
@@ -8432,7 +7309,7 @@ function resolve(start, byName) {
         }
       };
     }
-    const next = byName.get(targetName);
+    const next = byName2.get(targetName);
     if (next === void 0) {
       return {
         ok: false,
@@ -8462,7 +7339,7 @@ function parseStyleDictionary(source) {
   }
   const raws = [];
   const errors = [];
-  collect2(source, [], raws, errors);
+  collect(source, [], raws, errors);
   if (errors.length > 0) {
     return { kind: "error", errors };
   }
@@ -8477,11 +7354,11 @@ function parseStyleDictionary(source) {
       ]
     };
   }
-  const byName = new Map(raws.map((r2) => [r2.name, r2]));
+  const byName2 = new Map(raws.map((r2) => [r2.name, r2]));
   const tokens = [];
   const resolveErrors = [];
   for (const raw of raws) {
-    const resolved = resolve(raw, byName);
+    const resolved = resolve(raw, byName2);
     if (!resolved.ok) {
       resolveErrors.push(resolved.error);
       continue;
@@ -8644,7 +7521,7 @@ function parseTokensStudio(source) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve6 = (name, seen) => {
+  const resolve8 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -8670,7 +7547,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve6(target, new Set(seen).add(target));
+    const downstream = resolve8(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -8678,7 +7555,7 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve6(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve8(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
     const token = {
       name,
@@ -8726,7 +7603,7 @@ function mapType2(raw, path, warnings) {
   warnings.push(`${path}: unrecognized $type "${raw}" \u2014 treated as "other"`);
   return "other";
 }
-function collect3(node, pathSegments, inheritedType, warnings, errors, out) {
+function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
   const path = pathSegments.join(".");
   const ownType = "$type" in node && node.$type !== void 0 ? node.$type : inheritedType;
   if ("$value" in node) {
@@ -8771,16 +7648,16 @@ function collect3(node, pathSegments, inheritedType, warnings, errors, out) {
       });
       continue;
     }
-    collect3(child, childPath, ownType, warnings, errors, out);
+    collect2(child, childPath, ownType, warnings, errors, out);
   }
 }
-function resolve2(raw, byName, errors) {
+function resolve2(raw, byName2, errors) {
   const direct = aliasTarget3(raw.rawValue);
   if (direct === void 0) return { value: raw.rawValue };
   const seen = /* @__PURE__ */ new Set([raw.name]);
   let currentTarget = direct;
   for (; ; ) {
-    const target = byName.get(currentTarget);
+    const target = byName2.get(currentTarget);
     if (target === void 0) {
       errors.push({
         code: "unknown-alias",
@@ -8820,14 +7697,14 @@ function parseW3c(source) {
   const warnings = [];
   const errors = [];
   const raws = [];
-  collect3(source, [], void 0, warnings, errors, raws);
+  collect2(source, [], void 0, warnings, errors, raws);
   if (errors.length > 0) {
     return { kind: "error", errors };
   }
-  const byName = new Map(raws.map((r2) => [r2.name, r2]));
+  const byName2 = new Map(raws.map((r2) => [r2.name, r2]));
   const tokens = [];
   for (const raw of raws) {
-    const resolved = resolve2(raw, byName, errors);
+    const resolved = resolve2(raw, byName2, errors);
     if (resolved === void 0) continue;
     const token = {
       name: raw.name,
@@ -8850,205 +7727,21 @@ function parseW3c(source) {
   };
 }
 
-// src/engines/tokens/token-index.ts
-function canonicalValueKey(token) {
-  const { value } = token;
-  if (typeof value === "number") {
-    const dim2 = normalizeDimension(value);
-    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value);
-  }
-  if (typeof value !== "string") return void 0;
-  const color = normalizeColor(value);
-  if (color !== void 0) return color;
-  const dim = normalizeDimension(value);
-  if (dim !== void 0) return `${dim.px}px`;
-  return value;
-}
-var deltaE2000 = differenceCiede2000();
-function buildTokenIndex(tokens) {
-  const byName = /* @__PURE__ */ new Map();
-  const byValue = /* @__PURE__ */ new Map();
-  const colorTokens = [];
-  for (const token of tokens) {
-    byName.set(token.name, token);
-    const key = canonicalValueKey(token);
-    if (key !== void 0) {
-      const bucket = byValue.get(key);
-      if (bucket === void 0) {
-        byValue.set(key, [token]);
-      } else {
-        bucket.push(token);
-      }
-    }
-    if (token.type === "color" && typeof token.value === "string") {
-      const parsed = parse_default(token.value);
-      if (parsed !== void 0) colorTokens.push({ token, parsed });
-    }
-  }
-  return {
-    byName,
-    byValue,
-    nearest(rawColor, options) {
-      const query = parse_default(rawColor);
-      if (query === void 0) return [];
-      return colorTokens.map(({ token, parsed }) => ({
-        token,
-        deltaE: deltaE2000(query, parsed)
-      })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
-    }
-  };
-}
-
-// src/cli-commands/lint.ts
-var PARSERS = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
+// src/io/discover-tokens.ts
+import { readdir, readFile, stat } from "fs/promises";
+import { isAbsolute, join, resolve as resolve3, sep } from "path";
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
+  "coverage",
   "out",
-  ".next",
-  "coverage"
+  ".next"
 ]);
-var LINTABLE_EXTENSIONS = [".css", ".scss", ".tsx", ".jsx"];
-var KIND_SEVERITY = {
-  exact: "error",
-  near: "warn",
-  "off-system": "info"
-};
-function countByKind(findings) {
-  const byKind = { exact: 0, near: 0, offSystem: 0 };
-  for (const finding of findings) {
-    if (finding.match.kind === "exact") byKind.exact += 1;
-    else if (finding.match.kind === "near") byKind.near += 1;
-    else byKind.offSystem += 1;
-  }
-  return byKind;
-}
-function appendLintHistory(targetDir, findings) {
-  const stateDir = join2(targetDir, ".ds-bridge");
-  const record = {
-    at: (/* @__PURE__ */ new Date()).toISOString(),
-    kind: "lint",
-    byKind: countByKind(findings)
-  };
-  mkdirSync2(stateDir, { recursive: true });
-  appendFileSync2(
-    join2(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-function hasExtension(name) {
-  const lower = name.toLowerCase();
-  return LINTABLE_EXTENSIONS.some((ext) => lower.endsWith(ext));
-}
-function walkLintableFiles(dir, acc) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join2(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS.has(entry.name)) continue;
-      walkLintableFiles(full, acc);
-      continue;
-    }
-    if (entry.isFile() && hasExtension(entry.name)) acc.push(full);
-  }
-}
-function resolveTokenSource(targetDir, flagTokens) {
-  if (flagTokens !== void 0) {
-    const abs2 = isAbsolute(flagTokens) ? flagTokens : resolve3(process.cwd(), flagTokens);
-    if (!existsSync(abs2)) {
-      return {
-        kind: "error",
-        message: `Token source "${abs2}" (from --tokens) does not exist.`
-      };
-    }
-    return { kind: "ok", path: abs2 };
-  }
-  const configPath = join2(targetDir, ".ds-bridge.json");
-  if (existsSync(configPath)) {
-    let projectFileText;
-    try {
-      projectFileText = readFileSync(configPath, "utf8");
-    } catch {
-      projectFileText = void 0;
-    }
-    if (projectFileText !== void 0) {
-      const resolved = resolveConfig({ projectFileText });
-      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
-        const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute(src) ? src : resolve3(targetDir, src);
-        if (existsSync(abs2)) return { kind: "ok", path: abs2 };
-        return {
-          kind: "error",
-          message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
-        };
-      }
-    }
-  }
-  const discovered = discoverFirstTokenSource(targetDir);
-  if (discovered !== void 0) return { kind: "ok", path: discovered };
-  return {
-    kind: "error",
-    message: `No design-token source found for "${targetDir}".
-Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
-  };
-}
-function discoverFirstTokenSource(root) {
-  const candidates = [];
-  collectTokenCandidates(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat(path) !== void 0).sort((a, b) => {
-    const depth = depthOf(a) - depthOf(b);
-    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-  });
-  return verified[0];
-}
-function depthOf(path) {
-  return path.split(sep).filter((s) => s.length > 0).length;
-}
-function isConventionalTokenFile(name) {
-  if (!name.endsWith(".json")) return false;
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
-}
-function isTokenDir(name) {
-  return name === "tokens" || name === "design-tokens";
-}
-function collectTokenCandidates(dir, insideTokenDir, acc) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join2(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS.has(entry.name)) continue;
-      collectTokenCandidates(
-        full,
-        insideTokenDir || isTokenDir(entry.name),
-        acc
-      );
-      continue;
-    }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
-  }
-}
-function detectFileFormat(absPath) {
+async function detectFileFormat(absPath) {
   let raw;
   try {
-    raw = readFileSync(absPath, "utf8");
+    raw = await readFile(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -9061,7 +7754,222 @@ function detectFileFormat(absPath) {
   const format = detectFormat(parsed);
   return format === "unknown" ? void 0 : format;
 }
-function loadTokenMap(tokenPath) {
+function isConventionalTokenFile(fileName) {
+  if (!fileName.endsWith(".json")) return false;
+  return fileName === "tokens.json" || fileName === "design-tokens.json" || fileName.endsWith(".tokens.json");
+}
+function isTokenDir(dirName) {
+  return dirName === "tokens" || dirName === "design-tokens";
+}
+async function collectCandidates(dir, insideTokenDir, acc) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS.has(entry.name)) continue;
+      await collectCandidates(
+        full,
+        insideTokenDir || isTokenDir(entry.name),
+        acc
+      );
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (!entry.name.endsWith(".json")) continue;
+    if (insideTokenDir || isConventionalTokenFile(entry.name)) {
+      acc.add(full);
+    }
+  }
+}
+function depthOf(absPath) {
+  return absPath.split(sep).filter((segment) => segment.length > 0).length;
+}
+function compareSources(a, b) {
+  const depthDelta = depthOf(a.path) - depthOf(b.path);
+  if (depthDelta !== 0) return depthDelta;
+  return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
+}
+async function discoverTokenSources(rootDir, options) {
+  const root = resolve3(rootDir);
+  if (options?.explicit !== void 0) {
+    const explicitPath = isAbsolute(options.explicit) ? options.explicit : resolve3(root, options.explicit);
+    let isFile = false;
+    try {
+      isFile = (await stat(explicitPath)).isFile();
+    } catch {
+      isFile = false;
+    }
+    if (!isFile) return { kind: "explicit-not-found", path: explicitPath };
+    const format = await detectFileFormat(explicitPath);
+    if (format === void 0) {
+      return { kind: "explicit-not-found", path: explicitPath };
+    }
+    return { kind: "ok", sources: [{ path: explicitPath, format }] };
+  }
+  const candidatePaths = /* @__PURE__ */ new Set();
+  await collectCandidates(root, false, candidatePaths);
+  const sources = [];
+  for (const candidate of candidatePaths) {
+    const format = await detectFileFormat(candidate);
+    if (format !== void 0) sources.push({ path: candidate, format });
+  }
+  sources.sort(compareSources);
+  return { kind: "ok", sources };
+}
+
+// src/render/terminal/bar-chart.ts
+var import_picocolors = __toESM(require_picocolors(), 1);
+var colors = import_picocolors.default.createColors(true);
+var FULL_BLOCK = "\u2588";
+var PARTIAL_BLOCKS = ["", "\u258F", "\u258E", "\u258D", "\u258C", "\u258B", "\u258A", "\u2589"];
+function displayWidth(value) {
+  return [...value].length;
+}
+function buildBar(fraction, width) {
+  const eighths = Math.max(0, Math.round(fraction * width * 8));
+  const fullCount = Math.min(Math.floor(eighths / 8), width);
+  let bar = FULL_BLOCK.repeat(fullCount);
+  const remainder = eighths % 8;
+  if (fullCount < width && remainder > 0) {
+    bar += PARTIAL_BLOCKS[remainder];
+  }
+  return bar;
+}
+function renderBarChart(items, opts) {
+  const labelWidth = Math.max(0, ...items.map((i) => displayWidth(i.label)));
+  const valueStrings = items.map((i) => String(i.value));
+  const valueWidth = Math.max(0, ...valueStrings.map((v) => v.length));
+  const max = Math.max(0, ...items.map((i) => i.value));
+  return items.map((item, index) => {
+    const clamped = Math.max(0, item.value);
+    const fraction = max > 0 ? clamped / max : 0;
+    const bar = buildBar(fraction, opts.width);
+    const renderedBar = opts.color && bar.length > 0 ? colors.cyan(bar) : bar;
+    const label = item.label + " ".repeat(labelWidth - displayWidth(item.label));
+    const value = (valueStrings[index] ?? "").padStart(valueWidth);
+    return `${label} \u2502${renderedBar} ${value}`;
+  }).join("\n");
+}
+
+// src/render/terminal/severity.ts
+var import_picocolors2 = __toESM(require_picocolors(), 1);
+var colors2 = import_picocolors2.default.createColors(true);
+var PALETTE = {
+  error: (s) => colors2.red(s),
+  warn: (s) => colors2.yellow(s),
+  info: (s) => colors2.cyan(s),
+  ok: (s) => colors2.green(s)
+};
+function severityColor(level, text, opts) {
+  if (!opts.color) return text;
+  return PALETTE[level](text);
+}
+var FORCE_OFF = /* @__PURE__ */ new Set(["0", "false"]);
+function shouldColor(env, isTTY) {
+  const noColor = env.NO_COLOR;
+  if (noColor !== void 0 && noColor !== "") return false;
+  const force = env.FORCE_COLOR;
+  if (force !== void 0 && force !== "" && !FORCE_OFF.has(force)) return true;
+  if (env.CI !== void 0 && env.CI !== "") return false;
+  return isTTY;
+}
+
+// src/render/terminal/table.ts
+function isNumericCell(value) {
+  const trimmed = value.trim();
+  return trimmed !== "" && !Number.isNaN(Number(trimmed));
+}
+function displayWidth2(value) {
+  return [...value].length;
+}
+function pad(value, width, alignRight) {
+  const gap = Math.max(0, width - displayWidth2(value));
+  const filler = " ".repeat(gap);
+  return alignRight ? filler + value : value + filler;
+}
+function renderTable(headers, rows, _opts) {
+  const columnCount = headers.length;
+  const cellAt = (row, column) => row[column] ?? "";
+  const widths = [];
+  for (let c2 = 0; c2 < columnCount; c2++) {
+    let width = displayWidth2(headers[c2] ?? "");
+    for (const row of rows) {
+      width = Math.max(width, displayWidth2(cellAt(row, c2)));
+    }
+    widths.push(width);
+  }
+  const numericColumn = [];
+  for (let c2 = 0; c2 < columnCount; c2++) {
+    numericColumn.push(
+      rows.length > 0 && rows.every((row) => isNumericCell(cellAt(row, c2)))
+    );
+  }
+  const border = (left, mid, right) => left + widths.map((w) => "\u2500".repeat(w + 2)).join(mid) + right;
+  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell, c2) => {
+    const right = alignNumeric && (numericColumn[c2] ?? false);
+    return ` ${pad(cell, widths[c2] ?? 0, right)} `;
+  }).join("\u2502")}\u2502`;
+  const lines = [];
+  lines.push(border("\u250C", "\u252C", "\u2510"));
+  lines.push(dataRow(headers, false));
+  lines.push(border("\u251C", "\u253C", "\u2524"));
+  for (const row of rows) {
+    lines.push(
+      dataRow(
+        headers.map((_, c2) => cellAt(row, c2)),
+        true
+      )
+    );
+  }
+  lines.push(border("\u2514", "\u2534", "\u2518"));
+  return lines.join("\n");
+}
+
+// src/cli-commands/a11y.ts
+var PARSERS = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+var DEFAULT_MODE = "default";
+function fail(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function isPlainObject3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function readThemes(source) {
+  const raw = source.$themes;
+  if (!Array.isArray(raw)) return void 0;
+  const themes = [];
+  for (const entry of raw) {
+    if (!isPlainObject3(entry)) continue;
+    const name = entry.name;
+    const sets = entry.selectedTokenSets;
+    if (typeof name !== "string" || !isPlainObject3(sets)) continue;
+    const selected = {};
+    for (const [setName, state] of Object.entries(sets)) {
+      if (typeof state === "string") selected[setName] = state;
+    }
+    themes.push({ name, selectedTokenSets: selected });
+  }
+  return themes.length > 0 ? themes : void 0;
+}
+function themeSubDocument(source, theme) {
+  const sets = Object.entries(theme.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([setName]) => setName).filter((setName) => isPlainObject3(source[setName]));
+  const doc = {};
+  for (const setName of sets) doc[setName] = source[setName];
+  doc.$metadata = { tokenSetOrder: sets };
+  return doc;
+}
+function loadModeMaps(tokenPath) {
   let raw;
   try {
     raw = readFileSync(tokenPath, "utf8");
@@ -9089,6 +7997,26 @@ function loadTokenMap(tokenPath) {
       message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
     };
   }
+  const themes = format === "tokens-studio" && isPlainObject3(parsed) ? readThemes(parsed) : void 0;
+  if (themes !== void 0 && isPlainObject3(parsed)) {
+    const modes2 = [];
+    for (const theme of themes) {
+      const outcome2 = parseTokensStudio(themeSubDocument(parsed, theme));
+      if (outcome2.kind === "error") {
+        const lines = outcome2.errors.map((e4) => {
+          const where = e4.path !== void 0 ? ` (${e4.path})` : "";
+          return `  ${e4.code}${where}: ${e4.message}`;
+        });
+        return {
+          kind: "error",
+          message: `Failed to parse mode "${theme.name}" of "${tokenPath}":
+${lines.join("\n")}`
+        };
+      }
+      modes2.push({ mode: theme.name, map: outcome2.map });
+    }
+    return { kind: "ok", modes: modes2 };
+  }
   const outcome = PARSERS[format](parsed);
   if (outcome.kind === "error") {
     const lines = outcome.errors.map((e4) => {
@@ -9101,370 +8029,1098 @@ function loadTokenMap(tokenPath) {
 ${lines.join("\n")}`
     };
   }
-  return { kind: "ok", map: outcome.map };
+  return { kind: "ok", modes: [{ mode: DEFAULT_MODE, map: outcome.map }] };
 }
-function lintFile(absPath, relPath, tokens) {
-  let content;
-  try {
-    content = readFileSync(absPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+async function resolveTokenPath(target) {
+  const abs2 = resolve4(target);
+  if (!existsSync(abs2)) {
+    return { kind: "error", message: `Path "${abs2}" does not exist.` };
+  }
+  if (statSync(abs2).isFile()) return { kind: "ok", path: abs2 };
+  const discovered = await discoverTokenSources(abs2);
+  if (discovered.kind === "explicit-not-found") {
     return {
       kind: "error",
-      message: `Could not read "${absPath}": ${detail}`
+      message: `No token source found at "${discovered.path}".`
     };
   }
-  const literals = extractLiterals({ path: relPath, content });
-  const findings = [];
-  for (const literal of literals) {
-    const match = matchLiteral(literal, tokens.index, {
-      compositeColors: tokens.compositeColors
-    });
-    findings.push({ literal, match });
+  const first = discovered.sources[0];
+  if (first === void 0) {
+    return {
+      kind: "error",
+      message: `No design-token source found under "${abs2}".
+Pass a token file directly, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
+    };
   }
-  return { kind: "ok", findings };
+  return { kind: "ok", path: first.path };
 }
-function candidateNames(match) {
-  return match.kind === "near" ? match.candidates.map((candidate) => candidate.token.name) : [];
+function filterModes(all, modesFlag) {
+  if (modesFlag === void 0 || modesFlag.trim() === "") {
+    return { kind: "ok", modes: all };
+  }
+  const requested = modesFlag.split(",").map((m) => m.trim()).filter((m) => m.length > 0);
+  const available = new Set(all.map((m) => m.mode));
+  const unknown = requested.filter((m) => !available.has(m));
+  if (unknown.length > 0) {
+    const list = [...available].sort().join(", ");
+    return {
+      kind: "error",
+      message: `Unknown mode(s): ${unknown.join(", ")}. Available modes: ${list || "(none)"}.`
+    };
+  }
+  const keep = new Set(requested);
+  return { kind: "ok", modes: all.filter((m) => keep.has(m.mode)) };
 }
-function toJsonFinding(finding) {
-  const base = {
-    file: finding.literal.file,
-    line: finding.literal.line,
-    col: finding.literal.col,
-    raw: finding.literal.raw,
-    property: finding.literal.property,
-    kind: finding.match.kind
-  };
-  if (finding.match.kind === "exact") {
-    base.expectedToken = finding.match.token.name;
-  } else if (finding.match.kind === "near") {
-    base.expectedCandidates = candidateNames(finding.match);
+function statusSeverity(status) {
+  switch (status) {
+    case "pass":
+      return "ok";
+    case "fail":
+      return "error";
+    case "unparseable":
+      return "warn";
+  }
+}
+function findingDetail(finding) {
+  if (finding.status === "unparseable") {
+    return `${finding.foregroundValue} on ${finding.backgroundValue} \u2014 unparseable`;
+  }
+  const ratio = finding.ratio !== void 0 ? finding.ratio.toFixed(2) : "?";
+  const base = `${ratio}:1 (need ${finding.required}:1) \u2014 ${finding.foregroundValue} on ${finding.backgroundValue}`;
+  if (finding.suggestion?.kind === "adjusted") {
+    return `${base} \u2192 try ${finding.suggestion.value}`;
+  }
+  if (finding.suggestion?.kind === "none") {
+    return `${base} \u2192 no lightness-only fix`;
   }
   return base;
 }
-function suggestionFor(match) {
-  switch (match.kind) {
-    case "exact":
-      return `use token ${match.token.name}`;
-    case "near": {
-      const names = candidateNames(match).join(", ");
-      return `near token(s): ${names}`;
-    }
-    case "off-system":
-      return "no matching token (off-system)";
+function renderTerm(report, color) {
+  if (report.findings.length === 0) {
+    return "No semantic color pairings found \u2014 nothing to audit.";
   }
+  const rows = report.findings.map((finding) => {
+    const status = severityColor(
+      statusSeverity(finding.status),
+      finding.status,
+      { color }
+    );
+    const pair = `${finding.foreground} / ${finding.background}`;
+    return [finding.mode, status, pair, findingDetail(finding)];
+  });
+  const table = renderTable(["mode", "status", "pair", "detail"], rows, {
+    color
+  });
+  const { summary } = report;
+  const verdict = summary.failed === 0 && summary.unparseable === 0 ? severityColor(
+    "ok",
+    `All ${summary.passed} pair(s) meet ${report.level} contrast.`,
+    { color }
+  ) : severityColor(
+    "error",
+    `${summary.failed} of ${summary.total} pair(s) fail ${report.level} contrast` + (summary.unparseable > 0 ? ` (${summary.unparseable} unparseable).` : "."),
+    { color }
+  );
+  return [table, "", verdict].join("\n");
 }
-function renderTerm2(findings, color) {
-  const blocks = [];
-  const byFile = /* @__PURE__ */ new Map();
-  for (const finding of findings) {
-    const bucket = byFile.get(finding.literal.file);
-    if (bucket === void 0) byFile.set(finding.literal.file, [finding]);
-    else bucket.push(finding);
-  }
-  for (const [file, fileFindings] of byFile) {
-    const lines = [severityColor("ok", file, { color })];
-    for (const finding of fileFindings) {
-      const { literal, match } = finding;
-      const severity = KIND_SEVERITY[match.kind];
-      const position = `${literal.file}:${literal.line}:${literal.col}`;
-      const label = severityColor(severity, match.kind, { color });
-      lines.push(
-        `  ${position}  ${label}  ${literal.property}: ${literal.raw} \u2014 ${suggestionFor(match)}`
-      );
+function modeTallies(report) {
+  const byMode = /* @__PURE__ */ new Map();
+  for (const finding of report.findings) {
+    let tally = byMode.get(finding.mode);
+    if (tally === void 0) {
+      tally = { mode: finding.mode, passed: 0, failed: 0 };
+      byMode.set(finding.mode, tally);
     }
-    blocks.push(lines.join("\n"));
+    if (finding.status === "pass") tally.passed += 1;
+    else if (finding.status === "fail") tally.failed += 1;
   }
-  const counts = {
-    exact: 0,
-    near: 0,
-    "off-system": 0
+  return [...byMode.values()];
+}
+function appendA11yHistory(targetDir, report) {
+  const stateDir = join2(targetDir, ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "a11y",
+    level: report.level,
+    modes: modeTallies(report)
   };
-  for (const finding of findings) counts[finding.match.kind] += 1;
-  const rows = Object.keys(counts).map((kind) => [
-    severityColor(KIND_SEVERITY[kind], kind, { color }),
-    String(counts[kind])
-  ]);
-  const table = renderTable(["kind", "count"], rows, { color });
-  const total = findings.length;
-  const heading = `${total} finding${total === 1 ? "" : "s"}`;
-  return [heading, "", ...blocks, "", table].join("\n");
-}
-function changedFiles(targetDir) {
-  const result = spawnSync("git", ["diff", "--name-only", "HEAD"], {
-    cwd: targetDir,
-    encoding: "utf8"
-  });
-  if (result.error !== void 0 || result.status !== 0) {
-    return {
-      kind: "error",
-      message: `Could not list changed files in "${targetDir}" \u2014 not a git repository (or git is unavailable). Run without --changed, or lint inside a repo.`
-    };
-  }
-  const files = new Set(
-    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve3(targetDir, rel2))
+  mkdirSync(stateDir, { recursive: true });
+  appendFileSync(
+    join2(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
   );
-  return { kind: "ok", files };
 }
-function applyFixes(editsByFile) {
-  let changed = 0;
-  for (const [absPath, edits] of editsByFile) {
-    let content;
-    try {
-      content = readFileSync(absPath, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      return {
-        kind: "error",
-        message: `Could not read "${absPath}": ${detail}`
-      };
-    }
-    const next = applyEdits(content, edits);
-    if (next === content) continue;
-    try {
-      writeFileSync(absPath, next, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      return {
-        kind: "error",
-        message: `Could not write "${absPath}": ${detail}`
-      };
-    }
-    changed += 1;
+async function runA11y(path, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    return;
   }
-  return { kind: "ok", changed };
-}
-function lintAll(files, tokens) {
-  const all = [];
-  for (const file of files) {
-    const result = lintFile(file.abs, file.rel, tokens);
-    if (result.kind === "error") return result;
-    all.push(...result.findings);
+  const level = options.level;
+  if (level !== "AA" && level !== "AAA") {
+    fail(`Unknown --level "${options.level}". Expected "AA" or "AAA".`);
+    return;
   }
-  return { kind: "ok", findings: all };
-}
-function fail2(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function registerLintCommand(program2) {
-  program2.command("lint").description("Find raw values that should be design tokens").argument("[path]", "file or directory to lint", ".").option("--fix", "rewrite fixable exact matches to var() in place", false).option("--format <format>", "output format: term | json", "term").option("--tokens <file>", "explicit token source file").option("--changed", "limit to files changed vs git HEAD", false).action((path, options) => {
-    const format = options.format;
-    if (format !== "json" && format !== "term") {
-      fail2(
-        `Unknown --format "${options.format}". Expected "json" or "term".`
-      );
-      return;
-    }
-    const targetPath = resolve3(path);
-    if (!existsSync(targetPath)) {
-      fail2(`Path "${targetPath}" does not exist.`);
-      return;
-    }
-    const stat = statSync(targetPath);
-    const isFile = stat.isFile();
-    if (isFile && !hasExtension(targetPath)) {
-      fail2(
-        `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
-      );
-      return;
-    }
-    const targetDir = isFile ? process.cwd() : targetPath;
-    const tokenSource = resolveTokenSource(targetDir, options.tokens);
-    if (tokenSource.kind === "error") {
-      fail2(tokenSource.message);
-      return;
-    }
-    const loaded = loadTokenMap(tokenSource.path);
-    if (loaded.kind === "error") {
-      fail2(loaded.message);
-      return;
-    }
-    const tokens = {
-      map: loaded.map,
-      index: buildTokenIndex(loaded.map.tokens),
-      compositeColors: buildCompositeColorLookup(loaded.map.tokens)
-    };
-    const walked = [];
-    if (isFile) walked.push(targetPath);
-    else walkLintableFiles(targetDir, walked);
-    let inScope = walked;
-    if (options.changed) {
-      const changed = changedFiles(targetDir);
-      if (changed.kind === "error") {
-        fail2(changed.message);
-        return;
-      }
-      inScope = walked.filter((abs2) => changed.files.has(abs2));
-    }
-    const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
-    const linted = lintAll(files, tokens);
-    if (linted.kind === "error") {
-      fail2(linted.message);
-      return;
-    }
-    if (options.fix) {
-      runFix(files, tokens, linted.findings, isFile ? void 0 : targetDir);
-      return;
-    }
-    emitReport(linted.findings, format);
-    if (!isFile) appendLintHistory(targetDir, linted.findings);
-    process.exitCode = linted.findings.length > 0 ? 1 : 0;
-  });
-}
-function toRelative(targetDir, abs2) {
-  const rel2 = relative(targetDir, abs2);
-  return rel2.split(sep).join("/");
-}
-function emitReport(findings, format) {
+  const tokenPath = await resolveTokenPath(path);
+  if (tokenPath.kind === "error") {
+    fail(tokenPath.message);
+    return;
+  }
+  const loaded = loadModeMaps(tokenPath.path);
+  if (loaded.kind === "error") {
+    fail(loaded.message);
+    return;
+  }
+  const filtered = filterModes(loaded.modes, options.modes);
+  if (filtered.kind === "error") {
+    fail(filtered.message);
+    return;
+  }
+  const report = auditContrast(filtered.modes, { level });
+  const resolvedTarget = resolve4(path);
+  if (existsSync(resolvedTarget) && statSync(resolvedTarget).isDirectory()) {
+    appendA11yHistory(resolvedTarget, report);
+  }
   if (format === "json") {
-    const json = findings.map(toJsonFinding);
-    process.stdout.write(`${JSON.stringify(json, null, 2)}
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
 `);
-    return;
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm(report, color)}
+`);
   }
-  const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-  process.stdout.write(`${renderTerm2(findings, color)}
-`);
+  const clean = report.summary.failed === 0 && report.summary.unparseable === 0;
+  process.exitCode = clean ? 0 : 1;
 }
-function runFix(files, tokens, findings, historyDir) {
-  const relToAbs = new Map(files.map((f3) => [f3.rel, f3.abs]));
-  const engineFindings = findings.map((f3) => ({
-    literal: f3.literal,
-    match: f3.match
-  }));
-  const edits = planFixes(engineFindings);
-  const editsByFile = /* @__PURE__ */ new Map();
-  for (const edit of edits) {
-    const abs2 = relToAbs.get(edit.file);
-    if (abs2 === void 0) continue;
-    const bucket = editsByFile.get(abs2);
-    if (bucket === void 0) editsByFile.set(abs2, [edit]);
-    else bucket.push(edit);
-  }
-  const applied = applyFixes(editsByFile);
-  if (applied.kind === "error") {
-    fail2(applied.message);
-    return;
-  }
-  process.stdout.write(
-    `Changed ${applied.changed} file${applied.changed === 1 ? "" : "s"}.
-`
-  );
-  const relinted = lintAll(files, tokens);
-  if (relinted.kind === "error") {
-    fail2(relinted.message);
-    return;
-  }
-  const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
-  const stillExact = relinted.findings.filter((f3) => f3.match.kind === "exact");
-  const hasRemaining = remaining.length > 0 || stillExact.length > 0;
-  if (historyDir !== void 0) {
-    appendLintHistory(historyDir, relinted.findings);
-  }
-  process.exitCode = hasRemaining ? 1 : 0;
+function registerA11yCommand(program2) {
+  program2.command("a11y").description(
+    "Audit token-level WCAG contrast over semantic color pairings across modes"
+  ).argument(
+    "[path]",
+    "token file, or a directory to discover a token source in",
+    "."
+  ).option("--modes <modes>", "comma-separated modes to audit (default: all)").option("--level <level>", "WCAG conformance level: AA | AAA", "AA").option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    void runA11y(path, options);
+  });
 }
 
-// src/cli-commands/parity.ts
-import { existsSync as existsSync2, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
-import { join as join3, resolve as resolvePath } from "path";
+// src/cli-commands/changelog.ts
+import { cwd as processCwd } from "process";
 
-// src/engines/registry/parity.ts
-var OK_THRESHOLD = 0.85;
-var SEVERITY_ORDER = {
-  "missing-in-code": 0,
-  "missing-in-figma": 1,
-  "prop-mismatch": 2,
-  ok: 3
+// src/config.ts
+var REPORT_STYLES = ["html", "terminal", "both"];
+var DEFAULTS = {
+  reportStyle: "both",
+  readinessThreshold: 80
 };
+function parseProjectFile(text) {
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "invalid",
+      message: `.ds-bridge.json is not valid JSON: ${detail}`
+    };
+  }
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return {
+      kind: "invalid",
+      message: ".ds-bridge.json must be a JSON object"
+    };
+  }
+  const obj = raw;
+  const values = { hadFigmaToken: "figma_token" in obj };
+  if (obj.figma_file_key !== void 0) {
+    if (typeof obj.figma_file_key !== "string") {
+      return { kind: "invalid", message: "figma_file_key must be a string" };
+    }
+    values.figmaFileKey = obj.figma_file_key;
+  }
+  if (obj.token_source !== void 0) {
+    if (typeof obj.token_source !== "string") {
+      return { kind: "invalid", message: "token_source must be a string" };
+    }
+    values.tokenSource = obj.token_source;
+  }
+  if (obj.report_style !== void 0) {
+    if (!REPORT_STYLES.includes(obj.report_style)) {
+      return {
+        kind: "invalid",
+        message: `report_style must be one of ${REPORT_STYLES.join(" | ")}, got ${JSON.stringify(obj.report_style)}`
+      };
+    }
+    values.reportStyle = obj.report_style;
+  }
+  if (obj.readiness_threshold !== void 0) {
+    const n = obj.readiness_threshold;
+    if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 100) {
+      return {
+        kind: "invalid",
+        message: `readiness_threshold must be a number between 0 and 100, got ${JSON.stringify(n)}`
+      };
+    }
+    values.readinessThreshold = n;
+  }
+  return { kind: "ok", values };
+}
+function resolveConfig(inputs) {
+  const { flags = {}, env = {} } = inputs;
+  const warnings = [];
+  let project = { hadFigmaToken: false };
+  if (inputs.projectFileText !== void 0) {
+    const parsed = parseProjectFile(inputs.projectFileText);
+    if (parsed.kind === "invalid") {
+      return { kind: "invalid-project-file", message: parsed.message };
+    }
+    project = parsed.values;
+  }
+  if (project.hadFigmaToken) {
+    warnings.push(
+      "figma_token in .ds-bridge.json is ignored \u2014 set it via the plugin config dialog or the FIGMA_TOKEN env var, never in a committed file"
+    );
+  }
+  let envThreshold;
+  const rawEnvThreshold = env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD;
+  if (rawEnvThreshold !== void 0) {
+    const n = Number(rawEnvThreshold);
+    if (Number.isFinite(n) && n >= 0 && n <= 100) {
+      envThreshold = n;
+    } else {
+      warnings.push(
+        `CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD is not a number between 0 and 100 (got ${JSON.stringify(rawEnvThreshold)}) \u2014 ignoring`
+      );
+    }
+  }
+  let envReportStyle;
+  const rawEnvReportStyle = env.CLAUDE_PLUGIN_OPTION_REPORT_STYLE;
+  if (rawEnvReportStyle !== void 0) {
+    if (REPORT_STYLES.includes(rawEnvReportStyle)) {
+      envReportStyle = rawEnvReportStyle;
+    } else {
+      warnings.push(
+        `CLAUDE_PLUGIN_OPTION_REPORT_STYLE must be one of ${REPORT_STYLES.join(" | ")} (got ${JSON.stringify(rawEnvReportStyle)}) \u2014 ignoring`
+      );
+    }
+  }
+  const tokenValue = flags.figmaToken ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN;
+  const config = {
+    figmaFileKey: flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? project.figmaFileKey,
+    figmaToken: tokenValue !== void 0 && tokenValue !== "" ? { kind: "present", value: tokenValue } : { kind: "missing" },
+    tokenSource: flags.tokenSource ?? env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ?? project.tokenSource,
+    reportStyle: flags.reportStyle ?? envReportStyle ?? project.reportStyle ?? DEFAULTS.reportStyle,
+    readinessThreshold: flags.readinessThreshold ?? envThreshold ?? project.readinessThreshold ?? DEFAULTS.readinessThreshold
+  };
+  return { kind: "ok", config, warnings };
+}
+
+// src/engines/changelog/aggregate.ts
+var SOURCE_ORDER = {
+  figma: 0,
+  code: 1,
+  tokens: 2
+};
+var SEVERITY_ORDER = {
+  breaking: 0,
+  notable: 1,
+  minor: 2
+};
+var CONVENTIONAL_HEADER = /^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/;
+function toIso(value) {
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) return value;
+  return new Date(ms).toISOString();
+}
+function withinSince(dateIso, since) {
+  const at = Date.parse(dateIso);
+  const from = Date.parse(since);
+  if (Number.isNaN(at) || Number.isNaN(from)) return true;
+  return at >= from;
+}
+function valuePreview(token) {
+  const { value } = token;
+  if (typeof value === "string" || typeof value === "number")
+    return String(value);
+  return JSON.stringify(value);
+}
+function fromDiffEntry(entry, dateIso) {
+  const severity = entry.impact === "breaking" ? "breaking" : "notable";
+  switch (entry.kind) {
+    case "added":
+      return {
+        id: `tokens:added:${entry.token.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token added: ${entry.token.name}`,
+        detail: `${entry.token.type} = ${valuePreview(entry.token)}`
+      };
+    case "removed":
+      return {
+        id: `tokens:removed:${entry.token.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token removed: ${entry.token.name}`,
+        detail: `was ${entry.token.type} = ${valuePreview(entry.token)}`
+      };
+    case "renamed":
+      return {
+        id: `tokens:renamed:${entry.from.name}->${entry.to.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token renamed: ${entry.from.name} \u2192 ${entry.to.name}`,
+        detail: `${entry.to.type} = ${valuePreview(entry.to)}`
+      };
+    case "value-changed":
+      return {
+        id: `tokens:value-changed:${entry.after.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token changed: ${entry.after.name}`,
+        detail: `${valuePreview(entry.before)} \u2192 ${valuePreview(entry.after)}`
+      };
+    case "meta-changed": {
+      const meta = entry.after.description ?? entry.after.group;
+      return withDetail(
+        {
+          id: `tokens:meta-changed:${entry.after.name}`,
+          dateIso,
+          source: "tokens",
+          audience: "both",
+          severity,
+          title: `Token metadata changed: ${entry.after.name}`
+        },
+        meta
+      );
+    }
+  }
+}
+function withDetail(base, detail) {
+  return detail === void 0 ? base : { ...base, detail };
+}
+function fromCommit(commit) {
+  const lines = commit.subject.split("\n");
+  const header = (lines[0] ?? "").trim();
+  const hasBreakingFooter = /(^|\n)BREAKING CHANGE:/.test(commit.subject);
+  const match = CONVENTIONAL_HEADER.exec(header);
+  let severity = "minor";
+  let title = header;
+  if (match) {
+    const type = match[1];
+    const bang = match[3];
+    const subject = match[4] ?? header;
+    title = subject;
+    if (bang !== void 0 || hasBreakingFooter) {
+      severity = "breaking";
+    } else if (type === "feat") {
+      severity = "notable";
+    } else if (type === "fix") {
+      severity = "minor";
+    } else {
+      severity = "minor";
+    }
+  } else if (hasBreakingFooter) {
+    severity = "breaking";
+  }
+  return {
+    id: `code:${commit.hash}`,
+    dateIso: toIso(commit.dateIso),
+    source: "code",
+    audience: "developer",
+    severity,
+    title,
+    detail: commit.author
+  };
+}
+function fromVersion(version) {
+  const description = version.description.trim();
+  return withDetail(
+    {
+      id: `figma:${version.id}`,
+      dateIso: toIso(version.created_at),
+      source: "figma",
+      audience: "designer",
+      severity: "notable",
+      title: version.label.trim()
+    },
+    description === "" ? void 0 : version.description
+  );
+}
+function compareEntries(a, b) {
+  const dateDelta = Date.parse(b.dateIso) - Date.parse(a.dateIso);
+  if (dateDelta !== 0) return dateDelta;
+  const sourceDelta = SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
+  if (sourceDelta !== 0) return sourceDelta;
+  const sevDelta = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+  if (sevDelta !== 0) return sevDelta;
+  if (a.title < b.title) return -1;
+  if (a.title > b.title) return 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+function aggregateChangelog(input) {
+  const entries = [];
+  for (const version of input.versions) {
+    if (version.label.trim() === "") continue;
+    entries.push(fromVersion(version));
+  }
+  for (const commit of input.commits) {
+    entries.push(fromCommit(commit));
+  }
+  const tokenDate = toIso(input.since);
+  for (const entry of input.tokenDiff.entries) {
+    entries.push(fromDiffEntry(entry, tokenDate));
+  }
+  return entries.filter((entry) => withinSince(entry.dateIso, input.since)).sort(compareEntries);
+}
+
+// src/engines/changelog/render-md.ts
+var EMPTY = "# Changelog\n\n_No changes in the selected window._\n";
+var SECTIONS = [
+  { heading: "## For designers", audience: "designer" },
+  { heading: "## For developers", audience: "developer" }
+];
+function badge(severity) {
+  return `**[${severity}]**`;
+}
+function dateKey(entry) {
+  return entry.dateIso.slice(0, 10);
+}
+function escapeInline(text) {
+  return text.replace(/([\\*_`])/g, "\\$1");
+}
+function inSection(entry, sectionAudience) {
+  return entry.audience === sectionAudience || entry.audience === "both";
+}
+function renderItem(entry) {
+  const head = `- ${badge(entry.severity)} ${escapeInline(entry.title)}`;
+  if (entry.detail === void 0 || entry.detail.trim() === "") return head;
+  return `${head} \u2014 ${escapeInline(entry.detail)}`;
+}
+function renderSection(heading, entries) {
+  if (entries.length === 0) return void 0;
+  const lines = [heading, ""];
+  let currentDate;
+  for (const entry of entries) {
+    const date = dateKey(entry);
+    if (date !== currentDate) {
+      if (currentDate !== void 0) lines.push("");
+      lines.push(`### ${date}`, "");
+      currentDate = date;
+    }
+    lines.push(renderItem(entry));
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+function renderChangelogMarkdown(entries, options) {
+  const wanted = options.audience;
+  const sectionBlocks = [];
+  for (const section of SECTIONS) {
+    if (wanted !== void 0 && wanted !== "both" && wanted !== section.audience) {
+      continue;
+    }
+    const sectionEntries = entries.filter(
+      (entry) => inSection(entry, section.audience)
+    );
+    const block = renderSection(section.heading, sectionEntries);
+    if (block !== void 0) sectionBlocks.push(block);
+  }
+  if (sectionBlocks.length === 0) return EMPTY;
+  return `# Changelog
+
+${sectionBlocks.join("\n")}`;
+}
+
+// src/io/figma/client.ts
+var DEFAULT_BASE_URL = "https://api.figma.com";
+var MAX_RETRIES = 3;
+var DEFAULT_RETRY_AFTER_SECONDS = 1;
+function defaultSleep(ms) {
+  return new Promise((resolve8) => setTimeout(resolve8, ms));
+}
+function joinIds(ids) {
+  return encodeURIComponent(ids.join(","));
+}
+function parseRetryAfter(headers) {
+  const raw = headers.get("Retry-After");
+  if (raw === null) return DEFAULT_RETRY_AFTER_SECONDS;
+  const seconds = Number.parseInt(raw, 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS;
+}
+function mentionsScope(body) {
+  const text = typeof body === "string" ? body : JSON.stringify(body ?? "");
+  return /scope/i.test(text);
+}
+function createFigmaClient(options) {
+  const fetchImpl = options.fetch ?? fetch;
+  const sleep = options.sleep ?? defaultSleep;
+  const jitter = options.jitter ?? Math.random;
+  const { token } = options;
+  const origin = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const BASE_URL = `${origin}/v1`;
+  const baseHeaders = { "X-Figma-Token": token };
+  async function request(url, init) {
+    let lastRetryAfter = DEFAULT_RETRY_AFTER_SECONDS;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+      let response;
+      try {
+        response = await fetchImpl(url, init);
+      } catch (error) {
+        return {
+          kind: "network-error",
+          message: error instanceof Error ? error.message : String(error)
+        };
+      }
+      const { status } = response;
+      if (status === 429) {
+        lastRetryAfter = parseRetryAfter(response.headers);
+        if (attempt < MAX_RETRIES) {
+          await sleep(lastRetryAfter * 1e3 * (1 + jitter()));
+          continue;
+        }
+        return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
+      }
+      if (status === 401) return { kind: "auth-error" };
+      if (status === 403) {
+        let body;
+        try {
+          body = await response.json();
+        } catch {
+          body = await response.text().catch(() => "");
+        }
+        if (mentionsScope(body)) {
+          const message = typeof body === "object" && body !== null && "err" in body && typeof body.err === "string" ? body.err : "Token is missing a required scope.";
+          return { kind: "scope-error", message };
+        }
+        return { kind: "auth-error" };
+      }
+      if (status === 404) return { kind: "not-found" };
+      if (!response.ok) {
+        return {
+          kind: "network-error",
+          message: `Figma API responded with status ${status}.`
+        };
+      }
+      try {
+        const data = await response.json();
+        return { kind: "ok", data };
+      } catch (error) {
+        return {
+          kind: "network-error",
+          message: error instanceof Error ? error.message : String(error)
+        };
+      }
+    }
+    return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
+  }
+  function get(url) {
+    return request(url, { method: "GET", headers: { ...baseHeaders } });
+  }
+  return {
+    getFile(key) {
+      return get(`${BASE_URL}/files/${key}`);
+    },
+    getFileNodes(key, ids) {
+      const url = `${BASE_URL}/files/${key}/nodes?ids=${joinIds(ids)}`;
+      return get(url);
+    },
+    getComponents(key) {
+      return get(
+        `${BASE_URL}/files/${key}/components`
+      );
+    },
+    getVersions(key) {
+      return get(`${BASE_URL}/files/${key}/versions`);
+    },
+    getComments(key) {
+      return get(`${BASE_URL}/files/${key}/comments`);
+    },
+    postComment(key, message, clientMeta) {
+      const body = clientMeta === void 0 ? { message } : { message, client_meta: clientMeta };
+      return request(`${BASE_URL}/files/${key}/comments`, {
+        method: "POST",
+        headers: {
+          ...baseHeaders,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    },
+    getImages(key, ids, opts) {
+      const parts = [`ids=${joinIds(ids)}`];
+      if (opts?.format !== void 0) parts.push(`format=${opts.format}`);
+      if (opts?.scale !== void 0) parts.push(`scale=${opts.scale}`);
+      if (opts?.svg_include_id !== void 0) {
+        parts.push(`svg_include_id=${opts.svg_include_id}`);
+      }
+      return get(
+        `${BASE_URL}/images/${key}?${parts.join("&")}`
+      );
+    }
+  };
+}
+
+// src/io/git-log.ts
+import { spawnSync } from "child_process";
+var GIT_LOG_FIELD_SEP = "";
+var GIT_LOG_RECORD_SEP = "";
+var PRETTY_FORMAT = `--pretty=format:%H${GIT_LOG_FIELD_SEP}%aI${GIT_LOG_FIELD_SEP}%an${GIT_LOG_FIELD_SEP}%B${GIT_LOG_RECORD_SEP}`;
+function parseRecord(record) {
+  const fields = record.split(GIT_LOG_FIELD_SEP);
+  if (fields.length < 4) return void 0;
+  const [hash, dateIso, author, ...subjectParts] = fields;
+  if (hash === void 0 || hash === "" || dateIso === void 0 || author === void 0) {
+    return void 0;
+  }
+  const subject = subjectParts.join(GIT_LOG_FIELD_SEP).replace(/\n+$/, "");
+  return { hash, dateIso, author, subject };
+}
+function readGitLog(input) {
+  const args = ["log", `--since=${input.since}`, PRETTY_FORMAT];
+  const run = input.exec(args, input.cwd);
+  if (run.error !== void 0) {
+    return { kind: "git-unavailable", message: run.error };
+  }
+  if (run.status !== 0) {
+    return { kind: "not-a-repo" };
+  }
+  const commits = [];
+  for (const raw of run.stdout.split(GIT_LOG_RECORD_SEP)) {
+    const record = raw.replace(/^\n+/, "");
+    if (record.trim() === "") continue;
+    const commit = parseRecord(record);
+    if (commit !== void 0) commits.push(commit);
+  }
+  return { kind: "ok", commits };
+}
+function spawnGitExec(args, cwd3) {
+  const run = spawnSync("git", args, { cwd: cwd3, encoding: "utf8" });
+  if (run.error !== void 0) {
+    return { status: -1, stdout: "", stderr: "", error: run.error.message };
+  }
+  return {
+    status: run.status ?? -1,
+    stdout: run.stdout ?? "",
+    stderr: run.stderr ?? ""
+  };
+}
+
+// src/cli-commands/changelog.ts
+var DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
+function defaultSince(now) {
+  const ms = now.getTime() - 90 * 24 * 60 * 60 * 1e3;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+var EMPTY_TOKEN_DIFF = { entries: [], unchanged: 0 };
+function defaultDeps() {
+  return {
+    exec: spawnGitExec,
+    makeClient: (token) => createFigmaClient({
+      token,
+      baseUrl: process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE
+    }),
+    env: process.env,
+    cwd: processCwd(),
+    now: () => /* @__PURE__ */ new Date(),
+    stdout: (text) => process.stdout.write(text),
+    stderr: (text) => process.stderr.write(text)
+  };
+}
+function severityFor(severity) {
+  switch (severity) {
+    case "breaking":
+      return "error";
+    case "notable":
+      return "warn";
+    case "minor":
+      return "info";
+  }
+}
+function parseAudience(flag) {
+  switch (flag) {
+    case "designers":
+    case "designer":
+      return { kind: "ok", value: "designer" };
+    case "developers":
+    case "developer":
+      return { kind: "ok", value: "developer" };
+    case "both":
+      return { kind: "ok", value: "both" };
+    default:
+      return { kind: "error" };
+  }
+}
+function audienceMatches(entry, audience) {
+  if (audience === "both") return true;
+  return entry.audience === audience || entry.audience === "both";
+}
+function renderTerm2(entries, audience, color) {
+  if (entries.length === 0) {
+    return "No changes in the selected window.";
+  }
+  const lines = [`${entries.length} change(s):`, ""];
+  for (const entry of entries) {
+    const date = entry.dateIso.slice(0, 10);
+    const badge2 = severityColor(severityFor(entry.severity), entry.severity, {
+      color
+    });
+    const tag = `[${entry.source}/${entry.audience}]`;
+    const detail = entry.detail !== void 0 ? ` \u2014 ${entry.detail}` : "";
+    lines.push(`${date}  ${badge2}  ${tag} ${entry.title}${detail}`);
+  }
+  if (audience !== "both") {
+    lines.unshift(`(audience: ${audience})`, "");
+  }
+  return lines.join("\n");
+}
+async function fetchVersions(deps) {
+  const resolved = resolveConfig({ env: deps.env });
+  if (resolved.kind !== "ok") {
+    return { versions: [], note: `Figma side skipped: ${resolved.message}` };
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind !== "present" || config.figmaFileKey === void 0) {
+    return {
+      versions: [],
+      note: "Figma side skipped (no token / file key configured) \u2014 code + token changes only."
+    };
+  }
+  const client = deps.makeClient(config.figmaToken.value);
+  const result = await client.getVersions(config.figmaFileKey);
+  if (result.kind !== "ok") {
+    return {
+      versions: [],
+      note: `Figma side skipped (API ${result.kind}) \u2014 code + token changes only.`
+    };
+  }
+  return { versions: result.data.versions };
+}
+async function runChangelog(options, deps) {
+  const format = options.format;
+  if (format !== "term" && format !== "json" && format !== "md") {
+    deps.stderr(
+      `Unknown --format "${options.format}". Expected "term", "json", or "md".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const audience = parseAudience(options.audience);
+  if (audience.kind !== "ok") {
+    deps.stderr(
+      `Unknown --audience "${options.audience}". Expected "designers", "developers", or "both".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const since = options.since ?? defaultSince(deps.now());
+  const log = readGitLog({ exec: deps.exec, cwd: deps.cwd, since });
+  if (log.kind === "git-unavailable") {
+    deps.stderr(`Could not run git: ${log.message}
+`);
+    process.exitCode = 2;
+    return;
+  }
+  if (log.kind === "not-a-repo") {
+    deps.stderr(
+      `"${deps.cwd}" is not a git repository (or git failed). Run inside a repo.
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const { versions, note } = await fetchVersions(deps);
+  if (note !== void 0 && format === "term") {
+    deps.stderr(`${note}
+`);
+  }
+  const all = aggregateChangelog({
+    versions,
+    commits: log.commits,
+    tokenDiff: EMPTY_TOKEN_DIFF,
+    since
+  });
+  const entries = all.filter((entry) => audienceMatches(entry, audience.value));
+  if (format === "json") {
+    deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}
+`);
+  } else if (format === "md") {
+    deps.stdout(renderChangelogMarkdown(entries, { audience: audience.value }));
+  } else {
+    const color = shouldColor(deps.env, Boolean(process.stdout.isTTY));
+    deps.stdout(`${renderTerm2(entries, audience.value, color)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerChangelogCommand(program2) {
+  program2.command("changelog").description(
+    "Audience-segmented changelog from git log, Figma versions, and token changes"
+  ).option(
+    "--since <date>",
+    "include changes since this date (default: 90 days ago)"
+  ).option("--audience <who>", "designers | developers | both", "both").option("--format <format>", "output format: term | json | md", "term").action((options) => {
+    void runChangelog(options, defaultDeps());
+  });
+}
+
+// src/cli-commands/docs.ts
+import {
+  existsSync as existsSync2,
+  mkdirSync as mkdirSync2,
+  readFileSync as readFileSync2,
+  statSync as statSync2,
+  writeFileSync
+} from "fs";
+import { dirname, join as join3, resolve as resolvePath } from "path";
+import { fileURLToPath } from "url";
+
+// src/engines/docs/merge.ts
 function byNameAsc(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
-function show(score) {
-  if (!Number.isFinite(score)) return "0";
-  return String(Math.round(score * 1e3) / 1e3);
+function indexCode(code) {
+  const byName2 = /* @__PURE__ */ new Map();
+  for (const component of code) {
+    if (!byName2.has(component.name)) byName2.set(component.name, component);
+  }
+  return byName2;
 }
-function buildParity(registry) {
+function indexFigma(figma) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const model of figma) {
+    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+  }
+  return byId;
+}
+function resolveCode(importPath, rich, figmaFallbackVariants) {
+  if (rich !== void 0) {
+    return {
+      importPath: rich.importPath,
+      props: rich.props,
+      variants: rich.variants
+    };
+  }
+  return {
+    importPath,
+    props: [],
+    variants: figmaFallbackVariants ?? {}
+  };
+}
+function mergeComponentDocs(input) {
+  const { registry } = input;
   const matches = Array.isArray(registry?.matches) ? registry.matches : [];
   const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
   const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
-  const rows = [];
+  const codeByName = indexCode(input.code);
+  const figmaById = indexFigma(input.figma);
+  const docs = [];
   for (const match of matches) {
-    const score = typeof match.score === "number" ? match.score : 0;
-    if (score >= OK_THRESHOLD) {
-      rows.push({
-        component: match.codeName,
-        status: "ok",
-        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`
-      });
-    } else {
-      rows.push({
-        component: match.codeName,
-        status: "prop-mismatch",
-        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`
-      });
-    }
-  }
-  for (const entry of unmatchedFigma) {
-    const top = entry.candidates?.[0];
-    const detail = top !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top.codeName} @ ${show(top.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
-    rows.push({
-      component: entry.name,
-      status: "missing-in-code",
-      detail
+    const richCode = codeByName.get(match.codeName);
+    const richFigma = figmaById.get(match.nodeId);
+    const description = richFigma?.description ?? "";
+    const gaps = [];
+    if (description.length === 0) gaps.push("missing-figma-description");
+    docs.push({
+      name: match.codeName,
+      code: resolveCode(match.importPath, richCode),
+      figma: { nodeId: match.nodeId, description },
+      gaps
     });
   }
   for (const entry of unmatchedCode) {
-    const top = entry.candidates?.[0];
-    const detail = top !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top.figmaName} (${top.nodeId}) @ ${show(top.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
-    rows.push({
-      component: entry.name,
-      status: "missing-in-figma",
-      detail
+    const richCode = codeByName.get(entry.name);
+    docs.push({
+      name: entry.name,
+      code: resolveCode(entry.importPath, richCode),
+      gaps: ["unmatched-in-figma"]
     });
   }
-  rows.sort((a, b) => {
-    const bySeverity = SEVERITY_ORDER[a.status] - SEVERITY_ORDER[b.status];
-    return bySeverity !== 0 ? bySeverity : byNameAsc(a.component, b.component);
-  });
-  const summary = {
-    ok: 0,
-    missingInCode: 0,
-    missingInFigma: 0,
-    propMismatch: 0
-  };
-  for (const row of rows) {
-    switch (row.status) {
-      case "ok":
-        summary.ok += 1;
-        break;
-      case "missing-in-code":
-        summary.missingInCode += 1;
-        break;
-      case "missing-in-figma":
-        summary.missingInFigma += 1;
-        break;
-      case "prop-mismatch":
-        summary.propMismatch += 1;
-        break;
-    }
+  for (const entry of unmatchedFigma) {
+    const richFigma = figmaById.get(entry.nodeId);
+    const description = richFigma?.description ?? "";
+    const gaps = ["unmatched-in-code"];
+    if (description.length === 0) gaps.push("missing-figma-description");
+    docs.push({
+      name: entry.name,
+      // No code side: surface the figma variant axes so the doc is not empty.
+      code: resolveCode("", void 0, richFigma?.variantProps),
+      figma: { nodeId: entry.nodeId, description },
+      gaps
+    });
   }
-  return { rows, summary };
-}
-function toParitySection(report) {
-  return {
-    columns: ["Status"],
-    rows: report.rows.map((row) => ({
-      component: row.component,
-      cells: [{ status: row.status }]
-    }))
-  };
+  docs.sort((a, b) => byNameAsc(a.name, b.name));
+  return docs;
 }
 
-// src/cli-commands/parity.ts
-function fail3(message) {
+// src/engines/docs/render-llms.ts
+var TOKEN_TYPE_ORDER = [
+  "color",
+  "dimension",
+  "fontFamily",
+  "fontWeight",
+  "duration",
+  "number",
+  "shadow",
+  "typography",
+  "other"
+];
+function signature(doc) {
+  const parts = doc.code.props.map(
+    (prop) => `${prop.name}${prop.required ? "" : "?"}: ${prop.type}`
+  );
+  return `(${parts.join(", ")})`;
+}
+function locationOf(doc) {
+  if (doc.code.importPath.length > 0) return doc.code.importPath;
+  if (doc.figma !== void 0) return `figma:${doc.figma.nodeId}`;
+  return "(no source)";
+}
+function statusTag(doc) {
+  if (doc.gaps.length === 0) return "[documented]";
+  return `[gaps: ${doc.gaps.join(", ")}]`;
+}
+function renderTokens(tokens) {
+  const total = tokens.tokens.length;
+  const head = ["## Tokens", "", `Format: ${tokens.format}`, `Total: ${total}`];
+  if (total === 0) {
+    return [...head, "", "_No tokens._"].join("\n");
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const token of tokens.tokens) {
+    counts.set(token.type, (counts.get(token.type) ?? 0) + 1);
+  }
+  const lines = [];
+  for (const type of TOKEN_TYPE_ORDER) {
+    const count = counts.get(type);
+    if (count !== void 0 && count > 0) lines.push(`- ${type}: ${count}`);
+  }
+  return [...head, "", ...lines].join("\n");
+}
+function renderComponents(docs) {
+  const head = ["## Components"];
+  if (docs.length === 0) {
+    return [...head, "", "_No components._"].join("\n");
+  }
+  const lines = docs.map(
+    (doc) => `- ${doc.name}${signature(doc)} \u2014 ${locationOf(doc)} ${statusTag(doc)}`
+  );
+  return [...head, "", ...lines].join("\n");
+}
+function renderLlmsTxt(docs, tokens) {
+  const sections = [
+    "# Design System",
+    "> Machine-readable summary of the design system: tokens and components.",
+    renderTokens(tokens),
+    renderComponents(docs)
+  ];
+  return `${sections.join("\n\n")}
+`;
+}
+
+// src/engines/docs/render-mdx.ts
+function statusOf(doc) {
+  return doc.gaps.length > 0 ? "gaps" : "documented";
+}
+function escapeCell(text) {
+  return text.replace(/\|/g, "\\|");
+}
+function renderImport(doc) {
+  if (doc.code.importPath.length === 0) return void 0;
+  return [
+    "```tsx",
+    `import { ${doc.name} } from "${doc.code.importPath}";`,
+    "```"
+  ].join("\n");
+}
+function renderProps(doc) {
+  const { props } = doc.code;
+  if (props.length === 0) {
+    return ["## Props", "", "_No props documented._"].join("\n");
+  }
+  const rows = props.map(
+    (prop) => `| \`${escapeCell(prop.name)}\` | \`${escapeCell(prop.type)}\` | ${prop.required ? "yes" : "no"} |`
+  );
+  return [
+    "## Props",
+    "",
+    "| Prop | Type | Required |",
+    "| --- | --- | --- |",
+    ...rows
+  ].join("\n");
+}
+function renderVariants(doc) {
+  const axes = Object.keys(doc.code.variants).sort();
+  if (axes.length === 0) {
+    return ["## Variants", "", "_No variants._"].join("\n");
+  }
+  const lines = axes.map((axis) => {
+    const values = (doc.code.variants[axis] ?? []).map((value) => `\`${value}\``).join(", ");
+    return `- **${axis}**: ${values}`;
+  });
+  return ["## Variants", "", ...lines].join("\n");
+}
+function renderFigma(doc) {
+  const figma = doc.figma;
+  if (figma === void 0) return void 0;
+  const body = figma.description.length > 0 ? figma.description : "_No Figma description authored._";
+  return ["## Figma", "", body, "", `Node: \`${figma.nodeId}\``].join("\n");
+}
+function explainGap(gap) {
+  switch (gap) {
+    case "missing-figma-description":
+      return "The matched Figma component has no authored description.";
+    case "unmatched-in-figma":
+      return "The codebase has this component but the Figma library does not publish a match.";
+    case "unmatched-in-code":
+      return "Figma publishes this component but no code component matches it.";
+  }
+}
+function renderGaps(doc) {
+  if (doc.gaps.length === 0) return void 0;
+  const lines = doc.gaps.map((gap) => `> - ${explainGap(gap)}`);
+  return [
+    "> [!WARNING]",
+    "> This component has documentation gaps:",
+    ...lines
+  ].join("\n");
+}
+function renderComponentMdx(doc) {
+  const sections = [
+    ["---", `title: ${doc.name}`, `status: ${statusOf(doc)}`, "---"].join("\n"),
+    `# ${doc.name}`
+  ];
+  const importBlock = renderImport(doc);
+  if (importBlock !== void 0) sections.push(importBlock);
+  sections.push(renderProps(doc));
+  sections.push(renderVariants(doc));
+  const figmaBlock = renderFigma(doc);
+  if (figmaBlock !== void 0) sections.push(figmaBlock);
+  const gapsBlock = renderGaps(doc);
+  if (gapsBlock !== void 0) sections.push(gapsBlock);
+  return `${sections.join("\n\n")}
+`;
+}
+
+// src/cli-commands/docs.ts
+var EMPTY_TOKENS = { format: "w3c", tokens: [] };
+var PARSERS2 = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+function fail2(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
@@ -9472,21 +9128,20 @@ function fail3(message) {
 function normalizeName(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
-function statusSeverity(status) {
-  switch (status) {
-    case "ok":
-      return "ok";
-    case "prop-mismatch":
-      return "warn";
-    case "missing-in-code":
-    case "missing-in-figma":
-      return "error";
+async function scanCode(targetDir) {
+  const globals = globalThis;
+  if (typeof globals.__filename !== "string") {
+    const filename = fileURLToPath(import.meta.url);
+    globals.__filename = filename;
+    globals.__dirname = dirname(filename);
   }
+  const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
+  return scanCodeComponents(targetDir);
 }
 function loadRegistry(targetDir) {
   const registryPath = join3(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync2(registryPath)) {
-    fail3(
+    fail2(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
@@ -9496,100 +9151,44 @@ function loadRegistry(targetDir) {
     raw = readFileSync2(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail3(`Could not read registry "${registryPath}": ${detail}`);
+    fail2(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail3(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail2(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
-function filterRows(rows, component) {
-  if (component === void 0 || component === "") return rows;
-  const needle = normalizeName(component);
-  if (needle === "") return rows;
-  return rows.filter((row) => normalizeName(row.component).includes(needle));
-}
-function summarize(rows) {
-  const summary = {
-    ok: 0,
-    missingInCode: 0,
-    missingInFigma: 0,
-    propMismatch: 0
-  };
-  for (const row of rows) {
-    switch (row.status) {
-      case "ok":
-        summary.ok += 1;
-        break;
-      case "missing-in-code":
-        summary.missingInCode += 1;
-        break;
-      case "missing-in-figma":
-        summary.missingInFigma += 1;
-        break;
-      case "prop-mismatch":
-        summary.propMismatch += 1;
-        break;
-    }
+async function discoverTokens(targetDir) {
+  const outcome = await discoverTokenSources(targetDir);
+  if (outcome.kind !== "ok" || outcome.sources.length === 0) {
+    return EMPTY_TOKENS;
   }
-  return summary;
-}
-function renderTerm3(report, color) {
-  if (report.rows.length === 0) {
-    return "No components in the registry \u2014 nothing to compare.";
+  const source = outcome.sources[0];
+  if (source === void 0) return EMPTY_TOKENS;
+  let raw;
+  try {
+    raw = readFileSync2(source.path, "utf8");
+  } catch {
+    return EMPTY_TOKENS;
   }
-  const statusWidth = Math.max(
-    ...report.rows.map((row) => row.status.length),
-    "status".length
-  );
-  const componentWidth = Math.max(
-    ...report.rows.map((row) => row.component.length),
-    "component".length
-  );
-  const lines = [];
-  for (const row of report.rows) {
-    const status = row.status.padEnd(statusWidth);
-    const component = row.component.padEnd(componentWidth);
-    const coloredStatus = severityColor(statusSeverity(row.status), status, {
-      color
-    });
-    lines.push(`${coloredStatus}  ${component}  ${row.detail}`);
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return EMPTY_TOKENS;
   }
-  const { summary } = report;
-  const bars = renderBarChart(
-    [
-      { label: "ok", value: summary.ok },
-      { label: "prop-mismatch", value: summary.propMismatch },
-      { label: "missing-in-code", value: summary.missingInCode },
-      { label: "missing-in-figma", value: summary.missingInFigma }
-    ],
-    { width: 24, color }
-  );
-  const total = report.rows.length;
-  const allOk = total > 0 && summary.ok === total;
-  const verdict = allOk ? severityColor("ok", "All components in parity.", { color }) : severityColor(
-    "error",
-    `${total - summary.ok} of ${total} component(s) out of parity.`,
-    { color }
-  );
-  return [...lines, "", "Summary:", bars, "", verdict].join("\n");
+  const format = detectFormat(parsed);
+  if (format === "unknown") return EMPTY_TOKENS;
+  const result = PARSERS2[format](parsed);
+  return result.kind === "ok" ? result.map : EMPTY_TOKENS;
 }
-function mdCell(value) {
-  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
-}
-function renderMarkdown(report) {
-  const header = "| Component | Status | Detail |";
-  const separator = "| --- | --- | --- |";
-  const rows = report.rows.map(
-    (row) => `| ${mdCell(row.component)} | ${mdCell(row.status)} | ${mdCell(row.detail)} |`
-  );
-  const { summary } = report;
-  const summaryLine = `_ok: ${summary.ok} \xB7 prop-mismatch: ${summary.propMismatch} \xB7 missing-in-code: ${summary.missingInCode} \xB7 missing-in-figma: ${summary.missingInFigma}_`;
-  return [header, separator, ...rows, "", summaryLine].join("\n");
+function mdxFileName(component) {
+  const safe = component.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${safe.length > 0 ? safe : "component"}.mdx`;
 }
 function hasRegistry(candidate) {
   return existsSync2(
@@ -9602,76 +9201,616 @@ function disambiguate(component, path) {
   }
   return { component, path };
 }
-function runParity(rawComponent, rawPath, options) {
+function renderTerm3(result) {
+  const rows = result.pages.map((page) => [
+    page.component,
+    page.gaps.length === 0 ? "\u2014" : page.gaps.join(", ")
+  ]);
+  const table = renderTable(["component", "gaps"], rows, { color: false });
+  const gapTotal = result.pages.reduce((sum, p4) => sum + p4.gaps.length, 0);
+  const heading = `${result.pages.length} pages written to ${result.outDir}`;
+  const footer = `llms.txt: ${result.llmsPath} \xB7 ${gapTotal} gaps total`;
+  return [heading, "", table, "", footer].join("\n");
+}
+async function runDocs(rawComponent, rawPath, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail3(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail2(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
   const { component, path } = disambiguate(rawComponent, rawPath);
   const targetDir = resolvePath(path);
   if (!existsSync2(targetDir) || !statSync2(targetDir).isDirectory()) {
-    fail3(`Path "${targetDir}" is not a directory.`);
+    fail2(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const registry = loadRegistry(targetDir);
   if (registry === void 0) return;
-  const full = buildParity(registry);
-  const rows = filterRows(full.rows, component);
-  const report = { rows, summary: summarize(rows) };
-  if (options.markdown) {
-    process.stdout.write(`${renderMarkdown(report)}
-`);
-  } else if (format === "json") {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}
+  const code = await scanCode(targetDir);
+  const tokens = await discoverTokens(targetDir);
+  const allDocs = mergeComponentDocs({ registry, code, figma: [], tokens });
+  let docs = allDocs;
+  if (component !== void 0 && component !== "") {
+    const needle = normalizeName(component);
+    docs = allDocs.filter((doc) => normalizeName(doc.name) === needle);
+    if (docs.length === 0) {
+      const candidates = allDocs.map((doc) => doc.name).join(", ");
+      fail2(
+        `No component named "${component}" in the registry. Candidates: ${candidates.length > 0 ? candidates : "(none)"}.`
+      );
+      return;
+    }
+  }
+  const outDir = options.out !== void 0 ? resolvePath(options.out) : join3(targetDir, ".ds-bridge", "docs");
+  try {
+    mkdirSync2(outDir, { recursive: true });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail2(`Could not create output directory "${outDir}": ${detail}`);
+    return;
+  }
+  const pages = [];
+  for (const doc of docs) {
+    const fileName = mdxFileName(doc.name);
+    const pagePath = join3(outDir, fileName);
+    try {
+      writeFileSync(pagePath, renderComponentMdx(doc), "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      fail2(`Could not write "${pagePath}": ${detail}`);
+      return;
+    }
+    pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
+  }
+  const llmsPath = join3(outDir, "llms.txt");
+  try {
+    writeFileSync(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail2(`Could not write "${llmsPath}": ${detail}`);
+    return;
+  }
+  const result = { outDir, llmsPath, pages };
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
 `);
   } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm3(report, color)}
+    process.stdout.write(`${renderTerm3(result)}
 `);
   }
-  const allOk = report.rows.every((row) => row.status === "ok");
-  process.exitCode = allOk ? 0 : 1;
+  process.exitCode = 0;
 }
-function registerParityCommand(program2) {
-  program2.command("parity").description(
-    "Compare code components against the Figma library via the saved registry"
-  ).argument("[component]", "filter rows by normalized name substring").argument(
+function registerDocsCommand(program2) {
+  program2.command("docs").description(
+    "Generate component MDX docs + llms.txt from the saved registry and tokens"
+  ).argument("[component]", "filter to a single component by normalized name").argument(
     "[path]",
     "project directory holding .ds-bridge/registry.json",
     "."
-  ).option("--format <format>", "output format: term | json", "term").option(
-    "--markdown",
-    "emit a GitHub-flavored markdown table to stdout",
-    false
-  ).action(
+  ).option("--out <dir>", "output directory (default .ds-bridge/docs)").option("--format <format>", "output format: term | json", "term").action(
     (component, path, options) => {
-      runParity(component, path, options);
+      void runDocs(component, path, options);
     }
   );
 }
 
-// src/cli-commands/registry.ts
+// src/cli-commands/handoff.ts
+import { appendFileSync as appendFileSync2, mkdirSync as mkdirSync3 } from "fs";
+import { join as join4 } from "path";
+import { cwd } from "process";
+
+// src/engines/handoff/parse-url.ts
+var KEY_PATH_TYPES = /* @__PURE__ */ new Set(["file", "design", "proto"]);
+function isFigmaHost(host) {
+  const lower = host.toLowerCase();
+  return lower === "figma.com" || lower.endsWith(".figma.com");
+}
+function normalizeNodeId(raw) {
+  let value = raw;
+  try {
+    value = decodeURIComponent(raw);
+  } catch {
+    value = raw;
+  }
+  if (value.length === 0) return void 0;
+  return value.replace(/-/g, ":");
+}
+var INVALID = (message) => ({
+  kind: "invalid-url",
+  message
+});
+function parseFigmaUrl(url) {
+  if (typeof url !== "string") return INVALID("URL must be a string.");
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return INVALID("URL is empty.");
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  let parsed;
+  try {
+    parsed = new URL(withScheme);
+  } catch {
+    return INVALID(`Not a parseable URL: "${url}".`);
+  }
+  if (!isFigmaHost(parsed.hostname)) {
+    return INVALID(`Not a figma.com URL: "${url}".`);
+  }
+  const segments = parsed.pathname.split("/").filter((s) => s.length > 0);
+  if (segments.length === 0) {
+    return INVALID("Figma URL is missing a file key.");
+  }
+  const [pathType, ...rest] = segments;
+  if (pathType === void 0 || !KEY_PATH_TYPES.has(pathType)) {
+    return INVALID(`Unsupported Figma URL path "/${pathType ?? ""}".`);
+  }
+  const keySegment = rest[0];
+  if (keySegment === void 0 || keySegment.length === 0) {
+    return INVALID("Figma URL is missing a file key.");
+  }
+  let fileKey = keySegment;
+  const branchKey = rest[2];
+  if (rest[1] === "branch" && branchKey !== void 0 && branchKey.length > 0) {
+    fileKey = branchKey;
+  }
+  const nodeIdRaw = parsed.searchParams.get("node-id");
+  const nodeId = nodeIdRaw === null ? void 0 : normalizeNodeId(nodeIdRaw);
+  return nodeId === void 0 ? { kind: "ok", fileKey } : { kind: "ok", fileKey, nodeId };
+}
+
+// src/engines/handoff/score.ts
+var WEIGHT_BINDING = 40;
+var WEIGHT_AUTO_LAYOUT = 25;
+var WEIGHT_COMPONENT = 20;
+var WEIGHT_NAMING = 15;
+var BINDING_DEDUCTION_LIMIT = 10;
+var DEFAULT_NAME = /^(Frame|Rectangle|Group|Ellipse|Vector|Text) \d+$/;
+var MULTI_WORD_PASCAL = /^[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+$/;
+var COMPONENT_NOUNS = /* @__PURE__ */ new Set([
+  "Button",
+  "Chip",
+  "Input",
+  "Checkbox",
+  "Radio",
+  "Select",
+  "Badge",
+  "Avatar",
+  "Tooltip",
+  "Modal",
+  "Dialog",
+  "Tab",
+  "Tabs",
+  "Tag",
+  "Switch",
+  "Toggle",
+  "Dropdown",
+  "Menu",
+  "Toast",
+  "Alert",
+  "Accordion",
+  "Breadcrumb",
+  "Pagination",
+  "Slider",
+  "Stepper",
+  "Spinner"
+]);
+var FIX_BINDING = "Bind fills/strokes to a variable";
+var FIX_AUTO_LAYOUT = "Add auto layout";
+var FIX_COMPONENT = "Reattach to the published component or rename";
+var FIX_NAMING = "Rename meaningfully";
+function isStyleable(node) {
+  const hasFills = Array.isArray(node.fills) && node.fills.length > 0;
+  const hasStrokes = Array.isArray(node.strokes) && node.strokes.length > 0;
+  return hasFills || hasStrokes;
+}
+function isPaintBound(node) {
+  const bound = node.boundVariables;
+  if (bound === void 0) return false;
+  const fills = bound.fills;
+  const strokes = bound.strokes;
+  const boundFills = Array.isArray(fills) && fills.length > 0;
+  const boundStrokes = Array.isArray(strokes) && strokes.length > 0;
+  return boundFills || boundStrokes;
+}
+function isFrame(node) {
+  return node.type === "FRAME";
+}
+function hasAutoLayout(node) {
+  return node.layoutMode !== void 0 && node.layoutMode !== "NONE";
+}
+function isComponentName(name) {
+  return name.includes("/") || MULTI_WORD_PASCAL.test(name) || COMPONENT_NOUNS.has(name);
+}
+function isDefaultName(name) {
+  return DEFAULT_NAME.test(name);
+}
+function collect3(root) {
+  const nodes = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    nodes.push(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+  return nodes;
+}
+function scoreReadiness(root) {
+  const nodes = collect3(root);
+  const totalNodes = nodes.length;
+  const styleable = nodes.filter(isStyleable);
+  const unbound = styleable.filter((n) => !isPaintBound(n));
+  const boundCoverage = styleable.length === 0 ? 1 : 1 - unbound.length / styleable.length;
+  const frames = nodes.filter(isFrame);
+  const framesWithoutAutoLayout = frames.filter((n) => !hasAutoLayout(n));
+  const autoLayoutCoverage = frames.length === 0 ? 1 : 1 - framesWithoutAutoLayout.length / frames.length;
+  const instanceCount = nodes.filter((n) => n.type === "INSTANCE").length;
+  const suspectNodes = nodes.filter(
+    (n) => n.type !== "INSTANCE" && isComponentName(n.name)
+  );
+  const detachedSuspects = suspectNodes.length;
+  const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
+  const componentRatio = 1 - detachedSuspects / componentDenominator;
+  const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
+  const badNames = badNameNodes.length;
+  const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
+  const deductions = [];
+  if (unbound.length > 0) {
+    const lost = WEIGHT_BINDING * (unbound.length / styleable.length);
+    const perNode = lost / unbound.length;
+    const listed = [...unbound].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(0, BINDING_DEDUCTION_LIMIT);
+    for (const node of listed) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "var-binding",
+        points: perNode,
+        fix: FIX_BINDING
+      });
+    }
+  }
+  if (framesWithoutAutoLayout.length > 0) {
+    const lost = WEIGHT_AUTO_LAYOUT * (framesWithoutAutoLayout.length / frames.length);
+    const perNode = lost / framesWithoutAutoLayout.length;
+    for (const node of framesWithoutAutoLayout) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "auto-layout",
+        points: perNode,
+        fix: FIX_AUTO_LAYOUT
+      });
+    }
+  }
+  if (detachedSuspects > 0) {
+    const lost = WEIGHT_COMPONENT * (1 - componentRatio);
+    const perNode = lost / detachedSuspects;
+    for (const node of suspectNodes) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "component",
+        points: perNode,
+        fix: FIX_COMPONENT
+      });
+    }
+  }
+  if (badNames > 0) {
+    const lost = WEIGHT_NAMING * (badNames / totalNodes);
+    const perNode = lost / badNames;
+    for (const node of badNameNodes) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "naming",
+        points: perNode,
+        fix: FIX_NAMING
+      });
+    }
+  }
+  deductions.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    return a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0;
+  });
+  const rawScore = WEIGHT_BINDING * boundCoverage + WEIGHT_AUTO_LAYOUT * autoLayoutCoverage + WEIGHT_COMPONENT * componentRatio + WEIGHT_NAMING * namingRatio;
+  const score = Math.min(100, Math.max(0, Math.round(rawScore)));
+  return {
+    score,
+    deductions,
+    stats: {
+      totalNodes,
+      boundCoverage,
+      autoLayoutCoverage,
+      instanceCount,
+      detachedSuspects,
+      badNames
+    }
+  };
+}
+
+// src/cli-commands/handoff.ts
+var DEDUCTION_LIMIT = 10;
+var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
+var RULE_LABEL = {
+  "var-binding": "Variable binding",
+  "auto-layout": "Auto layout",
+  component: "Component usage",
+  naming: "Naming"
+};
+var HISTORY_DEDUCTION_LIMIT = 3;
+function appendHandoffHistory(report, frameName) {
+  const stateDir = join4(cwd(), ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "handoff",
+    score: report.score,
+    frameName,
+    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
+  };
+  mkdirSync3(stateDir, { recursive: true });
+  appendFileSync2(
+    join4(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
+function fail3(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage() {
+  return [
+    "No Figma personal access token configured.",
+    "",
+    "Set one via the plugin config dialog (stored in the system keychain) or,",
+    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
+    "",
+    "  export FIGMA_TOKEN=figd_your_token_here",
+    "",
+    "Create the token at figma.com \u2192 Settings \u2192 Security \u2192 Personal access",
+    "tokens, with these scopes:",
+    "  file_content:read, library_content:read, file_versions:read,",
+    "  file_comments:read, file_comments:write",
+    "",
+    "Note: the PAT must come from a Dev or Full seat \u2014 a View seat is rate-",
+    "limited to roughly a handful of requests per month and cannot be used here."
+  ].join("\n");
+}
+function clientErrorMessage(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read (and file_comments:write for --comment).`;
+    case "not-found":
+      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+function formatPoints(points) {
+  return points.toFixed(1).replace(/\.0$/, "");
+}
+function ruleSeverity() {
+  return "error";
+}
+function renderTerm4(report, threshold, color) {
+  const passed = report.score >= threshold;
+  const scoreSeverity = passed ? "ok" : "error";
+  const verdict = passed ? "PASS" : "BELOW THRESHOLD";
+  const scoreLine = severityColor(
+    scoreSeverity,
+    `Readiness ${report.score}/100 (threshold ${threshold}) \u2014 ${verdict}`,
+    { color }
+  );
+  const { stats } = report;
+  const statsRows = [
+    ["nodes", String(stats.totalNodes)],
+    ["bound coverage", `${Math.round(stats.boundCoverage * 100)}%`],
+    ["auto-layout coverage", `${Math.round(stats.autoLayoutCoverage * 100)}%`],
+    ["instances", String(stats.instanceCount)],
+    ["detached suspects", String(stats.detachedSuspects)],
+    ["default names", String(stats.badNames)]
+  ];
+  const statsTable = renderTable(["stat", "value"], statsRows, { color });
+  const lines = [scoreLine, "", statsTable];
+  if (report.deductions.length > 0) {
+    const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
+    const rows = listed.map((d) => [
+      severityColor(ruleSeverity(), RULE_LABEL[d.rule] ?? d.rule, { color }),
+      `${d.nodeName} (${d.nodeId})`,
+      `-${formatPoints(d.points)}`,
+      d.fix
+    ]);
+    const table = renderTable(["rule", "node", "points", "fix"], rows, {
+      color
+    });
+    lines.push("", `${report.deductions.length} deduction(s):`, table);
+    if (report.deductions.length > DEDUCTION_LIMIT) {
+      lines.push(`\u2026 ${report.deductions.length - DEDUCTION_LIMIT} more`);
+    }
+  } else {
+    lines.push("", "No deductions \u2014 this frame is handoff-ready.");
+  }
+  return lines.join("\n");
+}
+function commentBody(report, threshold) {
+  const verdict = report.score >= threshold ? "passes" : "is below";
+  const header = `Handoff readiness: ${report.score}/100 \u2014 ${verdict} the ${threshold} threshold.`;
+  if (report.deductions.length === 0) {
+    return `${header}
+No deductions \u2014 this frame is handoff-ready.`;
+  }
+  const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
+  const lines = listed.map(
+    (d) => `\u2022 ${RULE_LABEL[d.rule] ?? d.rule} (-${formatPoints(d.points)}): ${d.nodeName} \u2014 ${d.fix}`
+  );
+  const more = report.deductions.length > DEDUCTION_LIMIT ? [`\u2026 and ${report.deductions.length - DEDUCTION_LIMIT} more`] : [];
+  return [header, "Top deductions:", ...lines, ...more].join("\n");
+}
+function resolveThreshold(flag, configDefault) {
+  if (flag === void 0) return { kind: "ok", value: configDefault };
+  const n = Number(flag);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    return {
+      kind: "error",
+      message: `--threshold must be a number between 0 and 100 (got ${JSON.stringify(flag)}).`
+    };
+  }
+  return { kind: "ok", value: n };
+}
+function nodeFromFileNodes(nodes, nodeId) {
+  const direct = nodes[nodeId];
+  if (direct !== void 0) return direct.document;
+  const entries = Object.values(nodes).filter(
+    (v) => v !== void 0
+  );
+  return entries[0]?.document;
+}
+async function fetchRoot(client, fileKey, nodeId) {
+  if (nodeId !== void 0) {
+    const result2 = await client.getFileNodes(fileKey, [nodeId]);
+    if (result2.kind !== "ok") {
+      return { kind: "error", message: clientErrorMessage(result2) };
+    }
+    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
+    if (root === void 0) {
+      return {
+        kind: "error",
+        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
+      };
+    }
+    return { kind: "ok", root };
+  }
+  const result = await client.getFile(fileKey);
+  if (result.kind !== "ok") {
+    return { kind: "error", message: clientErrorMessage(result) };
+  }
+  return { kind: "ok", root: result.data.document };
+}
+async function runHandoff(url, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail3(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const parsed = parseFigmaUrl(url);
+  if (parsed.kind !== "ok") {
+    fail3(
+      `${parsed.message}
+Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
+    );
+    return;
+  }
+  const resolved = resolveConfig({ env: process.env });
+  if (resolved.kind !== "ok") {
+    fail3(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail3(missingTokenMessage());
+    return;
+  }
+  const threshold = resolveThreshold(
+    options.threshold,
+    config.readinessThreshold
+  );
+  if (threshold.kind === "error") {
+    fail3(threshold.message);
+    return;
+  }
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE2;
+  const client = createFigmaClient({
+    token: config.figmaToken.value,
+    baseUrl
+  });
+  const fetched = await fetchRoot(client, parsed.fileKey, parsed.nodeId);
+  if (fetched.kind !== "ok") {
+    fail3(fetched.message);
+    return;
+  }
+  const report = scoreReadiness(fetched.root);
+  if (options.history) {
+    appendHandoffHistory(report, fetched.root.name);
+  }
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm4(report, threshold.value, color)}
+`);
+  }
+  if (options.comment) {
+    if (!options.yes) {
+      process.stderr.write(
+        "refusing to comment without --yes (pass --comment --yes to write the summary to Figma)\n"
+      );
+    } else {
+      const clientMeta = parsed.nodeId !== void 0 ? { node_id: parsed.nodeId } : void 0;
+      const posted = await client.postComment(
+        parsed.fileKey,
+        commentBody(report, threshold.value),
+        clientMeta
+      );
+      if (posted.kind !== "ok") {
+        process.stderr.write(
+          `warning: could not post the Figma comment: ${clientErrorMessage(posted)}
+`
+        );
+      } else {
+        process.stdout.write(`Posted Figma comment ${posted.data.id}.
+`);
+      }
+    }
+  }
+  process.exitCode = report.score >= threshold.value ? 0 : 1;
+}
+function registerHandoffCommand(program2) {
+  program2.command("handoff").description("Score a Figma frame's pre-handoff machine-readability").argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
+    "--threshold <n>",
+    "readiness gate (0-100); exit 1 below it (default from config, 80)"
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--comment",
+    "post the score + top deductions as ONE Figma comment (requires --yes)",
+    false
+  ).option(
+    "--yes",
+    "confirm writing the --comment to Figma without an interactive prompt",
+    false
+  ).option(
+    "--no-history",
+    "do not append a readiness record to .ds-bridge/history.jsonl in the current directory"
+  ).action((url, options) => {
+    void runHandoff(url, options);
+  });
+}
+
+// src/cli-commands/impact.ts
 import {
+  appendFileSync as appendFileSync3,
   existsSync as existsSync3,
-  mkdirSync as mkdirSync3,
+  mkdirSync as mkdirSync4,
   readFileSync as readFileSync3,
-  statSync as statSync3,
   writeFileSync as writeFileSync2
 } from "fs";
-import { dirname, join as join4, resolve as resolvePath2 } from "path";
-import { fileURLToPath } from "url";
+import { dirname as dirname2, join as join5 } from "path";
+import { cwd as cwd2, env as processEnv } from "process";
+import { fileURLToPath as fileURLToPath2 } from "url";
 
-// src/engines/registry/match.ts
-var MATCH_THRESHOLD = 0.6;
-var AMBIGUITY_GAP = 0.1;
-var TOKEN_SCORE_FLOOR = 0.3;
-var NAME_WEIGHT = 0.7;
-var SHAPE_WEIGHT = 0.3;
-var MAX_CANDIDATES = 3;
-function normalizeName2(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
+// src/engines/impact/component-diff.ts
+var RENAME_THRESHOLD = 0.5;
 function tokenize2(name) {
   const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
   const tokens = [];
@@ -9681,7 +9820,7 @@ function tokenize2(name) {
   }
   return tokens;
 }
-function tokenSetScore(a, b) {
+function nameSimilarity(a, b) {
   const setA = new Set(tokenize2(a));
   const setB = new Set(tokenize2(b));
   if (setA.size === 0 || setB.size === 0) return 0;
@@ -9691,244 +9830,184 @@ function tokenSetScore(a, b) {
   }
   return 2 * intersection / (setA.size + setB.size);
 }
-function nameScore(codeName, figmaName) {
-  if (normalizeName2(codeName) === normalizeName2(figmaName)) return 1;
-  const score = tokenSetScore(codeName, figmaName);
-  return score < TOKEN_SCORE_FLOOR ? 0 : score;
-}
-function valueJaccard(a, b) {
-  const setA = new Set(a);
-  const setB = new Set(b);
-  if (setA.size === 0 && setB.size === 0) return 0;
-  let intersection = 0;
-  for (const value of setA) {
-    if (setB.has(value)) intersection += 1;
-  }
-  const union = setA.size + setB.size - intersection;
-  return union === 0 ? 0 : intersection / union;
-}
-function normalizedKeyIndex(variants) {
-  const index = /* @__PURE__ */ new Map();
-  for (const key of Object.keys(variants)) {
-    const values = variants[key] ?? [];
-    const norm = normalizeName2(key);
-    const existing = index.get(norm);
-    if (existing === void 0) {
-      index.set(norm, [...values]);
-    } else {
-      existing.push(...values);
-    }
-  }
-  return index;
-}
-function shapeScore(codeVariants, figmaVariants) {
-  const codeIndex = normalizedKeyIndex(codeVariants);
-  const figmaIndex = normalizedKeyIndex(figmaVariants);
-  const codeEmpty = codeIndex.size === 0;
-  const figmaEmpty = figmaIndex.size === 0;
-  if (codeEmpty && figmaEmpty) return 0.5;
-  if (codeEmpty || figmaEmpty) return 0.25;
-  const keys = /* @__PURE__ */ new Set([...codeIndex.keys(), ...figmaIndex.keys()]);
-  let total = 0;
-  for (const key of keys) {
-    total += valueJaccard(codeIndex.get(key) ?? [], figmaIndex.get(key) ?? []);
-  }
-  return total / keys.size;
-}
-function scorePair(codeComponent, figmaModel) {
-  const name = nameScore(codeComponent.name, figmaModel.name);
-  const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
-  return {
-    nameScore: name,
-    shapeScore: shape,
-    score: NAME_WEIGHT * name + SHAPE_WEIGHT * shape
-  };
-}
 function byNameAsc2(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
+  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
-function rankFigmaCandidates(codeComponent, figma) {
-  return figma.map((figmaModel) => ({
-    figma: figmaModel,
-    score: scorePair(codeComponent, figmaModel).score
-  })).sort(
-    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc2(a.figma.name, b.figma.name)
-  ).slice(0, MAX_CANDIDATES);
+var IMPACT_RANK = {
+  breaking: 2,
+  additive: 1,
+  cosmetic: 0
+};
+function moreSevere(a, b) {
+  return IMPACT_RANK[a] >= IMPACT_RANK[b] ? a : b;
 }
-function rankCodeCandidates(figmaModel, code) {
-  return code.map((codeComponent) => ({
-    code: codeComponent,
-    score: scorePair(codeComponent, figmaModel).score
-  })).sort(
-    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc2(a.code.name, b.code.name)
-  ).slice(0, MAX_CANDIDATES);
-}
-function matchComponents(code, figma) {
-  const edges = [];
-  for (let c2 = 0; c2 < code.length; c2 += 1) {
-    const codeComponent = code[c2];
-    if (codeComponent === void 0) continue;
-    for (let f3 = 0; f3 < figma.length; f3 += 1) {
-      const figmaModel = figma[f3];
-      if (figmaModel === void 0) continue;
-      const parts = scorePair(codeComponent, figmaModel);
-      if (parts.score >= MATCH_THRESHOLD) {
-        edges.push({ codeIndex: c2, figmaIndex: f3, parts });
-      }
-    }
-  }
-  edges.sort((a, b) => {
-    if (a.parts.score !== b.parts.score) return b.parts.score - a.parts.score;
-    const codeA = code[a.codeIndex]?.name ?? "";
-    const codeB = code[b.codeIndex]?.name ?? "";
-    const byCode = byNameAsc2(codeA, codeB);
-    if (byCode !== 0) return byCode;
-    const figmaA = figma[a.figmaIndex]?.name ?? "";
-    const figmaB = figma[b.figmaIndex]?.name ?? "";
-    return byNameAsc2(figmaA, figmaB);
-  });
-  const matchedCode = /* @__PURE__ */ new Set();
-  const matchedFigma = /* @__PURE__ */ new Set();
-  const matches = [];
-  for (const edge of edges) {
-    if (matchedCode.has(edge.codeIndex)) continue;
-    if (matchedFigma.has(edge.figmaIndex)) continue;
-    const codeComponent = code[edge.codeIndex];
-    if (codeComponent === void 0) continue;
-    let best = -1;
-    let second = -1;
-    for (let f3 = 0; f3 < figma.length; f3 += 1) {
-      if (matchedFigma.has(f3)) continue;
-      const figmaModel2 = figma[f3];
-      if (figmaModel2 === void 0) continue;
-      const s = scorePair(codeComponent, figmaModel2).score;
-      if (s > best) {
-        second = best;
-        best = s;
-      } else if (s > second) {
-        second = s;
-      }
-    }
-    const ambiguous = second >= MATCH_THRESHOLD && best >= MATCH_THRESHOLD && best - second < AMBIGUITY_GAP;
-    if (ambiguous) {
+function diffVariants(before, after) {
+  const changes = [];
+  const axes = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const axis of [...axes].sort()) {
+    const beforeValues = before[axis];
+    const afterValues = after[axis];
+    if (beforeValues === void 0 && afterValues !== void 0) {
+      changes.push({ axis, kind: "axis-added" });
       continue;
     }
-    matchedCode.add(edge.codeIndex);
-    matchedFigma.add(edge.figmaIndex);
-    const figmaModel = figma[edge.figmaIndex];
-    if (figmaModel === void 0) continue;
-    matches.push({
-      code: codeComponent,
-      figma: figmaModel,
-      score: edge.parts.score,
-      nameScore: edge.parts.nameScore,
-      shapeScore: edge.parts.shapeScore
-    });
+    if (beforeValues !== void 0 && afterValues === void 0) {
+      changes.push({ axis, kind: "axis-removed" });
+      continue;
+    }
+    if (beforeValues === void 0 || afterValues === void 0) continue;
+    const beforeSet = new Set(beforeValues);
+    const afterSet = new Set(afterValues);
+    const added = [];
+    const removed = [];
+    for (const value of afterSet) {
+      if (!beforeSet.has(value)) added.push(value);
+    }
+    for (const value of beforeSet) {
+      if (!afterSet.has(value)) removed.push(value);
+    }
+    for (const value of removed.sort()) {
+      changes.push({ axis, kind: "value-removed", value });
+    }
+    for (const value of added.sort()) {
+      changes.push({ axis, kind: "value-added", value });
+    }
   }
-  matches.sort((a, b) => byNameAsc2(a.code.name, b.code.name));
-  const unmatchedCode = [];
-  for (let c2 = 0; c2 < code.length; c2 += 1) {
-    if (matchedCode.has(c2)) continue;
-    const codeComponent = code[c2];
-    if (codeComponent === void 0) continue;
-    unmatchedCode.push({
-      code: codeComponent,
-      candidates: rankFigmaCandidates(codeComponent, figma)
-    });
+  return changes;
+}
+function variantChangeImpact(change) {
+  switch (change.kind) {
+    case "axis-removed":
+    case "value-removed":
+      return "breaking";
+    case "axis-added":
+    case "value-added":
+      return "additive";
   }
-  unmatchedCode.sort((a, b) => byNameAsc2(a.code.name, b.code.name));
-  const unmatchedFigma = [];
-  for (let f3 = 0; f3 < figma.length; f3 += 1) {
-    if (matchedFigma.has(f3)) continue;
-    const figmaModel = figma[f3];
-    if (figmaModel === void 0) continue;
-    unmatchedFigma.push({
-      figma: figmaModel,
-      candidates: rankCodeCandidates(figmaModel, code)
-    });
+}
+function classifyChanged(before, after) {
+  const variantChanges = diffVariants(before.variantProps, after.variantProps);
+  const descriptionChanged = before.description !== after.description;
+  if (variantChanges.length === 0 && !descriptionChanged) return void 0;
+  let impact = "cosmetic";
+  for (const change of variantChanges) {
+    impact = moreSevere(impact, variantChangeImpact(change));
   }
-  unmatchedFigma.sort((a, b) => byNameAsc2(a.figma.name, b.figma.name));
-  return { matches, unmatchedCode, unmatchedFigma };
-}
-
-// src/engines/registry/persist.ts
-function round3(value) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 1e3) / 1e3;
-}
-function normalizeName3(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-function byNameAsc3(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function toRegistryFile(result, generatedAt) {
-  const matches = result.matches.map((m) => ({
-    codeName: m.code.name,
-    importPath: m.code.importPath,
-    figmaName: m.figma.name,
-    nodeId: m.figma.nodeId,
-    score: round3(m.score)
-  })).sort((a, b) => byNameAsc3(a.codeName, b.codeName));
-  const unmatchedCode = result.unmatchedCode.map((u) => ({
-    name: u.code.name,
-    importPath: u.code.importPath,
-    candidates: u.candidates.map((c2) => ({
-      figmaName: c2.figma.name,
-      nodeId: c2.figma.nodeId,
-      score: round3(c2.score)
-    }))
-  })).sort((a, b) => byNameAsc3(a.name, b.name));
-  const unmatchedFigma = result.unmatchedFigma.map((u) => ({
-    name: u.figma.name,
-    nodeId: u.figma.nodeId,
-    candidates: u.candidates.map((c2) => ({
-      codeName: c2.code.name,
-      score: round3(c2.score)
-    }))
-  })).sort((a, b) => byNameAsc3(a.name, b.name));
   return {
-    schemaVersion: 1,
-    generatedAt,
-    matches,
-    unmatchedCode,
-    unmatchedFigma
+    name: after.name,
+    nodeId: after.nodeId,
+    descriptionChanged,
+    variantChanges,
+    impact
   };
 }
-function resolveEntry(registry, nodeNameOrId) {
-  const query = nodeNameOrId;
-  const normalizedQuery = normalizeName3(query);
-  for (const entry of registry.matches) {
-    if (entry.nodeId === query) return { kind: "match", entry };
-  }
-  for (const entry of registry.matches) {
-    if (entry.figmaName === query) return { kind: "match", entry };
-  }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.matches) {
-      if (normalizeName3(entry.figmaName) === normalizedQuery) {
-        return { kind: "match", entry };
+function matchRenames(removedCandidates, addedCandidates) {
+  const edges = [];
+  for (let b = 0; b < removedCandidates.length; b += 1) {
+    const beforeModel = removedCandidates[b];
+    if (beforeModel === void 0) continue;
+    for (let a = 0; a < addedCandidates.length; a += 1) {
+      const afterModel = addedCandidates[a];
+      if (afterModel === void 0) continue;
+      const score = nameSimilarity(beforeModel.name, afterModel.name);
+      if (score >= RENAME_THRESHOLD) {
+        edges.push({ beforeIndex: b, afterIndex: a, score });
       }
     }
   }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.nodeId === query) {
-      return { kind: "candidates", entries: entry.candidates };
+  edges.sort((x, y) => {
+    if (x.score !== y.score) return y.score - x.score;
+    const bx = removedCandidates[x.beforeIndex]?.name ?? "";
+    const by = removedCandidates[y.beforeIndex]?.name ?? "";
+    if (bx !== by) return bx < by ? -1 : 1;
+    const ax = addedCandidates[x.afterIndex]?.name ?? "";
+    const ay = addedCandidates[y.afterIndex]?.name ?? "";
+    return ax < ay ? -1 : ax > ay ? 1 : 0;
+  });
+  const usedBefore = /* @__PURE__ */ new Set();
+  const usedAfter = /* @__PURE__ */ new Set();
+  const matches = [];
+  for (const edge of edges) {
+    if (usedBefore.has(edge.beforeIndex) || usedAfter.has(edge.afterIndex)) {
+      continue;
     }
+    usedBefore.add(edge.beforeIndex);
+    usedAfter.add(edge.afterIndex);
+    matches.push(edge);
   }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.name === query) {
-      return { kind: "candidates", entries: entry.candidates };
+  return matches;
+}
+function diffComponents(before, after) {
+  const beforeById = /* @__PURE__ */ new Map();
+  for (const model of before) {
+    if (!beforeById.has(model.nodeId)) beforeById.set(model.nodeId, model);
+  }
+  const afterById = /* @__PURE__ */ new Map();
+  for (const model of after) {
+    if (!afterById.has(model.nodeId)) afterById.set(model.nodeId, model);
+  }
+  const renamed = [];
+  const changed = [];
+  for (const [nodeId, beforeModel] of beforeById) {
+    const afterModel = afterById.get(nodeId);
+    if (afterModel === void 0) continue;
+    if (beforeModel.name !== afterModel.name) {
+      renamed.push({
+        fromName: beforeModel.name,
+        toName: afterModel.name,
+        nodeId,
+        fromNodeId: nodeId,
+        impact: "breaking"
+      });
+      continue;
     }
+    const change = classifyChanged(beforeModel, afterModel);
+    if (change !== void 0) changed.push(change);
   }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.unmatchedFigma) {
-      if (normalizeName3(entry.name) === normalizedQuery) {
-        return { kind: "candidates", entries: entry.candidates };
-      }
-    }
+  const removedCandidates = [...beforeById.entries()].filter(([id]) => !afterById.has(id)).map(([, model]) => model);
+  const addedCandidates = [...afterById.entries()].filter(([id]) => !beforeById.has(id)).map(([, model]) => model);
+  const renameMatches = matchRenames(removedCandidates, addedCandidates);
+  const matchedBefore = /* @__PURE__ */ new Set();
+  const matchedAfter = /* @__PURE__ */ new Set();
+  for (const match of renameMatches) {
+    matchedBefore.add(match.beforeIndex);
+    matchedAfter.add(match.afterIndex);
+    const beforeModel = removedCandidates[match.beforeIndex];
+    const afterModel = addedCandidates[match.afterIndex];
+    if (beforeModel === void 0 || afterModel === void 0) continue;
+    renamed.push({
+      fromName: beforeModel.name,
+      toName: afterModel.name,
+      nodeId: afterModel.nodeId,
+      fromNodeId: beforeModel.nodeId,
+      impact: "breaking"
+    });
   }
-  return { kind: "not-found" };
+  const removed = [];
+  for (let b = 0; b < removedCandidates.length; b += 1) {
+    if (matchedBefore.has(b)) continue;
+    const model = removedCandidates[b];
+    if (model === void 0) continue;
+    removed.push({
+      name: model.name,
+      nodeId: model.nodeId,
+      impact: "breaking"
+    });
+  }
+  const added = [];
+  for (let a = 0; a < addedCandidates.length; a += 1) {
+    if (matchedAfter.has(a)) continue;
+    const model = addedCandidates[a];
+    if (model === void 0) continue;
+    added.push({ name: model.name, nodeId: model.nodeId, impact: "additive" });
+  }
+  added.sort(byNameAsc2);
+  removed.sort(byNameAsc2);
+  renamed.sort(
+    (x, y) => x.toName < y.toName ? -1 : x.toName > y.toName ? 1 : 0
+  );
+  changed.sort(byNameAsc2);
+  return { added, removed, renamed, changed };
 }
 
 // src/engines/registry/scan-figma.ts
@@ -10081,18 +10160,8 @@ function buildFigmaComponentModel(input) {
   });
 }
 
-// src/cli-commands/registry.ts
-async function scanCode(targetDir) {
-  const globals = globalThis;
-  if (typeof globals.__filename !== "string") {
-    const filename = fileURLToPath(import.meta.url);
-    globals.__filename = filename;
-    globals.__dirname = dirname(filename);
-  }
-  const { scanCodeComponents } = await import("./scan-code-SGBGLDO3.mjs");
-  return scanCodeComponents(targetDir);
-}
-var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
+// src/cli-commands/impact.ts
+var DEFAULT_FIGMA_API_BASE3 = "https://api.figma.com";
 function fail4(message) {
   process.stderr.write(`${message}
 `);
@@ -10107,7 +10176,7 @@ function missingTokenMessage2() {
     "",
     "  export FIGMA_TOKEN=figd_your_token_here",
     "",
-    "The token needs the file_content:read and library_content:read scopes, and",
+    "The token needs the library_content:read and file_versions:read scopes, and",
     "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
     "be used here."
   ].join("\n");
@@ -10116,7 +10185,7 @@ function missingFileKeyMessage() {
   return [
     "No Figma library file key configured.",
     "",
-    "Set the figma_file_key plugin option, or for standalone CLI use export it:",
+    "Pass --file-key <key>, set the figma_file_key plugin option, or export it:",
     "",
     "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
     "",
@@ -10128,24 +10197,214 @@ function clientErrorMessage2(result) {
     case "auth-error":
       return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
     case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read and library_content:read.`;
+      return `Figma token is missing a required scope: ${result.message}. The token needs library_content:read and file_versions:read.`;
     case "not-found":
-      return "Figma could not find that file. Check figma_file_key is correct and the token's account can access the library.";
+      return "Figma could not find that file. Check the file key is correct and the token's account can access the library.";
     case "rate-limited":
       return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
     case "network-error":
       return `Could not reach the Figma API: ${result.message}.`;
   }
 }
-async function runBuild(path, options) {
+function cursorPath() {
+  const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
+  if (dataDir !== void 0 && dataDir !== "") {
+    return join5(dataDir, "impact-cursor.json");
+  }
+  return join5(cwd2(), ".ds-bridge", "cache", "impact-cursor.json");
+}
+function readCursor(path) {
+  if (!existsSync3(path)) return void 0;
+  try {
+    const parsed = JSON.parse(readFileSync3(path, "utf8"));
+    if (!Array.isArray(parsed.snapshot)) return void 0;
+    return parsed;
+  } catch {
+    return void 0;
+  }
+}
+function writeCursor(path, cursor) {
+  try {
+    mkdirSync4(dirname2(path), { recursive: true });
+    writeFileSync2(path, `${JSON.stringify(cursor, null, 2)}
+`, "utf8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+function loadRegistry2() {
+  const registryPath = join5(cwd2(), ".ds-bridge", "registry.json");
+  if (!existsSync3(registryPath)) return void 0;
+  try {
+    return JSON.parse(readFileSync3(registryPath, "utf8"));
+  } catch {
+    return void 0;
+  }
+}
+async function mapChangedUsage(registry, changedFigmaNames) {
+  const globals = globalThis;
+  if (typeof globals.__filename !== "string") {
+    const filename = fileURLToPath2(import.meta.url);
+    globals.__filename = filename;
+    globals.__dirname = dirname2(filename);
+  }
+  const { mapUsage } = await import("./usage-OFLQCL5F.mjs");
+  return mapUsage({ registry, changedFigmaNames, projectDir: cwd2() });
+}
+function changedNames(diff) {
+  const names = [];
+  for (const removed of diff.removed) names.push(removed.name);
+  for (const renamed of diff.renamed) names.push(renamed.fromName);
+  for (const changed of diff.changed) names.push(changed.name);
+  for (const added of diff.added) names.push(added.name);
+  return names;
+}
+function hasBreaking(diff) {
+  if (diff.removed.length > 0) return true;
+  if (diff.renamed.length > 0) return true;
+  return diff.changed.some((c2) => c2.impact === "breaking");
+}
+function countByImpact(diff) {
+  const counts = { breaking: 0, additive: 0, cosmetic: 0 };
+  const all = [
+    ...diff.added,
+    ...diff.removed,
+    ...diff.renamed,
+    ...diff.changed
+  ];
+  for (const entry of all) {
+    if (entry.impact === "breaking") counts.breaking += 1;
+    else if (entry.impact === "additive") counts.additive += 1;
+    else counts.cosmetic += 1;
+  }
+  return counts;
+}
+function appendImpactHistory(targetDir, diff, usageByName) {
+  const stateDir = join5(targetDir, ".ds-bridge");
+  let touchedCallSites = 0;
+  for (const usage of usageByName.values()) {
+    touchedCallSites += usage.usages.length;
+  }
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "impact",
+    ...countByImpact(diff),
+    touchedCallSites
+  };
+  mkdirSync4(stateDir, { recursive: true });
+  appendFileSync3(
+    join5(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
+function diffRows(diff) {
+  const rows = [];
+  for (const r2 of diff.removed) {
+    rows.push({
+      component: r2.name,
+      lookupName: r2.name,
+      category: "removed",
+      impact: r2.impact,
+      detail: "component removed from the library"
+    });
+  }
+  for (const r2 of diff.renamed) {
+    rows.push({
+      component: r2.toName,
+      lookupName: r2.fromName,
+      category: "renamed",
+      impact: r2.impact,
+      detail: `renamed from "${r2.fromName}"`
+    });
+  }
+  for (const c2 of diff.changed) {
+    const parts = [];
+    if (c2.descriptionChanged) parts.push("description changed");
+    for (const vc of c2.variantChanges) {
+      if (vc.kind === "axis-added") parts.push(`+axis ${vc.axis}`);
+      else if (vc.kind === "axis-removed") parts.push(`-axis ${vc.axis}`);
+      else if (vc.kind === "value-added") parts.push(`+${vc.axis}=${vc.value}`);
+      else parts.push(`-${vc.axis}=${vc.value}`);
+    }
+    rows.push({
+      component: c2.name,
+      lookupName: c2.name,
+      category: "changed",
+      impact: c2.impact,
+      detail: parts.join(", ")
+    });
+  }
+  for (const a of diff.added) {
+    rows.push({
+      component: a.name,
+      lookupName: a.name,
+      category: "added",
+      impact: a.impact,
+      detail: "new component"
+    });
+  }
+  const rank = {
+    breaking: 0,
+    additive: 1,
+    cosmetic: 2
+  };
+  rows.sort((x, y) => {
+    const byImpact = (rank[x.impact] ?? 9) - (rank[y.impact] ?? 9);
+    return byImpact !== 0 ? byImpact : x.component < y.component ? -1 : x.component > y.component ? 1 : 0;
+  });
+  return rows;
+}
+function renderTerm5(diff, usageByName, registryPresent, color) {
+  const rows = diffRows(diff);
+  if (rows.length === 0) {
+    return severityColor(
+      "ok",
+      "No component changes since the last snapshot.",
+      {
+        color
+      }
+    );
+  }
+  const breaking = hasBreaking(diff);
+  const header = severityColor(
+    breaking ? "error" : "ok",
+    breaking ? `${rows.length} change(s) \u2014 BREAKING changes found.` : `${rows.length} change(s) \u2014 no breaking changes.`,
+    { color }
+  );
+  const tableRows = rows.map((row) => {
+    const usage = usageByName.get(row.lookupName);
+    const sites = usage?.count ?? 0;
+    const touches = registryPresent ? sites > 0 ? `touches ${sites} call site${sites === 1 ? "" : "s"}` : "no call sites" : "\u2014";
+    const sev = row.impact === "breaking" ? "error" : row.impact === "additive" ? "warn" : "info";
+    return [
+      severityColor(sev, row.impact, { color }),
+      row.category,
+      row.component,
+      row.detail,
+      touches
+    ];
+  });
+  const table = renderTable(
+    ["impact", "category", "component", "detail", "code"],
+    tableRows,
+    { color }
+  );
+  const lines = [header, "", table];
+  if (!registryPresent) {
+    lines.push(
+      "",
+      'No .ds-bridge/registry.json found \u2014 run "ds-bridge registry build" to map changes to code call sites.'
+    );
+  }
+  return lines.join("\n");
+}
+async function runImpact(options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
     fail4(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const targetDir = resolvePath2(path);
-  if (!existsSync3(targetDir) || !statSync3(targetDir).isDirectory()) {
-    fail4(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const resolved = resolveConfig({ env: process.env });
@@ -10162,24 +10421,1734 @@ async function runBuild(path, options) {
     fail4(missingTokenMessage2());
     return;
   }
-  if (config.figmaFileKey === void 0 || config.figmaFileKey === "") {
+  const fileKey = options.fileKey ?? config.figmaFileKey;
+  if (fileKey === void 0 || fileKey === "") {
     fail4(missingFileKeyMessage());
     return;
   }
-  const code = await scanCode(targetDir);
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE2;
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE3;
+  const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
+  const componentsResult = await client.getComponents(fileKey);
+  if (componentsResult.kind !== "ok") {
+    fail4(clientErrorMessage2(componentsResult));
+    return;
+  }
+  const versionsResult = await client.getVersions(fileKey);
+  if (versionsResult.kind !== "ok") {
+    fail4(clientErrorMessage2(versionsResult));
+    return;
+  }
+  const freshSnapshot = buildFigmaComponentModel({
+    published: componentsResult.data
+  });
+  const newestVersionId = versionsResult.data.versions[0]?.id ?? "";
+  const capturedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const path = cursorPath();
+  const cursor = readCursor(path);
+  const haveBaseline = cursor !== void 0 && cursor.fileKey === fileKey;
+  const nextCursor = {
+    fileKey,
+    versionId: newestVersionId,
+    capturedAt,
+    snapshot: freshSnapshot
+  };
+  if (!haveBaseline) {
+    if (!writeCursor(path, nextCursor)) {
+      fail4(`Could not write the impact cursor to "${path}".`);
+      return;
+    }
+    const sinceNote = options.since !== void 0 ? ` (--since ${options.since} noted; v2 diffs against the cached snapshot)` : "";
+    if (format === "json") {
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            baseline: true,
+            breaking: false,
+            fileKey,
+            versionId: newestVersionId,
+            componentCount: freshSnapshot.length
+          },
+          null,
+          2
+        )}
+`
+      );
+    } else {
+      process.stdout.write(
+        `Captured a baseline snapshot of ${freshSnapshot.length} component(s)${sinceNote}.
+Run "ds-bridge impact" again after library changes to see the diff.
+`
+      );
+    }
+    process.exitCode = 0;
+    return;
+  }
+  const diff = diffComponents(cursor.snapshot, freshSnapshot);
+  const breaking = hasBreaking(diff);
+  const registry = loadRegistry2();
+  const usageByName = /* @__PURE__ */ new Map();
+  if (registry !== void 0) {
+    const usages = await mapChangedUsage(registry, changedNames(diff));
+    for (const usage of usages) usageByName.set(usage.figmaName, usage);
+  }
+  if (format === "json") {
+    const usageList = [...usageByName.values()];
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          baseline: false,
+          breaking,
+          fileKey,
+          fromVersionId: cursor.versionId,
+          toVersionId: newestVersionId,
+          diff,
+          usage: usageList,
+          registryPresent: registry !== void 0
+        },
+        null,
+        2
+      )}
+`
+    );
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(
+      `${renderTerm5(diff, usageByName, registry !== void 0, color)}
+`
+    );
+  }
+  appendImpactHistory(cwd2(), diff, usageByName);
+  if (!writeCursor(path, nextCursor)) {
+    process.stderr.write(
+      `warning: could not update the impact cursor at "${path}".
+`
+    );
+  }
+  process.exitCode = breaking ? 1 : 0;
+}
+function registerImpactCommand(program2) {
+  program2.command("impact").description(
+    "Detect breaking Figma library changes since the last snapshot and map them to code"
+  ).option(
+    "--since <versionId>",
+    "note a baseline version id (v2 diffs against the cached snapshot)"
+  ).option("--file-key <key>", "Figma library file key (overrides config)").option("--format <format>", "output format: term | json", "term").action((options) => {
+    void runImpact(options);
+  });
+}
+
+// src/cli-commands/lint.ts
+import { spawnSync as spawnSync2 } from "child_process";
+import {
+  appendFileSync as appendFileSync4,
+  existsSync as existsSync4,
+  mkdirSync as mkdirSync5,
+  readdirSync,
+  readFileSync as readFileSync4,
+  statSync as statSync3,
+  writeFileSync as writeFileSync3
+} from "fs";
+import { isAbsolute as isAbsolute2, join as join6, relative, resolve as resolve5, sep as sep2 } from "path";
+
+// src/engines/lint/extract.ts
+var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
+var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
+var DIM_RE = /-?\d+(?:\.\d+)?(?:px)?/;
+var SPACING_PREFIXES = ["padding", "margin", "inset"];
+var SPACING_EXACT = /* @__PURE__ */ new Set([
+  "gap",
+  "row-gap",
+  "column-gap",
+  "rowGap",
+  "columnGap",
+  "top",
+  "right",
+  "bottom",
+  "left"
+]);
+function isSpacingProperty(property) {
+  const lower = property.toLowerCase();
+  if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
+  for (const prefix of SPACING_PREFIXES) {
+    if (lower === prefix || lower.startsWith(prefix)) return true;
+  }
+  return false;
+}
+function blankComments(text) {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === "/" && text[i + 1] === "*") {
+      const end = text.indexOf("*/", i + 2);
+      const stop = end === -1 ? text.length : end + 2;
+      for (let j = i; j < stop; j++) out += text[j] === "\n" ? "\n" : " ";
+      i = stop;
+    } else {
+      out += text[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+function* scanValue(value, property) {
+  const spacing = isSpacingProperty(property);
+  let i = 0;
+  while (i < value.length) {
+    const rest = value.slice(i);
+    if (/^var\s*\(/i.test(rest)) {
+      const close = value.indexOf(")", i);
+      i = close === -1 ? value.length : close + 1;
+      continue;
+    }
+    const fn5 = COLOR_FN_RE.exec(rest);
+    if (fn5 !== null && fn5.index === 0) {
+      yield { offset: i, raw: fn5[0], valueKind: "color" };
+      i += fn5[0].length;
+      continue;
+    }
+    if (value[i] === "#") {
+      const hex2 = HEX_RE.exec(rest);
+      if (hex2 !== null && hex2.index === 0) {
+        yield { offset: i, raw: hex2[0], valueKind: "color" };
+        i += hex2[0].length;
+        continue;
+      }
+    }
+    if (spacing && (value[i] === "-" || /\d/.test(value[i] ?? ""))) {
+      const prev = value[i - 1] ?? " ";
+      if (!/[a-zA-Z0-9.#-]/.test(prev)) {
+        const dim = DIM_RE.exec(rest);
+        if (dim !== null && dim.index === 0) {
+          const px = Number.parseFloat(dim[0]);
+          if (Number.isFinite(px) && px !== 0) {
+            yield { offset: i, raw: dim[0], valueKind: "dimension" };
+          }
+          i += dim[0].length;
+          continue;
+        }
+      }
+    }
+    i += 1;
+  }
+}
+function extractCss(text, lineBase, colBase) {
+  const hits = [];
+  const cleaned = blankComments(text);
+  const lines = cleaned.split("\n");
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li] ?? "";
+    const colShift = li === 0 ? colBase : 0;
+    const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
+    let m = decl.exec(line);
+    while (m !== null) {
+      const property = m[1] ?? "";
+      const value = m[2] ?? "";
+      const valueStart = m.index + m[0].length - value.length;
+      for (const hit of scanValue(value, property)) {
+        hits.push({
+          line: lineBase + li,
+          col: colShift + valueStart + hit.offset + 1,
+          raw: hit.raw,
+          property,
+          valueKind: hit.valueKind
+        });
+      }
+      m = decl.exec(line);
+    }
+  }
+  return hits;
+}
+function indexToLineCol(source, index) {
+  let line = 1;
+  let lineStart = 0;
+  for (let i = 0; i < index; i++) {
+    if (source[i] === "\n") {
+      line += 1;
+      lineStart = i + 1;
+    }
+  }
+  return { line, col: index - lineStart + 1 };
+}
+var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
+function extractTsx(source, file) {
+  const out = [];
+  const styleOpen = /style\s*=\s*\{\{/g;
+  let so = styleOpen.exec(source);
+  while (so !== null) {
+    const bodyStart = so.index + so[0].length;
+    const close = source.indexOf("}}", bodyStart);
+    const body = source.slice(bodyStart, close === -1 ? source.length : close);
+    STYLE_OBJ_PROP_RE.lastIndex = 0;
+    let pm = STYLE_OBJ_PROP_RE.exec(body);
+    while (pm !== null) {
+      const property = pm[1] ?? "";
+      const valueCapture = pm[2] ?? "";
+      const rawValue = valueCapture.trim();
+      const leading = valueCapture.length - valueCapture.trimStart().length;
+      const valueIndexInBody = pm.index + pm[0].length - valueCapture.length + leading;
+      const absValueIndex = bodyStart + valueIndexInBody;
+      const quoted = /^(["'])(.*)\1$/.exec(rawValue);
+      if (quoted !== null) {
+        const inner = quoted[2] ?? "";
+        if (isColorLiteral(inner)) {
+          const pos = indexToLineCol(source, absValueIndex);
+          out.push({
+            file,
+            line: pos.line,
+            col: pos.col,
+            raw: rawValue,
+            property,
+            valueKind: "color",
+            context: "style-object"
+          });
+        }
+      } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
+        if (isSpacingProperty(property)) {
+          const num3 = Number.parseFloat(rawValue);
+          if (Number.isFinite(num3) && num3 !== 0) {
+            const pos = indexToLineCol(source, absValueIndex);
+            out.push({
+              file,
+              line: pos.line,
+              col: pos.col,
+              raw: rawValue,
+              property,
+              valueKind: "dimension",
+              context: "style-object"
+            });
+          }
+        }
+      }
+      pm = STYLE_OBJ_PROP_RE.exec(body);
+    }
+    so = styleOpen.exec(source);
+  }
+  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
+  let st = styledOpen.exec(source);
+  while (st !== null) {
+    const backtickIndex = st.index + st[0].length - 1;
+    const bodyStart = backtickIndex + 1;
+    const close = source.indexOf("`", bodyStart);
+    const body = source.slice(bodyStart, close === -1 ? source.length : close);
+    const pos = indexToLineCol(source, bodyStart);
+    const cssHits = extractCss(body, pos.line, pos.col - 1);
+    for (const hit of cssHits) {
+      out.push({
+        file,
+        line: hit.line,
+        col: hit.col,
+        raw: hit.raw,
+        property: hit.property,
+        valueKind: hit.valueKind,
+        context: "styled-template"
+      });
+    }
+    st = styledOpen.exec(source);
+  }
+  return out;
+}
+var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
+var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
+function isColorLiteral(value) {
+  const v = value.trim();
+  return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
+}
+function extensionOf(path) {
+  const dot = path.lastIndexOf(".");
+  return dot === -1 ? "" : path.slice(dot).toLowerCase();
+}
+function byLineThenCol(a, b) {
+  if (a.line !== b.line) return a.line - b.line;
+  return a.col - b.col;
+}
+function extractLiterals(file) {
+  const ext = extensionOf(file.path);
+  let result = [];
+  try {
+    if (ext === ".css" || ext === ".scss") {
+      result = extractCss(file.content, 1, 0).map((hit) => ({
+        file: file.path,
+        line: hit.line,
+        col: hit.col,
+        raw: hit.raw,
+        property: hit.property,
+        valueKind: hit.valueKind,
+        context: "css-declaration"
+      }));
+    } else if (ext === ".tsx" || ext === ".jsx") {
+      result = extractTsx(file.content, file.path);
+    }
+  } catch {
+    return [];
+  }
+  return result.sort(byLineThenCol);
+}
+
+// src/engines/lint/fix.ts
+function isCompositeToken(token) {
+  return typeof token.value === "object" && token.value !== null;
+}
+function toCssVar(token) {
+  return `var(--${token.name.replaceAll(".", "-")})`;
+}
+function quoteOf(raw) {
+  const first = raw[0];
+  const last = raw[raw.length - 1];
+  if (raw.length >= 2 && (first === '"' || first === "'") && first === last) {
+    return first;
+  }
+  return void 0;
+}
+function replacementFor(literal, token) {
+  const cssVar = toCssVar(token);
+  if (literal.context !== "style-object") return cssVar;
+  const quote = quoteOf(literal.raw);
+  if (quote !== void 0) return `${quote}${cssVar}${quote}`;
+  return `"${cssVar}"`;
+}
+function compareEdits(a, b) {
+  if (a.file !== b.file) return a.file < b.file ? -1 : 1;
+  if (a.line !== b.line) return b.line - a.line;
+  return b.col - a.col;
+}
+function planFixes(findings) {
+  const edits = [];
+  for (const { literal, match } of findings) {
+    if (match.kind !== "exact") continue;
+    if (isCompositeToken(match.token)) continue;
+    edits.push({
+      file: literal.file,
+      line: literal.line,
+      col: literal.col,
+      length: literal.raw.length,
+      replacement: replacementFor(literal, match.token)
+    });
+  }
+  return edits.sort(compareEdits);
+}
+function applyEdits(content, edits) {
+  if (edits.length === 0) return content;
+  const lines = content.split("\n");
+  const byLine = /* @__PURE__ */ new Map();
+  for (const edit of edits) {
+    const bucket = byLine.get(edit.line);
+    if (bucket === void 0) byLine.set(edit.line, [edit]);
+    else bucket.push(edit);
+  }
+  for (const [line, lineEdits] of byLine) {
+    const index = line - 1;
+    const text = lines[index];
+    if (text === void 0) continue;
+    let next = text;
+    for (const edit of [...lineEdits].sort((a, b) => b.col - a.col)) {
+      const start = edit.col - 1;
+      if (start < 0 || start > next.length) continue;
+      next = next.slice(0, start) + edit.replacement + next.slice(start + edit.length);
+    }
+    lines[index] = next;
+  }
+  return lines.join("\n");
+}
+
+// src/engines/tokens/normalize.ts
+function normalizeColor(raw) {
+  if (raw === "") return void 0;
+  const parsed = parse_default(raw);
+  if (parsed === void 0) return void 0;
+  const alpha = parsed.alpha ?? 1;
+  return alpha < 1 ? formatHex8(parsed) : formatHex(parsed);
+}
+var PX_RE = /^(-?\d+(?:\.\d+)?)px$/;
+var REM_RE = /^(-?\d+(?:\.\d+)?)rem$/;
+var UNITLESS_RE = /^(-?\d+(?:\.\d+)?)$/;
+function normalizeDimension(raw, options) {
+  const remBase = options?.remBase ?? 16;
+  if (typeof raw === "number") {
+    return Number.isFinite(raw) ? { px: raw } : void 0;
+  }
+  const trimmed = raw.trim();
+  const px = PX_RE.exec(trimmed);
+  if (px?.[1] !== void 0) return { px: Number(px[1]) };
+  const rem = REM_RE.exec(trimmed);
+  if (rem?.[1] !== void 0) return { px: Number(rem[1]) * remBase };
+  const unitless = UNITLESS_RE.exec(trimmed);
+  if (unitless?.[1] !== void 0) return { px: Number(unitless[1]) };
+  return void 0;
+}
+
+// src/engines/lint/match.ts
+var COLOR_NEAR_DELTA_E = 2.5;
+var DIMENSION_NEAR_PX = 1;
+var NEAR_LIMIT = 3;
+function pickPreferred(tokens) {
+  if (tokens.length === 0) return void 0;
+  const names = new Set(tokens.map((t) => t.name));
+  const semantic = tokens.find(
+    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
+  );
+  return semantic ?? tokens[0];
+}
+function aliasRank(token) {
+  return token.aliasOf !== void 0 ? 0 : 1;
+}
+function stripQuotes(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (trimmed.length >= 2 && (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+function matchColor(literal, index, options) {
+  const canonical2 = normalizeColor(stripQuotes(literal.raw));
+  if (canonical2 === void 0) return { kind: "off-system" };
+  const exact = index.byValue.get(canonical2);
+  if (exact !== void 0 && exact.length > 0) {
+    const token = pickPreferred(exact);
+    if (token !== void 0) return { kind: "exact", token };
+  }
+  const composite = options?.compositeColors?.get(canonical2);
+  if (composite !== void 0 && composite.length > 0) {
+    const token = pickPreferred(composite);
+    if (token !== void 0) return { kind: "exact", token };
+  }
+  const near = index.nearest(canonical2, {
+    maxDeltaE: COLOR_NEAR_DELTA_E,
+    limit: NEAR_LIMIT
+  });
+  if (near.length === 0) return { kind: "off-system" };
+  const candidates = near.map((m) => ({ token: m.token, distance: m.deltaE })).sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : aliasRank(a.token) - aliasRank(b.token)
+  ).slice(0, NEAR_LIMIT);
+  return { kind: "near", candidates };
+}
+function matchDimension(literal, index) {
+  const dim = normalizeDimension(stripQuotes(literal.raw));
+  if (dim === void 0) return { kind: "off-system" };
+  const bucket = index.byValue.get(`${dim.px}px`);
+  if (bucket !== void 0) {
+    const exact = bucket.find((t) => t.type === "dimension");
+    if (exact !== void 0) return { kind: "exact", token: exact };
+  }
+  const candidates = [];
+  for (const token of index.byName.values()) {
+    if (token.type !== "dimension") continue;
+    const tokenDim = normalizeDimension(
+      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
+    );
+    if (tokenDim === void 0) continue;
+    const distance = Math.abs(dim.px - tokenDim.px);
+    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
+    candidates.push({ token, distance });
+  }
+  if (candidates.length === 0) return { kind: "off-system" };
+  candidates.sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
+  );
+  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT) };
+}
+function matchLiteral(literal, index, options) {
+  return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
+}
+function buildCompositeColorLookup(tokens) {
+  const lookup = /* @__PURE__ */ new Map();
+  for (const token of tokens) {
+    const { value } = token;
+    if (typeof value !== "object" || value === null) continue;
+    const inner = value.color;
+    if (typeof inner !== "string") continue;
+    const canonical2 = normalizeColor(inner);
+    if (canonical2 === void 0) continue;
+    const bucket = lookup.get(canonical2);
+    if (bucket === void 0) {
+      lookup.set(canonical2, [token]);
+    } else {
+      bucket.push(token);
+    }
+  }
+  return lookup;
+}
+
+// src/engines/tokens/token-index.ts
+function canonicalValueKey(token) {
+  const { value } = token;
+  if (typeof value === "number") {
+    const dim2 = normalizeDimension(value);
+    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value);
+  }
+  if (typeof value !== "string") return void 0;
+  const color = normalizeColor(value);
+  if (color !== void 0) return color;
+  const dim = normalizeDimension(value);
+  if (dim !== void 0) return `${dim.px}px`;
+  return value;
+}
+var deltaE2000 = differenceCiede2000();
+function buildTokenIndex(tokens) {
+  const byName2 = /* @__PURE__ */ new Map();
+  const byValue = /* @__PURE__ */ new Map();
+  const colorTokens = [];
+  for (const token of tokens) {
+    byName2.set(token.name, token);
+    const key = canonicalValueKey(token);
+    if (key !== void 0) {
+      const bucket = byValue.get(key);
+      if (bucket === void 0) {
+        byValue.set(key, [token]);
+      } else {
+        bucket.push(token);
+      }
+    }
+    if (token.type === "color" && typeof token.value === "string") {
+      const parsed = parse_default(token.value);
+      if (parsed !== void 0) colorTokens.push({ token, parsed });
+    }
+  }
+  return {
+    byName: byName2,
+    byValue,
+    nearest(rawColor, options) {
+      const query = parse_default(rawColor);
+      if (query === void 0) return [];
+      return colorTokens.map(({ token, parsed }) => ({
+        token,
+        deltaE: deltaE2000(query, parsed)
+      })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
+    }
+  };
+}
+
+// src/cli-commands/lint.ts
+var PARSERS3 = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "out",
+  ".next",
+  "coverage"
+]);
+var LINTABLE_EXTENSIONS = [".css", ".scss", ".tsx", ".jsx"];
+var KIND_SEVERITY = {
+  exact: "error",
+  near: "warn",
+  "off-system": "info"
+};
+function countByKind(findings) {
+  const byKind = { exact: 0, near: 0, offSystem: 0 };
+  for (const finding of findings) {
+    if (finding.match.kind === "exact") byKind.exact += 1;
+    else if (finding.match.kind === "near") byKind.near += 1;
+    else byKind.offSystem += 1;
+  }
+  return byKind;
+}
+function appendLintHistory(targetDir, findings) {
+  const stateDir = join6(targetDir, ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "lint",
+    byKind: countByKind(findings)
+  };
+  mkdirSync5(stateDir, { recursive: true });
+  appendFileSync4(
+    join6(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
+function hasExtension(name) {
+  const lower = name.toLowerCase();
+  return LINTABLE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+function walkLintableFiles(dir, acc) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join6(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      walkLintableFiles(full, acc);
+      continue;
+    }
+    if (entry.isFile() && hasExtension(entry.name)) acc.push(full);
+  }
+}
+function resolveTokenSource(targetDir, flagTokens) {
+  if (flagTokens !== void 0) {
+    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve5(process.cwd(), flagTokens);
+    if (!existsSync4(abs2)) {
+      return {
+        kind: "error",
+        message: `Token source "${abs2}" (from --tokens) does not exist.`
+      };
+    }
+    return { kind: "ok", path: abs2 };
+  }
+  const configPath = join6(targetDir, ".ds-bridge.json");
+  if (existsSync4(configPath)) {
+    let projectFileText;
+    try {
+      projectFileText = readFileSync4(configPath, "utf8");
+    } catch {
+      projectFileText = void 0;
+    }
+    if (projectFileText !== void 0) {
+      const resolved = resolveConfig({ projectFileText });
+      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
+        const src = resolved.config.tokenSource;
+        const abs2 = isAbsolute2(src) ? src : resolve5(targetDir, src);
+        if (existsSync4(abs2)) return { kind: "ok", path: abs2 };
+        return {
+          kind: "error",
+          message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
+        };
+      }
+    }
+  }
+  const discovered = discoverFirstTokenSource(targetDir);
+  if (discovered !== void 0) return { kind: "ok", path: discovered };
+  return {
+    kind: "error",
+    message: `No design-token source found for "${targetDir}".
+Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
+  };
+}
+function discoverFirstTokenSource(root) {
+  const candidates = [];
+  collectTokenCandidates(root, false, candidates);
+  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
+    const depth = depthOf2(a) - depthOf2(b);
+    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
+  });
+  return verified[0];
+}
+function depthOf2(path) {
+  return path.split(sep2).filter((s) => s.length > 0).length;
+}
+function isConventionalTokenFile2(name) {
+  if (!name.endsWith(".json")) return false;
+  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
+}
+function isTokenDir2(name) {
+  return name === "tokens" || name === "design-tokens";
+}
+function collectTokenCandidates(dir, insideTokenDir, acc) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join6(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      collectTokenCandidates(
+        full,
+        insideTokenDir || isTokenDir2(entry.name),
+        acc
+      );
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
+  }
+}
+function detectFileFormat2(absPath) {
+  let raw;
+  try {
+    raw = readFileSync4(absPath, "utf8");
+  } catch {
+    return void 0;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return void 0;
+  }
+  const format = detectFormat(parsed);
+  return format === "unknown" ? void 0 : format;
+}
+function loadTokenMap(tokenPath) {
+  let raw;
+  try {
+    raw = readFileSync4(tokenPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read token source "${tokenPath}": ${detail}`
+    };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
+    };
+  }
+  const format = detectFormat(parsed);
+  if (format === "unknown") {
+    return {
+      kind: "error",
+      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
+    };
+  }
+  const outcome = PARSERS3[format](parsed);
+  if (outcome.kind === "error") {
+    const lines = outcome.errors.map((e4) => {
+      const where = e4.path !== void 0 ? ` (${e4.path})` : "";
+      return `  ${e4.code}${where}: ${e4.message}`;
+    });
+    return {
+      kind: "error",
+      message: `Failed to parse token source "${tokenPath}" as ${format}:
+${lines.join("\n")}`
+    };
+  }
+  return { kind: "ok", map: outcome.map };
+}
+function lintFile(absPath, relPath, tokens) {
+  let content;
+  try {
+    content = readFileSync4(absPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read "${absPath}": ${detail}`
+    };
+  }
+  const literals = extractLiterals({ path: relPath, content });
+  const findings = [];
+  for (const literal of literals) {
+    const match = matchLiteral(literal, tokens.index, {
+      compositeColors: tokens.compositeColors
+    });
+    findings.push({ literal, match });
+  }
+  return { kind: "ok", findings };
+}
+function candidateNames(match) {
+  return match.kind === "near" ? match.candidates.map((candidate) => candidate.token.name) : [];
+}
+function toJsonFinding(finding) {
+  const base = {
+    file: finding.literal.file,
+    line: finding.literal.line,
+    col: finding.literal.col,
+    raw: finding.literal.raw,
+    property: finding.literal.property,
+    kind: finding.match.kind
+  };
+  if (finding.match.kind === "exact") {
+    base.expectedToken = finding.match.token.name;
+  } else if (finding.match.kind === "near") {
+    base.expectedCandidates = candidateNames(finding.match);
+  }
+  return base;
+}
+function suggestionFor(match) {
+  switch (match.kind) {
+    case "exact":
+      return `use token ${match.token.name}`;
+    case "near": {
+      const names = candidateNames(match).join(", ");
+      return `near token(s): ${names}`;
+    }
+    case "off-system":
+      return "no matching token (off-system)";
+  }
+}
+function renderTerm6(findings, color) {
+  const blocks = [];
+  const byFile = /* @__PURE__ */ new Map();
+  for (const finding of findings) {
+    const bucket = byFile.get(finding.literal.file);
+    if (bucket === void 0) byFile.set(finding.literal.file, [finding]);
+    else bucket.push(finding);
+  }
+  for (const [file, fileFindings] of byFile) {
+    const lines = [severityColor("ok", file, { color })];
+    for (const finding of fileFindings) {
+      const { literal, match } = finding;
+      const severity = KIND_SEVERITY[match.kind];
+      const position = `${literal.file}:${literal.line}:${literal.col}`;
+      const label = severityColor(severity, match.kind, { color });
+      lines.push(
+        `  ${position}  ${label}  ${literal.property}: ${literal.raw} \u2014 ${suggestionFor(match)}`
+      );
+    }
+    blocks.push(lines.join("\n"));
+  }
+  const counts = {
+    exact: 0,
+    near: 0,
+    "off-system": 0
+  };
+  for (const finding of findings) counts[finding.match.kind] += 1;
+  const rows = Object.keys(counts).map((kind) => [
+    severityColor(KIND_SEVERITY[kind], kind, { color }),
+    String(counts[kind])
+  ]);
+  const table = renderTable(["kind", "count"], rows, { color });
+  const total = findings.length;
+  const heading = `${total} finding${total === 1 ? "" : "s"}`;
+  return [heading, "", ...blocks, "", table].join("\n");
+}
+function changedFiles(targetDir) {
+  const result = spawnSync2("git", ["diff", "--name-only", "HEAD"], {
+    cwd: targetDir,
+    encoding: "utf8"
+  });
+  if (result.error !== void 0 || result.status !== 0) {
+    return {
+      kind: "error",
+      message: `Could not list changed files in "${targetDir}" \u2014 not a git repository (or git is unavailable). Run without --changed, or lint inside a repo.`
+    };
+  }
+  const files = new Set(
+    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve5(targetDir, rel2))
+  );
+  return { kind: "ok", files };
+}
+function applyFixes(editsByFile) {
+  let changed = 0;
+  for (const [absPath, edits] of editsByFile) {
+    let content;
+    try {
+      content = readFileSync4(absPath, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not read "${absPath}": ${detail}`
+      };
+    }
+    const next = applyEdits(content, edits);
+    if (next === content) continue;
+    try {
+      writeFileSync3(absPath, next, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not write "${absPath}": ${detail}`
+      };
+    }
+    changed += 1;
+  }
+  return { kind: "ok", changed };
+}
+function lintAll(files, tokens) {
+  const all = [];
+  for (const file of files) {
+    const result = lintFile(file.abs, file.rel, tokens);
+    if (result.kind === "error") return result;
+    all.push(...result.findings);
+  }
+  return { kind: "ok", findings: all };
+}
+function fail5(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function registerLintCommand(program2) {
+  program2.command("lint").description("Find raw values that should be design tokens").argument("[path]", "file or directory to lint", ".").option("--fix", "rewrite fixable exact matches to var() in place", false).option("--format <format>", "output format: term | json", "term").option("--tokens <file>", "explicit token source file").option("--changed", "limit to files changed vs git HEAD", false).action((path, options) => {
+    const format = options.format;
+    if (format !== "json" && format !== "term") {
+      fail5(
+        `Unknown --format "${options.format}". Expected "json" or "term".`
+      );
+      return;
+    }
+    const targetPath = resolve5(path);
+    if (!existsSync4(targetPath)) {
+      fail5(`Path "${targetPath}" does not exist.`);
+      return;
+    }
+    const stat2 = statSync3(targetPath);
+    const isFile = stat2.isFile();
+    if (isFile && !hasExtension(targetPath)) {
+      fail5(
+        `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
+      );
+      return;
+    }
+    const targetDir = isFile ? process.cwd() : targetPath;
+    const tokenSource = resolveTokenSource(targetDir, options.tokens);
+    if (tokenSource.kind === "error") {
+      fail5(tokenSource.message);
+      return;
+    }
+    const loaded = loadTokenMap(tokenSource.path);
+    if (loaded.kind === "error") {
+      fail5(loaded.message);
+      return;
+    }
+    const tokens = {
+      map: loaded.map,
+      index: buildTokenIndex(loaded.map.tokens),
+      compositeColors: buildCompositeColorLookup(loaded.map.tokens)
+    };
+    const walked = [];
+    if (isFile) walked.push(targetPath);
+    else walkLintableFiles(targetDir, walked);
+    let inScope = walked;
+    if (options.changed) {
+      const changed = changedFiles(targetDir);
+      if (changed.kind === "error") {
+        fail5(changed.message);
+        return;
+      }
+      inScope = walked.filter((abs2) => changed.files.has(abs2));
+    }
+    const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
+    const linted = lintAll(files, tokens);
+    if (linted.kind === "error") {
+      fail5(linted.message);
+      return;
+    }
+    if (options.fix) {
+      runFix(files, tokens, linted.findings, isFile ? void 0 : targetDir);
+      return;
+    }
+    emitReport(linted.findings, format);
+    if (!isFile) appendLintHistory(targetDir, linted.findings);
+    process.exitCode = linted.findings.length > 0 ? 1 : 0;
+  });
+}
+function toRelative(targetDir, abs2) {
+  const rel2 = relative(targetDir, abs2);
+  return rel2.split(sep2).join("/");
+}
+function emitReport(findings, format) {
+  if (format === "json") {
+    const json = findings.map(toJsonFinding);
+    process.stdout.write(`${JSON.stringify(json, null, 2)}
+`);
+    return;
+  }
+  const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+  process.stdout.write(`${renderTerm6(findings, color)}
+`);
+}
+function runFix(files, tokens, findings, historyDir) {
+  const relToAbs = new Map(files.map((f3) => [f3.rel, f3.abs]));
+  const engineFindings = findings.map((f3) => ({
+    literal: f3.literal,
+    match: f3.match
+  }));
+  const edits = planFixes(engineFindings);
+  const editsByFile = /* @__PURE__ */ new Map();
+  for (const edit of edits) {
+    const abs2 = relToAbs.get(edit.file);
+    if (abs2 === void 0) continue;
+    const bucket = editsByFile.get(abs2);
+    if (bucket === void 0) editsByFile.set(abs2, [edit]);
+    else bucket.push(edit);
+  }
+  const applied = applyFixes(editsByFile);
+  if (applied.kind === "error") {
+    fail5(applied.message);
+    return;
+  }
+  process.stdout.write(
+    `Changed ${applied.changed} file${applied.changed === 1 ? "" : "s"}.
+`
+  );
+  const relinted = lintAll(files, tokens);
+  if (relinted.kind === "error") {
+    fail5(relinted.message);
+    return;
+  }
+  const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
+  const stillExact = relinted.findings.filter((f3) => f3.match.kind === "exact");
+  const hasRemaining = remaining.length > 0 || stillExact.length > 0;
+  if (historyDir !== void 0) {
+    appendLintHistory(historyDir, relinted.findings);
+  }
+  process.exitCode = hasRemaining ? 1 : 0;
+}
+
+// src/cli-commands/parity.ts
+import { existsSync as existsSync5, readFileSync as readFileSync5, statSync as statSync4 } from "fs";
+import { join as join7, resolve as resolvePath2 } from "path";
+
+// src/engines/registry/parity.ts
+var OK_THRESHOLD = 0.85;
+var SEVERITY_ORDER2 = {
+  "missing-in-code": 0,
+  "missing-in-figma": 1,
+  "prop-mismatch": 2,
+  ok: 3
+};
+function byNameAsc3(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function show(score) {
+  if (!Number.isFinite(score)) return "0";
+  return String(Math.round(score * 1e3) / 1e3);
+}
+function buildParity(registry) {
+  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
+  const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
+  const rows = [];
+  for (const match of matches) {
+    const score = typeof match.score === "number" ? match.score : 0;
+    if (score >= OK_THRESHOLD) {
+      rows.push({
+        component: match.codeName,
+        status: "ok",
+        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`
+      });
+    } else {
+      rows.push({
+        component: match.codeName,
+        status: "prop-mismatch",
+        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`
+      });
+    }
+  }
+  for (const entry of unmatchedFigma) {
+    const top = entry.candidates?.[0];
+    const detail = top !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top.codeName} @ ${show(top.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
+    rows.push({
+      component: entry.name,
+      status: "missing-in-code",
+      detail
+    });
+  }
+  for (const entry of unmatchedCode) {
+    const top = entry.candidates?.[0];
+    const detail = top !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top.figmaName} (${top.nodeId}) @ ${show(top.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
+    rows.push({
+      component: entry.name,
+      status: "missing-in-figma",
+      detail
+    });
+  }
+  rows.sort((a, b) => {
+    const bySeverity = SEVERITY_ORDER2[a.status] - SEVERITY_ORDER2[b.status];
+    return bySeverity !== 0 ? bySeverity : byNameAsc3(a.component, b.component);
+  });
+  const summary = {
+    ok: 0,
+    missingInCode: 0,
+    missingInFigma: 0,
+    propMismatch: 0
+  };
+  for (const row of rows) {
+    switch (row.status) {
+      case "ok":
+        summary.ok += 1;
+        break;
+      case "missing-in-code":
+        summary.missingInCode += 1;
+        break;
+      case "missing-in-figma":
+        summary.missingInFigma += 1;
+        break;
+      case "prop-mismatch":
+        summary.propMismatch += 1;
+        break;
+    }
+  }
+  return { rows, summary };
+}
+function toParitySection(report) {
+  return {
+    columns: ["Status"],
+    rows: report.rows.map((row) => ({
+      component: row.component,
+      cells: [{ status: row.status }]
+    }))
+  };
+}
+
+// src/cli-commands/parity.ts
+function fail6(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function normalizeName2(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function statusSeverity2(status) {
+  switch (status) {
+    case "ok":
+      return "ok";
+    case "prop-mismatch":
+      return "warn";
+    case "missing-in-code":
+    case "missing-in-figma":
+      return "error";
+  }
+}
+function loadRegistry3(targetDir) {
+  const registryPath = join7(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync5(registryPath)) {
+    fail6(
+      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
+    );
+    return void 0;
+  }
+  let raw;
+  try {
+    raw = readFileSync5(registryPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail6(`Could not read registry "${registryPath}": ${detail}`);
+    return void 0;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail6(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    return void 0;
+  }
+}
+function filterRows(rows, component) {
+  if (component === void 0 || component === "") return rows;
+  const needle = normalizeName2(component);
+  if (needle === "") return rows;
+  return rows.filter((row) => normalizeName2(row.component).includes(needle));
+}
+function summarize(rows) {
+  const summary = {
+    ok: 0,
+    missingInCode: 0,
+    missingInFigma: 0,
+    propMismatch: 0
+  };
+  for (const row of rows) {
+    switch (row.status) {
+      case "ok":
+        summary.ok += 1;
+        break;
+      case "missing-in-code":
+        summary.missingInCode += 1;
+        break;
+      case "missing-in-figma":
+        summary.missingInFigma += 1;
+        break;
+      case "prop-mismatch":
+        summary.propMismatch += 1;
+        break;
+    }
+  }
+  return summary;
+}
+function renderTerm7(report, color) {
+  if (report.rows.length === 0) {
+    return "No components in the registry \u2014 nothing to compare.";
+  }
+  const statusWidth = Math.max(
+    ...report.rows.map((row) => row.status.length),
+    "status".length
+  );
+  const componentWidth = Math.max(
+    ...report.rows.map((row) => row.component.length),
+    "component".length
+  );
+  const lines = [];
+  for (const row of report.rows) {
+    const status = row.status.padEnd(statusWidth);
+    const component = row.component.padEnd(componentWidth);
+    const coloredStatus = severityColor(statusSeverity2(row.status), status, {
+      color
+    });
+    lines.push(`${coloredStatus}  ${component}  ${row.detail}`);
+  }
+  const { summary } = report;
+  const bars = renderBarChart(
+    [
+      { label: "ok", value: summary.ok },
+      { label: "prop-mismatch", value: summary.propMismatch },
+      { label: "missing-in-code", value: summary.missingInCode },
+      { label: "missing-in-figma", value: summary.missingInFigma }
+    ],
+    { width: 24, color }
+  );
+  const total = report.rows.length;
+  const allOk = total > 0 && summary.ok === total;
+  const verdict = allOk ? severityColor("ok", "All components in parity.", { color }) : severityColor(
+    "error",
+    `${total - summary.ok} of ${total} component(s) out of parity.`,
+    { color }
+  );
+  return [...lines, "", "Summary:", bars, "", verdict].join("\n");
+}
+function mdCell(value) {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+function renderMarkdown(report) {
+  const header = "| Component | Status | Detail |";
+  const separator = "| --- | --- | --- |";
+  const rows = report.rows.map(
+    (row) => `| ${mdCell(row.component)} | ${mdCell(row.status)} | ${mdCell(row.detail)} |`
+  );
+  const { summary } = report;
+  const summaryLine = `_ok: ${summary.ok} \xB7 prop-mismatch: ${summary.propMismatch} \xB7 missing-in-code: ${summary.missingInCode} \xB7 missing-in-figma: ${summary.missingInFigma}_`;
+  return [header, separator, ...rows, "", summaryLine].join("\n");
+}
+function hasRegistry2(candidate) {
+  return existsSync5(
+    join7(resolvePath2(candidate), ".ds-bridge", "registry.json")
+  );
+}
+function disambiguate2(component, path) {
+  if (component !== void 0 && component !== "" && path === "." && !hasRegistry2(".") && hasRegistry2(component)) {
+    return { component: void 0, path: component };
+  }
+  return { component, path };
+}
+function runParity(rawComponent, rawPath, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail6(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const { component, path } = disambiguate2(rawComponent, rawPath);
+  const targetDir = resolvePath2(path);
+  if (!existsSync5(targetDir) || !statSync4(targetDir).isDirectory()) {
+    fail6(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const registry = loadRegistry3(targetDir);
+  if (registry === void 0) return;
+  const full = buildParity(registry);
+  const rows = filterRows(full.rows, component);
+  const report = { rows, summary: summarize(rows) };
+  if (options.markdown) {
+    process.stdout.write(`${renderMarkdown(report)}
+`);
+  } else if (format === "json") {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm7(report, color)}
+`);
+  }
+  const allOk = report.rows.every((row) => row.status === "ok");
+  process.exitCode = allOk ? 0 : 1;
+}
+function registerParityCommand(program2) {
+  program2.command("parity").description(
+    "Compare code components against the Figma library via the saved registry"
+  ).argument("[component]", "filter rows by normalized name substring").argument(
+    "[path]",
+    "project directory holding .ds-bridge/registry.json",
+    "."
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--markdown",
+    "emit a GitHub-flavored markdown table to stdout",
+    false
+  ).action(
+    (component, path, options) => {
+      runParity(component, path, options);
+    }
+  );
+}
+
+// src/cli-commands/registry.ts
+import {
+  existsSync as existsSync6,
+  mkdirSync as mkdirSync6,
+  readFileSync as readFileSync6,
+  statSync as statSync5,
+  writeFileSync as writeFileSync4
+} from "fs";
+import { dirname as dirname3, join as join8, resolve as resolvePath3 } from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
+
+// src/engines/registry/match.ts
+var MATCH_THRESHOLD = 0.6;
+var AMBIGUITY_GAP = 0.1;
+var TOKEN_SCORE_FLOOR = 0.3;
+var NAME_WEIGHT = 0.7;
+var SHAPE_WEIGHT = 0.3;
+var MAX_CANDIDATES = 3;
+function normalizeName3(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function tokenize3(name) {
+  const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
+  const tokens = [];
+  for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
+    const token = part.toLowerCase();
+    if (token.length > 0) tokens.push(token);
+  }
+  return tokens;
+}
+function tokenSetScore(a, b) {
+  const setA = new Set(tokenize3(a));
+  const setB = new Set(tokenize3(b));
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection += 1;
+  }
+  return 2 * intersection / (setA.size + setB.size);
+}
+function nameScore(codeName, figmaName) {
+  if (normalizeName3(codeName) === normalizeName3(figmaName)) return 1;
+  const score = tokenSetScore(codeName, figmaName);
+  return score < TOKEN_SCORE_FLOOR ? 0 : score;
+}
+function valueJaccard(a, b) {
+  const setA = new Set(a);
+  const setB = new Set(b);
+  if (setA.size === 0 && setB.size === 0) return 0;
+  let intersection = 0;
+  for (const value of setA) {
+    if (setB.has(value)) intersection += 1;
+  }
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+function normalizedKeyIndex(variants) {
+  const index = /* @__PURE__ */ new Map();
+  for (const key of Object.keys(variants)) {
+    const values = variants[key] ?? [];
+    const norm = normalizeName3(key);
+    const existing = index.get(norm);
+    if (existing === void 0) {
+      index.set(norm, [...values]);
+    } else {
+      existing.push(...values);
+    }
+  }
+  return index;
+}
+function shapeScore(codeVariants, figmaVariants) {
+  const codeIndex = normalizedKeyIndex(codeVariants);
+  const figmaIndex = normalizedKeyIndex(figmaVariants);
+  const codeEmpty = codeIndex.size === 0;
+  const figmaEmpty = figmaIndex.size === 0;
+  if (codeEmpty && figmaEmpty) return 0.5;
+  if (codeEmpty || figmaEmpty) return 0.25;
+  const keys = /* @__PURE__ */ new Set([...codeIndex.keys(), ...figmaIndex.keys()]);
+  let total = 0;
+  for (const key of keys) {
+    total += valueJaccard(codeIndex.get(key) ?? [], figmaIndex.get(key) ?? []);
+  }
+  return total / keys.size;
+}
+function scorePair(codeComponent, figmaModel) {
+  const name = nameScore(codeComponent.name, figmaModel.name);
+  const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
+  return {
+    nameScore: name,
+    shapeScore: shape,
+    score: NAME_WEIGHT * name + SHAPE_WEIGHT * shape
+  };
+}
+function byNameAsc4(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function rankFigmaCandidates(codeComponent, figma) {
+  return figma.map((figmaModel) => ({
+    figma: figmaModel,
+    score: scorePair(codeComponent, figmaModel).score
+  })).sort(
+    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc4(a.figma.name, b.figma.name)
+  ).slice(0, MAX_CANDIDATES);
+}
+function rankCodeCandidates(figmaModel, code) {
+  return code.map((codeComponent) => ({
+    code: codeComponent,
+    score: scorePair(codeComponent, figmaModel).score
+  })).sort(
+    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc4(a.code.name, b.code.name)
+  ).slice(0, MAX_CANDIDATES);
+}
+function matchComponents(code, figma) {
+  const edges = [];
+  for (let c2 = 0; c2 < code.length; c2 += 1) {
+    const codeComponent = code[c2];
+    if (codeComponent === void 0) continue;
+    for (let f3 = 0; f3 < figma.length; f3 += 1) {
+      const figmaModel = figma[f3];
+      if (figmaModel === void 0) continue;
+      const parts = scorePair(codeComponent, figmaModel);
+      if (parts.score >= MATCH_THRESHOLD) {
+        edges.push({ codeIndex: c2, figmaIndex: f3, parts });
+      }
+    }
+  }
+  edges.sort((a, b) => {
+    if (a.parts.score !== b.parts.score) return b.parts.score - a.parts.score;
+    const codeA = code[a.codeIndex]?.name ?? "";
+    const codeB = code[b.codeIndex]?.name ?? "";
+    const byCode = byNameAsc4(codeA, codeB);
+    if (byCode !== 0) return byCode;
+    const figmaA = figma[a.figmaIndex]?.name ?? "";
+    const figmaB = figma[b.figmaIndex]?.name ?? "";
+    return byNameAsc4(figmaA, figmaB);
+  });
+  const matchedCode = /* @__PURE__ */ new Set();
+  const matchedFigma = /* @__PURE__ */ new Set();
+  const matches = [];
+  for (const edge of edges) {
+    if (matchedCode.has(edge.codeIndex)) continue;
+    if (matchedFigma.has(edge.figmaIndex)) continue;
+    const codeComponent = code[edge.codeIndex];
+    if (codeComponent === void 0) continue;
+    let best = -1;
+    let second = -1;
+    for (let f3 = 0; f3 < figma.length; f3 += 1) {
+      if (matchedFigma.has(f3)) continue;
+      const figmaModel2 = figma[f3];
+      if (figmaModel2 === void 0) continue;
+      const s = scorePair(codeComponent, figmaModel2).score;
+      if (s > best) {
+        second = best;
+        best = s;
+      } else if (s > second) {
+        second = s;
+      }
+    }
+    const ambiguous = second >= MATCH_THRESHOLD && best >= MATCH_THRESHOLD && best - second < AMBIGUITY_GAP;
+    if (ambiguous) {
+      continue;
+    }
+    matchedCode.add(edge.codeIndex);
+    matchedFigma.add(edge.figmaIndex);
+    const figmaModel = figma[edge.figmaIndex];
+    if (figmaModel === void 0) continue;
+    matches.push({
+      code: codeComponent,
+      figma: figmaModel,
+      score: edge.parts.score,
+      nameScore: edge.parts.nameScore,
+      shapeScore: edge.parts.shapeScore
+    });
+  }
+  matches.sort((a, b) => byNameAsc4(a.code.name, b.code.name));
+  const unmatchedCode = [];
+  for (let c2 = 0; c2 < code.length; c2 += 1) {
+    if (matchedCode.has(c2)) continue;
+    const codeComponent = code[c2];
+    if (codeComponent === void 0) continue;
+    unmatchedCode.push({
+      code: codeComponent,
+      candidates: rankFigmaCandidates(codeComponent, figma)
+    });
+  }
+  unmatchedCode.sort((a, b) => byNameAsc4(a.code.name, b.code.name));
+  const unmatchedFigma = [];
+  for (let f3 = 0; f3 < figma.length; f3 += 1) {
+    if (matchedFigma.has(f3)) continue;
+    const figmaModel = figma[f3];
+    if (figmaModel === void 0) continue;
+    unmatchedFigma.push({
+      figma: figmaModel,
+      candidates: rankCodeCandidates(figmaModel, code)
+    });
+  }
+  unmatchedFigma.sort((a, b) => byNameAsc4(a.figma.name, b.figma.name));
+  return { matches, unmatchedCode, unmatchedFigma };
+}
+
+// src/engines/registry/persist.ts
+function round3(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 1e3) / 1e3;
+}
+function normalizeName4(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function byNameAsc5(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function toRegistryFile(result, generatedAt) {
+  const matches = result.matches.map((m) => ({
+    codeName: m.code.name,
+    importPath: m.code.importPath,
+    figmaName: m.figma.name,
+    nodeId: m.figma.nodeId,
+    score: round3(m.score)
+  })).sort((a, b) => byNameAsc5(a.codeName, b.codeName));
+  const unmatchedCode = result.unmatchedCode.map((u) => ({
+    name: u.code.name,
+    importPath: u.code.importPath,
+    candidates: u.candidates.map((c2) => ({
+      figmaName: c2.figma.name,
+      nodeId: c2.figma.nodeId,
+      score: round3(c2.score)
+    }))
+  })).sort((a, b) => byNameAsc5(a.name, b.name));
+  const unmatchedFigma = result.unmatchedFigma.map((u) => ({
+    name: u.figma.name,
+    nodeId: u.figma.nodeId,
+    candidates: u.candidates.map((c2) => ({
+      codeName: c2.code.name,
+      score: round3(c2.score)
+    }))
+  })).sort((a, b) => byNameAsc5(a.name, b.name));
+  return {
+    schemaVersion: 1,
+    generatedAt,
+    matches,
+    unmatchedCode,
+    unmatchedFigma
+  };
+}
+function resolveEntry(registry, nodeNameOrId) {
+  const query = nodeNameOrId;
+  const normalizedQuery = normalizeName4(query);
+  for (const entry of registry.matches) {
+    if (entry.nodeId === query) return { kind: "match", entry };
+  }
+  for (const entry of registry.matches) {
+    if (entry.figmaName === query) return { kind: "match", entry };
+  }
+  if (normalizedQuery.length > 0) {
+    for (const entry of registry.matches) {
+      if (normalizeName4(entry.figmaName) === normalizedQuery) {
+        return { kind: "match", entry };
+      }
+    }
+  }
+  for (const entry of registry.unmatchedFigma) {
+    if (entry.nodeId === query) {
+      return { kind: "candidates", entries: entry.candidates };
+    }
+  }
+  for (const entry of registry.unmatchedFigma) {
+    if (entry.name === query) {
+      return { kind: "candidates", entries: entry.candidates };
+    }
+  }
+  if (normalizedQuery.length > 0) {
+    for (const entry of registry.unmatchedFigma) {
+      if (normalizeName4(entry.name) === normalizedQuery) {
+        return { kind: "candidates", entries: entry.candidates };
+      }
+    }
+  }
+  return { kind: "not-found" };
+}
+
+// src/cli-commands/registry.ts
+async function scanCode2(targetDir) {
+  const globals = globalThis;
+  if (typeof globals.__filename !== "string") {
+    const filename = fileURLToPath3(import.meta.url);
+    globals.__filename = filename;
+    globals.__dirname = dirname3(filename);
+  }
+  const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
+  return scanCodeComponents(targetDir);
+}
+var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
+function fail7(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage3() {
+  return [
+    "No Figma personal access token configured.",
+    "",
+    "Set one via the plugin config dialog (stored in the system keychain) or,",
+    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
+    "",
+    "  export FIGMA_TOKEN=figd_your_token_here",
+    "",
+    "The token needs the file_content:read and library_content:read scopes, and",
+    "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
+    "be used here."
+  ].join("\n");
+}
+function missingFileKeyMessage2() {
+  return [
+    "No Figma library file key configured.",
+    "",
+    "Set the figma_file_key plugin option, or for standalone CLI use export it:",
+    "",
+    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
+    "",
+    "The key is the segment after /file/ or /design/ in the library file URL."
+  ].join("\n");
+}
+function clientErrorMessage3(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read and library_content:read.`;
+    case "not-found":
+      return "Figma could not find that file. Check figma_file_key is correct and the token's account can access the library.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+async function runBuild(path, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail7(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const targetDir = resolvePath3(path);
+  if (!existsSync6(targetDir) || !statSync5(targetDir).isDirectory()) {
+    fail7(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const resolved = resolveConfig({ env: process.env });
+  if (resolved.kind !== "ok") {
+    fail7(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail7(missingTokenMessage3());
+    return;
+  }
+  if (config.figmaFileKey === void 0 || config.figmaFileKey === "") {
+    fail7(missingFileKeyMessage2());
+    return;
+  }
+  const code = await scanCode2(targetDir);
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
   const client = createFigmaClient({
     token: config.figmaToken.value,
     baseUrl
   });
   const componentsResult = await client.getComponents(config.figmaFileKey);
   if (componentsResult.kind !== "ok") {
-    fail4(clientErrorMessage2(componentsResult));
+    fail7(clientErrorMessage3(componentsResult));
     return;
   }
   const fileResult = await client.getFile(config.figmaFileKey);
   if (fileResult.kind !== "ok") {
-    fail4(clientErrorMessage2(fileResult));
+    fail7(clientErrorMessage3(fileResult));
     return;
   }
   const figma = buildFigmaComponentModel({
@@ -10189,11 +12158,11 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join4(targetDir, ".ds-bridge");
-  const registryPath = join4(stateDir, "registry.json");
+  const stateDir = join8(targetDir, ".ds-bridge");
+  const registryPath = join8(stateDir, "registry.json");
   try {
-    mkdirSync3(stateDir, { recursive: true });
-    writeFileSync2(
+    mkdirSync6(stateDir, { recursive: true });
+    writeFileSync4(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
 `,
@@ -10201,7 +12170,7 @@ async function runBuild(path, options) {
     );
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Could not write registry to "${registryPath}": ${detail}`);
+    fail7(`Could not write registry to "${registryPath}": ${detail}`);
     return;
   }
   if (format === "json") {
@@ -10241,37 +12210,37 @@ function renderBuildSummary(registry, registryPath) {
   }
   return lines.join("\n");
 }
-function loadRegistry2(targetDir) {
-  const registryPath = join4(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync3(registryPath)) {
-    fail4(
+function loadRegistry4(targetDir) {
+  const registryPath = join8(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync6(registryPath)) {
+    fail7(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
   }
   let raw;
   try {
-    raw = readFileSync3(registryPath, "utf8");
+    raw = readFileSync6(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Could not read registry "${registryPath}": ${detail}`);
+    fail7(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail7(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
 function runResolve(nodeNameOrId, path) {
-  const targetDir = resolvePath2(path);
-  if (!existsSync3(targetDir) || !statSync3(targetDir).isDirectory()) {
-    fail4(`Path "${targetDir}" is not a directory.`);
+  const targetDir = resolvePath3(path);
+  if (!existsSync6(targetDir) || !statSync5(targetDir).isDirectory()) {
+    fail7(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const registry = loadRegistry2(targetDir);
+  const registry = loadRegistry4(targetDir);
   if (registry === void 0) return;
   const outcome = resolveEntry(registry, nodeNameOrId);
   switch (outcome.kind) {
@@ -10323,13 +12292,13 @@ function registerRegistryCommand(program2) {
 // src/cli-commands/report.ts
 import { spawn } from "child_process";
 import {
-  existsSync as existsSync4,
-  mkdirSync as mkdirSync4,
-  readFileSync as readFileSync4,
-  statSync as statSync4,
-  writeFileSync as writeFileSync3
+  existsSync as existsSync7,
+  mkdirSync as mkdirSync7,
+  readFileSync as readFileSync7,
+  statSync as statSync6,
+  writeFileSync as writeFileSync5
 } from "fs";
-import { basename, dirname as dirname2, join as join5, resolve as resolve4 } from "path";
+import { basename, dirname as dirname4, join as join9, resolve as resolve6 } from "path";
 import { platform } from "process";
 
 // src/render/html/charts.ts
@@ -10753,6 +12722,48 @@ function paritySection(data) {
     `<div class="chart">${heatGrid(rows)}</div>${columns}`
   );
 }
+function a11ySection(data) {
+  const a11y = data.a11y;
+  if (a11y === void 0 || a11y.modes.length === 0) {
+    return panel("Contrast (a11y)", emptyState2("a11y"));
+  }
+  const bars = a11y.modes.map((m) => ({
+    label: m.mode,
+    value: m.failed
+  }));
+  const tallies = [
+    '<ul class="modes">',
+    ...a11y.modes.map(
+      (m) => `<li><code>${escapeHtml(m.mode)}</code><span class="count">${escapeHtml(String(m.passed))} passed \xB7 ${escapeHtml(String(m.failed))} failed</span></li>`
+    ),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Contrast (a11y)",
+    [
+      `<div class="meta">Failures by mode \xB7 level ${escapeHtml(a11y.level)}</div>`,
+      `<div class="chart">${barChart(bars)}</div>`,
+      tallies
+    ].join("")
+  );
+}
+function impactSection(data) {
+  const impact = data.impact;
+  if (impact === void 0) {
+    return panel("Change impact", emptyState2("impact"));
+  }
+  const bars = [
+    { label: "Breaking", value: impact.breaking },
+    { label: "Additive", value: impact.additive },
+    { label: "Cosmetic", value: impact.cosmetic }
+  ];
+  const sites = impact.touchedCallSites;
+  const radius = `<div class="meta">Touches ${escapeHtml(String(sites))} call site${sites === 1 ? "" : "s"}</div>`;
+  return panel(
+    "Change impact",
+    `<div class="chart">${barChart(bars)}</div>${radius}`
+  );
+}
 function renderDashboard(data) {
   const project = escapeHtml(data.project);
   const generatedAt = escapeHtml(data.generatedAt);
@@ -10767,6 +12778,8 @@ function renderDashboard(data) {
     lintSection(data),
     readinessSection(data),
     paritySection(data),
+    a11ySection(data),
+    impactSection(data),
     "</div>",
     "</div>"
   ].join("");
@@ -10798,16 +12811,24 @@ function asNumber(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join5(stateDir, "history.jsonl");
+  const historyPath = join9(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync4(historyPath, "utf8");
+    text = readFileSync7(historyPath, "utf8");
   } catch {
-    return { driftTrend: [], lintSummary: void 0, readiness: void 0 };
+    return {
+      driftTrend: [],
+      lintSummary: void 0,
+      readiness: void 0,
+      a11y: void 0,
+      impact: void 0
+    };
   }
   const driftTrend = [];
   let lint;
   let readiness;
+  let a11y;
+  let impact;
   const lines = text.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
     const trimmed = (lines[index] ?? "").trim();
@@ -10856,15 +12877,38 @@ function aggregateHistory(stateDir, onWarning) {
           points: asNumber(d.points)
         }))
       };
+      continue;
+    }
+    if (record.kind === "a11y") {
+      const r2 = record;
+      const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
+      a11y = {
+        level: r2.level === "AAA" ? "AAA" : "AA",
+        modes: modes2.map((m) => ({
+          mode: typeof m.mode === "string" ? m.mode : "",
+          passed: asNumber(m.passed),
+          failed: asNumber(m.failed)
+        }))
+      };
+      continue;
+    }
+    if (record.kind === "impact") {
+      const r2 = record;
+      impact = {
+        breaking: asNumber(r2.breaking),
+        additive: asNumber(r2.additive),
+        cosmetic: asNumber(r2.cosmetic),
+        touchedCallSites: asNumber(r2.touchedCallSites)
+      };
     }
   }
-  return { driftTrend, lintSummary: lint, readiness };
+  return { driftTrend, lintSummary: lint, readiness, a11y, impact };
 }
 function readParity(stateDir, onWarning) {
-  const registryPath = join5(stateDir, "registry.json");
+  const registryPath = join9(stateDir, "registry.json");
   let text;
   try {
-    text = readFileSync4(registryPath, "utf8");
+    text = readFileSync7(registryPath, "utf8");
   } catch {
     return void 0;
   }
@@ -10881,8 +12925,8 @@ function readParity(stateDir, onWarning) {
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync4(dirname2(outPath), { recursive: true });
-    writeFileSync3(outPath, html, "utf8");
+    mkdirSync7(dirname4(outPath), { recursive: true });
+    writeFileSync5(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -10925,12 +12969,12 @@ function failReport(message) {
   process.exitCode = 2;
 }
 function runReport(path, options) {
-  const targetDir = resolve4(path);
-  if (!existsSync4(targetDir) || !statSync4(targetDir).isDirectory()) {
+  const targetDir = resolve6(path);
+  if (!existsSync7(targetDir) || !statSync6(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const stateDir = join5(targetDir, ".ds-bridge");
+  const stateDir = join9(targetDir, ".ds-bridge");
   const warn = (message) => {
     process.stderr.write(`${message}
 `);
@@ -10944,9 +12988,11 @@ function runReport(path, options) {
     driftTrend: aggregation.driftTrend,
     ...aggregation.lintSummary !== void 0 ? { lintSummary: aggregation.lintSummary } : {},
     ...aggregation.readiness !== void 0 ? { readiness: aggregation.readiness } : {},
-    ...parity !== void 0 ? { parity } : {}
+    ...parity !== void 0 ? { parity } : {},
+    ...aggregation.a11y !== void 0 ? { a11y: aggregation.a11y } : {},
+    ...aggregation.impact !== void 0 ? { impact: aggregation.impact } : {}
   });
-  const outPath = options.out !== void 0 ? resolve4(options.out) : join5(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve6(options.out) : join9(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -10974,15 +13020,15 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync as appendFileSync3,
-  existsSync as existsSync5,
-  mkdirSync as mkdirSync5,
+  appendFileSync as appendFileSync5,
+  existsSync as existsSync8,
+  mkdirSync as mkdirSync8,
   readdirSync as readdirSync2,
-  readFileSync as readFileSync5,
-  statSync as statSync5,
-  writeFileSync as writeFileSync4
+  readFileSync as readFileSync8,
+  statSync as statSync7,
+  writeFileSync as writeFileSync6
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join6, relative as relative2, resolve as resolve5, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute3, join as join10, relative as relative2, resolve as resolve7, sep as sep3 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -11189,7 +13235,7 @@ function scanTsTheme(content) {
 
 // src/cli-commands/tokens.ts
 var TABLE_LIMIT = 20;
-var PARSERS2 = {
+var PARSERS4 = {
   w3c: parseW3c,
   "tokens-studio": parseTokensStudio,
   "style-dictionary": parseStyleDictionary
@@ -11206,7 +13252,7 @@ function countsByType(map) {
   }
   return [...counts.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
 }
-function renderTerm4(filePath, map, color) {
+function renderTerm8(filePath, map, color) {
   const heading = `${filePath} \u2014 format: ${map.format} \u2014 ${map.tokens.length} tokens`;
   const chart = renderBarChart(countsByType(map), { width: 24, color });
   const rows = map.tokens.slice(0, TABLE_LIMIT).map((token) => [token.name, token.type, previewValue(token.value)]);
@@ -11220,7 +13266,7 @@ function renderTerm4(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync5(filePath, "utf8");
+    raw = readFileSync8(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -11247,7 +13293,7 @@ function loadTokenMap2(filePath) {
     process.exitCode = 1;
     return void 0;
   }
-  const outcome = PARSERS2[format](parsed);
+  const outcome = PARSERS4[format](parsed);
   if (outcome.kind === "error") {
     process.stderr.write(`Failed to parse "${filePath}" as ${format}:
 `);
@@ -11265,7 +13311,7 @@ function loadTokenMap2(filePath) {
   }
   return outcome.map;
 }
-var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set([
+var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   ".ds-bridge",
@@ -11297,23 +13343,23 @@ function walkOutputFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join6(dir, entry.name);
+    const full = join10(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkOutputFiles(full, acc);
       continue;
     }
     if (entry.isFile() && hasOutputExtension(entry.name)) acc.push(full);
   }
 }
-function depthOf2(path) {
-  return path.split(sep2).filter((s) => s.length > 0).length;
+function depthOf3(path) {
+  return path.split(sep3).filter((s) => s.length > 0).length;
 }
-function isConventionalTokenFile2(name) {
+function isConventionalTokenFile3(name) {
   if (!name.endsWith(".json")) return false;
   return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
 }
-function isTokenDir2(name) {
+function isTokenDir3(name) {
   return name === "tokens" || name === "design-tokens";
 }
 function collectTokenCandidates2(dir, insideTokenDir, acc) {
@@ -11324,24 +13370,24 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join6(dir, entry.name);
+    const full = join10(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
       collectTokenCandidates2(
         full,
-        insideTokenDir || isTokenDir2(entry.name),
+        insideTokenDir || isTokenDir3(entry.name),
         acc
       );
       continue;
     }
     if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
+    if (insideTokenDir || isConventionalTokenFile3(entry.name)) acc.push(full);
   }
 }
-function detectFileFormat2(absPath) {
+function detectFileFormat3(absPath) {
   let raw;
   try {
-    raw = readFileSync5(absPath, "utf8");
+    raw = readFileSync8(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -11357,16 +13403,16 @@ function detectFileFormat2(absPath) {
 function discoverFirstTokenSource2(root) {
   const candidates = [];
   collectTokenCandidates2(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
-    const depth = depthOf2(a) - depthOf2(b);
+  const verified = candidates.filter((path) => detectFileFormat3(path) !== void 0).sort((a, b) => {
+    const depth = depthOf3(a) - depthOf3(b);
     return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
   });
   return verified[0];
 }
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve5(process.cwd(), flagTokens);
-    if (!existsSync5(abs2)) {
+    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve7(process.cwd(), flagTokens);
+    if (!existsSync8(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -11374,11 +13420,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join6(targetDir, ".ds-bridge.json");
-  if (existsSync5(configPath)) {
+  const configPath = join10(targetDir, ".ds-bridge.json");
+  if (existsSync8(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync5(configPath, "utf8");
+      projectFileText = readFileSync8(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -11386,8 +13432,8 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute2(src) ? src : resolve5(targetDir, src);
-        if (existsSync5(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute3(src) ? src : resolve7(targetDir, src);
+        if (existsSync8(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -11406,7 +13452,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync5(tokenPath, "utf8");
+    raw = readFileSync8(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -11453,10 +13499,10 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    if (resolve5(file) === resolve5(tokenSourcePath)) continue;
+    if (resolve7(file) === resolve7(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync5(file, "utf8");
+      content = readFileSync8(file, "utf8");
     } catch {
       continue;
     }
@@ -11546,19 +13592,19 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync5(stateDir, { recursive: true });
-  appendFileSync3(
-    join6(stateDir, "history.jsonl"),
+  mkdirSync8(stateDir, { recursive: true });
+  appendFileSync5(
+    join10(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join6(stateDir, "history.jsonl");
+  const historyPath = join10(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync5(historyPath, "utf8");
+    text = readFileSync8(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -11590,11 +13636,11 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join6(stateDir, "reports");
-  mkdirSync5(reportsDir, { recursive: true });
+  const reportsDir = join10(stateDir, "reports");
+  mkdirSync8(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join6(reportsDir, `tokens-${date}.html`);
-  writeFileSync4(reportPath, html, "utf8");
+  const reportPath = join10(reportsDir, `tokens-${date}.html`);
+  writeFileSync6(reportPath, html, "utf8");
   return reportPath;
 }
 function failCheck(message) {
@@ -11610,8 +13656,8 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve5(path);
-  if (!existsSync5(targetDir) || !statSync5(targetDir).isDirectory()) {
+  const targetDir = resolve7(path);
+  if (!existsSync8(targetDir) || !statSync7(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -11625,8 +13671,8 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve5(options.outputs) : targetDir;
-  if (!existsSync5(outputsDir) || !statSync5(outputsDir).isDirectory()) {
+  const outputsDir = options.outputs !== void 0 ? resolve7(options.outputs) : targetDir;
+  if (!existsSync8(outputsDir) || !statSync7(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -11638,7 +13684,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join6(targetDir, ".ds-bridge");
+  const stateDir = join10(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -11690,7 +13736,7 @@ function registerTokensCommand(program2) {
       return;
     }
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm4(path, map, color)}
+    process.stdout.write(`${renderTerm8(path, map, color)}
 `);
   });
 }
@@ -11708,6 +13754,10 @@ function buildProgram() {
   registerHandoffCommand(program2);
   registerRegistryCommand(program2);
   registerParityCommand(program2);
+  registerA11yCommand(program2);
+  registerImpactCommand(program2);
+  registerChangelogCommand(program2);
+  registerDocsCommand(program2);
   return program2;
 }
 buildProgram().parse();
