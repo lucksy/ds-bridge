@@ -1,8 +1,9 @@
-// M2.1 — integration: the built CLI's `dashboard list` command. Spawns
-// dist/cli.mjs against a scratch project dir and asserts exit codes plus the
-// term/json shapes. (M2.2 extends this file with set/add/remove blocks.)
+// M2.1/M2.2 — integration: the built CLI's `dashboard` command group. Spawns
+// dist/cli.mjs against a scratch project dir and asserts exit codes, the
+// term/json shapes for `list`, and the set/add/remove edit + persistence
+// semantics (materialization, idempotency, unrelated-key preservation).
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -143,5 +144,170 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(2);
 		expect(result.stderr.length).toBeGreaterThan(0);
+	});
+});
+
+async function readConfig(): Promise<Record<string, unknown>> {
+	return JSON.parse(await readFile(configPath(), "utf8")) as Record<
+		string,
+		unknown
+	>;
+}
+
+describe("ds-bridge dashboard set (built dist/cli.mjs)", () => {
+	it("set --view owner persists dashboard_view and resolves to owner on list", async () => {
+		const setResult = await run(["dashboard", "set", "--view", "owner", dir]);
+		expect(setResult.code).toBe(0);
+		const written = await readConfig();
+		expect(written.dashboard_view).toBe("owner");
+		expect(written.dashboard_artifacts).toBeUndefined();
+
+		const listResult = await run(["dashboard", "list", "--format=json", dir]);
+		const parsed = JSON.parse(listResult.stdout) as JsonList;
+		expect(parsed.view.viewName).toBe("owner");
+	});
+
+	it("set --artifacts persists dashboard_artifacts and clears any prior view", async () => {
+		await run(["dashboard", "set", "--view", "owner", dir]);
+		const setResult = await run([
+			"dashboard",
+			"set",
+			"--artifacts",
+			"parity,a11y",
+			dir,
+		]);
+		expect(setResult.code).toBe(0);
+		const written = await readConfig();
+		expect(written.dashboard_artifacts).toEqual(["parity", "a11y"]);
+		expect(written.dashboard_view).toBeUndefined();
+	});
+
+	it("set with both --view and --artifacts exits 2 (mutually exclusive)", async () => {
+		const result = await run([
+			"dashboard",
+			"set",
+			"--view",
+			"owner",
+			"--artifacts",
+			"parity",
+			dir,
+		]);
+		expect(result.code).toBe(2);
+	});
+
+	it("set with neither --view nor --artifacts exits 2", async () => {
+		const result = await run(["dashboard", "set", dir]);
+		expect(result.code).toBe(2);
+	});
+
+	it("set --view with an unknown preset exits 2 with suggestions", async () => {
+		const result = await run(["dashboard", "set", "--view", "ownr", dir]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("owner");
+	});
+
+	it("set --artifacts with an unknown id exits 2 with suggestions", async () => {
+		const result = await run([
+			"dashboard",
+			"set",
+			"--artifacts",
+			"parity,paritee",
+			dir,
+		]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("parity");
+	});
+});
+
+describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
+	it("materializes the current preset into an explicit list, with a notice", async () => {
+		await run(["dashboard", "set", "--view", "owner", dir]);
+		const result = await run(["dashboard", "add", "impact", dir]);
+		expect(result.code).toBe(0);
+		// owner = drift-trend, parity, a11y → + impact = 4
+		const written = await readConfig();
+		expect(written.dashboard_artifacts).toEqual([
+			"drift-trend",
+			"parity",
+			"a11y",
+			"impact",
+		]);
+		expect(written.dashboard_view).toBeUndefined();
+		expect(result.stdout.toLowerCase()).toContain("explicit");
+	});
+
+	it("adding an already-present artifact is an idempotent no-op success with a notice", async () => {
+		await run(["dashboard", "set", "--artifacts", "parity,a11y", dir]);
+		const result = await run(["dashboard", "add", "parity", dir]);
+		expect(result.code).toBe(0);
+		const written = await readConfig();
+		expect(written.dashboard_artifacts).toEqual(["parity", "a11y"]);
+		expect(result.stdout.toLowerCase()).toMatch(/already|no-op|no change/);
+	});
+
+	it("removing an artifact materializes then drops it", async () => {
+		await run(["dashboard", "set", "--view", "owner", dir]);
+		const result = await run(["dashboard", "remove", "parity", dir]);
+		expect(result.code).toBe(0);
+		const written = await readConfig();
+		expect(written.dashboard_artifacts).toEqual(["drift-trend", "a11y"]);
+	});
+
+	it("removing an absent artifact is an idempotent no-op success with a notice", async () => {
+		await run(["dashboard", "set", "--artifacts", "parity,a11y", dir]);
+		const result = await run(["dashboard", "remove", "impact", dir]);
+		expect(result.code).toBe(0);
+		const written = await readConfig();
+		expect(written.dashboard_artifacts).toEqual(["parity", "a11y"]);
+		expect(result.stdout.toLowerCase()).toMatch(
+			/already|no-op|not in|no change/,
+		);
+	});
+
+	it("add with an unknown id exits 2 with suggestions and does not write", async () => {
+		await run(["dashboard", "set", "--view", "owner", dir]);
+		const before = await readFile(configPath(), "utf8");
+		const result = await run(["dashboard", "add", "paritee", dir]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("parity");
+		expect(await readFile(configPath(), "utf8")).toBe(before);
+	});
+
+	it("preserves unrelated keys byte-wise when materializing", async () => {
+		// A hand-written file with unrelated keys BEFORE dashboard_view; they (and
+		// their order) must survive — only the dashboard keys are edited, with
+		// dashboard_artifacts replacing dashboard_view in place at the end.
+		const original = {
+			figma_file_key: "ABC123",
+			report_style: "html",
+			dashboard_view: "owner",
+		};
+		await writeFile(
+			configPath(),
+			`${JSON.stringify(original, null, 2)}\n`,
+			"utf8",
+		);
+		const result = await run(["dashboard", "add", "impact", dir]);
+		expect(result.code).toBe(0);
+		const text = await readFile(configPath(), "utf8");
+		const written = JSON.parse(text) as Record<string, unknown>;
+		expect(written.figma_file_key).toBe("ABC123");
+		expect(written.report_style).toBe("html");
+		expect(written.dashboard_view).toBeUndefined();
+		expect(written.dashboard_artifacts).toEqual([
+			"drift-trend",
+			"parity",
+			"a11y",
+			"impact",
+		]);
+		// order preserved: unrelated keys first, dashboard_artifacts at the end
+		expect(Object.keys(written)).toEqual([
+			"figma_file_key",
+			"report_style",
+			"dashboard_artifacts",
+		]);
+		// 2-space indent + trailing newline convention
+		expect(text.endsWith("}\n")).toBe(true);
+		expect(text).toContain('  "figma_file_key"');
 	});
 });
