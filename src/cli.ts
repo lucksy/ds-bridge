@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { Command } from "commander";
 import { registerA11yCommand } from "./cli-commands/a11y.js";
 import { registerChangelogCommand } from "./cli-commands/changelog.js";
+import { registerDashboardCommand } from "./cli-commands/dashboard.js";
 import { registerDocsCommand } from "./cli-commands/docs.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerImpactCommand } from "./cli-commands/impact.js";
@@ -34,6 +35,7 @@ export function buildProgram(): Command {
 	registerImpactCommand(program);
 	registerChangelogCommand(program);
 	registerDocsCommand(program);
+	registerDashboardCommand(program);
 
 	return program;
 }
