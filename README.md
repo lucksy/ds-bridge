@@ -13,7 +13,7 @@ Professional+** (the remote Figma MCP server is available on all plans).
 > **Status:** v0.4.0 — spec-driven, strict TDD. See [`SPEC.md`](./SPEC.md)
 > (contract), [`PLAN.md`](./PLAN.md) (build strategy), [`TASKS.md`](./TASKS.md)
 > (live task tracker). The marketing site under [`website/`](./website) is built
-> but not yet deployed (Cloudflare Pages hookup pending).
+> and live at **<https://ds-bridge.pages.dev>** (Cloudflare Pages).
 
 ## Who it serves
 
@@ -211,7 +211,7 @@ npm run check          # typecheck + lint + test + validate (pre-commit gate)
 ```
 
 The marketing site is its own package under [`website/`](./website) (Next.js
-static export); its tutorials are authored but go live once Cloudflare Pages is connected.
+static export), live at <https://ds-bridge.pages.dev> — tutorials: <https://ds-bridge.pages.dev/tutorials/>.
 
 ## Live Figma smoke test
 
@@ -261,7 +261,7 @@ never failed.
 - **v1.0.0 (next):** the flagship `/ds-bridge:figma-impl` (frame → on-system
   code via the registry + a structured gaps report) and headless E2E coverage
   that proves the plugin loads in `claude -p --bare`.
-- **Website:** authored tutorials and a landing page exist under `website/`;
-  they go live once the Cloudflare Pages deployment is connected.
+- **Website:** live at <https://ds-bridge.pages.dev> — landing page + ten
+  tutorials, deployed from `website/` via Cloudflare Pages.
 
 License: [MIT](./LICENSE)

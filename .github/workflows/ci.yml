@@ -46,6 +46,47 @@ jobs:
       - name: Plugin validate (strict)
         run: npx --yes @anthropic-ai/claude-code plugin validate . --strict
 
+  # W1.5 — website deploy to Cloudflare Pages (project: ds-bridge). Runs on
+  # push to main (production, --branch=main) and on PRs (per-branch preview
+  # deployment URLs), always AFTER the check job passes — a red suite never
+  # deploys. Same self-skip pattern as e2e: GitHub can't use `secrets` in `if`,
+  # so the deploy STEP exits 0 with a notice until CLOUDFLARE_API_TOKEN is
+  # configured (CLOUDFLARE_ACCOUNT_ID is a repo secret set at W1.5 hookup).
+  # First-ever production deploy may also come from a local `wrangler pages
+  # deploy` — the job is idempotent either way.
+  deploy-website:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install website (locked)
+        run: npm ci --prefix website
+
+      - name: Build static export
+        run: npm run build --prefix website
+
+      - name: Deploy to Cloudflare Pages (skips without CLOUDFLARE_API_TOKEN)
+        # main push -> production; PR -> preview deployment for the head branch.
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "skipped (no CLOUDFLARE_API_TOKEN secret configured — see TASKS.md W1.5)"
+            exit 0
+          fi
+          BRANCH="${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}"
+          npx --yes wrangler pages deploy website/out \
+            --project-name=ds-bridge --branch="$BRANCH"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   # T4.7 — gated live Figma smoke test (fixture-drift detection). Runs nightly
   # (cron above) and on manual workflow_dispatch ONLY — never on push/PR (the
   # `if` keeps it off PR/branch runs). Gating is by SELF-SKIP: the secrets are
