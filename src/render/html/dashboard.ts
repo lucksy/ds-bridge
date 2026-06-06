@@ -7,6 +7,10 @@
 // four product artifacts are drawn via the T3.1 SVG chart functions; every
 // section degrades to a styled empty-state panel when its data is absent.
 
+import {
+	ALL_ARTIFACT_IDS,
+	type ArtifactId,
+} from "../../engines/report/catalog.js";
 import type { ParityStatus, ReportData } from "../../engines/report/types.js";
 import type { LineSeries } from "./charts.js";
 import { barChart, donutGauge, heatGrid, lineChart } from "./charts.js";
@@ -328,29 +332,66 @@ function impactSection(data: ReportData): string {
 	);
 }
 
+// Each artifact id maps to the section renderer for its ReportData slice. The
+// keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
+// caller-supplied selection over this map is what gates DOM inclusion (an id
+// absent from the selection is never rendered — see renderDashboard).
+const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
+	"drift-trend": driftSection,
+	"lint-summary": lintSection,
+	readiness: readinessSection,
+	parity: paritySection,
+	a11y: a11ySection,
+	impact: impactSection,
+};
+
+/** Optional rendering controls that do not affect which sections appear. */
+export interface RenderDashboardOptions {
+	/** Active view name; rendered in the document header when supplied. */
+	viewLabel?: string;
+}
+
 /**
- * Render the complete offline dashboard for a {@link ReportData}. Returns one
- * self-contained `<!DOCTYPE html>` document with inline styles and six
- * sections (drift trend, lint, readiness, parity, contrast, impact), each falling back to a
- * styled empty state. All caller-supplied strings are HTML-escaped.
+ * Render the offline dashboard for a {@link ReportData}, including only the
+ * artifacts in `selection` (default: all six, in catalog order — today's
+ * behavior). Returns one self-contained `<!DOCTYPE html>` document with inline
+ * styles.
+ *
+ * **Selection gates DOM inclusion BEFORE any data-presence check:** an artifact
+ * absent from `selection` is omitted entirely (no `<section>`, no title, no
+ * empty-state); only for an *included* artifact does the per-section logic
+ * decide chart-vs-empty-state. This ordering is load-bearing for `drift-trend`,
+ * which the report CLI passes unconditionally as `[]` when empty while the
+ * other sections are conditionally spread — gating-first makes a deselected
+ * drift-trend disappear while a selected-but-`[]` one keeps its empty-state.
+ *
+ * Sections render in `selection` order. All caller-supplied strings are
+ * HTML-escaped.
  */
-export function renderDashboard(data: ReportData): string {
+export function renderDashboard(
+	data: ReportData,
+	selection: readonly ArtifactId[] = ALL_ARTIFACT_IDS,
+	options: RenderDashboardOptions = {},
+): string {
 	const project = escapeHtml(data.project);
 	const generatedAt = escapeHtml(data.generatedAt);
+
+	const viewLabel =
+		options.viewLabel === undefined
+			? ""
+			: `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
+
+	const sections = selection.map((id) => SECTION_RENDERERS[id](data));
 
 	const body = [
 		'<div class="wrap">',
 		'<header class="dash">',
 		`<h1>ds-bridge report · <span class="project">${project}</span></h1>`,
+		viewLabel,
 		`<span class="generated">Generated ${generatedAt}</span>`,
 		"</header>",
 		'<div class="grid">',
-		driftSection(data),
-		lintSection(data),
-		readinessSection(data),
-		paritySection(data),
-		a11ySection(data),
-		impactSection(data),
+		...sections,
 		"</div>",
 		"</div>",
 	].join("");

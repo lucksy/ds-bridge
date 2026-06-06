@@ -3,7 +3,14 @@
 // the four sections (full + empty + partial), self-containment (offline-safe)
 // and escaping of untrusted strings.
 import { describe, expect, it } from "vitest";
-import type { ReportData } from "../../../src/engines/report/types.js";
+import {
+	ALL_ARTIFACT_IDS,
+	type ArtifactId,
+} from "../../../src/engines/report/catalog.js";
+import type {
+	DriftTrendPoint,
+	ReportData,
+} from "../../../src/engines/report/types.js";
 import { renderDashboard } from "../../../src/render/html/dashboard.js";
 
 function countMatches(haystack: string, pattern: RegExp): number {
@@ -322,5 +329,154 @@ describe("renderDashboard — escaping untrusted strings", () => {
 		expect(html).not.toMatch(/<link\b/i);
 		expect(html).not.toMatch(/@import/i);
 		expect(html).not.toMatch(/url\(/i);
+	});
+});
+
+// M1.2 — Renderer renders a selection. Selection gates DOM inclusion BEFORE any
+// per-section data-presence check; an artifact absent from the selection is
+// omitted from the DOM entirely (no <section>, no <h2>, no empty-state).
+//
+// The section <h2> title is the DOM-inclusion probe per artifact id.
+const TITLE_FOR: Record<ArtifactId, RegExp> = {
+	"drift-trend": /<h2>Drift trend<\/h2>/,
+	"lint-summary": /<h2>Lint violations<\/h2>/,
+	readiness: /<h2>Readiness<\/h2>/,
+	parity: /<h2>Parity matrix<\/h2>/,
+	a11y: /<h2>Contrast \(a11y\)<\/h2>/,
+	impact: /<h2>Change impact<\/h2>/,
+};
+
+describe("renderDashboard — default-call equivalence", () => {
+	it("renderDashboard(fullData) is text-equal to passing ALL_ARTIFACT_IDS explicitly", () => {
+		expect(renderDashboard(fullData)).toBe(
+			renderDashboard(fullData, ALL_ARTIFACT_IDS),
+		);
+	});
+
+	it("an empty selection renders no sections at all", () => {
+		const html = renderDashboard(fullData, []);
+		expect(countMatches(html, /<section class="panel">/g)).toBe(0);
+		expect(countMatches(html, /<svg\b/g)).toBe(0);
+		expect(html).not.toMatch(/No data yet/i);
+		// the document scaffold and header still render.
+		expect(html.trimStart().slice(0, 15).toLowerCase()).toBe("<!doctype html>");
+		expect(html).toContain("acme-design-system");
+	});
+});
+
+describe("renderDashboard — selection gates DOM inclusion (four quadrants)", () => {
+	const driftData: DriftTrendPoint[] = [
+		{ date: "2026-06-01", breaking: 1, additive: 2, cosmetic: 3 },
+	];
+
+	it("selected + data → renders the drift chart, no empty-state", () => {
+		const html = renderDashboard(
+			{
+				generatedAt: emptyData.generatedAt,
+				project: "q1",
+				driftTrend: driftData,
+			},
+			["drift-trend"],
+		);
+		expect(html).toMatch(TITLE_FOR["drift-trend"]);
+		expect(countMatches(html, /<polyline\b/g)).toBe(3);
+		expect(html).not.toMatch(/No data yet/i);
+	});
+
+	it("selected + no-data (driftTrend: []) → keeps its empty-state", () => {
+		const html = renderDashboard(
+			{
+				generatedAt: emptyData.generatedAt,
+				project: "q2",
+				driftTrend: [],
+			},
+			["drift-trend"],
+		);
+		expect(html).toMatch(TITLE_FOR["drift-trend"]);
+		expect(countMatches(html, /<svg\b/g)).toBe(0);
+		expect(countMatches(html, /No data yet/gi)).toBe(1);
+	});
+
+	it("deselected + data → omitted from the DOM entirely (no section, no title)", () => {
+		const html = renderDashboard(
+			{
+				generatedAt: emptyData.generatedAt,
+				project: "q3",
+				driftTrend: driftData,
+			},
+			["lint-summary"],
+		);
+		expect(html).not.toMatch(TITLE_FOR["drift-trend"]);
+		expect(html).not.toMatch(/Drift trend/);
+		expect(countMatches(html, /<polyline\b/g)).toBe(0);
+	});
+
+	it("deselected + no-data (driftTrend: []) → omitted, not an empty-state (the load-bearing quirk)", () => {
+		const html = renderDashboard(
+			{
+				generatedAt: emptyData.generatedAt,
+				project: "q4",
+				driftTrend: [],
+			},
+			["lint-summary"],
+		);
+		expect(html).not.toMatch(TITLE_FOR["drift-trend"]);
+		expect(html).not.toMatch(/Drift trend/);
+		// only the selected lint section is present (here as an empty-state).
+		expect(html).toMatch(TITLE_FOR["lint-summary"]);
+		expect(countMatches(html, /No data yet/gi)).toBe(1);
+	});
+});
+
+describe("renderDashboard — selection order drives section order", () => {
+	it("renders parity before drift-trend when the selection says so", () => {
+		const html = renderDashboard(fullData, ["parity", "drift-trend"]);
+		const parityAt = html.search(TITLE_FOR.parity);
+		const driftAt = html.search(TITLE_FOR["drift-trend"]);
+		expect(parityAt).toBeGreaterThan(-1);
+		expect(driftAt).toBeGreaterThan(-1);
+		expect(parityAt).toBeLessThan(driftAt);
+		// exactly the two selected sections, nothing else.
+		expect(countMatches(html, /<section class="panel">/g)).toBe(2);
+	});
+
+	it("renders only the subset's sections (no other artifact leaks in)", () => {
+		const html = renderDashboard(fullData, ["a11y", "impact"]);
+		expect(html).toMatch(TITLE_FOR.a11y);
+		expect(html).toMatch(TITLE_FOR.impact);
+		expect(html).not.toMatch(TITLE_FOR["drift-trend"]);
+		expect(html).not.toMatch(TITLE_FOR["lint-summary"]);
+		expect(html).not.toMatch(TITLE_FOR.readiness);
+		expect(html).not.toMatch(TITLE_FOR.parity);
+		const a11yAt = html.search(TITLE_FOR.a11y);
+		const impactAt = html.search(TITLE_FOR.impact);
+		expect(a11yAt).toBeLessThan(impactAt);
+	});
+});
+
+describe("renderDashboard — active view label in the header", () => {
+	it("omitting viewLabel keeps the header byte-identical to today", () => {
+		expect(renderDashboard(fullData, ALL_ARTIFACT_IDS, {})).toBe(
+			renderDashboard(fullData),
+		);
+	});
+
+	it("renders the view label in the header when supplied", () => {
+		const html = renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+			viewLabel: "owner",
+		});
+		expect(html).toContain("owner");
+		// it lives in the document header, not as a section.
+		const headerEnd = html.indexOf("</header>");
+		expect(headerEnd).toBeGreaterThan(-1);
+		expect(html.slice(0, headerEnd)).toContain("owner");
+	});
+
+	it("escapes a hostile view label", () => {
+		const html = renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+			viewLabel: "<script>alert(1)</script>",
+		});
+		expect(html).not.toMatch(/<script\b/i);
+		expect(html).toContain("&lt;script&gt;");
 	});
 });
