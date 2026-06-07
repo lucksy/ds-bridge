@@ -6,6 +6,7 @@ import { registerAdoptionCommand } from "./cli-commands/adoption.js";
 import { registerBadgeCommand } from "./cli-commands/badge.js";
 import { registerChangelogCommand } from "./cli-commands/changelog.js";
 import { registerDashboardCommand } from "./cli-commands/dashboard.js";
+import { registerDigestCommand } from "./cli-commands/digest.js";
 import { registerDocsCommand } from "./cli-commands/docs.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerImpactCommand } from "./cli-commands/impact.js";
@@ -40,6 +41,7 @@ export function buildProgram(): Command {
 	registerChangelogCommand(program);
 	registerDocsCommand(program);
 	registerDashboardCommand(program);
+	registerDigestCommand(program);
 
 	return program;
 }
