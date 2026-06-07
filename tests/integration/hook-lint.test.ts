@@ -51,7 +51,9 @@ function runHook(
 // exit → empty stdout → JSON parse failure here, while the isolated run passes
 // 4/4 and CI passes. A retry tolerates machine load without weakening the
 // contract (a REAL hook regression fails all attempts).
-describe("ds-bridge PostToolUse lint hook (scripts/hook-lint.mjs)", { retry: 2 }, () => {
+describe("ds-bridge PostToolUse lint hook (scripts/hook-lint.mjs)", {
+	retry: 2,
+}, () => {
 	afterAll(async () => {
 		await Promise.all(
 			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),
