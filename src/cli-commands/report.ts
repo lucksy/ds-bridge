@@ -27,6 +27,7 @@ import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import type { ArtifactId } from "../engines/report/catalog.js";
 import { resolveView } from "../engines/report/presets.js";
+import { scoreFromHistory, type Weights } from "../engines/report/score.js";
 import type {
 	A11ySummary,
 	DriftTrendPoint,
@@ -34,6 +35,7 @@ import type {
 	LintSummary,
 	Parity,
 	Readiness,
+	SystemScore,
 } from "../engines/report/types.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 
@@ -240,6 +242,33 @@ function aggregateHistory(
 }
 
 /**
+ * Replay <stateDir>/history.jsonl into the weighted system score (S4b). Reads
+ * the SAME file aggregateHistory reads, then hands the raw text to the pure
+ * engine (`scoreFromHistory`), which owns its tolerant parse. `weights` from
+ * config; absent → the engine defaults. Missing/empty file or a `no-data`
+ * outcome → undefined, so the section degrades to its empty state.
+ */
+function computeSystemScore(
+	stateDir: string,
+	weights: Weights | undefined,
+): SystemScore | undefined {
+	const historyPath = join(stateDir, "history.jsonl");
+	let text: string;
+	try {
+		text = readFileSync(historyPath, "utf8");
+	} catch {
+		return undefined;
+	}
+	const outcome = scoreFromHistory(text, weights);
+	if (outcome.kind === "no-data") return undefined;
+	return {
+		current: outcome.current,
+		components: outcome.components,
+		trend: outcome.trend,
+	};
+}
+
+/**
  * Read <stateDir>/registry.json and project it into the dashboard's Parity
  * section. Absent file → undefined (the renderer shows the empty state).
  * Unreadable / non-JSON registry → undefined with one stderr warning (a
@@ -337,6 +366,8 @@ interface ResolvedSelection {
 	artifacts: ArtifactId[];
 	/** Header label to name the active view; absent for the no-config default. */
 	viewLabel?: string;
+	/** Validated system-score weights from config; undefined → engine defaults. */
+	scoreWeights?: Weights;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -365,6 +396,7 @@ function resolveSelection(
 ): ResolvedSelection | ReportError {
 	let dashboardView: string | undefined;
 	let dashboardArtifacts: ArtifactId[] | undefined;
+	let scoreWeights: Weights | undefined;
 
 	const configPath = join(targetDir, ".ds-bridge.json");
 	if (existsSync(configPath)) {
@@ -384,6 +416,7 @@ function resolveSelection(
 		}
 		dashboardView = resolved.config.dashboardView;
 		dashboardArtifacts = resolved.config.dashboardArtifacts;
+		scoreWeights = resolved.config.scoreWeights;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -443,6 +476,7 @@ function resolveSelection(
 			return {
 				artifacts: outcome.artifacts,
 				...(viewLabel !== undefined ? { viewLabel } : {}),
+				...(scoreWeights !== undefined ? { scoreWeights } : {}),
 			};
 		}
 	}
@@ -470,6 +504,10 @@ function runReport(path: string, options: ReportOptions): void {
 	};
 	const aggregation = aggregateHistory(stateDir, warn);
 	const parity = readParity(stateDir, warn);
+	// Replay the SAME history.jsonl into the weighted system score (S4b). The
+	// engine owns its parse (tolerance-mirrored); weights come from config, else
+	// the engine defaults. no-data → leave systemScore undefined (empty state).
+	const systemScore = computeSystemScore(stateDir, selection.scoreWeights);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -480,6 +518,7 @@ function runReport(path: string, options: ReportOptions): void {
 		{
 			generatedAt,
 			project: basename(targetDir),
+			...(systemScore !== undefined ? { systemScore } : {}),
 			driftTrend: aggregation.driftTrend,
 			...(aggregation.lintSummary !== undefined
 				? { lintSummary: aggregation.lintSummary }

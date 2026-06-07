@@ -71,17 +71,18 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
-		expect(parsed.artifacts).toHaveLength(6);
+		expect(parsed.artifacts).toHaveLength(7);
 		expect(parsed.artifacts.every((a) => a.enabled)).toBe(true);
 		expect(parsed.view.source).toBe("default");
 		expect(parsed.view.viewName).toBe("everything");
 	});
 
-	it("emits the six artifacts in catalog order with stable metadata", async () => {
+	it("emits the seven artifacts in catalog order with stable metadata", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
 		expect(parsed.artifacts.map((a) => a.id)).toEqual([
+			"system-score",
 			"drift-trend",
 			"lint-summary",
 			"readiness",
@@ -89,12 +90,16 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"a11y",
 			"impact",
 		]);
-		const drift = parsed.artifacts[0];
+		// system-score leads (wave-2, S2); drift-trend is now second.
+		const score = parsed.artifacts[0];
+		expect(score?.id).toBe("system-score");
+		expect(score?.title).toBe("System score");
+		const drift = parsed.artifacts[1];
 		expect(drift?.title).toBe("Token drift");
 		expect(drift?.personas).toEqual(["owner", "engineering"]);
 	});
 
-	it("with dashboard_view=owner, exactly drift-trend/parity/a11y are enabled", async () => {
+	it("with dashboard_view=owner, exactly system-score/drift-trend/parity/a11y are enabled", async () => {
 		await writeFile(
 			configPath(),
 			`${JSON.stringify({ dashboard_view: "owner" }, null, 2)}\n`,
@@ -104,7 +109,8 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
 		const enabled = parsed.artifacts.filter((a) => a.enabled).map((a) => a.id);
-		expect(enabled).toEqual(["drift-trend", "parity", "a11y"]);
+		// owner now leads with system-score (wave-2, S2 preset enrichment).
+		expect(enabled).toEqual(["system-score", "drift-trend", "parity", "a11y"]);
 		expect(parsed.view.source).toBe("project");
 		expect(parsed.view.viewName).toBe("owner");
 	});
@@ -224,9 +230,10 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		await run(["dashboard", "set", "--view", "owner", dir]);
 		const result = await run(["dashboard", "add", "impact", dir]);
 		expect(result.code).toBe(0);
-		// owner = drift-trend, parity, a11y → + impact = 4
+		// owner = system-score, drift-trend, parity, a11y → + impact = 5 (S2 enrichment)
 		const written = await readConfig();
 		expect(written.dashboard_artifacts).toEqual([
+			"system-score",
 			"drift-trend",
 			"parity",
 			"a11y",
@@ -250,7 +257,12 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "remove", "parity", dir]);
 		expect(result.code).toBe(0);
 		const written = await readConfig();
-		expect(written.dashboard_artifacts).toEqual(["drift-trend", "a11y"]);
+		// owner = system-score, drift-trend, parity, a11y → drop parity (S2 enrichment)
+		expect(written.dashboard_artifacts).toEqual([
+			"system-score",
+			"drift-trend",
+			"a11y",
+		]);
 	});
 
 	it("removing an absent artifact is an idempotent no-op success with a notice", async () => {
@@ -294,7 +306,9 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		expect(written.figma_file_key).toBe("ABC123");
 		expect(written.report_style).toBe("html");
 		expect(written.dashboard_view).toBeUndefined();
+		// owner = system-score, drift-trend, parity, a11y → + impact (S2 enrichment)
 		expect(written.dashboard_artifacts).toEqual([
+			"system-score",
 			"drift-trend",
 			"parity",
 			"a11y",

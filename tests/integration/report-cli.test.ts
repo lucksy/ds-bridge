@@ -380,7 +380,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("Chip");
 	});
 
-	it("T7.22 ACCEPTANCE (C7): all six artifacts present → SIX svg charts", async () => {
+	it("T7.22 ACCEPTANCE (C7): all seven artifacts present → EIGHT svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
@@ -411,9 +411,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// Drift, lint, readiness, parity, contrast, impact: one chart each.
-		expect(countSvgs(html)).toBe(6);
-		// None of the six sections falls back to the empty state.
+		// Drift, lint, readiness, parity, contrast, impact: one chart each (6);
+		// plus the system-score section's gauge + trend (2) → EIGHT (wave-2 S4b).
+		expect(countSvgs(html)).toBe(8);
+		// None of the seven sections falls back to the empty state.
 		expect(html).not.toContain("No data yet");
 	});
 
@@ -492,8 +493,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const html = await readFile(reportPath, "utf8");
 		// Readiness + parity still show their empty-state panels.
 		expect(html).toContain("No data yet");
-		// Drift section is populated, but readiness + parity are not → only ONE svg.
-		expect(countSvgs(html)).toBe(1);
+		// Drift section is populated (1 svg); the single tokens-check line also
+		// yields a drift component so the system-score section computes its gauge +
+		// trend (2 svgs) → THREE svgs total (wave-2 S4b). Readiness + parity stay
+		// empty.
+		expect(countSvgs(html)).toBe(3);
 	});
 });
 
@@ -562,6 +566,12 @@ async function seedProjectConfig(dir: string, config: unknown): Promise<void> {
 
 describe("ds-bridge report — dashboard composer (M1.3)", () => {
 	it("no flags + no .ds-bridge.json → byte-identical to the v1.0.0 golden", async () => {
+		// WAVE-2 RE-ANCHOR (S4b): the golden was REGENERATED from this same seed +
+		// the unchanged sentinel rule (only the fresh "Generated " timestamp is
+		// substituted) because the six-artifact history now also computes a system
+		// score, so the no-config render gains the system-score section (gauge +
+		// trend + weights legend). New bytes, same contract.
+		//
 		// The golden's project name is its directory basename ("report-golden"),
 		// so seed under a fixed-name subdir of a fresh tmp dir.
 		const base = await freshTmp("ds-report-golden-");
@@ -579,7 +589,7 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(withSentinelTimestamp(html)).toBe(golden);
 	});
 
-	it("--view owner renders ONLY drift/parity/a11y (3 svgs) and names the view", async () => {
+	it("--view owner renders system-score + drift/parity/a11y (5 svgs) and names the view", async () => {
 		const dir = await freshTmp("ds-report-view-owner-");
 		await seedSixArtifacts(dir);
 
@@ -590,18 +600,42 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// owner = drift-trend · parity · a11y → exactly three populated charts.
-		expect(countSvgs(html)).toBe(3);
-		// The two omitted sections leave no trace (not even a title).
+		// owner = system-score · drift-trend · parity · a11y → the score section's
+		// gauge + trend (2) plus one chart each for drift/parity/a11y = FIVE (S4b).
+		expect(countSvgs(html)).toBe(5);
+		// The omitted sections leave no trace (not even a title).
 		expect(html).not.toContain("Lint violations");
 		expect(html).not.toContain("Readiness");
 		expect(html).not.toContain("Change impact");
-		// The selected three are present.
+		// The selected sections are present — including the new system-score one.
+		expect(html).toContain("System score");
 		expect(html).toContain("Drift trend");
 		expect(html).toContain("Parity matrix");
 		expect(html).toContain("Contrast (a11y)");
 		// The active view is named in the HTML header.
 		expect(html).toContain("owner");
+	});
+
+	it("--view owner shows the computed system-score value in the HTML (S4b)", async () => {
+		const dir = await freshTmp("ds-report-view-owner-score-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--view", "owner"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// The donut gauge renders the current composite as a centered numeral.
+		// seedSixArtifacts → drift 75 · lint 74 · readiness 72 · a11y 85, default
+		// weights 30/30/20/20 → 7610/100 = 76.1 → 76.
+		expect(html).toMatch(/<text[^>]*>76<\/text>/);
+		// the components/weights legend names every present component kind.
+		expect(html).toContain("drift");
+		expect(html).toContain("lint");
+		expect(html).toContain("readiness");
+		expect(html).toContain("a11y");
 	});
 
 	it("--artifacts parity,a11y renders exactly two sections", async () => {
@@ -634,8 +668,10 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// engineering = lint-summary · impact · drift-trend → three charts.
-		expect(countSvgs(html)).toBe(3);
+		// engineering = system-score · lint-summary · impact · drift-trend → the
+		// score's gauge + trend (2) plus one chart each for lint/impact/drift = 5.
+		expect(countSvgs(html)).toBe(5);
+		expect(html).toContain("System score");
 		expect(html).toContain("Lint violations");
 		expect(html).toContain("Change impact");
 		expect(html).toContain("Drift trend");
@@ -656,8 +692,10 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// consumer = parity · impact → two charts, engineering's lint absent.
-		expect(countSvgs(html)).toBe(2);
+		// consumer = system-score · parity · impact → the score's gauge + trend (2)
+		// plus one chart each for parity/impact = FOUR; engineering's lint absent.
+		expect(countSvgs(html)).toBe(4);
+		expect(html).toContain("System score");
 		expect(html).toContain("Parity matrix");
 		expect(html).toContain("Change impact");
 		expect(html).not.toContain("Lint violations");
