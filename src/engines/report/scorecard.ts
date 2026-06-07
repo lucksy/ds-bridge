@@ -13,16 +13,20 @@
 // — the blessed wave-2 precedent (see score.ts:5-10): aggregateHistory's output
 // is lossy (fields renamed into drift buckets, the adoption pct already rounded
 // per directory) and score.ts deliberately owns its own parse. To avoid a FOURTH
-// tolerance re-implementation, this module runs ONE shared internal line-iterator
-// (`extractLatest`) with the identical tolerance contract: per-line JSON.parse
-// skip-on-corrupt, unknown-kind skip, `asNumber` coercion, last-wins per kind,
-// and the adoption PARALLEL last-wins keyed on field presence (a plain lint line
-// never clears a prior adoption-bearing line — SPEC-adoption §3 / score.ts:333).
+// tolerance re-implementation, this module no longer owns a line-iterator: it
+// folds the ONE shared `replayHistory` (history-lines.ts) into a last-wins map
+// (`extractLatest`). The tolerance is replayHistory's (per-line JSON.parse
+// skip-on-corrupt, non-null object + string-kind to emit, unknown-kind passthrough
+// — skipped here at the consumer); the adoption PARALLEL last-wins keyed on field
+// presence (a plain lint line never clears a prior adoption-bearing line —
+// SPEC-adoption §3 / score.ts:333) and the `asNumber` coercion stay this module's
+// concern, applied as the row extractors read.
 //
 // Omission rules (§2): a row absent on BOTH sides is omitted entirely (a PR
 // comment must not list seven "n/a"s); `delta` renders only when BOTH sides have
 // a comparable scalar; zero rows on both sides → `{ kind: "no-data" }`. A model
 // built with `baseText === undefined` is flagged `currentOnly`. Deterministic.
+import { replayHistory } from "./history-lines.js";
 import { scoreFromHistory, type Weights } from "./score.js";
 
 /** The seven scorecard row ids, in the fixed §2 render order. */
@@ -175,28 +179,18 @@ interface LatestRecords {
 }
 
 /**
- * THE shared line-iterator. Replays one history text into the latest record of
- * each relevant kind, with the blessed tolerance: blank-skip, per-line
- * JSON.parse skip-on-corrupt, unknown-kind skip, last-wins, and the adoption
- * parallel last-wins keyed on field presence. No coercion happens here — the row
- * extractors coerce on read so the iterator stays a single faithful replay.
+ * Fold the shared `replayHistory` into the latest record of each relevant kind.
+ * The tolerance (blank-skip, JSON.parse skip-on-corrupt, non-null-object +
+ * string-kind) is the iterator's; this fold applies last-wins per kind, skips
+ * the kinds it does not recognize (forward compat), and keeps the adoption
+ * parallel last-wins keyed on field presence (a plain lint line never clears a
+ * prior adoption-bearing line — SPEC-adoption §3 / score.ts:333). No coercion
+ * happens here — the row extractors coerce on read.
  */
 function extractLatest(text: string): LatestRecords {
 	const latest: LatestRecords = {};
-	const lines = text.split("\n");
-	for (let i = 0; i < lines.length; i += 1) {
-		const trimmed = (lines[i] ?? "").trim();
-		if (trimmed === "") continue;
-
-		let record: Record<string, unknown>;
-		try {
-			record = JSON.parse(trimmed) as Record<string, unknown>;
-		} catch {
-			continue; // corrupt line — skip
-		}
-		if (typeof record !== "object" || record === null) continue;
-
-		switch (record.kind) {
+	for (const { kind, record } of replayHistory(text)) {
+		switch (kind) {
 			case "tokens-check":
 				latest.tokensCheck = record;
 				break;
