@@ -5,6 +5,7 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type ArtifactId, lookupArtifact } from "./engines/report/catalog.js";
+import { validateWeights, type Weights } from "./engines/report/score.js";
 
 export type ReportStyle = "html" | "terminal" | "both";
 
@@ -26,6 +27,13 @@ export interface ResolvedConfig {
 	 */
 	dashboardView: string | undefined;
 	dashboardArtifacts: ArtifactId[] | undefined;
+	/**
+	 * The merged, validated system-score weights from `.ds-bridge.json`'s
+	 * `score_weights` key (a partial override merged onto the engine defaults),
+	 * or `undefined` when the key is absent. Validation is delegated to the
+	 * engine's `validateWeights` — single source of truth (SPEC-score §2).
+	 */
+	scoreWeights: Weights | undefined;
 }
 
 export interface ConfigFlags {
@@ -61,6 +69,7 @@ interface ProjectFileValues {
 	readinessThreshold?: number;
 	dashboardView?: string;
 	dashboardArtifacts?: ArtifactId[];
+	scoreWeights?: Weights;
 	hadFigmaToken: boolean;
 }
 
@@ -171,6 +180,45 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 		values.dashboardArtifacts = artifacts;
 	}
 
+	// System-score weights (SPEC-score §2). Validation is delegated entirely to
+	// the engine's validateWeights (single source of truth); its typed outcomes
+	// are translated into this file's existing config-error style.
+	if (obj.score_weights !== undefined) {
+		// The engine tolerates non-objects (treats them as defaults); the config
+		// surface is stricter — score_weights must be a plain object of overrides.
+		if (
+			typeof obj.score_weights !== "object" ||
+			obj.score_weights === null ||
+			Array.isArray(obj.score_weights)
+		) {
+			return {
+				kind: "invalid",
+				message: "score_weights must be an object of component → weight",
+			};
+		}
+		const weights = validateWeights(obj.score_weights);
+		switch (weights.kind) {
+			case "unknown-key":
+				return {
+					kind: "invalid",
+					message: `score_weights has an unknown key ${JSON.stringify(weights.key)} — expected drift, lint, readiness or a11y`,
+				};
+			case "non-positive":
+				return {
+					kind: "invalid",
+					message: `score_weights.${weights.key} must be a positive number`,
+				};
+			case "non-finite":
+				return {
+					kind: "invalid",
+					message: `score_weights.${weights.key} must be a finite number`,
+				};
+			case "ok":
+				values.scoreWeights = weights.weights;
+				break;
+		}
+	}
+
 	return { kind: "ok", values };
 }
 
@@ -249,6 +297,9 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 		// is applied downstream by resolveView (M0.2), not here.
 		dashboardView: project.dashboardView,
 		dashboardArtifacts: project.dashboardArtifacts,
+		// The merged/validated weights, or undefined when score_weights is absent
+		// (callers fall back to the engine defaults in that case).
+		scoreWeights: project.scoreWeights,
 	};
 
 	return { kind: "ok", config, warnings };

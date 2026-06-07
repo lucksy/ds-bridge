@@ -275,6 +275,140 @@ describe("resolveConfig — dashboard keys", () => {
 	});
 });
 
+describe("resolveConfig — score_weights key (S4a)", () => {
+	it("leaves scoreWeights undefined when the key is absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "abc" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.scoreWeights).toBeUndefined();
+	});
+
+	it("merges a partial score_weights override onto the engine defaults", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_weights: { drift: 50 } }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		// drift overridden, the other three keep their documented defaults.
+		expect(outcome.config.scoreWeights).toEqual({
+			drift: 50,
+			lint: 30,
+			readiness: 20,
+			a11y: 20,
+		});
+	});
+
+	it("accepts a full four-key score_weights object", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				score_weights: { drift: 1, lint: 2, readiness: 3, a11y: 4 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.scoreWeights).toEqual({
+			drift: 1,
+			lint: 2,
+			readiness: 3,
+			a11y: 4,
+		});
+	});
+
+	it("rejects an unknown score_weights subkey with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				score_weights: { parity: 10 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_weights");
+		expect(outcome.message).toContain("parity");
+	});
+
+	it("rejects a non-positive score_weights value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_weights: { lint: 0 } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_weights");
+		expect(outcome.message).toContain("lint");
+	});
+
+	it("rejects a negative score_weights value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_weights: { readiness: -5 } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_weights");
+		expect(outcome.message).toContain("readiness");
+	});
+
+	it("rejects a non-number score_weights value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_weights: { a11y: "lots" } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_weights");
+		expect(outcome.message).toContain("a11y");
+	});
+
+	it("rejects a non-object score_weights with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_weights: "30,30,20,20" }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_weights");
+	});
+
+	it("coexists with dashboard_view in the same project file", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				dashboard_view: "owner",
+				score_weights: { drift: 40 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.dashboardView).toBe("owner");
+		expect(outcome.config.scoreWeights).toEqual({
+			drift: 40,
+			lint: 30,
+			readiness: 20,
+			a11y: 20,
+		});
+	});
+
+	it("coexists with dashboard_artifacts in the same project file", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				dashboard_artifacts: ["parity", "a11y"],
+				score_weights: { lint: 45 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.dashboardArtifacts).toEqual(["parity", "a11y"]);
+		expect(outcome.config.scoreWeights?.lint).toBe(45);
+	});
+});
+
 describe("writeProjectConfig", () => {
 	let dir: string;
 
