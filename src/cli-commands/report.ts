@@ -27,7 +27,13 @@ import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import type { ArtifactId } from "../engines/report/catalog.js";
 import { resolveView } from "../engines/report/presets.js";
-import { scoreFromHistory, type Weights } from "../engines/report/score.js";
+import {
+	DEFAULT_WEIGHTS,
+	scoreFromHistory,
+	type Weights,
+} from "../engines/report/score.js";
+import { buildScorecard } from "../engines/report/scorecard.js";
+import { renderScorecardMarkdown } from "../engines/report/scorecard-md.js";
 import type {
 	A11ySummary,
 	AdoptionTrendPoint,
@@ -40,6 +46,7 @@ import type {
 	Readiness,
 	SystemScore,
 } from "../engines/report/types.js";
+import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 
 /** A typed operational failure, translated to exit code 2 + stderr at the edge. */
@@ -459,6 +466,10 @@ interface ReportOptions {
 	out: string | undefined;
 	view: string | undefined;
 	artifacts: string | undefined;
+	/** Output format: "html" (default) | "md". Unknown → exit 2 listing both. */
+	format: string;
+	/** `--delta <ref>`: compare against the base ref's committed history (md only). */
+	delta: string | undefined;
 }
 
 function failReport(message: string): void {
@@ -587,8 +598,113 @@ function resolveSelection(
 	}
 }
 
+/** Read <stateDir>/history.jsonl, or "" when the file is absent/unreadable. */
+function readHistoryText(stateDir: string): string {
+	try {
+		return readFileSync(join(stateDir, "history.jsonl"), "utf8");
+	} catch {
+		return "";
+	}
+}
+
+/**
+ * Render the markdown scorecard (the `--format md` path, C4). Compares the
+ * current `.ds-bridge/history.jsonl` against the base ref's COMMITTED history
+ * when `--delta <ref>` is given, and emits the scorecard to stdout (CI-pipeable)
+ * or — with `--out` — writes it to a file and prints that path.
+ *
+ * Base resolution (per SPEC §1.1, via the injectable GitExec seam, cwd =
+ * targetDir): `missing` → render current-only + a no-baseline note (exit 0);
+ * `git-error` → exit 2 with the message; `ok` → diff against the committed text.
+ * Both sides score with the CURRENT weights (§1.5). An absent/empty current
+ * history surfaces as `no-data` → exit 2 with run-a-check guidance.
+ */
+function runMarkdownReport(
+	targetDir: string,
+	options: ReportOptions,
+	weights: Weights | undefined,
+): void {
+	const stateDir = join(targetDir, ".ds-bridge");
+	const currentText = readHistoryText(stateDir);
+
+	// Optional base: read the ref's committed history through git (cwd = the
+	// resolved targetDir, not process.cwd()). The render options carry the labels.
+	let baseText: string | undefined;
+	let noBaseline = false;
+	const baseLabel = options.delta;
+	if (options.delta !== undefined) {
+		const outcome = readFileAtRef({
+			ref: options.delta,
+			path: join(".ds-bridge", "history.jsonl"),
+			cwd: targetDir,
+			exec: spawnGitExec,
+		});
+		if (outcome.kind === "git-error") {
+			failReport(`Could not read "${options.delta}": ${outcome.message}`);
+			return;
+		}
+		if (outcome.kind === "missing") {
+			// The realistic case: the committed .ds-bridge/ has no history at the ref.
+			// Render current-only plus a no-baseline note (exit 0).
+			noBaseline = true;
+		} else {
+			baseText = outcome.text;
+		}
+	}
+
+	const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
+	const model = buildScorecard(currentText, baseText, effectiveWeights);
+	if (model.kind === "no-data") {
+		failReport(
+			"No design-system history yet — run a check (e.g. ds-bridge tokens-check) to populate the scorecard.",
+		);
+		return;
+	}
+
+	const markdown = renderScorecardMarkdown(model, {
+		...(baseLabel !== undefined ? { baseLabel } : {}),
+		...(noBaseline ? { noBaseline: true } : {}),
+	});
+
+	// --out redirects to a file (and prints the path); otherwise the markdown goes
+	// to stdout with NO trailing path line (pipe-cleanliness for CI / step summary).
+	if (options.out !== undefined) {
+		const outPath = resolve(options.out);
+		const written = writeDashboard(outPath, markdown);
+		if (written.kind === "error") {
+			failReport(written.message);
+			return;
+		}
+		process.stdout.write(`${outPath}\n`);
+	} else {
+		process.stdout.write(markdown);
+	}
+
+	process.exitCode = 0;
+}
+
 /** Execute the `report` command. Exit codes: 0 success · 2 operational error. */
 function runReport(path: string, options: ReportOptions): void {
+	// Validate flag combos first (a usage error should exit 2 before any I/O):
+	// --format is two-valued (html | md); --delta requires md; --open is invalid
+	// with md (no file to open). Per the C4 branch-order paragraph.
+	if (options.format !== "html" && options.format !== "md") {
+		failReport(
+			`Unknown --format "${options.format}". Expected "html" or "md".`,
+		);
+		return;
+	}
+	if (options.delta !== undefined && options.format !== "md") {
+		failReport("--delta requires --format md.");
+		return;
+	}
+	if (options.open && options.format === "md") {
+		failReport(
+			"--open is not valid with --format md (there is no file to open).",
+		);
+		return;
+	}
+
 	const targetDir = resolve(path);
 	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
 		failReport(`Path "${targetDir}" is not a directory.`);
@@ -597,9 +713,16 @@ function runReport(path: string, options: ReportOptions): void {
 
 	// Resolve which artifacts to render (flags > .ds-bridge.json > everything)
 	// before any history/registry work — a usage/config error should exit 2 fast.
+	// (Also resolves the CURRENT-side score weights, applied to BOTH md sides.)
 	const selection = resolveSelection(targetDir, options);
 	if ("kind" in selection) {
 		failReport(selection.message);
+		return;
+	}
+
+	// The md path emits a markdown scorecard and RETURNS before the html tail.
+	if (options.format === "md") {
+		runMarkdownReport(targetDir, options, selection.scoreWeights);
 		return;
 	}
 
@@ -683,8 +806,17 @@ export function registerReportCommand(program: Command): void {
 			"render a custom comma-separated artifact list (mutually exclusive with --view)",
 		)
 		.option(
+			"--format <format>",
+			"output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY)",
+			"html",
+		)
+		.option(
+			"--delta <ref>",
+			"compare against the base ref's committed history (requires --format md)",
+		)
+		.option(
 			"--out <file>",
-			"output file (default <path>/.ds-bridge/reports/dashboard.html)",
+			"output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)",
 		)
 		.option(
 			"--open",

@@ -808,3 +808,248 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(stderr.toLowerCase()).toContain("mutually exclusive");
 	});
 });
+
+// ---------- C4 — `report --format md` + `--delta` (markdown scorecard) ----------
+//
+// The md path emits a markdown scorecard to stdout (CI-pipeable), `--out`
+// redirects to a file, and `--delta <ref>` compares against the base ref's
+// COMMITTED `.ds-bridge/history.jsonl` (read via git through the targetDir).
+// The html path stays byte-identical (the golden above is the signature gate).
+
+/**
+ * Initialise a real git repo in `dir`, seed + COMMIT a history.jsonl (the
+ * committed base the --delta ref reads), then optionally REPLACE the working
+ * history with `workingLines` (the uncommitted current tip). Returns nothing —
+ * the repo lives at `dir` and `--delta <ref>` reads the committed base via git.
+ */
+async function seedGitRepoWithHistory(
+	dir: string,
+	committedLines: string[],
+	workingLines?: string[],
+): Promise<void> {
+	const git = (args: string[]): Promise<unknown> =>
+		execFileAsync("git", args, {
+			cwd: dir,
+			encoding: "utf8",
+			env: {
+				...process.env,
+				GIT_AUTHOR_NAME: "ds-bridge-test",
+				GIT_AUTHOR_EMAIL: "test@example.com",
+				GIT_COMMITTER_NAME: "ds-bridge-test",
+				GIT_COMMITTER_EMAIL: "test@example.com",
+			},
+		});
+	await git(["init", "-q"]);
+	await git(["checkout", "-q", "-b", "main"]);
+	await seedHistory(dir, committedLines);
+	await git(["add", "-A"]);
+	await git(["commit", "-q", "-m", "seed history"]);
+	if (workingLines !== undefined) {
+		// Replace the working-tree history with the uncommitted current tip; the
+		// committed base stays addressable as `main` / `HEAD`.
+		await seedHistory(dir, workingLines);
+	}
+}
+
+describe("ds-bridge report — markdown scorecard (C4)", () => {
+	it("--format md with current history prints a markdown scorecard to stdout (no path line)", async () => {
+		const dir = await freshTmp("ds-report-md-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 2),
+			adoptionLintLine("2026-06-03T10:00:00.000Z"),
+			handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", []),
+		]);
+
+		const result = await runCli(["report", dir, "--format", "md"]);
+		expect(result.code).toBe(0);
+		// The markdown scorecard is emitted to stdout.
+		expect(result.stdout).toContain("### Design-system scorecard");
+		expect(result.stdout).toContain("| Metric | current |");
+		expect(result.stdout).toContain("System score");
+		// Current-only: no Δ column, no base label.
+		expect(result.stdout).not.toContain(" | Δ |");
+		// Pipe-cleanliness: stdout carries ONLY markdown — no dashboard.html path
+		// line and no .html anywhere.
+		expect(result.stdout).not.toContain(".html");
+		expect(result.stdout).not.toMatch(/reports[/\\]dashboard/);
+		// No file is written for the stdout md path.
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		await expect(readFile(reportPath, "utf8")).rejects.toThrow();
+	});
+
+	it("--format md --delta <ref> compares against the committed base (arrows + a real delta)", async () => {
+		const dir = await freshTmp("ds-report-md-delta-");
+		await seedGitRepoWithHistory(
+			dir,
+			// committed base: lint 4 total violations, on-system 50%.
+			[
+				JSON.stringify({
+					at: "2026-06-01T10:00:00.000Z",
+					kind: "lint",
+					byKind: { exact: 2, near: 1, offSystem: 1 },
+					adoption: { refs: 1, literals: 1, byDirectory: [] },
+				}),
+			],
+			// working tip: lint 1 total violation, on-system 75% — a real movement.
+			[
+				JSON.stringify({
+					at: "2026-06-02T10:00:00.000Z",
+					kind: "lint",
+					byKind: { exact: 1, near: 0, offSystem: 0 },
+					adoption: { refs: 3, literals: 1, byDirectory: [] },
+				}),
+			],
+		);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--delta",
+			"main",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("### Design-system scorecard");
+		// The Δ column is present and names the base ref as the base column.
+		expect(result.stdout).toContain("| Metric | main | current | Δ |");
+		// On-system moved up 50% → 75% (▲); lint violations dropped 4 → 1 (▼).
+		expect(result.stdout).toContain("| On-system | 50% | 75% | +25 ▲ |");
+		expect(result.stdout).toContain("| Lint violations | 4 | 1 | -3 ▼ |");
+		// Pipe-cleanliness.
+		expect(result.stdout).not.toContain(".html");
+	});
+
+	it("--delta to a ref with no committed history → exit 0 with a no-baseline note", async () => {
+		const dir = await freshTmp("ds-report-md-nobase-");
+		// A real repo whose FIRST commit has NO .ds-bridge/ — the committed dir
+		// exists on disk (the working history) but not at the ref → missing.
+		const git = (args: string[]): Promise<unknown> =>
+			execFileAsync("git", args, {
+				cwd: dir,
+				encoding: "utf8",
+				env: {
+					...process.env,
+					GIT_AUTHOR_NAME: "ds-bridge-test",
+					GIT_AUTHOR_EMAIL: "test@example.com",
+					GIT_COMMITTER_NAME: "ds-bridge-test",
+					GIT_COMMITTER_EMAIL: "test@example.com",
+				},
+			});
+		await git(["init", "-q"]);
+		await git(["checkout", "-q", "-b", "main"]);
+		await writeFile(join(dir, "README.md"), "seed\n", "utf8");
+		await git(["add", "-A"]);
+		await git(["commit", "-q", "-m", "no history yet"]);
+		// Now add a working-tree history (uncommitted) so the current side has data.
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--delta",
+			"main",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("### Design-system scorecard");
+		expect(result.stdout).toContain("_no baseline at main_");
+		// Falls back to a current-only table (no Δ column).
+		expect(result.stdout).not.toContain(" | Δ |");
+	});
+
+	it("--delta to a bad ref → exit 2 (git-error)", async () => {
+		const dir = await freshTmp("ds-report-md-badref-");
+		await seedGitRepoWithHistory(dir, [
+			adoptionLintLine("2026-06-03T10:00:00.000Z"),
+		]);
+
+		const { code, stderr } = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--delta",
+			"no-such-ref-xyz",
+		]);
+		expect(code).toBe(2);
+		expect(stderr.length).toBeGreaterThan(0);
+	});
+
+	it("--delta without --format md → exit 2", async () => {
+		const dir = await freshTmp("ds-report-md-deltaonly-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const { code, stderr } = await runCli(["report", dir, "--delta", "main"]);
+		expect(code).toBe(2);
+		expect(stderr.toLowerCase()).toContain("--delta");
+		expect(stderr.toLowerCase()).toContain("md");
+	});
+
+	it("--open with --format md → exit 2", async () => {
+		const dir = await freshTmp("ds-report-md-open-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const { code, stderr } = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--open",
+		]);
+		expect(code).toBe(2);
+		expect(stderr.toLowerCase()).toContain("--open");
+	});
+
+	it("an unknown --format → exit 2 listing both html and md", async () => {
+		const dir = await freshTmp("ds-report-md-badfmt-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const { code, stderr } = await runCli(["report", dir, "--format", "term"]);
+		expect(code).toBe(2);
+		expect(stderr).toContain("html");
+		expect(stderr).toContain("md");
+	});
+
+	it("--format md --out writes the scorecard to a file and prints that path", async () => {
+		const dir = await freshTmp("ds-report-md-out-");
+		await seedHistory(dir, [
+			adoptionLintLine("2026-06-03T10:00:00.000Z"),
+			handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", []),
+		]);
+		const outFile = join(dir, "scorecard.md");
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--out",
+			outFile,
+		]);
+		expect(result.code).toBe(0);
+		// The path IS printed when redirected to a file.
+		expect(result.stdout).toContain(outFile);
+
+		const md = await readFile(outFile, "utf8");
+		expect(md).toContain("### Design-system scorecard");
+		expect(md).toContain("System score");
+	});
+
+	it("--format md with no history → exit 2 with run-a-check guidance", async () => {
+		const dir = await freshTmp("ds-report-md-nodata-");
+		// No .ds-bridge/history.jsonl at all → no-data → exit 2.
+
+		const { code, stderr } = await runCli(["report", dir, "--format", "md"]);
+		expect(code).toBe(2);
+		expect(stderr.toLowerCase()).toContain("run");
+		expect(stderr.toLowerCase()).toContain("check");
+	});
+});
