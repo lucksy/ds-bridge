@@ -71,13 +71,13 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
-		expect(parsed.artifacts).toHaveLength(7);
+		expect(parsed.artifacts).toHaveLength(10);
 		expect(parsed.artifacts.every((a) => a.enabled)).toBe(true);
 		expect(parsed.view.source).toBe("default");
 		expect(parsed.view.viewName).toBe("everything");
 	});
 
-	it("emits the seven artifacts in catalog order with stable metadata", async () => {
+	it("emits the ten artifacts in catalog order with stable metadata", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
@@ -89,6 +89,9 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"parity",
 			"a11y",
 			"impact",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 		]);
 		// system-score leads (wave-2, S2); drift-trend is now second.
 		const score = parsed.artifacts[0];
@@ -109,8 +112,17 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
 		const enabled = parsed.artifacts.filter((a) => a.enabled).map((a) => a.id);
-		// owner now leads with system-score (wave-2, S2 preset enrichment).
-		expect(enabled).toEqual(["system-score", "drift-trend", "parity", "a11y"]);
+		// owner is the full seven-artifact owner view (wave-3, B3). `list` reports
+		// the ENABLED set in CATALOG order, not preset order.
+		expect(enabled).toEqual([
+			"system-score",
+			"drift-trend",
+			"parity",
+			"a11y",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
+		]);
 		expect(parsed.view.source).toBe("project");
 		expect(parsed.view.viewName).toBe("owner");
 	});
@@ -230,10 +242,13 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		await run(["dashboard", "set", "--view", "owner", dir]);
 		const result = await run(["dashboard", "add", "impact", dir]);
 		expect(result.code).toBe(0);
-		// owner = system-score, drift-trend, parity, a11y → + impact = 5 (S2 enrichment)
+		// owner = the seven owner artifacts → + impact = 8 (wave-3 B3).
 		const written = await readConfig();
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 			"drift-trend",
 			"parity",
 			"a11y",
@@ -257,9 +272,12 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "remove", "parity", dir]);
 		expect(result.code).toBe(0);
 		const written = await readConfig();
-		// owner = system-score, drift-trend, parity, a11y → drop parity (S2 enrichment)
+		// owner = the seven owner artifacts → drop parity = six (wave-3 B3).
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 			"drift-trend",
 			"a11y",
 		]);
@@ -306,9 +324,12 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		expect(written.figma_file_key).toBe("ABC123");
 		expect(written.report_style).toBe("html");
 		expect(written.dashboard_view).toBeUndefined();
-		// owner = system-score, drift-trend, parity, a11y → + impact (S2 enrichment)
+		// owner = the seven owner artifacts → + impact (wave-3 B3)
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 			"drift-trend",
 			"parity",
 			"a11y",

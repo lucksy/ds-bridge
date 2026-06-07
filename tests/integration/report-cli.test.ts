@@ -118,6 +118,38 @@ function impactLine(
 	return JSON.stringify({ at, kind: "impact", ...counts });
 }
 
+/**
+ * A lint history line CARRYING an adoption block (A2 shape). Top-level
+ * refs:3/literals:1 → on-system 75% (the adoption score component); byDirectory
+ * worst-first (src/legacy 0% then src/components 100%). Used by the B3 seeds so
+ * the adoption-trend + leaderboard sections populate and the composite stays 76.
+ */
+function adoptionLintLine(at: string): string {
+	return JSON.stringify({
+		at,
+		kind: "lint",
+		byKind: { exact: 3, near: 2, offSystem: 1 },
+		adoption: {
+			refs: 3,
+			literals: 1,
+			byDirectory: [
+				{ dir: "src/legacy", refs: 0, literals: 1 },
+				{ dir: "src/components", refs: 3, literals: 0 },
+			],
+		},
+	});
+}
+
+/** A well-formed `adoption` history record (the A3b append shape). */
+function adoptionLine(
+	at: string,
+	imported: number,
+	total: number,
+	uncovered: string[],
+): string {
+	return JSON.stringify({ at, kind: "adoption", imported, total, uncovered });
+}
+
 /** Write <dir>/.ds-bridge/registry.json with the given contents. */
 async function seedRegistry(dir: string, registry: unknown): Promise<void> {
 	const stateDir = join(dir, ".ds-bridge");
@@ -380,16 +412,12 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("Chip");
 	});
 
-	it("T7.22 ACCEPTANCE (C7): all seven artifacts present → EIGHT svg charts", async () => {
+	it("T7.22 ACCEPTANCE (C7) + B3: all ten artifacts present → ELEVEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
 			tokensCheckLine("2026-06-02T10:00:00.000Z", 0, 2, 1),
-			JSON.stringify({
-				at: "2026-06-03T10:00:00.000Z",
-				kind: "lint",
-				byKind: { exact: 3, near: 2, offSystem: 1 },
-			}),
+			adoptionLintLine("2026-06-03T10:00:00.000Z"),
 			handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", [
 				{ rule: "var-binding", points: 8 },
 			]),
@@ -403,6 +431,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 				cosmetic: 1,
 				touchedCallSites: 14,
 			}),
+			adoptionLine("2026-06-07T10:00:00.000Z", 1, 3, ["Spinner", "Tooltip"]),
 		]);
 		await seedRegistry(dir, sampleRegistry());
 
@@ -412,9 +441,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		// Drift, lint, readiness, parity, contrast, impact: one chart each (6);
-		// plus the system-score section's gauge + trend (2) → EIGHT (wave-2 S4b).
-		expect(countSvgs(html)).toBe(8);
-		// None of the seven sections falls back to the empty state.
+		// plus the system-score section's gauge + trend (2); plus the three owner
+		// sections (adoption-trend line, coverage donut, leaderboard bar) → 11 (B3).
+		expect(countSvgs(html)).toBe(11);
+		// None of the ten sections falls back to the empty state.
 		expect(html).not.toContain("No data yet");
 	});
 
@@ -513,19 +543,16 @@ const goldenPath = join(
 );
 
 /**
- * Seed the EXACT T7.22 six-artifact acceptance history + registry (the bytes the
+ * Seed the EXACT ten-artifact acceptance history + registry (the bytes the
  * golden was recorded against) into <dir>/.ds-bridge/. Identical literals to the
- * "all six artifacts present" acceptance test above so the golden stays anchored.
+ * "all ten artifacts present" acceptance test above (now incl. the adoption
+ * block + `adoption` line, B3) so the golden stays anchored.
  */
 async function seedSixArtifacts(dir: string): Promise<void> {
 	await seedHistory(dir, [
 		tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
 		tokensCheckLine("2026-06-02T10:00:00.000Z", 0, 2, 1),
-		JSON.stringify({
-			at: "2026-06-03T10:00:00.000Z",
-			kind: "lint",
-			byKind: { exact: 3, near: 2, offSystem: 1 },
-		}),
+		adoptionLintLine("2026-06-03T10:00:00.000Z"),
 		handoffLine("2026-06-04T10:00:00.000Z", 72, "Card / Primary", [
 			{ rule: "var-binding", points: 8 },
 		]),
@@ -539,6 +566,7 @@ async function seedSixArtifacts(dir: string): Promise<void> {
 			cosmetic: 1,
 			touchedCallSites: 14,
 		}),
+		adoptionLine("2026-06-07T10:00:00.000Z", 1, 3, ["Spinner", "Tooltip"]),
 	]);
 	await seedRegistry(dir, sampleRegistry());
 }
@@ -566,11 +594,14 @@ async function seedProjectConfig(dir: string, config: unknown): Promise<void> {
 
 describe("ds-bridge report — dashboard composer (M1.3)", () => {
 	it("no flags + no .ds-bridge.json → byte-identical to the v1.0.0 golden", async () => {
-		// WAVE-2 RE-ANCHOR (S4b): the golden was REGENERATED from this same seed +
+		// WAVE-3 RE-ANCHOR (B3): the golden was REGENERATED from this same seed +
 		// the unchanged sentinel rule (only the fresh "Generated " timestamp is
-		// substituted) because the six-artifact history now also computes a system
-		// score, so the no-config render gains the system-score section (gauge +
-		// trend + weights legend). New bytes, same contract.
+		// substituted). The seed now also carries an adoption block on the lint
+		// line and an `adoption` kind line, so the no-config render gains the three
+		// owner sections (adoption-trend, import-coverage, leaderboard) and the
+		// score legend's weight column rebalances 30/30/20/20 → 25/25/15/15 (+ the
+		// adoption row at 20). The composite numeral STAYS 76. New bytes, same
+		// contract.
 		//
 		// The golden's project name is its directory basename ("report-golden"),
 		// so seed under a fixed-name subdir of a fresh tmp dir.
@@ -589,7 +620,7 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(withSentinelTimestamp(html)).toBe(golden);
 	});
 
-	it("--view owner renders system-score + drift/parity/a11y (5 svgs) and names the view", async () => {
+	it("--view owner renders all seven owner artifacts (8 svgs) and names the view", async () => {
 		const dir = await freshTmp("ds-report-view-owner-");
 		await seedSixArtifacts(dir);
 
@@ -600,20 +631,48 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// owner = system-score · drift-trend · parity · a11y → the score section's
-		// gauge + trend (2) plus one chart each for drift/parity/a11y = FIVE (S4b).
-		expect(countSvgs(html)).toBe(5);
+		// owner (B3) = system-score · adoption-trend · import-coverage · leaderboard
+		// · drift-trend · parity · a11y → the score section's gauge + trend (2) plus
+		// one chart each for the other six selected sections = EIGHT.
+		expect(countSvgs(html)).toBe(8);
 		// The omitted sections leave no trace (not even a title).
 		expect(html).not.toContain("Lint violations");
 		expect(html).not.toContain("Readiness");
 		expect(html).not.toContain("Change impact");
-		// The selected sections are present — including the new system-score one.
+		// The selected sections are present — including the new owner ones.
 		expect(html).toContain("System score");
+		expect(html).toContain("Adoption trend");
+		expect(html).toContain("Import coverage");
+		expect(html).toContain("Adoption leaderboard");
 		expect(html).toContain("Drift trend");
 		expect(html).toContain("Parity matrix");
 		expect(html).toContain("Contrast (a11y)");
 		// The active view is named in the HTML header.
 		expect(html).toContain("owner");
+	});
+
+	it("B3: --view owner renders the three owner artifacts with real data, not empty states", async () => {
+		const dir = await freshTmp("ds-report-view-owner-data-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--view", "owner"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// import-coverage: 1/3 imported → 33% centred numeral; the uncovered names list.
+		expect(html).toMatch(/<text[^>]*>33<\/text>/);
+		expect(html).toContain("Spinner");
+		expect(html).toContain("Tooltip");
+		// leaderboard worst-first: src/legacy (0%) precedes src/components (100%).
+		const legacyAt = html.indexOf("src/legacy");
+		const componentsAt = html.indexOf("src/components");
+		expect(legacyAt).toBeGreaterThan(-1);
+		expect(legacyAt).toBeLessThan(componentsAt);
+		// none of the three owner sections degrade to an empty state.
+		expect(html).not.toContain("No data yet");
 	});
 
 	it("--view owner shows the computed system-score value in the HTML (S4b)", async () => {
@@ -628,8 +687,9 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			"utf8",
 		);
 		// The donut gauge renders the current composite as a centered numeral.
-		// seedSixArtifacts → drift 75 · lint 74 · readiness 72 · a11y 85, default
-		// weights 30/30/20/20 → 7610/100 = 76.1 → 76.
+		// seedSixArtifacts → drift 75 · lint 74 · readiness 72 · a11y 85 · adoption
+		// 75 (refs 3 / 4 values), rebalanced weights 25/25/15/15/20 → 7580/100 =
+		// 75.80 → 76. The adoption component holds the composite at 76 (B3).
 		expect(html).toMatch(/<text[^>]*>76<\/text>/);
 		// the components/weights legend names every present component kind.
 		expect(html).toContain("drift");

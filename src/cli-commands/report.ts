@@ -30,8 +30,11 @@ import { resolveView } from "../engines/report/presets.js";
 import { scoreFromHistory, type Weights } from "../engines/report/score.js";
 import type {
 	A11ySummary,
+	AdoptionTrendPoint,
 	DriftTrendPoint,
 	ImpactSummary,
+	ImportCoverage,
+	LeaderboardRow,
 	LintSummary,
 	Parity,
 	Readiness,
@@ -58,6 +61,20 @@ interface TokensCheckRecord {
 	inSync: boolean;
 }
 
+/** One leaderboard directory bucket on a lint line's adoption block (A2). */
+interface LintAdoptionDirectory {
+	dir: string;
+	refs: number;
+	literals: number;
+}
+
+/** The css/scss-scoped adoption block on a directory lint line (A2). */
+interface LintAdoptionBlock {
+	refs: number;
+	literals: number;
+	byDirectory: LintAdoptionDirectory[];
+}
+
 /** One `lint` history record carrying the by-kind violation counts. */
 interface LintRecord {
 	at: string;
@@ -67,6 +84,17 @@ interface LintRecord {
 		near: number;
 		offSystem: number;
 	};
+	/** NEW (A2): css/scss adoption counts; absent on old/single-file runs. */
+	adoption?: LintAdoptionBlock;
+}
+
+/** One `adoption` history record carrying the import-coverage census (A3b). */
+interface AdoptionRecord {
+	at: string;
+	kind: "adoption";
+	imported: number;
+	total: number;
+	uncovered: string[];
 }
 
 /** One `handoff` history record carrying the readiness score + top deductions. */
@@ -114,10 +142,22 @@ interface Aggregation {
 	readiness: Readiness | undefined;
 	a11y: A11ySummary | undefined;
 	impact: ImpactSummary | undefined;
+	/** On-system % over time, one point per dated adoption-bearing lint line (B3). */
+	adoptionTrend: AdoptionTrendPoint[];
+	/** On-system % by directory, from the LATEST adoption-bearing lint line (B3). */
+	leaderboard: LeaderboardRow[] | undefined;
+	/** Registry import coverage, last `adoption` kind line wins (B3). */
+	importCoverage: ImportCoverage | undefined;
 }
 
 function asNumber(value: unknown): number {
 	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/** On-system percentage (refs / (refs + literals)), half-up rounded; 0 if empty. */
+function onSystemPct(refs: number, literals: number): number {
+	const total = refs + literals;
+	return total === 0 ? 0 : Math.round((refs / total) * 100);
 }
 
 /**
@@ -142,6 +182,9 @@ function aggregateHistory(
 			readiness: undefined,
 			a11y: undefined,
 			impact: undefined,
+			adoptionTrend: [],
+			leaderboard: undefined,
+			importCoverage: undefined,
 		};
 	}
 
@@ -150,6 +193,13 @@ function aggregateHistory(
 	let readiness: Readiness | undefined;
 	let a11y: A11ySummary | undefined;
 	let impact: ImpactSummary | undefined;
+	// Adoption: a trend point per dated adoption-bearing lint line; the LATEST
+	// such line's byDirectory becomes the leaderboard (B3). Tracked in parallel
+	// to the plain-lint last-wins so a later plain lint line never clears them.
+	const adoptionTrend: AdoptionTrendPoint[] = [];
+	let leaderboard: LeaderboardRow[] | undefined;
+	// Import coverage: last `adoption` kind line wins (B3).
+	let importCoverage: ImportCoverage | undefined;
 
 	const lines = text.split("\n");
 	for (let index = 0; index < lines.length; index += 1) {
@@ -189,6 +239,52 @@ function aggregateHistory(
 					offSystem: asNumber(byKind.offSystem),
 				},
 				topOffenders: [],
+			};
+			// A lint line that CARRIES an adoption block contributes a dated trend
+			// point and refreshes the leaderboard (B3). A plain lint line touches
+			// neither — so adoption survives a later plain run (parallel last-wins).
+			const adoption =
+				typeof r.adoption === "object" && r.adoption !== null
+					? r.adoption
+					: undefined;
+			if (adoption !== undefined) {
+				const refs = asNumber(adoption.refs);
+				const literals = asNumber(adoption.literals);
+				if (typeof r.at === "string") {
+					adoptionTrend.push({
+						date: r.at.slice(0, 10),
+						pct: onSystemPct(refs, literals),
+					});
+				}
+				const byDirectory = Array.isArray(adoption.byDirectory)
+					? adoption.byDirectory
+					: [];
+				// Latest adoption-bearing line wins for the leaderboard (the renderer
+				// trusts the worst-first ordering the lint engine already produced).
+				leaderboard = byDirectory.map((d) => ({
+					dir: typeof d.dir === "string" ? d.dir : "",
+					refs: asNumber(d.refs),
+					literals: asNumber(d.literals),
+				}));
+			}
+			continue;
+		}
+
+		if (record.kind === "adoption") {
+			const r = record as Partial<AdoptionRecord>;
+			const imported = asNumber(r.imported);
+			const total = asNumber(r.total);
+			const uncovered = Array.isArray(r.uncovered)
+				? r.uncovered.filter((n): n is string => typeof n === "string")
+				: [];
+			// Last adoption record wins. uncoveredTotal is reconstructed from the
+			// census (total − imported) — the history line caps the NAMES at 20 but
+			// the true gap count is the population minus what's imported (A3b shape).
+			importCoverage = {
+				imported,
+				total,
+				uncovered,
+				uncoveredTotal: Math.max(0, total - imported),
 			};
 			continue;
 		}
@@ -238,7 +334,16 @@ function aggregateHistory(
 		// Unknown kinds (including missing kind) are skipped silently.
 	}
 
-	return { driftTrend, lintSummary: lint, readiness, a11y, impact };
+	return {
+		driftTrend,
+		lintSummary: lint,
+		readiness,
+		a11y,
+		impact,
+		adoptionTrend,
+		leaderboard,
+		importCoverage,
+	};
 }
 
 /**
@@ -530,6 +635,13 @@ function runReport(path: string, options: ReportOptions): void {
 			...(aggregation.a11y !== undefined ? { a11y: aggregation.a11y } : {}),
 			...(aggregation.impact !== undefined
 				? { impact: aggregation.impact }
+				: {}),
+			adoptionTrend: aggregation.adoptionTrend,
+			...(aggregation.leaderboard !== undefined
+				? { leaderboard: aggregation.leaderboard }
+				: {}),
+			...(aggregation.importCoverage !== undefined
+				? { importCoverage: aggregation.importCoverage }
 				: {}),
 		},
 		selection.artifacts,

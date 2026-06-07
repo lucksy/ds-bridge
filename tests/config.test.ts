@@ -293,19 +293,26 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 
 		expect(outcome.kind).toBe("ok");
 		if (outcome.kind !== "ok") return;
-		// drift overridden, the other three keep their documented defaults.
+		// drift overridden, the other four keep their rebalanced defaults (A4).
 		expect(outcome.config.scoreWeights).toEqual({
 			drift: 50,
-			lint: 30,
-			readiness: 20,
-			a11y: 20,
+			lint: 25,
+			readiness: 15,
+			a11y: 15,
+			adoption: 20,
 		});
 	});
 
-	it("accepts a full four-key score_weights object", () => {
+	it("accepts a full five-key score_weights object (including adoption)", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				score_weights: { drift: 1, lint: 2, readiness: 3, a11y: 4 },
+				score_weights: {
+					drift: 1,
+					lint: 2,
+					readiness: 3,
+					a11y: 4,
+					adoption: 5,
+				},
 			}),
 		});
 
@@ -316,6 +323,7 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 			lint: 2,
 			readiness: 3,
 			a11y: 4,
+			adoption: 5,
 		});
 	});
 
@@ -388,9 +396,10 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 		expect(outcome.config.dashboardView).toBe("owner");
 		expect(outcome.config.scoreWeights).toEqual({
 			drift: 40,
-			lint: 30,
-			readiness: 20,
-			a11y: 20,
+			lint: 25,
+			readiness: 15,
+			a11y: 15,
+			adoption: 20,
 		});
 	});
 

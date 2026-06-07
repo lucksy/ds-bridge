@@ -123,9 +123,10 @@ describe("runSetupWizard (injected streams)", () => {
 	});
 
 	it("customize add+remove loop materializes an explicit artifact list", async () => {
-		// Pick owner (system-score, drift-trend, parity, a11y — wave-2 S2 enrichment);
-		// customize? y; add impact; remove parity; done; confirm y.
-		// → [system-score, drift-trend, a11y, impact]
+		// Pick owner (the seven owner artifacts — wave-3 B3); customize? y; add
+		// impact; remove parity; done; confirm y.
+		// → [system-score, adoption-trend, import-coverage, leaderboard, drift-trend,
+		//    a11y, impact]
 		const { exitCode } = await drive([
 			"1",
 			"y",
@@ -141,6 +142,9 @@ describe("runSetupWizard (injected streams)", () => {
 		>;
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 			"drift-trend",
 			"a11y",
 			"impact",
@@ -166,13 +170,16 @@ describe("runSetupWizard (injected streams)", () => {
 		expect(exitCode).toBe(0);
 		expect(output.toLowerCase()).toContain("parity"); // suggestion echoed
 		// unknown add did not corrupt the selection: owner preset persisted as list
-		// (wave-2 S2: owner now leads with system-score).
+		// (wave-3 B3: the full seven-artifact owner view).
 		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
 			string,
 			unknown
 		>;
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 			"drift-trend",
 			"parity",
 			"a11y",
