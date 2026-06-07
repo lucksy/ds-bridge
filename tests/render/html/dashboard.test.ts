@@ -20,6 +20,20 @@ function countMatches(haystack: string, pattern: RegExp): number {
 const fullData: ReportData = {
 	generatedAt: "2026-06-05T12:00:00.000Z",
 	project: "acme-design-system",
+	systemScore: {
+		current: 78,
+		components: [
+			{ kind: "drift", score: 80, weight: 30 },
+			{ kind: "lint", score: 65, weight: 30 },
+			{ kind: "readiness", score: 82, weight: 20 },
+			{ kind: "a11y", score: 85, weight: 20 },
+		],
+		trend: [
+			{ date: "2026-06-01", score: 70 },
+			{ date: "2026-06-02", score: 74 },
+			{ date: "2026-06-03", score: 78 },
+		],
+	},
 	driftTrend: [
 		{ date: "2026-06-01", breaking: 2, additive: 5, cosmetic: 3 },
 		{ date: "2026-06-02", breaking: 1, additive: 7, cosmetic: 4 },
@@ -138,15 +152,17 @@ describe("renderDashboard — self-containment (offline safe)", () => {
 describe("renderDashboard — full data", () => {
 	const html = renderDashboard(fullData);
 
-	it("renders all six section titles", () => {
+	it("renders all seven section titles", () => {
+		expect(html).toMatch(/System score/i);
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
 		expect(html).toMatch(/Readiness/i);
 		expect(html).toMatch(/Parity/i);
 	});
 
-	it("emits exactly six <svg> charts (one per section)", () => {
-		expect(countMatches(html, /<svg\b/g)).toBe(6);
+	it("emits exactly eight <svg> charts (one per section + the score gauge & trend)", () => {
+		// six wave-1 sections (one svg each) + system-score's gauge + trend = 8.
+		expect(countMatches(html, /<svg\b/g)).toBe(8);
 	});
 
 	it("includes a11y mode labels and failure counts (T7.22)", () => {
@@ -171,8 +187,9 @@ describe("renderDashboard — full data", () => {
 	});
 
 	it("includes a line chart with one polyline per drift series", () => {
-		// breaking, additive, cosmetic → three series.
-		expect(countMatches(html, /<polyline\b/g)).toBe(3);
+		// drift: breaking, additive, cosmetic → three series; the system-score
+		// trend adds one more polyline (S3) → four polylines document-wide.
+		expect(countMatches(html, /<polyline\b/g)).toBe(4);
 	});
 
 	it("includes lint counts in the bar chart", () => {
@@ -193,20 +210,43 @@ describe("renderDashboard — full data", () => {
 		expect(html).toContain("size");
 		expect(html).toContain("icon");
 	});
+
+	it("renders the system-score gauge with the current composite (S3)", () => {
+		expect(html).toMatch(TITLE_FOR["system-score"]);
+		// donutGauge renders the current value as a centered numeral.
+		expect(html).toMatch(/<text[^>]*>78<\/text>/);
+	});
+
+	it("renders the system-score trend as a line chart (S3)", () => {
+		// the trend has three points → one polyline in the score's own svg.
+		expect(html).toMatch(/Line chart/);
+	});
+
+	it("renders a components/weights legend table (kind · sub-score · weight) (S3)", () => {
+		// every present component is legible with its applied weight.
+		expect(html).toContain("drift");
+		expect(html).toContain("lint");
+		expect(html).toContain("readiness");
+		expect(html).toContain("a11y");
+		// the applied weights echo into the legend (default 30/30/20/20).
+		expect(html).toMatch(/30/);
+		expect(html).toMatch(/20/);
+	});
 });
 
 describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
-	it("renders all six empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(6);
+	it("renders all seven empty-state panels", () => {
+		expect(countMatches(html, /No data yet/gi)).toBe(7);
 	});
 
 	it("emits zero <svg> charts", () => {
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
 	});
 
-	it("still renders all six section titles", () => {
+	it("still renders all seven section titles", () => {
+		expect(html).toMatch(/System score/i);
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
 		expect(html).toMatch(/Readiness/i);
@@ -216,7 +256,7 @@ describe("renderDashboard — empty data", () => {
 	});
 
 	it("mentions the ds-bridge command in each empty state", () => {
-		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(6);
+		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(7);
 	});
 });
 
@@ -230,9 +270,9 @@ describe("renderDashboard — partial mixes", () => {
 			],
 			readiness: { score: 70, frameName: "Frame", deductions: [] },
 		});
-		// two charts present, four empty states.
+		// two charts present, five empty states (incl. absent system-score).
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(4);
+		expect(countMatches(html, /No data yet/gi)).toBe(5);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -247,7 +287,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(5);
+		expect(countMatches(html, /No data yet/gi)).toBe(6);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -257,7 +297,7 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(6);
+		expect(countMatches(html, /No data yet/gi)).toBe(7);
 	});
 
 	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
@@ -267,7 +307,7 @@ describe("renderDashboard — partial mixes", () => {
 			a11y: { level: "AA", modes: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(6);
+		expect(countMatches(html, /No data yet/gi)).toBe(7);
 	});
 
 	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
@@ -277,7 +317,7 @@ describe("renderDashboard — partial mixes", () => {
 			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(5);
+		expect(countMatches(html, /No data yet/gi)).toBe(6);
 	});
 });
 
@@ -338,6 +378,7 @@ describe("renderDashboard — escaping untrusted strings", () => {
 //
 // The section <h2> title is the DOM-inclusion probe per artifact id.
 const TITLE_FOR: Record<ArtifactId, RegExp> = {
+	"system-score": /<h2>System score<\/h2>/,
 	"drift-trend": /<h2>Drift trend<\/h2>/,
 	"lint-summary": /<h2>Lint violations<\/h2>/,
 	readiness: /<h2>Readiness<\/h2>/,

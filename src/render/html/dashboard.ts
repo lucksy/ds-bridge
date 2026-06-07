@@ -116,6 +116,10 @@ table.parity-key, .meta {
 }
 .cols { margin-top: 10px; font-size: 12px; color: var(--text-subtle); }
 .cols b { color: var(--text); font-weight: 600; }
+table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
+table.weights th, table.weights td { padding: 4px 8px; border-top: 1px solid var(--border); text-align: left; }
+table.weights th { color: var(--text-subtle); font-weight: 600; }
+table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
 ul.offenders { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
 ul.offenders li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-top: 1px solid var(--border); }
 ul.offenders code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
@@ -144,6 +148,59 @@ function panel(title: string, body: string): string {
 		body,
 		"</section>",
 	].join("");
+}
+
+// The human label for each score component kind in the legend table.
+const COMPONENT_LABEL: Record<string, string> = {
+	drift: "drift",
+	lint: "lint",
+	readiness: "readiness",
+	a11y: "a11y",
+};
+
+/**
+ * System score → donut gauge (current 0–100) + line chart (trend) + a
+ * components/weights legend table (kind · sub-score · applied weight). Empty
+ * state reuses the shared `emptyState` helper verbatim with a run-a-check hint.
+ */
+function systemScoreSection(data: ReportData): string {
+	const score = data.systemScore;
+	if (score === undefined) {
+		return panel("System score", emptyState("report"));
+	}
+
+	const trendSeries: LineSeries[] = [
+		{
+			label: "score",
+			points: score.trend.map((point, index) => ({
+				x: index,
+				y: point.score,
+			})),
+		},
+	];
+
+	const legendRows = score.components
+		.map(
+			(c) =>
+				`<tr><td>${escapeHtml(COMPONENT_LABEL[c.kind] ?? c.kind)}</td><td class="num">${escapeHtml(String(c.score))}</td><td class="num">${escapeHtml(String(c.weight))}</td></tr>`,
+		)
+		.join("");
+
+	const legend = [
+		'<table class="weights">',
+		"<thead><tr><th>Component</th><th>Sub-score</th><th>Weight</th></tr></thead>",
+		`<tbody>${legendRows}</tbody>`,
+		"</table>",
+	].join("");
+
+	return panel(
+		"System score",
+		[
+			`<div class="chart" style="text-align:center">${donutGauge(score.current, { label: "System score" })}</div>`,
+			`<div class="chart">${lineChart(trendSeries)}</div>`,
+			legend,
+		].join(""),
+	);
 }
 
 /** Drift trend → multi-series line chart (breaking / additive / cosmetic). */
@@ -337,6 +394,7 @@ function impactSection(data: ReportData): string {
 // caller-supplied selection over this map is what gates DOM inclusion (an id
 // absent from the selection is never rendered — see renderDashboard).
 const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
+	"system-score": systemScoreSection,
 	"drift-trend": driftSection,
 	"lint-summary": lintSection,
 	readiness: readinessSection,
