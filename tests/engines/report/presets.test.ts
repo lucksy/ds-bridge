@@ -14,19 +14,31 @@ import {
 } from "../../../src/engines/report/presets.js";
 
 describe("PRESETS", () => {
-	it("declares the five frozen views with their exact ordered contents (SPEC-measure §3)", () => {
-		expect(PRESETS.owner).toEqual(["drift-trend", "parity", "a11y"]);
+	it("declares the five views with system-score FIRST in each, then the wave-1 contents (SPEC-score §3)", () => {
+		expect(PRESETS.owner).toEqual([
+			"system-score",
+			"drift-trend",
+			"parity",
+			"a11y",
+		]);
 		expect(PRESETS.engineering).toEqual([
+			"system-score",
 			"lint-summary",
 			"impact",
 			"drift-trend",
 		]);
-		expect(PRESETS.design).toEqual(["readiness", "a11y", "parity"]);
-		expect(PRESETS.consumer).toEqual(["parity", "impact"]);
+		expect(PRESETS.design).toEqual([
+			"system-score",
+			"readiness",
+			"a11y",
+			"parity",
+		]);
+		expect(PRESETS.consumer).toEqual(["system-score", "parity", "impact"]);
 	});
 
-	it("defines `everything` as all six artifacts in catalog order", () => {
+	it("defines `everything` as all seven artifacts in catalog order (system-score leads)", () => {
 		expect(PRESETS.everything).toEqual([...ALL_ARTIFACT_IDS]);
+		expect(PRESETS.everything[0]).toBe("system-score");
 	});
 
 	it("exports PRESET_NAMES as the five view names", () => {
@@ -64,7 +76,12 @@ describe("resolveView — precedence permutations", () => {
 		if (outcome.kind === "ok") {
 			expect(outcome.source).toBe("flags");
 			expect(outcome.viewName).toBe("owner");
-			expect(outcome.artifacts).toEqual(["drift-trend", "parity", "a11y"]);
+			expect(outcome.artifacts).toEqual([
+				"system-score",
+				"drift-trend",
+				"parity",
+				"a11y",
+			]);
 		}
 	});
 
@@ -84,7 +101,12 @@ describe("resolveView — precedence permutations", () => {
 		if (outcome.kind === "ok") {
 			expect(outcome.source).toBe("project");
 			expect(outcome.viewName).toBe("design");
-			expect(outcome.artifacts).toEqual(["readiness", "a11y", "parity"]);
+			expect(outcome.artifacts).toEqual([
+				"system-score",
+				"readiness",
+				"a11y",
+				"parity",
+			]);
 		}
 	});
 
@@ -107,7 +129,7 @@ describe("resolveView — precedence permutations", () => {
 		if (outcome.kind === "ok") {
 			expect(outcome.source).toBe("flags");
 			expect(outcome.viewName).toBe("consumer");
-			expect(outcome.artifacts).toEqual(["parity", "impact"]);
+			expect(outcome.artifacts).toEqual(["system-score", "parity", "impact"]);
 		}
 	});
 

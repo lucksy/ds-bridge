@@ -84,6 +84,34 @@ export interface ImpactSummary {
 	touchedCallSites: number;
 }
 
+/** The four weightable system-score components (mirrors score.ts ComponentKind). */
+export type SystemScoreComponentKind = "drift" | "lint" | "readiness" | "a11y";
+
+/** One present score component: its kind, 0–100 sub-score, configured weight. */
+export interface SystemScoreComponent {
+	kind: SystemScoreComponentKind;
+	score: number;
+	weight: number;
+}
+
+/** One trend point: a distinct dated state's composite score. */
+export interface SystemScoreTrendPoint {
+	date: string;
+	score: number;
+}
+
+/**
+ * The weighted 0–100 composite system score, replayed from history (S1). This
+ * is the engine's ok-shape minus its `kind` discriminator — the value the
+ * caller threads into {@link ReportData}.
+ */
+export interface SystemScore {
+	/** The current weighted composite, 0–100, half-up rounded. */
+	current: number;
+	components: SystemScoreComponent[];
+	trend: SystemScoreTrendPoint[];
+}
+
 /**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
@@ -92,6 +120,7 @@ export interface ReportData {
 	/** ISO timestamp supplied by the caller; rendered verbatim in the header. */
 	generatedAt: string;
 	project: string;
+	systemScore?: SystemScore;
 	driftTrend?: DriftTrendPoint[];
 	lintSummary?: LintSummary;
 	readiness?: Readiness;

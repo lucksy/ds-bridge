@@ -19,16 +19,17 @@ export type PresetName =
 	| "everything";
 
 /**
- * The frozen wave-1 preset contents, each an ordered ArtifactId list
- * (SPEC-measure §3 — contents frozen for v1.1.0, ids stay the stable contract).
- * `everything` mirrors the catalog order so the no-config default is identical
- * to today's output.
+ * The preset contents, each an ordered ArtifactId list. `system-score` leads
+ * every view (SPEC-score §3 — the score tops every view); the wave-1 contents
+ * follow in their frozen order (ids stay the stable contract). `everything`
+ * mirrors the catalog order (system-score already at catalog index 0) so the
+ * no-config default stays identical to the catalog.
  */
 export const PRESETS = {
-	owner: ["drift-trend", "parity", "a11y"],
-	engineering: ["lint-summary", "impact", "drift-trend"],
-	design: ["readiness", "a11y", "parity"],
-	consumer: ["parity", "impact"],
+	owner: ["system-score", "drift-trend", "parity", "a11y"],
+	engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
+	design: ["system-score", "readiness", "a11y", "parity"],
+	consumer: ["system-score", "parity", "impact"],
 	everything: [...ALL_ARTIFACT_IDS],
 } as const satisfies Record<PresetName, readonly ArtifactId[]>;
 

@@ -15,6 +15,7 @@ import type { ReportData } from "../../../src/engines/report/types.js";
 /** The optional section keys of ReportData — the set CATALOG must cover. */
 type SectionKey = Exclude<keyof ReportData, "generatedAt" | "project">;
 const SECTION_KEYS: readonly SectionKey[] = [
+	"systemScore",
 	"driftTrend",
 	"lintSummary",
 	"readiness",
@@ -24,8 +25,9 @@ const SECTION_KEYS: readonly SectionKey[] = [
 ];
 
 describe("CATALOG", () => {
-	it("declares the six wave-1 artifacts in dashboard order", () => {
+	it("leads with system-score (index 0) then the six wave-1 artifacts in dashboard order", () => {
 		expect(CATALOG.map((a) => a.id)).toEqual([
+			"system-score",
 			"drift-trend",
 			"lint-summary",
 			"readiness",
@@ -35,10 +37,23 @@ describe("CATALOG", () => {
 		]);
 	});
 
+	it("places system-score at index 0 with all four personas and the systemScore key", () => {
+		const entry = CATALOG[0];
+		expect(entry?.id).toBe("system-score");
+		expect(entry?.title).toBe("System score");
+		expect(entry?.reportDataKey).toBe("systemScore");
+		expect([...(entry?.personas ?? [])].sort()).toEqual([
+			"consumer",
+			"design",
+			"engineering",
+			"owner",
+		]);
+	});
+
 	it("covers exactly the optional ReportData sections (runtime half of the satisfies check)", () => {
 		const keys = CATALOG.map((a) => a.reportDataKey).sort();
 		expect(keys).toEqual([...SECTION_KEYS].sort());
-		// No duplicates: six ids → six distinct keys.
+		// No duplicates: seven ids → seven distinct keys.
 		expect(new Set(keys).size).toBe(SECTION_KEYS.length);
 	});
 

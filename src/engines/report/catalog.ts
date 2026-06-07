@@ -4,8 +4,12 @@
 // surface as a typed outcome carrying suggestions.
 import type { ReportData } from "./types.js";
 
-/** The six wave-1 artifact ids (kebab-case — the user-facing contract). */
+/**
+ * The artifact ids (kebab-case — the user-facing contract). `system-score`
+ * leads (wave-2, S2); the six wave-1 ids follow in dashboard order.
+ */
 export type ArtifactId =
+	| "system-score"
 	| "drift-trend"
 	| "lint-summary"
 	| "readiness"
@@ -40,6 +44,12 @@ export interface ArtifactMeta {
  * spec.
  */
 export const CATALOG = [
+	{
+		id: "system-score",
+		title: "System score",
+		personas: ["owner", "engineering", "design", "consumer"],
+		reportDataKey: "systemScore",
+	},
 	{
 		id: "drift-trend",
 		title: "Token drift",
@@ -93,7 +103,7 @@ export type LookupOutcome =
 	| { kind: "found"; artifact: ArtifactMeta }
 	| { kind: "unknown"; id: string; suggestions: ArtifactId[] };
 
-/** Levenshtein edit distance — tiny and sufficient for a fixed six-id set. */
+/** Levenshtein edit distance — tiny and sufficient for the fixed artifact-id set. */
 function editDistance(a: string, b: string): number {
 	const rows = a.length + 1;
 	const cols = b.length + 1;
