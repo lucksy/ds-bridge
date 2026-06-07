@@ -389,31 +389,121 @@ function impactSection(data: ReportData): string {
 	);
 }
 
-// B1 contract placeholders for the three owner artifacts — they keep
-// SECTION_RENDERERS total over the widened ArtifactId (the compile gate) until
-// B2 replaces these with the real lineChart / donutGauge / barChart sections.
+// The on-system percentage for a refs/literals pair (B2). 0 when no values.
+function onSystemPct(refs: number, literals: number): number {
+	const total = refs + literals;
+	return total === 0 ? 0 : Math.round((refs / total) * 100);
+}
+
+/**
+ * Adoption trend → line chart of the on-system pct over dated points (B2).
+ * Honest-scope one-liner: the ratio counts css/scss values only (SPEC §1).
+ */
 function adoptionTrendSection(data: ReportData): string {
 	const trend = data.adoptionTrend;
 	if (trend === undefined || trend.length === 0) {
 		return panel("Adoption trend", emptyState("lint <dir>"));
 	}
-	return panel("Adoption trend", emptyState("lint <dir>"));
+
+	const series: LineSeries[] = [
+		{
+			label: "on-system %",
+			points: trend.map((point, index) => ({ x: index, y: point.pct })),
+		},
+	];
+
+	const dateRange = `${escapeHtml(trend[0]?.date ?? "")} → ${escapeHtml(
+		trend[trend.length - 1]?.date ?? "",
+	)}`;
+
+	return panel(
+		"Adoption trend",
+		[
+			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="meta">On-system % over ${dateRange} · css/scss values only (var(--…) vs literals)</div>`,
+		].join(""),
+	);
 }
 
+/**
+ * Import coverage → donut gauge of imported/total + the capped uncovered list
+ * with an overflow note (B2). Honest-scope one-liner: mapUsage scans resolved
+ * `.tsx` imports only, so the number is a floor (SPEC §1 / A3a).
+ */
 function importCoverageSection(data: ReportData): string {
 	const coverage = data.importCoverage;
 	if (coverage === undefined) {
 		return panel("Import coverage", emptyState("adoption"));
 	}
-	return panel("Import coverage", emptyState("adoption"));
+
+	const { imported, total, uncovered, uncoveredTotal } = coverage;
+	const pct = total === 0 ? 0 : Math.round((imported / total) * 100);
+
+	const list =
+		uncovered.length > 0
+			? [
+					'<ul class="offenders">',
+					...uncovered.map(
+						(name) => `<li><code>${escapeHtml(name)}</code></li>`,
+					),
+					"</ul>",
+				].join("")
+			: "";
+
+	const overflow =
+		uncoveredTotal > uncovered.length
+			? `<div class="meta">… and ${escapeHtml(
+					String(uncoveredTotal - uncovered.length),
+				)} more</div>`
+			: "";
+
+	return panel(
+		"Import coverage",
+		[
+			`<div class="chart" style="text-align:center">${donutGauge(pct, { label: "Import coverage" })}</div>`,
+			`<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported · resolved .tsx imports only (a floor)</div>`,
+			list,
+			overflow,
+		].join(""),
+	);
 }
 
+/**
+ * Adoption leaderboard → bar chart of on-system % by directory, worst-first
+ * (B2). The renderer trusts the assembly's worst-first ordering; each bar's
+ * value is the directory's on-system percentage.
+ */
 function leaderboardSection(data: ReportData): string {
 	const rows = data.leaderboard;
 	if (rows === undefined || rows.length === 0) {
 		return panel("Adoption leaderboard", emptyState("lint <dir>"));
 	}
-	return panel("Adoption leaderboard", emptyState("lint <dir>"));
+
+	const bars = rows.map((row) => ({
+		label: row.dir,
+		value: onSystemPct(row.refs, row.literals),
+	}));
+
+	// Per-directory pct labels (the bar widths are the same percentages).
+	const labels = [
+		'<ul class="offenders">',
+		...rows.map(
+			(row) =>
+				`<li><code>${escapeHtml(row.dir)}</code><span class="count">${escapeHtml(
+					String(onSystemPct(row.refs, row.literals)),
+				)}%</span></li>`,
+		),
+		"</ul>",
+	].join("");
+
+	return panel(
+		"Adoption leaderboard",
+		[
+			`<div class="meta">On-system % by directory, worst-first · css/scss values only</div>`,
+			`<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+			labels,
+		].join(""),
+	);
 }
 
 // Each artifact id maps to the section renderer for its ReportData slice. The
