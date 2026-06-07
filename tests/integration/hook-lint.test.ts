@@ -45,7 +45,13 @@ function runHook(
 	});
 }
 
-describe("ds-bridge PostToolUse lint hook (scripts/hook-lint.mjs)", () => {
+// retry: the hook's ≤1.5s SILENT-timeout budget is product behavior, but under
+// a full-suite parallel run (73 spawning test files) the spawn can legitimately
+// exceed it on a loaded machine — observed 2026-06-07: 3.1s under load → silent
+// exit → empty stdout → JSON parse failure here, while the isolated run passes
+// 4/4 and CI passes. A retry tolerates machine load without weakening the
+// contract (a REAL hook regression fails all attempts).
+describe("ds-bridge PostToolUse lint hook (scripts/hook-lint.mjs)", { retry: 2 }, () => {
 	afterAll(async () => {
 		await Promise.all(
 			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),
