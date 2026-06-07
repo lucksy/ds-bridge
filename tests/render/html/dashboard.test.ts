@@ -385,6 +385,9 @@ const TITLE_FOR: Record<ArtifactId, RegExp> = {
 	parity: /<h2>Parity matrix<\/h2>/,
 	a11y: /<h2>Contrast \(a11y\)<\/h2>/,
 	impact: /<h2>Change impact<\/h2>/,
+	"adoption-trend": /<h2>Adoption trend<\/h2>/,
+	"import-coverage": /<h2>Import coverage<\/h2>/,
+	leaderboard: /<h2>Adoption leaderboard<\/h2>/,
 };
 
 describe("renderDashboard — default-call equivalence", () => {

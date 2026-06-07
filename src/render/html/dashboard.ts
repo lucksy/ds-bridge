@@ -389,6 +389,33 @@ function impactSection(data: ReportData): string {
 	);
 }
 
+// B1 contract placeholders for the three owner artifacts — they keep
+// SECTION_RENDERERS total over the widened ArtifactId (the compile gate) until
+// B2 replaces these with the real lineChart / donutGauge / barChart sections.
+function adoptionTrendSection(data: ReportData): string {
+	const trend = data.adoptionTrend;
+	if (trend === undefined || trend.length === 0) {
+		return panel("Adoption trend", emptyState("lint <dir>"));
+	}
+	return panel("Adoption trend", emptyState("lint <dir>"));
+}
+
+function importCoverageSection(data: ReportData): string {
+	const coverage = data.importCoverage;
+	if (coverage === undefined) {
+		return panel("Import coverage", emptyState("adoption"));
+	}
+	return panel("Import coverage", emptyState("adoption"));
+}
+
+function leaderboardSection(data: ReportData): string {
+	const rows = data.leaderboard;
+	if (rows === undefined || rows.length === 0) {
+		return panel("Adoption leaderboard", emptyState("lint <dir>"));
+	}
+	return panel("Adoption leaderboard", emptyState("lint <dir>"));
+}
+
 // Each artifact id maps to the section renderer for its ReportData slice. The
 // keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
 // caller-supplied selection over this map is what gates DOM inclusion (an id
@@ -401,6 +428,9 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	parity: paritySection,
 	a11y: a11ySection,
 	impact: impactSection,
+	"adoption-trend": adoptionTrendSection,
+	"import-coverage": importCoverageSection,
+	leaderboard: leaderboardSection,
 };
 
 /** Optional rendering controls that do not affect which sections appear. */

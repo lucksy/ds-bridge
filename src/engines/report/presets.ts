@@ -26,7 +26,15 @@ export type PresetName =
  * no-config default stays identical to the catalog.
  */
 export const PRESETS = {
-	owner: ["system-score", "drift-trend", "parity", "a11y"],
+	owner: [
+		"system-score",
+		"adoption-trend",
+		"import-coverage",
+		"leaderboard",
+		"drift-trend",
+		"parity",
+		"a11y",
+	],
 	engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
 	design: ["system-score", "readiness", "a11y", "parity"],
 	consumer: ["system-score", "parity", "impact"],

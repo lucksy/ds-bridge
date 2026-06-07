@@ -15,8 +15,13 @@ import {
 
 describe("PRESETS", () => {
 	it("declares the five views with system-score FIRST in each, then the wave-1 contents (SPEC-score §3)", () => {
+		// owner earns its name (SPEC-adoption §3): seven artifacts, the three new
+		// owner artifacts riding right behind system-score.
 		expect(PRESETS.owner).toEqual([
 			"system-score",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 			"drift-trend",
 			"parity",
 			"a11y",
@@ -36,9 +41,10 @@ describe("PRESETS", () => {
 		expect(PRESETS.consumer).toEqual(["system-score", "parity", "impact"]);
 	});
 
-	it("defines `everything` as all seven artifacts in catalog order (system-score leads)", () => {
+	it("defines `everything` as all ten artifacts in catalog order (system-score leads)", () => {
 		expect(PRESETS.everything).toEqual([...ALL_ARTIFACT_IDS]);
 		expect(PRESETS.everything[0]).toBe("system-score");
+		expect(PRESETS.everything).toHaveLength(10);
 	});
 
 	it("exports PRESET_NAMES as the five view names", () => {
@@ -78,6 +84,9 @@ describe("resolveView — precedence permutations", () => {
 			expect(outcome.viewName).toBe("owner");
 			expect(outcome.artifacts).toEqual([
 				"system-score",
+				"adoption-trend",
+				"import-coverage",
+				"leaderboard",
 				"drift-trend",
 				"parity",
 				"a11y",

@@ -118,6 +118,42 @@ export interface SystemScore {
 }
 
 /**
+ * One adoption-trend point: a dated on-system percentage (B1). `pct` is the
+ * css/scss-scoped ratio 100·refs/(refs+literals) from a dated adoption-bearing
+ * lint line (SPEC-adoption §1 honest scope — css/scss only).
+ */
+export interface AdoptionTrendPoint {
+	/** ISO date (YYYY-MM-DD); the x-axis category label. */
+	date: string;
+	/** On-system percentage, 0–100. */
+	pct: number;
+}
+
+/**
+ * Import-coverage summary: of every CODE component the registry knows, how many
+ * the project actually imports (B1). Shape aligned with the A3a CoverageResult
+ * so the assembly threads the engine output through verbatim. **Honest scope:**
+ * mapUsage scans resolved `.tsx` imports only — the number is a floor.
+ */
+export interface ImportCoverage {
+	/** CODE components with ≥1 resolved import site. */
+	imported: number;
+	/** Every CODE component in the registry. */
+	total: number;
+	/** Not-yet-imported names, alphabetical, capped at 20. */
+	uncovered: string[];
+	/** Full count of uncovered components, before the cap. */
+	uncoveredTotal: number;
+}
+
+/** One leaderboard row: a directory's on-system refs vs off-system literals (B1). */
+export interface LeaderboardRow {
+	dir: string;
+	refs: number;
+	literals: number;
+}
+
+/**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
  */
@@ -132,4 +168,10 @@ export interface ReportData {
 	parity?: Parity;
 	a11y?: A11ySummary;
 	impact?: ImpactSummary;
+	/** On-system % over time, from dated adoption-bearing lint lines (B1). */
+	adoptionTrend?: AdoptionTrendPoint[];
+	/** Registry import coverage, from the latest `adoption` history line (B1). */
+	importCoverage?: ImportCoverage;
+	/** On-system % by directory, worst-first, from the latest lint line (B1). */
+	leaderboard?: LeaderboardRow[];
 }

@@ -15,7 +15,10 @@ export type ArtifactId =
 	| "readiness"
 	| "parity"
 	| "a11y"
-	| "impact";
+	| "impact"
+	| "adoption-trend"
+	| "import-coverage"
+	| "leaderboard";
 
 /** Persona tags used by presets and `dashboard list`. */
 export type Persona = "owner" | "engineering" | "design" | "consumer";
@@ -85,6 +88,24 @@ export const CATALOG = [
 		title: "Change impact",
 		personas: ["engineering", "consumer"],
 		reportDataKey: "impact",
+	},
+	{
+		id: "adoption-trend",
+		title: "Adoption trend",
+		personas: ["owner", "engineering"],
+		reportDataKey: "adoptionTrend",
+	},
+	{
+		id: "import-coverage",
+		title: "Import coverage",
+		personas: ["owner", "consumer"],
+		reportDataKey: "importCoverage",
+	},
+	{
+		id: "leaderboard",
+		title: "Adoption leaderboard",
+		personas: ["owner"],
+		reportDataKey: "leaderboard",
 	},
 ] as const satisfies readonly ArtifactMeta[];
 

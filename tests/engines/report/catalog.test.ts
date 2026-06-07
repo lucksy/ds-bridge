@@ -22,10 +22,13 @@ const SECTION_KEYS: readonly SectionKey[] = [
 	"parity",
 	"a11y",
 	"impact",
+	"adoptionTrend",
+	"importCoverage",
+	"leaderboard",
 ];
 
 describe("CATALOG", () => {
-	it("leads with system-score (index 0) then the six wave-1 artifacts in dashboard order", () => {
+	it("leads with system-score then the six wave-1 artifacts and the three owner artifacts (positions 8–10)", () => {
 		expect(CATALOG.map((a) => a.id)).toEqual([
 			"system-score",
 			"drift-trend",
@@ -34,7 +37,33 @@ describe("CATALOG", () => {
 			"parity",
 			"a11y",
 			"impact",
+			"adoption-trend",
+			"import-coverage",
+			"leaderboard",
 		]);
+	});
+
+	it("appends the three owner artifacts at positions 8–10 with their SPEC §3 personas + keys", () => {
+		const trend = CATALOG[7];
+		expect(trend?.id).toBe("adoption-trend");
+		expect(trend?.reportDataKey).toBe("adoptionTrend");
+		expect([...(trend?.personas ?? [])].sort()).toEqual([
+			"engineering",
+			"owner",
+		]);
+
+		const coverage = CATALOG[8];
+		expect(coverage?.id).toBe("import-coverage");
+		expect(coverage?.reportDataKey).toBe("importCoverage");
+		expect([...(coverage?.personas ?? [])].sort()).toEqual([
+			"consumer",
+			"owner",
+		]);
+
+		const leaderboard = CATALOG[9];
+		expect(leaderboard?.id).toBe("leaderboard");
+		expect(leaderboard?.reportDataKey).toBe("leaderboard");
+		expect([...(leaderboard?.personas ?? [])]).toEqual(["owner"]);
 	});
 
 	it("places system-score at index 0 with all four personas and the systemScore key", () => {
@@ -53,7 +82,7 @@ describe("CATALOG", () => {
 	it("covers exactly the optional ReportData sections (runtime half of the satisfies check)", () => {
 		const keys = CATALOG.map((a) => a.reportDataKey).sort();
 		expect(keys).toEqual([...SECTION_KEYS].sort());
-		// No duplicates: seven ids → seven distinct keys.
+		// No duplicates: ten ids → ten distinct keys.
 		expect(new Set(keys).size).toBe(SECTION_KEYS.length);
 	});
 
