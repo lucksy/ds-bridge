@@ -94,11 +94,11 @@ var require_argument = __commonJS({
       /**
        * @package
        */
-      _collectValue(value, previous) {
+      _collectValue(value2, previous) {
         if (previous === this.defaultValue || !Array.isArray(previous)) {
-          return [value];
+          return [value2];
         }
-        previous.push(value);
+        previous.push(value2);
         return previous;
       }
       /**
@@ -108,8 +108,8 @@ var require_argument = __commonJS({
        * @param {string} [description]
        * @return {Argument}
        */
-      default(value, description) {
-        this.defaultValue = value;
+      default(value2, description) {
+        this.defaultValue = value2;
         this.defaultValueDescription = description;
         return this;
       }
@@ -819,8 +819,8 @@ var require_option = __commonJS({
        * @param {string} [description]
        * @return {Option}
        */
-      default(value, description) {
-        this.defaultValue = value;
+      default(value2, description) {
+        this.defaultValue = value2;
         this.defaultValueDescription = description;
         return this;
       }
@@ -921,11 +921,11 @@ var require_option = __commonJS({
       /**
        * @package
        */
-      _collectValue(value, previous) {
+      _collectValue(value2, previous) {
         if (previous === this.defaultValue || !Array.isArray(previous)) {
-          return [value];
+          return [value2];
         }
-        previous.push(value);
+        previous.push(value2);
         return previous;
       }
       /**
@@ -1019,7 +1019,7 @@ var require_option = __commonJS({
             this.positiveOptions.set(option.attributeName(), option);
           }
         });
-        this.negativeOptions.forEach((value, key) => {
+        this.negativeOptions.forEach((value2, key) => {
           if (this.positiveOptions.has(key)) {
             this.dualOptions.add(key);
           }
@@ -1032,12 +1032,12 @@ var require_option = __commonJS({
        * @param {Option} option
        * @returns {boolean}
        */
-      valueFromOption(value, option) {
+      valueFromOption(value2, option) {
         const optionKey = option.attributeName();
         if (!this.dualOptions.has(optionKey)) return true;
         const preset = this.negativeOptions.get(optionKey).presetArg;
         const negativeValue = preset !== void 0 ? preset : false;
-        return option.negate === (negativeValue === value);
+        return option.negate === (negativeValue === value2);
       }
     };
     function camelcase(str) {
@@ -1678,9 +1678,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} invalidArgumentMessage
        * @private
        */
-      _callParseArg(target, value, previous, invalidArgumentMessage) {
+      _callParseArg(target, value2, previous, invalidArgumentMessage) {
         try {
-          return target.parseArg(value, previous);
+          return target.parseArg(value2, previous);
         } catch (err) {
           if (err.code === "commander.invalidArgument") {
             const message = `${invalidArgumentMessage} ${err.message}`;
@@ -1967,8 +1967,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {object} value
        * @return {Command} `this` command for chaining
        */
-      setOptionValue(key, value) {
-        return this.setOptionValueWithSource(key, value, void 0);
+      setOptionValue(key, value2) {
+        return this.setOptionValueWithSource(key, value2, void 0);
       }
       /**
        * Store option value and where the value came from.
@@ -1978,11 +1978,11 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} source - expected values are default/config/env/cli/implied
        * @return {Command} `this` command for chaining
        */
-      setOptionValueWithSource(key, value, source) {
+      setOptionValueWithSource(key, value2, source) {
         if (this._storeOptionsAsProperties) {
-          this[key] = value;
+          this[key] = value2;
         } else {
-          this._optionValues[key] = value;
+          this._optionValues[key] = value2;
         }
         this._optionValueSources[key] = source;
         return this;
@@ -2365,13 +2365,13 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @private
        */
       _processArguments() {
-        const myParseArg = (argument, value, previous) => {
-          let parsedValue = value;
-          if (value !== null && argument.parseArg) {
-            const invalidValueMessage = `error: command-argument value '${value}' is invalid for argument '${argument.name()}'.`;
+        const myParseArg = (argument, value2, previous) => {
+          let parsedValue = value2;
+          if (value2 !== null && argument.parseArg) {
+            const invalidValueMessage = `error: command-argument value '${value2}' is invalid for argument '${argument.name()}'.`;
             parsedValue = this._callParseArg(
               argument,
-              value,
+              value2,
               previous,
               invalidValueMessage
             );
@@ -2381,25 +2381,25 @@ Expecting one of '${allowedValues.join("', '")}'`);
         this._checkNumberOfArguments();
         const processedArgs = [];
         this.registeredArguments.forEach((declaredArg, index) => {
-          let value = declaredArg.defaultValue;
+          let value2 = declaredArg.defaultValue;
           if (declaredArg.variadic) {
             if (index < this.args.length) {
-              value = this.args.slice(index);
+              value2 = this.args.slice(index);
               if (declaredArg.parseArg) {
-                value = value.reduce((processed, v) => {
+                value2 = value2.reduce((processed, v) => {
                   return myParseArg(declaredArg, v, processed);
                 }, declaredArg.defaultValue);
               }
-            } else if (value === void 0) {
-              value = [];
+            } else if (value2 === void 0) {
+              value2 = [];
             }
           } else if (index < this.args.length) {
-            value = this.args[index];
+            value2 = this.args[index];
             if (declaredArg.parseArg) {
-              value = myParseArg(declaredArg, value, declaredArg.defaultValue);
+              value2 = myParseArg(declaredArg, value2, declaredArg.defaultValue);
             }
           }
-          processedArgs[index] = value;
+          processedArgs[index] = value2;
         });
         this.processedArgs = processedArgs;
       }
@@ -2664,15 +2664,15 @@ Expecting one of '${allowedValues.join("', '")}'`);
             const option = this._findOption(arg);
             if (option) {
               if (option.required) {
-                const value = args[i++];
-                if (value === void 0) this.optionMissingArgument(option);
-                this.emit(`option:${option.name()}`, value);
+                const value2 = args[i++];
+                if (value2 === void 0) this.optionMissingArgument(option);
+                this.emit(`option:${option.name()}`, value2);
               } else if (option.optional) {
-                let value = null;
+                let value2 = null;
                 if (i < args.length && (!maybeOption(args[i]) || negativeNumberArg(args[i]))) {
-                  value = args[i++];
+                  value2 = args[i++];
                 }
-                this.emit(`option:${option.name()}`, value);
+                this.emit(`option:${option.name()}`, value2);
               } else {
                 this.emit(`option:${option.name()}`);
               }
@@ -3948,33 +3948,33 @@ var huenits = {
   turn: 360
 };
 function num2(chars) {
-  let value = "";
+  let value2 = "";
   if (chars[_i] === "-" || chars[_i] === "+") {
-    value += chars[_i++];
+    value2 += chars[_i++];
   }
-  value += digits(chars);
+  value2 += digits(chars);
   if (chars[_i] === "." && /\d/.test(chars[_i + 1])) {
-    value += chars[_i++] + digits(chars);
+    value2 += chars[_i++] + digits(chars);
   }
   if (chars[_i] === "e" || chars[_i] === "E") {
     if ((chars[_i + 1] === "-" || chars[_i + 1] === "+") && /\d/.test(chars[_i + 2])) {
-      value += chars[_i++] + chars[_i++] + digits(chars);
+      value2 += chars[_i++] + chars[_i++] + digits(chars);
     } else if (/\d/.test(chars[_i + 1])) {
-      value += chars[_i++] + digits(chars);
+      value2 += chars[_i++] + digits(chars);
     }
   }
   if (is_ident(chars)) {
     let id = ident(chars);
     if (id === "deg" || id === "rad" || id === "turn" || id === "grad") {
-      return { type: Tok.Hue, value: value * huenits[id] };
+      return { type: Tok.Hue, value: value2 * huenits[id] };
     }
     return void 0;
   }
   if (chars[_i] === "%") {
     _i++;
-    return { type: Tok.Percentage, value: +value };
+    return { type: Tok.Percentage, value: +value2 };
   }
-  return { type: Tok.Number, value: +value };
+  return { type: Tok.Number, value: +value2 };
 }
 function digits(chars) {
   let v = "";
@@ -4700,7 +4700,7 @@ var convertLab65ToRgb = (lab2) => convertXyz65ToRgb_default(convertLab65ToXyz65_
 var convertLab65ToRgb_default = convertLab65ToRgb;
 
 // node_modules/culori/src/lab65/convertXyz65ToLab65.js
-var f = (value) => value > e ? Math.cbrt(value) : (k * value + 16) / 116;
+var f = (value2) => value2 > e ? Math.cbrt(value2) : (k * value2 + 16) / 116;
 var convertXyz65ToLab65 = ({ x, y, z, alpha }) => {
   if (x === void 0) x = 0;
   if (y === void 0) y = 0;
@@ -5656,7 +5656,7 @@ var convertRgbToXyz50 = (rgb3) => {
 var convertRgbToXyz50_default = convertRgbToXyz50;
 
 // node_modules/culori/src/lab/convertXyz50ToLab.js
-var f2 = (value) => value > e3 ? Math.cbrt(value) : (k3 * value + 16) / 116;
+var f2 = (value2) => value2 > e3 ? Math.cbrt(value2) : (k3 * value2 + 16) / 116;
 var convertXyz50ToLab = ({ x, y, z, alpha }) => {
   if (x === void 0) x = 0;
   if (y === void 0) y = 0;
@@ -5904,7 +5904,7 @@ var u_fn = (x, y, z) => 4 * x / (x + 15 * y + 3 * z);
 var v_fn = (x, y, z) => 9 * y / (x + 15 * y + 3 * z);
 var un = u_fn(D50.X, D50.Y, D50.Z);
 var vn = v_fn(D50.X, D50.Y, D50.Z);
-var l_fn = (value) => value <= e3 ? k3 * value : 116 * Math.cbrt(value) - 16;
+var l_fn = (value2) => value2 <= e3 ? k3 * value2 : 116 * Math.cbrt(value2) - 16;
 var convertXyz50ToLuv = ({ x, y, z, alpha }) => {
   if (x === void 0) x = 0;
   if (y === void 0) y = 0;
@@ -6976,14 +6976,14 @@ var definition28 = {
 var definition_default28 = definition28;
 
 // node_modules/culori/src/round.js
-var r = (value, precision) => Math.round(value * (precision = Math.pow(10, precision))) / precision;
-var round = (precision = 4) => (value) => typeof value === "number" ? r(value, precision) : value;
+var r = (value2, precision) => Math.round(value2 * (precision = Math.pow(10, precision))) / precision;
+var round = (precision = 4) => (value2) => typeof value2 === "number" ? r(value2, precision) : value2;
 var round_default = round;
 
 // node_modules/culori/src/formatter.js
 var twoDecimals = round_default(2);
-var clamp = (value) => Math.max(0, Math.min(1, value || 0));
-var fixup = (value) => Math.round(clamp(value) * 255);
+var clamp = (value2) => Math.max(0, Math.min(1, value2 || 0));
+var fixup = (value2) => Math.round(clamp(value2) * 255);
 var rgb = converter_default("rgb");
 var hsl = converter_default("hsl");
 var serializeHex = (color) => {
@@ -7185,8 +7185,8 @@ function auditContrast(modes2, options) {
 }
 
 // src/engines/tokens/detect.ts
-function isObject(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isObject(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 function hasW3cValue(node) {
   return "$value" in node;
@@ -7230,8 +7230,8 @@ function detectFormat(source) {
 }
 
 // src/engines/tokens/parse-style-dictionary.ts
-function isObject2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isObject2(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 function inferType(firstSegment) {
   switch (firstSegment) {
@@ -7248,9 +7248,9 @@ function inferType(firstSegment) {
   }
 }
 var ALIAS_PATTERN = /^\{(.+)\}$/;
-function aliasTarget(value) {
-  if (typeof value !== "string") return void 0;
-  const match = ALIAS_PATTERN.exec(value);
+function aliasTarget(value2) {
+  if (typeof value2 !== "string") return void 0;
+  const match = ALIAS_PATTERN.exec(value2);
   if (match === null) return void 0;
   const inner = match[1];
   if (inner === void 0) return void 0;
@@ -7260,8 +7260,8 @@ function collect(node, path, raws, errors) {
   if ("value" in node) {
     const name = path.join(".");
     const firstSegment = path[0] ?? "";
-    const value = node.value;
-    if (typeof value !== "string" && typeof value !== "number") {
+    const value2 = node.value;
+    if (typeof value2 !== "string" && typeof value2 !== "number") {
       errors.push({
         code: "invalid-shape",
         path: name,
@@ -7275,9 +7275,9 @@ function collect(node, path, raws, errors) {
       name,
       type: inferType(firstSegment),
       group: firstSegment,
-      rawValue: value,
+      rawValue: value2,
       description,
-      aliasOf: aliasTarget(value)
+      aliasOf: aliasTarget(value2)
     });
     return;
   }
@@ -7411,22 +7411,22 @@ function mapType(sourceType) {
       return "other";
   }
 }
-function isPlainObject(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isPlainObject(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 function readLeaf(node) {
   const hasClassic = "value" in node;
   const hasModern = "$value" in node;
   if (!hasClassic && !hasModern) return void 0;
-  const value = hasModern ? node.$value : node.value;
+  const value2 = hasModern ? node.$value : node.value;
   const type = hasModern ? node.$type : node.type;
   const description = node.$description ?? node.description;
-  return { value, type, description };
+  return { value: value2, type, description };
 }
 var ALIAS_RE = /^\{([^}]+)\}$/;
-function aliasTarget2(value) {
-  if (typeof value !== "string") return void 0;
-  const match = ALIAS_RE.exec(value);
+function aliasTarget2(value2) {
+  if (typeof value2 !== "string") return void 0;
+  const match = ALIAS_RE.exec(value2);
   return match ? match[1] : void 0;
 }
 function collectSet(setName, tree, out, errors) {
@@ -7521,7 +7521,7 @@ function parseTokensStudio(source) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve10 = (name, seen) => {
+  const resolve11 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -7547,7 +7547,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve10(target, new Set(seen).add(target));
+    const downstream = resolve11(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -7555,7 +7555,7 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve10(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve11(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
     const token = {
       name,
@@ -7589,12 +7589,12 @@ var KNOWN_TYPES = /* @__PURE__ */ new Set([
   "shadow",
   "typography"
 ]);
-function isPlainObject2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isPlainObject2(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
-function aliasTarget3(value) {
-  if (typeof value !== "string") return void 0;
-  const match = /^\{([^}]+)\}$/.exec(value.trim());
+function aliasTarget3(value2) {
+  if (typeof value2 !== "string") return void 0;
+  const match = /^\{([^}]+)\}$/.exec(value2.trim());
   return match ? match[1] : void 0;
 }
 function mapType2(raw, path, warnings) {
@@ -7607,8 +7607,8 @@ function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
   const path = pathSegments.join(".");
   const ownType = "$type" in node && node.$type !== void 0 ? node.$type : inheritedType;
   if ("$value" in node) {
-    const value = node.$value;
-    if (typeof value !== "string" && typeof value !== "number" && !isPlainObject2(value)) {
+    const value2 = node.$value;
+    if (typeof value2 !== "string" && typeof value2 !== "number" && !isPlainObject2(value2)) {
       errors.push({
         code: "invalid-shape",
         path,
@@ -7628,7 +7628,7 @@ function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
     const token = {
       name: path,
       type: mapType2(ownType, path, warnings),
-      rawValue: value,
+      rawValue: value2,
       group
     };
     if (typeof node.$description === "string") {
@@ -7827,8 +7827,8 @@ var import_picocolors = __toESM(require_picocolors(), 1);
 var colors = import_picocolors.default.createColors(true);
 var FULL_BLOCK = "\u2588";
 var PARTIAL_BLOCKS = ["", "\u258F", "\u258E", "\u258D", "\u258C", "\u258B", "\u258A", "\u2589"];
-function displayWidth(value) {
-  return [...value].length;
+function displayWidth(value2) {
+  return [...value2].length;
 }
 function buildBar(fraction, width) {
   const eighths = Math.max(0, Math.round(fraction * width * 8));
@@ -7851,8 +7851,8 @@ function renderBarChart(items, opts) {
     const bar = buildBar(fraction, opts.width);
     const renderedBar = opts.color && bar.length > 0 ? colors.cyan(bar) : bar;
     const label = item.label + " ".repeat(labelWidth - displayWidth(item.label));
-    const value = (valueStrings[index] ?? "").padStart(valueWidth);
-    return `${label} \u2502${renderedBar} ${value}`;
+    const value2 = (valueStrings[index] ?? "").padStart(valueWidth);
+    return `${label} \u2502${renderedBar} ${value2}`;
   }).join("\n");
 }
 
@@ -7880,17 +7880,17 @@ function shouldColor(env, isTTY) {
 }
 
 // src/render/terminal/table.ts
-function isNumericCell(value) {
-  const trimmed = value.trim();
+function isNumericCell(value2) {
+  const trimmed = value2.trim();
   return trimmed !== "" && !Number.isNaN(Number(trimmed));
 }
-function displayWidth2(value) {
-  return [...value].length;
+function displayWidth2(value2) {
+  return [...value2].length;
 }
-function pad(value, width, alignRight) {
-  const gap = Math.max(0, width - displayWidth2(value));
+function pad(value2, width, alignRight) {
+  const gap = Math.max(0, width - displayWidth2(value2));
   const filler = " ".repeat(gap);
-  return alignRight ? filler + value : value + filler;
+  return alignRight ? filler + value2 : value2 + filler;
 }
 function renderTable(headers, rows, _opts) {
   const columnCount = headers.length;
@@ -7942,8 +7942,8 @@ function fail(message) {
 `);
   process.exitCode = 2;
 }
-function isPlainObject3(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function isPlainObject3(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 function readThemes(source) {
   const raw = source.$themes;
@@ -8311,11 +8311,11 @@ function appendAdoptionHistory(targetDir, coverage) {
 }
 function renderTerm2(coverage, color) {
   const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct3 = total > 0 ? Math.round(imported / total * 100) : 0;
+  const pct4 = total > 0 ? Math.round(imported / total * 100) : 0;
   const clean = uncoveredTotal === 0;
   const summary = severityColor(
     clean ? "ok" : "warn",
-    `Import coverage: ${imported}/${total} registry components imported (${pct3}%).`,
+    `Import coverage: ${imported}/${total} registry components imported (${pct4}%).`,
     { color }
   );
   const lines = [summary];
@@ -8518,14 +8518,14 @@ var COMPONENT_ORDER = [
   "a11y",
   "adoption"
 ];
-function asNumber(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+function asNumber(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function clamp01(value) {
-  return Math.min(100, Math.max(0, value));
+function clamp01(value2) {
+  return Math.min(100, Math.max(0, value2));
 }
-function roundHalfUp(value) {
-  return Math.round(value);
+function roundHalfUp(value2) {
+  return Math.round(value2);
 }
 function validateWeights(raw) {
   if (raw === void 0 || raw === null) {
@@ -8541,14 +8541,14 @@ function validateWeights(raw) {
       return { kind: "unknown-key", key };
     }
     const typedKey = key;
-    const value = obj[key];
-    if (typeof value !== "number" || !Number.isFinite(value)) {
+    const value2 = obj[key];
+    if (typeof value2 !== "number" || !Number.isFinite(value2)) {
       return { kind: "non-finite", key: typedKey };
     }
-    if (value <= 0) {
+    if (value2 <= 0) {
       return { kind: "non-positive", key: typedKey };
     }
-    weights[typedKey] = value;
+    weights[typedKey] = value2;
   }
   return { kind: "ok", weights };
 }
@@ -8887,11 +8887,11 @@ function writeProjectConfig(dir, patch) {
     }
   }
   const merged = { ...existing };
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === void 0) {
+  for (const [key, value2] of Object.entries(patch)) {
+    if (value2 === void 0) {
       delete merged[key];
     } else {
-      merged[key] = value;
+      merged[key] = value2;
     }
   }
   const text = `${JSON.stringify(merged, null, 2)}
@@ -8912,16 +8912,16 @@ var CHAR_WIDTH = 7;
 var SEGMENT_PADDING = 10;
 var HEIGHT = 20;
 var FONT_SIZE = 11;
-function escapeXml(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function escapeXml(value2) {
+  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function clamp2(value, min, max) {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
+function clamp2(value2, min, max) {
+  if (value2 < min) return min;
+  if (value2 > max) return max;
+  return value2;
 }
-function roundHalfUp2(value) {
-  return Math.round(value);
+function roundHalfUp2(value2) {
+  return Math.round(value2);
 }
 function bandFill(score) {
   if (score >= 90) return BAND_GREEN;
@@ -9051,9 +9051,9 @@ var SEVERITY_ORDER = {
   minor: 2
 };
 var CONVENTIONAL_HEADER = /^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/;
-function toIso(value) {
-  const ms = Date.parse(value);
-  if (Number.isNaN(ms)) return value;
+function toIso(value2) {
+  const ms = Date.parse(value2);
+  if (Number.isNaN(ms)) return value2;
   return new Date(ms).toISOString();
 }
 function withinSince(dateIso, since) {
@@ -9063,10 +9063,10 @@ function withinSince(dateIso, since) {
   return at >= from;
 }
 function valuePreview(token) {
-  const { value } = token;
-  if (typeof value === "string" || typeof value === "number")
-    return String(value);
-  return JSON.stringify(value);
+  const { value: value2 } = token;
+  if (typeof value2 === "string" || typeof value2 === "number")
+    return String(value2);
+  return JSON.stringify(value2);
 }
 function fromDiffEntry(entry, dateIso) {
   const severity = entry.impact === "breaking" ? "breaking" : "notable";
@@ -9268,7 +9268,7 @@ var DEFAULT_BASE_URL = "https://api.figma.com";
 var MAX_RETRIES = 3;
 var DEFAULT_RETRY_AFTER_SECONDS = 1;
 function defaultSleep(ms) {
-  return new Promise((resolve10) => setTimeout(resolve10, ms));
+  return new Promise((resolve11) => setTimeout(resolve11, ms));
 }
 function joinIds(ids) {
   return encodeURIComponent(ids.join(","));
@@ -9677,8 +9677,8 @@ function suggestViewNames(input, limit = 3) {
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
   ).slice(0, limit).map((c2) => c2.name);
 }
-function isPresetName(value) {
-  return Object.hasOwn(PRESETS, value);
+function isPresetName(value2) {
+  return Object.hasOwn(PRESETS, value2);
 }
 function resolveSource(selection, source) {
   const view = selection.view;
@@ -9757,9 +9757,9 @@ var LineReader = class {
   constructor(rl) {
     rl.on("line", (line) => {
       if (this.waiting !== void 0) {
-        const { resolve: resolve10 } = this.waiting;
+        const { resolve: resolve11 } = this.waiting;
         this.waiting = void 0;
-        resolve10(line);
+        resolve11(line);
       } else {
         this.queue.push(line);
       }
@@ -9778,8 +9778,8 @@ var LineReader = class {
     const buffered = this.queue.shift();
     if (buffered !== void 0) return Promise.resolve(buffered);
     if (this.closed) return Promise.reject(new EofError());
-    return new Promise((resolve10, reject) => {
-      this.waiting = { resolve: resolve10, reject };
+    return new Promise((resolve11, reject) => {
+      this.waiting = { resolve: resolve11, reject };
     });
   }
 };
@@ -10179,7 +10179,7 @@ function registerDashboardCommand(program2) {
   });
 }
 
-// src/cli-commands/docs.ts
+// src/cli-commands/digest.ts
 import {
   existsSync as existsSync6,
   mkdirSync as mkdirSync4,
@@ -10187,7 +10187,465 @@ import {
   statSync as statSync4,
   writeFileSync as writeFileSync3
 } from "fs";
-import { dirname as dirname3, join as join7, resolve as resolvePath2 } from "path";
+import { dirname as dirname3, join as join7, resolve as resolve7 } from "path";
+import { cwd as processCwd2 } from "process";
+
+// src/engines/report/history-lines.ts
+function asObject(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function replayHistory(text) {
+  const records = [];
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = (lines[i] ?? "").trim();
+    if (trimmed === "") continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+    const record = asObject(parsed);
+    if (record === void 0) continue;
+    if (typeof record.kind !== "string") continue;
+    const entry = { kind: record.kind, record };
+    if (typeof record.at === "string") entry.at = record.at;
+    records.push(entry);
+  }
+  return records;
+}
+
+// src/engines/report/digest.ts
+var ACCEPTED_SINCE_FORMS = 'Expected an ISO date "YYYY-MM-DD" or a relative window "<N>d" / "<N>w".';
+var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+var RELATIVE = /^(\d+)([dw])$/;
+var MS_PER_DAY = 24 * 60 * 60 * 1e3;
+function parseSince(raw, nowIso) {
+  const value2 = raw ?? "7d";
+  const isoMatch = ISO_DATE.exec(value2);
+  if (isoMatch !== null) {
+    const ms = Date.parse(`${value2}T00:00:00.000Z`);
+    if (Number.isNaN(ms)) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    const roundTrip = new Date(ms).toISOString().slice(0, 10);
+    if (roundTrip !== value2) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    return { kind: "ok", sinceIso: `${value2}T00:00:00.000Z` };
+  }
+  const relMatch = RELATIVE.exec(value2);
+  if (relMatch !== null) {
+    const count = Number.parseInt(relMatch[1] ?? "", 10);
+    const unit = relMatch[2];
+    if (count <= 0) return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    const days = unit === "w" ? count * 7 : count;
+    const nowMs = Date.parse(nowIso);
+    if (Number.isNaN(nowMs)) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    return {
+      kind: "ok",
+      sinceIso: new Date(nowMs - days * MS_PER_DAY).toISOString()
+    };
+  }
+  return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+}
+var KIND_AUDIENCE = {
+  drift: "both",
+  lint: "developer",
+  "on-system": "both",
+  coverage: "both",
+  readiness: "designer",
+  a11y: "designer"
+};
+var MOVEMENT_ORDER = [
+  "drift",
+  "lint",
+  "on-system",
+  "coverage",
+  "readiness",
+  "a11y"
+];
+function asNumber2(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function asRecord(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function pct(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function inAudience(tag, wanted) {
+  if (wanted === "both") return true;
+  return tag === wanted || tag === "both";
+}
+function absorb(side, kind, record) {
+  switch (kind) {
+    case "tokens-check":
+      side.tokensCheck = record;
+      break;
+    case "lint":
+      side.lint = record;
+      if (asRecord(record.adoption) !== void 0) side.adoption = record;
+      break;
+    case "adoption":
+      side.adoptionLine = record;
+      break;
+    case "handoff":
+      side.handoff = record;
+      break;
+    case "a11y":
+      side.a11y = record;
+      break;
+    default:
+      break;
+  }
+}
+function driftMetric(r2) {
+  return r2 === void 0 ? void 0 : asNumber2(r2.stale);
+}
+function lintMetric(r2) {
+  if (r2 === void 0) return void 0;
+  const byKind = asRecord(r2.byKind) ?? {};
+  return asNumber2(byKind.exact) + asNumber2(byKind.near) + asNumber2(byKind.offSystem);
+}
+function onSystemMetric(r2) {
+  const adoption = r2 === void 0 ? void 0 : asRecord(r2.adoption);
+  if (adoption === void 0) return void 0;
+  return pct(
+    asNumber2(adoption.refs),
+    asNumber2(adoption.refs) + asNumber2(adoption.literals)
+  );
+}
+function coverageMetric(r2) {
+  if (r2 === void 0) return void 0;
+  return pct(asNumber2(r2.imported), asNumber2(r2.total));
+}
+function readinessMetric(r2) {
+  return r2 === void 0 ? void 0 : asNumber2(r2.score);
+}
+function a11yMetric(r2) {
+  if (r2 === void 0) return void 0;
+  const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
+  let passed = 0;
+  let failed = 0;
+  for (const m of modes2) {
+    const mm = asRecord(m);
+    if (mm === void 0) continue;
+    passed += asNumber2(mm.passed);
+    failed += asNumber2(mm.failed);
+  }
+  return pct(passed, passed + failed);
+}
+var METRICS = {
+  drift: { slot: "tokensCheck", read: driftMetric },
+  lint: { slot: "lint", read: lintMetric },
+  "on-system": { slot: "adoption", read: onSystemMetric },
+  coverage: { slot: "adoptionLine", read: coverageMetric },
+  readiness: { slot: "handoff", read: readinessMetric },
+  a11y: { slot: "a11y", read: a11yMetric }
+};
+function directionOf(baseline, current) {
+  if (baseline === void 0) return "flat";
+  if (current > baseline) return "up";
+  if (current < baseline) return "down";
+  return "flat";
+}
+function buildDigest(text, sinceIso, audience, readinessThreshold) {
+  const records = replayHistory(text);
+  const before = {};
+  const inWindow = {};
+  let anyInWindow = false;
+  for (const { kind, at, record } of records) {
+    if (at === void 0) continue;
+    if (at >= sinceIso) {
+      absorb(inWindow, kind, record);
+      anyInWindow = true;
+    } else {
+      absorb(before, kind, record);
+    }
+  }
+  if (!anyInWindow) {
+    return { kind: "quiet", sinceIso, audience };
+  }
+  const movements = [];
+  for (const kind of MOVEMENT_ORDER) {
+    const tag = KIND_AUDIENCE[kind];
+    if (!inAudience(tag, audience)) continue;
+    const { slot, read } = METRICS[kind];
+    const current = read(inWindow[slot]);
+    if (current === void 0) continue;
+    const baseline = read(before[slot]);
+    movements.push({
+      kind,
+      audience: tag,
+      ...baseline !== void 0 ? { baseline } : {},
+      current,
+      isNew: baseline === void 0,
+      direction: directionOf(baseline, current)
+    });
+  }
+  const candidates = [];
+  const driftStale = driftMetric(inWindow.tokensCheck);
+  if (driftStale !== void 0 && driftStale > 0) {
+    candidates.push({ command: "/ds-bridge:token-check", audience: "both" });
+  }
+  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber2(asRecord(inWindow.lint.byKind)?.offSystem);
+  if (offSystem !== void 0 && offSystem > 0) {
+    candidates.push({
+      command: "/ds-bridge:ds-lint --fix",
+      audience: "developer"
+    });
+  }
+  const readiness = readinessMetric(inWindow.handoff);
+  if (readiness !== void 0 && readiness < readinessThreshold) {
+    candidates.push({ command: "/ds-bridge:handoff-qa", audience: "designer" });
+  }
+  const a11yFailing = (() => {
+    if (inWindow.a11y === void 0) return false;
+    const modes2 = Array.isArray(inWindow.a11y.modes) ? inWindow.a11y.modes : [];
+    return modes2.some((m) => asNumber2(asRecord(m)?.failed) > 0);
+  })();
+  if (a11yFailing) {
+    candidates.push({ command: "/ds-bridge:a11y-check", audience: "designer" });
+  }
+  const coverage = coverageMetric(inWindow.adoptionLine);
+  if (coverage !== void 0 && coverage < 100) {
+    candidates.push({ command: "ds-bridge adoption", audience: "both" });
+  }
+  const actions = candidates.filter((a) => inAudience(a.audience, audience)).slice(0, 3);
+  return { kind: "ok", sinceIso, audience, movements, actions };
+}
+
+// src/engines/report/digest-md.ts
+var TITLE = "# Design-system digest";
+var SECTIONS2 = [
+  { heading: "## For designers", audience: "designer" },
+  { heading: "## For developers", audience: "developer" }
+];
+var MOVEMENT_LABEL = {
+  drift: "Drift",
+  lint: "Lint violations",
+  "on-system": "On-system",
+  coverage: "Import coverage",
+  readiness: "Readiness",
+  a11y: "Contrast"
+};
+var PERCENT_KINDS = /* @__PURE__ */ new Set([
+  "on-system",
+  "coverage",
+  "a11y"
+]);
+var ACTION_REASON = {
+  "/ds-bridge:token-check": "review breaking token drift",
+  "/ds-bridge:ds-lint --fix": "clear off-system lint violations",
+  "/ds-bridge:handoff-qa": "readiness is below the gate",
+  "/ds-bridge:a11y-check": "failing contrast pairs need a look",
+  "ds-bridge adoption": "import coverage is below 100%"
+};
+function arrow(row) {
+  if (row.isNew) return "\u2014";
+  switch (row.direction) {
+    case "up":
+      return "\u25B2";
+    case "down":
+      return "\u25BC";
+    case "flat":
+      return "=";
+  }
+}
+function value(kind, n) {
+  return PERCENT_KINDS.has(kind) ? `${n}%` : `${n}`;
+}
+function inSection2(rowAudience, sectionAudience) {
+  return rowAudience === sectionAudience || rowAudience === "both";
+}
+function renderMovement(row) {
+  const label = MOVEMENT_LABEL[row.kind];
+  const current = value(row.kind, row.current);
+  if (row.isNew) {
+    return `- ${label} ${arrow(row)} new ${current}`;
+  }
+  const baseline = value(row.kind, row.baseline ?? 0);
+  return `- ${label} ${arrow(row)} ${baseline} \u2192 ${current}`;
+}
+function renderSection2(heading, sectionAudience, movements) {
+  const lines = movements.filter((m) => inSection2(m.audience, sectionAudience));
+  if (lines.length === 0) return void 0;
+  return [heading, "", ...lines.map(renderMovement)].join("\n");
+}
+function renderAction(command, index) {
+  const reason = ACTION_REASON[command] ?? "see the docs";
+  return `${index + 1}. Run \`${command}\` \u2014 ${reason}`;
+}
+function renderDigestMarkdown(model) {
+  if (model.kind === "quiet") {
+    return `${TITLE}
+
+_Quiet week \u2014 no design-system movement since ${model.sinceIso}._
+`;
+  }
+  const blocks = [
+    TITLE,
+    `_Window: changes since ${model.sinceIso}._`
+  ];
+  for (const section of SECTIONS2) {
+    if (model.audience !== "both" && model.audience !== section.audience) {
+      continue;
+    }
+    const block = renderSection2(
+      section.heading,
+      section.audience,
+      model.movements
+    );
+    if (block !== void 0) blocks.push(block);
+  }
+  if (model.actions.length > 0) {
+    const actionLines = model.actions.map((a, i) => renderAction(a.command, i));
+    blocks.push(["## Actions", "", ...actionLines].join("\n"));
+  }
+  return `${blocks.join("\n\n")}
+`;
+}
+
+// src/cli-commands/digest.ts
+function defaultDeps2() {
+  return {
+    cwd: processCwd2(),
+    now: () => /* @__PURE__ */ new Date(),
+    stdout: (text) => process.stdout.write(text),
+    stderr: (text) => process.stderr.write(text)
+  };
+}
+function parseAudience2(flag) {
+  switch (flag) {
+    case "designers":
+    case "designer":
+      return { kind: "ok", value: "designer" };
+    case "developers":
+    case "developer":
+      return { kind: "ok", value: "developer" };
+    case "both":
+      return { kind: "ok", value: "both" };
+    default:
+      return { kind: "error" };
+  }
+}
+function readHistoryText(stateDir) {
+  try {
+    return readFileSync6(join7(stateDir, "history.jsonl"), "utf8");
+  } catch {
+    return "";
+  }
+}
+function resolveReadinessThreshold(targetDir) {
+  const configPath = join7(targetDir, ".ds-bridge.json");
+  let projectFileText;
+  if (existsSync6(configPath)) {
+    try {
+      projectFileText = readFileSync6(configPath, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not read ${configPath}: ${detail}`
+      };
+    }
+  }
+  const resolved = resolveConfig(
+    projectFileText !== void 0 ? { projectFileText } : {}
+  );
+  if (resolved.kind === "invalid-project-file") {
+    return { kind: "error", message: resolved.message };
+  }
+  return { kind: "ok", value: resolved.config.readinessThreshold };
+}
+function runDigest(path, options, deps) {
+  const audience = parseAudience2(options.audience);
+  if (audience.kind !== "ok") {
+    deps.stderr(
+      `Unknown --audience "${options.audience}". Expected "designers", "developers", or "both".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const nowIso = deps.now().toISOString();
+  const since = parseSince(options.since, nowIso);
+  if (since.kind !== "ok") {
+    deps.stderr(`Invalid --since "${options.since}". ${since.message}
+`);
+    process.exitCode = 2;
+    return;
+  }
+  const targetDir = resolve7(deps.cwd, path);
+  if (!existsSync6(targetDir) || !statSync4(targetDir).isDirectory()) {
+    deps.stderr(`Path "${targetDir}" is not a directory.
+`);
+    process.exitCode = 2;
+    return;
+  }
+  const threshold = resolveReadinessThreshold(targetDir);
+  if (threshold.kind === "error") {
+    deps.stderr(`${threshold.message}
+`);
+    process.exitCode = 2;
+    return;
+  }
+  const stateDir = join7(targetDir, ".ds-bridge");
+  const text = readHistoryText(stateDir);
+  const model = buildDigest(
+    text,
+    since.sinceIso,
+    audience.value,
+    threshold.value
+  );
+  const markdown = renderDigestMarkdown(model);
+  if (options.out !== void 0) {
+    const outPath = resolve7(deps.cwd, options.out);
+    try {
+      mkdirSync4(dirname3(outPath), { recursive: true });
+      writeFileSync3(outPath, markdown, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      deps.stderr(`Could not write digest to "${outPath}": ${detail}
+`);
+      process.exitCode = 2;
+      return;
+    }
+    deps.stdout(`${outPath}
+`);
+  } else {
+    deps.stdout(markdown);
+  }
+  process.exitCode = 0;
+}
+function registerDigestCommand(program2) {
+  program2.command("digest").description(
+    "Paste-anywhere markdown of what moved in a window, segmented by audience, ending in up to three concrete actions"
+  ).argument("[path]", "project directory to digest", ".").option(
+    "--since <window>",
+    'window start: an ISO date "YYYY-MM-DD" or a relative "<N>d" / "<N>w" (default 7d)'
+  ).option("--audience <who>", "designers | developers | both", "both").option(
+    "--out <file>",
+    "redirect the digest markdown to a file (and print the path) instead of stdout"
+  ).action((path, options) => {
+    runDigest(path, options, defaultDeps2());
+  });
+}
+
+// src/cli-commands/docs.ts
+import {
+  existsSync as existsSync7,
+  mkdirSync as mkdirSync5,
+  readFileSync as readFileSync7,
+  statSync as statSync5,
+  writeFileSync as writeFileSync4
+} from "fs";
+import { dirname as dirname4, join as join8, resolve as resolvePath2 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/engines/docs/merge.ts
@@ -10370,7 +10828,7 @@ function renderVariants(doc) {
     return ["## Variants", "", "_No variants._"].join("\n");
   }
   const lines = axes.map((axis) => {
-    const values = (doc.code.variants[axis] ?? []).map((value) => `\`${value}\``).join(", ");
+    const values = (doc.code.variants[axis] ?? []).map((value2) => `\`${value2}\``).join(", ");
     return `- **${axis}**: ${values}`;
   });
   return ["## Variants", "", ...lines].join("\n");
@@ -10437,14 +10895,14 @@ async function scanCode(targetDir) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath2(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname3(filename);
+    globals.__dirname = dirname4(filename);
   }
   const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
   return scanCodeComponents(targetDir);
 }
 function loadRegistry2(targetDir) {
-  const registryPath = join7(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync6(registryPath)) {
+  const registryPath = join8(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync7(registryPath)) {
     fail5(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -10452,7 +10910,7 @@ function loadRegistry2(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync6(registryPath, "utf8");
+    raw = readFileSync7(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail5(`Could not read registry "${registryPath}": ${detail}`);
@@ -10475,7 +10933,7 @@ async function discoverTokens(targetDir) {
   if (source === void 0) return EMPTY_TOKENS;
   let raw;
   try {
-    raw = readFileSync6(source.path, "utf8");
+    raw = readFileSync7(source.path, "utf8");
   } catch {
     return EMPTY_TOKENS;
   }
@@ -10495,8 +10953,8 @@ function mdxFileName(component) {
   return `${safe.length > 0 ? safe : "component"}.mdx`;
 }
 function hasRegistry(candidate) {
-  return existsSync6(
-    join7(resolvePath2(candidate), ".ds-bridge", "registry.json")
+  return existsSync7(
+    join8(resolvePath2(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate(component, path) {
@@ -10524,7 +10982,7 @@ async function runDocs(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate(rawComponent, rawPath);
   const targetDir = resolvePath2(path);
-  if (!existsSync6(targetDir) || !statSync4(targetDir).isDirectory()) {
+  if (!existsSync7(targetDir) || !statSync5(targetDir).isDirectory()) {
     fail5(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -10545,9 +11003,9 @@ async function runDocs(rawComponent, rawPath, options) {
       return;
     }
   }
-  const outDir = options.out !== void 0 ? resolvePath2(options.out) : join7(targetDir, ".ds-bridge", "docs");
+  const outDir = options.out !== void 0 ? resolvePath2(options.out) : join8(targetDir, ".ds-bridge", "docs");
   try {
-    mkdirSync4(outDir, { recursive: true });
+    mkdirSync5(outDir, { recursive: true });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail5(`Could not create output directory "${outDir}": ${detail}`);
@@ -10556,9 +11014,9 @@ async function runDocs(rawComponent, rawPath, options) {
   const pages = [];
   for (const doc of docs) {
     const fileName = mdxFileName(doc.name);
-    const pagePath = join7(outDir, fileName);
+    const pagePath = join8(outDir, fileName);
     try {
-      writeFileSync3(pagePath, renderComponentMdx(doc), "utf8");
+      writeFileSync4(pagePath, renderComponentMdx(doc), "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       fail5(`Could not write "${pagePath}": ${detail}`);
@@ -10566,9 +11024,9 @@ async function runDocs(rawComponent, rawPath, options) {
     }
     pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
   }
-  const llmsPath = join7(outDir, "llms.txt");
+  const llmsPath = join8(outDir, "llms.txt");
   try {
-    writeFileSync3(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+    writeFileSync4(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail5(`Could not write "${llmsPath}": ${detail}`);
@@ -10599,8 +11057,8 @@ function registerDocsCommand(program2) {
 }
 
 // src/cli-commands/handoff.ts
-import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync5 } from "fs";
-import { join as join8 } from "path";
+import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync6 } from "fs";
+import { join as join9 } from "path";
 import { cwd } from "process";
 
 // src/engines/handoff/parse-url.ts
@@ -10610,14 +11068,14 @@ function isFigmaHost(host) {
   return lower === "figma.com" || lower.endsWith(".figma.com");
 }
 function normalizeNodeId(raw) {
-  let value = raw;
+  let value2 = raw;
   try {
-    value = decodeURIComponent(raw);
+    value2 = decodeURIComponent(raw);
   } catch {
-    value = raw;
+    value2 = raw;
   }
-  if (value.length === 0) return void 0;
-  return value.replace(/-/g, ":");
+  if (value2.length === 0) return void 0;
+  return value2.replace(/-/g, ":");
 }
 var INVALID = (message) => ({
   kind: "invalid-url",
@@ -10845,7 +11303,7 @@ var RULE_LABEL = {
 };
 var HISTORY_DEDUCTION_LIMIT = 3;
 function appendHandoffHistory(report, frameName) {
-  const stateDir = join8(cwd(), ".ds-bridge");
+  const stateDir = join9(cwd(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "handoff",
@@ -10853,9 +11311,9 @@ function appendHandoffHistory(report, frameName) {
     frameName,
     deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
   };
-  mkdirSync5(stateDir, { recursive: true });
+  mkdirSync6(stateDir, { recursive: true });
   appendFileSync3(
-    join8(stateDir, "history.jsonl"),
+    join9(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -11104,12 +11562,12 @@ function registerHandoffCommand(program2) {
 // src/cli-commands/impact.ts
 import {
   appendFileSync as appendFileSync4,
-  existsSync as existsSync7,
-  mkdirSync as mkdirSync6,
-  readFileSync as readFileSync7,
-  writeFileSync as writeFileSync4
+  existsSync as existsSync8,
+  mkdirSync as mkdirSync7,
+  readFileSync as readFileSync8,
+  writeFileSync as writeFileSync5
 } from "fs";
-import { dirname as dirname4, join as join9 } from "path";
+import { dirname as dirname5, join as join10 } from "path";
 import { cwd as cwd2, env as processEnv } from "process";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
@@ -11164,17 +11622,17 @@ function diffVariants(before, after) {
     const afterSet = new Set(afterValues);
     const added = [];
     const removed = [];
-    for (const value of afterSet) {
-      if (!beforeSet.has(value)) added.push(value);
+    for (const value2 of afterSet) {
+      if (!beforeSet.has(value2)) added.push(value2);
     }
-    for (const value of beforeSet) {
-      if (!afterSet.has(value)) removed.push(value);
+    for (const value2 of beforeSet) {
+      if (!afterSet.has(value2)) removed.push(value2);
     }
-    for (const value of removed.sort()) {
-      changes.push({ axis, kind: "value-removed", value });
+    for (const value2 of removed.sort()) {
+      changes.push({ axis, kind: "value-removed", value: value2 });
     }
-    for (const value of added.sort()) {
-      changes.push({ axis, kind: "value-added", value });
+    for (const value2 of added.sort()) {
+      changes.push({ axis, kind: "value-added", value: value2 });
     }
   }
   return changes;
@@ -11315,11 +11773,11 @@ function diffComponents(before, after) {
 }
 
 // src/engines/registry/scan-figma.ts
-function isString(value) {
-  return typeof value === "string";
+function isString(value2) {
+  return typeof value2 === "string";
 }
-function asString(value) {
-  return isString(value) ? value : "";
+function asString(value2) {
+  return isString(value2) ? value2 : "";
 }
 function parseVariantName(name) {
   const props = {};
@@ -11328,13 +11786,13 @@ function parseVariantName(name) {
     const eq = pair.indexOf("=");
     if (eq === -1) continue;
     const key = pair.slice(0, eq).trim();
-    const value = pair.slice(eq + 1).trim();
+    const value2 = pair.slice(eq + 1).trim();
     if (key.length === 0) continue;
     const existing = props[key];
     if (existing === void 0) {
-      props[key] = [value];
+      props[key] = [value2];
     } else {
-      existing.push(value);
+      existing.push(value2);
     }
   }
   return props;
@@ -11513,14 +11971,14 @@ function clientErrorMessage2(result) {
 function cursorPath() {
   const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join9(dataDir, "impact-cursor.json");
+    return join10(dataDir, "impact-cursor.json");
   }
-  return join9(cwd2(), ".ds-bridge", "cache", "impact-cursor.json");
+  return join10(cwd2(), ".ds-bridge", "cache", "impact-cursor.json");
 }
 function readCursor(path) {
-  if (!existsSync7(path)) return void 0;
+  if (!existsSync8(path)) return void 0;
   try {
-    const parsed = JSON.parse(readFileSync7(path, "utf8"));
+    const parsed = JSON.parse(readFileSync8(path, "utf8"));
     if (!Array.isArray(parsed.snapshot)) return void 0;
     return parsed;
   } catch {
@@ -11529,8 +11987,8 @@ function readCursor(path) {
 }
 function writeCursor(path, cursor) {
   try {
-    mkdirSync6(dirname4(path), { recursive: true });
-    writeFileSync4(path, `${JSON.stringify(cursor, null, 2)}
+    mkdirSync7(dirname5(path), { recursive: true });
+    writeFileSync5(path, `${JSON.stringify(cursor, null, 2)}
 `, "utf8");
     return true;
   } catch {
@@ -11538,10 +11996,10 @@ function writeCursor(path, cursor) {
   }
 }
 function loadRegistry3() {
-  const registryPath = join9(cwd2(), ".ds-bridge", "registry.json");
-  if (!existsSync7(registryPath)) return void 0;
+  const registryPath = join10(cwd2(), ".ds-bridge", "registry.json");
+  if (!existsSync8(registryPath)) return void 0;
   try {
-    return JSON.parse(readFileSync7(registryPath, "utf8"));
+    return JSON.parse(readFileSync8(registryPath, "utf8"));
   } catch {
     return void 0;
   }
@@ -11551,7 +12009,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath3(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname4(filename);
+    globals.__dirname = dirname5(filename);
   }
   const { mapUsage } = await import("./usage-OFLQCL5F.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd2() });
@@ -11585,7 +12043,7 @@ function countByImpact(diff) {
   return counts;
 }
 function appendImpactHistory(targetDir, diff, usageByName) {
-  const stateDir = join9(targetDir, ".ds-bridge");
+  const stateDir = join10(targetDir, ".ds-bridge");
   let touchedCallSites = 0;
   for (const usage of usageByName.values()) {
     touchedCallSites += usage.usages.length;
@@ -11596,9 +12054,9 @@ function appendImpactHistory(targetDir, diff, usageByName) {
     ...countByImpact(diff),
     touchedCallSites
   };
-  mkdirSync6(stateDir, { recursive: true });
+  mkdirSync7(stateDir, { recursive: true });
   appendFileSync4(
-    join9(stateDir, "history.jsonl"),
+    join10(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -11845,14 +12303,14 @@ function registerImpactCommand(program2) {
 import { spawnSync as spawnSync2 } from "child_process";
 import {
   appendFileSync as appendFileSync5,
-  existsSync as existsSync8,
-  mkdirSync as mkdirSync7,
+  existsSync as existsSync9,
+  mkdirSync as mkdirSync8,
   readdirSync,
-  readFileSync as readFileSync8,
-  statSync as statSync5,
-  writeFileSync as writeFileSync5
+  readFileSync as readFileSync9,
+  statSync as statSync6,
+  writeFileSync as writeFileSync6
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join10, relative, resolve as resolve7, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute2, join as join11, relative, resolve as resolve8, sep as sep2 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -11917,14 +12375,14 @@ function blankComments(text) {
   }
   return out;
 }
-function* scanValue(value, property) {
+function* scanValue(value2, property) {
   const spacing = isSpacingProperty(property);
   let i = 0;
-  while (i < value.length) {
-    const rest = value.slice(i);
+  while (i < value2.length) {
+    const rest = value2.slice(i);
     if (/^var\s*\(/i.test(rest)) {
-      const close = value.indexOf(")", i);
-      i = close === -1 ? value.length : close + 1;
+      const close = value2.indexOf(")", i);
+      i = close === -1 ? value2.length : close + 1;
       continue;
     }
     const fn5 = COLOR_FN_RE.exec(rest);
@@ -11933,7 +12391,7 @@ function* scanValue(value, property) {
       i += fn5[0].length;
       continue;
     }
-    if (value[i] === "#") {
+    if (value2[i] === "#") {
       const hex2 = HEX_RE.exec(rest);
       if (hex2 !== null && hex2.index === 0) {
         yield { offset: i, raw: hex2[0], valueKind: "color" };
@@ -11941,8 +12399,8 @@ function* scanValue(value, property) {
         continue;
       }
     }
-    if (spacing && (value[i] === "-" || /\d/.test(value[i] ?? ""))) {
-      const prev = value[i - 1] ?? " ";
+    if (spacing && (value2[i] === "-" || /\d/.test(value2[i] ?? ""))) {
+      const prev = value2[i - 1] ?? " ";
       if (!/[a-zA-Z0-9.#-]/.test(prev)) {
         const dim = DIM_RE.exec(rest);
         if (dim !== null && dim.index === 0) {
@@ -11969,9 +12427,9 @@ function extractCss(text, lineBase, colBase) {
     let m = decl.exec(line);
     while (m !== null) {
       const property = m[1] ?? "";
-      const value = m[2] ?? "";
-      const valueStart = m.index + m[0].length - value.length;
-      for (const hit of scanValue(value, property)) {
+      const value2 = m[2] ?? "";
+      const valueStart = m.index + m[0].length - value2.length;
+      for (const hit of scanValue(value2, property)) {
         hits.push({
           line: lineBase + li,
           col: colShift + valueStart + hit.offset + 1,
@@ -12076,8 +12534,8 @@ function extractTsx(source, file) {
 }
 var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
 var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
-function isColorLiteral(value) {
-  const v = value.trim();
+function isColorLiteral(value2) {
+  const v = value2.trim();
   return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
 }
 function extensionOf(path) {
@@ -12124,7 +12582,7 @@ function dirnameOf(path) {
   const slash = path.lastIndexOf("/");
   return slash === -1 ? "" : path.slice(0, slash);
 }
-function pct(refs, literals) {
+function pct2(refs, literals) {
   const denom = refs + literals;
   return denom === 0 ? 0 : refs / denom;
 }
@@ -12144,8 +12602,8 @@ function tallyAdoption(files) {
     }
   }
   const byDirectory = [...byDir.values()].filter((d) => d.refs + d.literals > 0).sort((a, b) => {
-    const pa = pct(a.refs, a.literals);
-    const pb = pct(b.refs, b.literals);
+    const pa = pct2(a.refs, a.literals);
+    const pb = pct2(b.refs, b.literals);
     if (pa !== pb) return pa - pb;
     return a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0;
   }).slice(0, BY_DIRECTORY_CAP);
@@ -12321,9 +12779,9 @@ function matchLiteral(literal, index, options) {
 function buildCompositeColorLookup(tokens) {
   const lookup = /* @__PURE__ */ new Map();
   for (const token of tokens) {
-    const { value } = token;
-    if (typeof value !== "object" || value === null) continue;
-    const inner = value.color;
+    const { value: value2 } = token;
+    if (typeof value2 !== "object" || value2 === null) continue;
+    const inner = value2.color;
     if (typeof inner !== "string") continue;
     const canonical2 = normalizeColor(inner);
     if (canonical2 === void 0) continue;
@@ -12339,17 +12797,17 @@ function buildCompositeColorLookup(tokens) {
 
 // src/engines/tokens/token-index.ts
 function canonicalValueKey(token) {
-  const { value } = token;
-  if (typeof value === "number") {
-    const dim2 = normalizeDimension(value);
-    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value);
+  const { value: value2 } = token;
+  if (typeof value2 === "number") {
+    const dim2 = normalizeDimension(value2);
+    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
   }
-  if (typeof value !== "string") return void 0;
-  const color = normalizeColor(value);
+  if (typeof value2 !== "string") return void 0;
+  const color = normalizeColor(value2);
   if (color !== void 0) return color;
-  const dim = normalizeDimension(value);
+  const dim = normalizeDimension(value2);
   if (dim !== void 0) return `${dim.px}px`;
-  return value;
+  return value2;
 }
 var deltaE2000 = differenceCiede2000();
 function buildTokenIndex(tokens) {
@@ -12426,7 +12884,7 @@ function computeAdoption(files, findings) {
   const perFile = cssFiles.map((file) => {
     let refs = 0;
     try {
-      refs = countTokenRefs(readFileSync8(file.abs, "utf8"));
+      refs = countTokenRefs(readFileSync9(file.abs, "utf8"));
     } catch {
       refs = 0;
     }
@@ -12448,16 +12906,16 @@ function isCssLike(path) {
   return lower.endsWith(".css") || lower.endsWith(".scss");
 }
 function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join10(targetDir, ".ds-bridge");
+  const stateDir = join11(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
     byKind: countByKind(findings),
     adoption: computeAdoption(files, findings)
   };
-  mkdirSync7(stateDir, { recursive: true });
+  mkdirSync8(stateDir, { recursive: true });
   appendFileSync5(
-    join10(stateDir, "history.jsonl"),
+    join11(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -12475,7 +12933,7 @@ function walkLintableFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join10(dir, entry.name);
+    const full = join11(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       walkLintableFiles(full, acc);
@@ -12486,8 +12944,8 @@ function walkLintableFiles(dir, acc) {
 }
 function resolveTokenSource(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve7(process.cwd(), flagTokens);
-    if (!existsSync8(abs2)) {
+    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve8(process.cwd(), flagTokens);
+    if (!existsSync9(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -12495,11 +12953,11 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join10(targetDir, ".ds-bridge.json");
-  if (existsSync8(configPath)) {
+  const configPath = join11(targetDir, ".ds-bridge.json");
+  if (existsSync9(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync8(configPath, "utf8");
+      projectFileText = readFileSync9(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -12507,8 +12965,8 @@ function resolveTokenSource(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute2(src) ? src : resolve7(targetDir, src);
-        if (existsSync8(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute2(src) ? src : resolve8(targetDir, src);
+        if (existsSync9(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -12551,7 +13009,7 @@ function collectTokenCandidates(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join10(dir, entry.name);
+    const full = join11(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       collectTokenCandidates(
@@ -12568,7 +13026,7 @@ function collectTokenCandidates(dir, insideTokenDir, acc) {
 function detectFileFormat2(absPath) {
   let raw;
   try {
-    raw = readFileSync8(absPath, "utf8");
+    raw = readFileSync9(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -12584,7 +13042,7 @@ function detectFileFormat2(absPath) {
 function loadTokenMap(tokenPath) {
   let raw;
   try {
-    raw = readFileSync8(tokenPath, "utf8");
+    raw = readFileSync9(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -12626,7 +13084,7 @@ ${lines.join("\n")}`
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync8(absPath, "utf8");
+    content = readFileSync9(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -12723,7 +13181,7 @@ function changedFiles(targetDir) {
     };
   }
   const files = new Set(
-    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve7(targetDir, rel2))
+    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve8(targetDir, rel2))
   );
   return { kind: "ok", files };
 }
@@ -12732,7 +13190,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync8(absPath, "utf8");
+      content = readFileSync9(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -12743,7 +13201,7 @@ function applyFixes(editsByFile) {
     const next = applyEdits(content, edits);
     if (next === content) continue;
     try {
-      writeFileSync5(absPath, next, "utf8");
+      writeFileSync6(absPath, next, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -12778,12 +13236,12 @@ function registerLintCommand(program2) {
       );
       return;
     }
-    const targetPath = resolve7(path);
-    if (!existsSync8(targetPath)) {
+    const targetPath = resolve8(path);
+    if (!existsSync9(targetPath)) {
       fail8(`Path "${targetPath}" does not exist.`);
       return;
     }
-    const stat2 = statSync5(targetPath);
+    const stat2 = statSync6(targetPath);
     const isFile = stat2.isFile();
     if (isFile && !hasExtension(targetPath)) {
       fail8(
@@ -12844,9 +13302,9 @@ function toRelative(targetDir, abs2) {
 }
 function emitAdoptionSummary(adoption) {
   const total = adoption.refs + adoption.literals;
-  const pct3 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
+  const pct4 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
   process.stdout.write(
-    `on-system: ${pct3}% (${adoption.refs} token refs / ${total} css/scss values)
+    `on-system: ${pct4}% (${adoption.refs} token refs / ${total} css/scss values)
 `
   );
 }
@@ -12902,8 +13360,8 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync9, readFileSync as readFileSync9, statSync as statSync6 } from "fs";
-import { join as join11, resolve as resolvePath3 } from "path";
+import { existsSync as existsSync10, readFileSync as readFileSync10, statSync as statSync7 } from "fs";
+import { join as join12, resolve as resolvePath3 } from "path";
 
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
@@ -13018,8 +13476,8 @@ function statusSeverity2(status) {
   }
 }
 function loadRegistry4(targetDir) {
-  const registryPath = join11(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync9(registryPath)) {
+  const registryPath = join12(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync10(registryPath)) {
     fail9(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -13027,7 +13485,7 @@ function loadRegistry4(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync9(registryPath, "utf8");
+    raw = readFileSync10(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail9(`Could not read registry "${registryPath}": ${detail}`);
@@ -13112,8 +13570,8 @@ function renderTerm9(report, color) {
   );
   return [...lines, "", "Summary:", bars, "", verdict].join("\n");
 }
-function mdCell(value) {
-  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+function mdCell(value2) {
+  return value2.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
 }
 function renderMarkdown(report) {
   const header = "| Component | Status | Detail |";
@@ -13126,8 +13584,8 @@ function renderMarkdown(report) {
   return [header, separator, ...rows, "", summaryLine2].join("\n");
 }
 function hasRegistry2(candidate) {
-  return existsSync9(
-    join11(resolvePath3(candidate), ".ds-bridge", "registry.json")
+  return existsSync10(
+    join12(resolvePath3(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate2(component, path) {
@@ -13144,7 +13602,7 @@ function runParity(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate2(rawComponent, rawPath);
   const targetDir = resolvePath3(path);
-  if (!existsSync9(targetDir) || !statSync6(targetDir).isDirectory()) {
+  if (!existsSync10(targetDir) || !statSync7(targetDir).isDirectory()) {
     fail9(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -13187,13 +13645,13 @@ function registerParityCommand(program2) {
 
 // src/cli-commands/registry.ts
 import {
-  existsSync as existsSync10,
-  mkdirSync as mkdirSync8,
-  readFileSync as readFileSync10,
-  statSync as statSync7,
-  writeFileSync as writeFileSync6
+  existsSync as existsSync11,
+  mkdirSync as mkdirSync9,
+  readFileSync as readFileSync11,
+  statSync as statSync8,
+  writeFileSync as writeFileSync7
 } from "fs";
-import { dirname as dirname5, join as join12, resolve as resolvePath4 } from "path";
+import { dirname as dirname6, join as join13, resolve as resolvePath4 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 
 // src/engines/registry/match.ts
@@ -13235,8 +13693,8 @@ function valueJaccard(a, b) {
   const setB = new Set(b);
   if (setA.size === 0 && setB.size === 0) return 0;
   let intersection = 0;
-  for (const value of setA) {
-    if (setB.has(value)) intersection += 1;
+  for (const value2 of setA) {
+    if (setB.has(value2)) intersection += 1;
   }
   const union = setA.size + setB.size - intersection;
   return union === 0 ? 0 : intersection / union;
@@ -13386,9 +13844,9 @@ function matchComponents(code, figma) {
 }
 
 // src/engines/registry/persist.ts
-function round3(value) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 1e3) / 1e3;
+function round3(value2) {
+  if (!Number.isFinite(value2)) return 0;
+  return Math.round(value2 * 1e3) / 1e3;
 }
 function normalizeName4(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -13471,7 +13929,7 @@ async function scanCode2(targetDir) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath4(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname5(filename);
+    globals.__dirname = dirname6(filename);
   }
   const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
   return scanCodeComponents(targetDir);
@@ -13528,7 +13986,7 @@ async function runBuild(path, options) {
     return;
   }
   const targetDir = resolvePath4(path);
-  if (!existsSync10(targetDir) || !statSync7(targetDir).isDirectory()) {
+  if (!existsSync11(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -13573,11 +14031,11 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join12(targetDir, ".ds-bridge");
-  const registryPath = join12(stateDir, "registry.json");
+  const stateDir = join13(targetDir, ".ds-bridge");
+  const registryPath = join13(stateDir, "registry.json");
   try {
-    mkdirSync8(stateDir, { recursive: true });
-    writeFileSync6(
+    mkdirSync9(stateDir, { recursive: true });
+    writeFileSync7(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
 `,
@@ -13626,8 +14084,8 @@ function renderBuildSummary(registry, registryPath) {
   return lines.join("\n");
 }
 function loadRegistry5(targetDir) {
-  const registryPath = join12(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync10(registryPath)) {
+  const registryPath = join13(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync11(registryPath)) {
     fail10(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -13635,7 +14093,7 @@ function loadRegistry5(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync10(registryPath, "utf8");
+    raw = readFileSync11(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail10(`Could not read registry "${registryPath}": ${detail}`);
@@ -13651,7 +14109,7 @@ function loadRegistry5(targetDir) {
 }
 function runResolve(nodeNameOrId, path) {
   const targetDir = resolvePath4(path);
-  if (!existsSync10(targetDir) || !statSync7(targetDir).isDirectory()) {
+  if (!existsSync11(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -13707,13 +14165,13 @@ function registerRegistryCommand(program2) {
 // src/cli-commands/report.ts
 import { spawn } from "child_process";
 import {
-  existsSync as existsSync11,
-  mkdirSync as mkdirSync9,
-  readFileSync as readFileSync11,
-  statSync as statSync8,
-  writeFileSync as writeFileSync7
+  existsSync as existsSync12,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync12,
+  statSync as statSync9,
+  writeFileSync as writeFileSync8
 } from "fs";
-import { basename, dirname as dirname6, join as join13, resolve as resolve8 } from "path";
+import { basename, dirname as dirname7, join as join14, resolve as resolve9 } from "path";
 import { platform } from "process";
 
 // src/engines/report/scorecard.ts
@@ -13726,36 +14184,26 @@ var ROW_ORDER = [
   "contrast",
   "readiness"
 ];
-function asNumber2(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+function asNumber3(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function pct2(part, whole) {
+function pct3(part, whole) {
   if (whole <= 0) return void 0;
   return Math.round(100 * part / whole);
 }
-function asRecord(value) {
-  return typeof value === "object" && value !== null ? value : void 0;
+function asRecord2(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
 function extractLatest(text) {
   const latest = {};
-  const lines = text.split("\n");
-  for (let i = 0; i < lines.length; i += 1) {
-    const trimmed = (lines[i] ?? "").trim();
-    if (trimmed === "") continue;
-    let record;
-    try {
-      record = JSON.parse(trimmed);
-    } catch {
-      continue;
-    }
-    if (typeof record !== "object" || record === null) continue;
-    switch (record.kind) {
+  for (const { kind, record } of replayHistory(text)) {
+    switch (kind) {
       case "tokens-check":
         latest.tokensCheck = record;
         break;
       case "lint": {
         latest.lint = record;
-        if (asRecord(record.adoption) !== void 0) {
+        if (asRecord2(record.adoption) !== void 0) {
           latest.adoption = record;
         }
         break;
@@ -13788,28 +14236,28 @@ function scoreFor(text, weights) {
   };
 }
 function onSystemPct(record) {
-  const adoption = record === void 0 ? void 0 : asRecord(record.adoption);
+  const adoption = record === void 0 ? void 0 : asRecord2(record.adoption);
   if (adoption === void 0) return void 0;
-  const refs = asNumber2(adoption.refs);
-  const literals = asNumber2(adoption.literals);
-  return pct2(refs, refs + literals);
+  const refs = asNumber3(adoption.refs);
+  const literals = asNumber3(adoption.literals);
+  return pct3(refs, refs + literals);
 }
 function violations(record) {
   if (record === void 0) return void 0;
-  const byKind = asRecord(record.byKind) ?? {};
-  return asNumber2(byKind.exact) + asNumber2(byKind.near) + asNumber2(byKind.offSystem);
+  const byKind = asRecord2(record.byKind) ?? {};
+  return asNumber3(byKind.exact) + asNumber3(byKind.near) + asNumber3(byKind.offSystem);
 }
 function driftCounts(record) {
   if (record === void 0) return void 0;
   return {
-    stale: asNumber2(record.stale),
-    missing: asNumber2(record.missing),
-    orphan: asNumber2(record.orphan)
+    stale: asNumber3(record.stale),
+    missing: asNumber3(record.missing),
+    orphan: asNumber3(record.orphan)
   };
 }
 function coverageCounts(record) {
   if (record === void 0) return void 0;
-  return { imported: asNumber2(record.imported), total: asNumber2(record.total) };
+  return { imported: asNumber3(record.imported), total: asNumber3(record.total) };
 }
 function contrastPct(record) {
   if (record === void 0) return void 0;
@@ -13817,17 +14265,17 @@ function contrastPct(record) {
   let passed = 0;
   let failed = 0;
   for (const m of modes2) {
-    const mm = asRecord(m);
+    const mm = asRecord2(m);
     if (mm === void 0) continue;
-    passed += asNumber2(mm.passed);
-    failed += asNumber2(mm.failed);
+    passed += asNumber3(mm.passed);
+    failed += asNumber3(mm.failed);
   }
-  return pct2(passed, passed + failed);
+  return pct3(passed, passed + failed);
 }
 function readinessValue(record) {
   if (record === void 0) return void 0;
   return {
-    score: asNumber2(record.score),
+    score: asNumber3(record.score),
     frame: typeof record.frameName === "string" ? record.frameName : ""
   };
 }
@@ -13909,7 +14357,7 @@ function buildScorecard(currentText, baseText, weights) {
 }
 
 // src/engines/report/scorecard-md.ts
-var TITLE = "### Design-system scorecard";
+var TITLE2 = "### Design-system scorecard";
 var ROW_LABEL = {
   score: "System score",
   "on-system": "On-system",
@@ -13935,7 +14383,7 @@ var COMPONENT_LABEL = {
   a11y: "A11y",
   adoption: "Adoption"
 };
-function arrow(delta) {
+function arrow2(delta) {
   if (delta > 0) return "\u25B2";
   if (delta < 0) return "\u25BC";
   return "=";
@@ -13950,8 +14398,8 @@ function driftCell(counts, bold) {
 function isPercent(id) {
   return id === "on-system" || id === "contrast";
 }
-function scalar(id, value) {
-  return isPercent(id) ? `${value}%` : `${value}`;
+function scalar(id, value2) {
+  return isPercent(id) ? `${value2}%` : `${value2}`;
 }
 function metricLabel(row) {
   if (row.id === "readiness") {
@@ -13993,7 +14441,7 @@ function moverFragment(label, id, row) {
   const now = nowScalar(row);
   const base = baseScalar(row);
   const delta = hasScalarDelta(row) ? row.delta : 0;
-  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow(delta)}`;
+  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow2(delta)}`;
 }
 function breakingTokenIncrease(rows) {
   const drift = rows.find((r2) => r2.id === "drift");
@@ -14049,8 +14497,8 @@ function currentOnlySummary(rows) {
   for (const row of rows) {
     const now = primaryNow(row);
     if (now === void 0) continue;
-    const value = row.id === "drift" || row.id === "import-coverage" ? `${now}` : scalar(row.id, now);
-    return `${ROW_LABEL[row.id]} ${value}`;
+    const value2 = row.id === "drift" || row.id === "import-coverage" ? `${now}` : scalar(row.id, now);
+    return `${ROW_LABEL[row.id]} ${value2}`;
   }
   return "No movement";
 }
@@ -14059,20 +14507,20 @@ function renderCompareRow(row, breaking) {
   if (row.id === "drift") {
     const base2 = row.base !== void 0 ? driftCell(row.base, false) : "\u2014";
     const now2 = row.now !== void 0 ? driftCell(row.now, breaking) : "\u2014";
-    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.stale - row.base.stale)} ${arrow(row.now.stale - row.base.stale)}` : "\u2014";
+    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.stale - row.base.stale)} ${arrow2(row.now.stale - row.base.stale)}` : "\u2014";
     return `| ${label} | ${base2} | ${now2} | ${delta} |`;
   }
   if (row.id === "import-coverage") {
     const base2 = row.base !== void 0 ? `${row.base.imported}/${row.base.total}` : "\u2014";
     const now2 = row.now !== void 0 ? `${row.now.imported}/${row.now.total}` : "\u2014";
-    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.imported - row.base.imported)} ${arrow(row.now.imported - row.base.imported)}` : "\u2014";
+    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.imported - row.base.imported)} ${arrow2(row.now.imported - row.base.imported)}` : "\u2014";
     return `| ${label} | ${base2} | ${now2} | ${delta} |`;
   }
   const now = nowScalar(row);
   const base = baseScalar(row);
   const nowCell = now !== void 0 ? scalar(row.id, now) : "\u2014";
   const baseCell = base !== void 0 ? scalar(row.id, base) : "\u2014";
-  const deltaCell = hasScalarDelta(row) ? `${signed(row.delta)} ${arrow(row.delta)}` : "\u2014";
+  const deltaCell = hasScalarDelta(row) ? `${signed(row.delta)} ${arrow2(row.delta)}` : "\u2014";
   return `| ${label} | ${baseCell} | ${nowCell} | ${deltaCell} |`;
 }
 function renderCurrentRow(row) {
@@ -14107,7 +14555,7 @@ function componentBlock(rows) {
   return lines;
 }
 function renderScorecardMarkdown(model, options) {
-  const lines = [TITLE, ""];
+  const lines = [TITLE2, ""];
   if (model.kind === "no-data") {
     lines.push(
       "_No design-system history yet \u2014 run a check to populate the scorecard._",
@@ -14157,16 +14605,16 @@ var TEXT_COLOR2 = "#374151";
 var GAUGE_COLOR = "#2563eb";
 var HEAT_COLOR = "#2563eb";
 var AXIS_COLOR = "#9ca3af";
-function escapeXml2(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function escapeXml2(value2) {
+  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function round2(n) {
   return Number(n.toFixed(3));
 }
-function clamp3(value, min, max) {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
+function clamp3(value2, min, max) {
+  if (value2 < min) return min;
+  if (value2 > max) return max;
+  return value2;
 }
 function niceNum(x, snap) {
   const exp = Math.floor(Math.log10(x));
@@ -14301,9 +14749,9 @@ function barChart(items, opts = {}) {
   parts.push("</svg>");
   return parts.join("");
 }
-function donutGauge(value, opts = {}) {
+function donutGauge(value2, opts = {}) {
   const size = 120;
-  const clamped = clamp3(value, 0, 100);
+  const clamped = clamp3(value2, 0, 100);
   const display = Math.round(clamped);
   const cx = size / 2;
   const cy = size / 2;
@@ -14357,8 +14805,8 @@ function heatGrid(rows, opts = {}) {
 }
 
 // src/render/html/dashboard.ts
-function escapeHtml(value) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+function escapeHtml(value2) {
+  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 var STYLE = `
 :root {
@@ -14680,7 +15128,7 @@ function importCoverageSection(data) {
     return panel("Import coverage", emptyState2("adoption"));
   }
   const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct3 = total === 0 ? 0 : Math.round(imported / total * 100);
+  const pct4 = total === 0 ? 0 : Math.round(imported / total * 100);
   const list = uncovered.length > 0 ? [
     '<ul class="offenders">',
     ...uncovered.map(
@@ -14694,7 +15142,7 @@ function importCoverageSection(data) {
   return panel(
     "Import coverage",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(pct3, { label: "Import coverage" })}</div>`,
+      `<div class="chart" style="text-align:center">${donutGauge(pct4, { label: "Import coverage" })}</div>`,
       `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
       list,
       overflow
@@ -14781,18 +15229,18 @@ var RULE_REASON = {
   component: "Component usage",
   naming: "Naming"
 };
-function asNumber3(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+function asNumber4(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
 function onSystemPct3(refs, literals) {
   const total = refs + literals;
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join13(stateDir, "history.jsonl");
+  const historyPath = join14(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync11(historyPath, "utf8");
+    text = readFileSync12(historyPath, "utf8");
   } catch {
     return {
       driftTrend: [],
@@ -14831,9 +15279,9 @@ function aggregateHistory(stateDir, onWarning) {
       const date = typeof r2.at === "string" ? r2.at.slice(0, 10) : "";
       driftTrend.push({
         date,
-        breaking: asNumber3(r2.stale),
-        additive: asNumber3(r2.missing),
-        cosmetic: asNumber3(r2.orphan)
+        breaking: asNumber4(r2.stale),
+        additive: asNumber4(r2.missing),
+        cosmetic: asNumber4(r2.orphan)
       });
       continue;
     }
@@ -14842,16 +15290,16 @@ function aggregateHistory(stateDir, onWarning) {
       const byKind = r2.byKind ?? { exact: 0, near: 0, offSystem: 0 };
       lint = {
         byKind: {
-          exact: asNumber3(byKind.exact),
-          near: asNumber3(byKind.near),
-          offSystem: asNumber3(byKind.offSystem)
+          exact: asNumber4(byKind.exact),
+          near: asNumber4(byKind.near),
+          offSystem: asNumber4(byKind.offSystem)
         },
         topOffenders: []
       };
       const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
       if (adoption !== void 0) {
-        const refs = asNumber3(adoption.refs);
-        const literals = asNumber3(adoption.literals);
+        const refs = asNumber4(adoption.refs);
+        const literals = asNumber4(adoption.literals);
         if (typeof r2.at === "string") {
           adoptionTrend.push({
             date: r2.at.slice(0, 10),
@@ -14861,16 +15309,16 @@ function aggregateHistory(stateDir, onWarning) {
         const byDirectory = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
         leaderboard = byDirectory.map((d) => ({
           dir: typeof d.dir === "string" ? d.dir : "",
-          refs: asNumber3(d.refs),
-          literals: asNumber3(d.literals)
+          refs: asNumber4(d.refs),
+          literals: asNumber4(d.literals)
         }));
       }
       continue;
     }
     if (record.kind === "adoption") {
       const r2 = record;
-      const imported = asNumber3(r2.imported);
-      const total = asNumber3(r2.total);
+      const imported = asNumber4(r2.imported);
+      const total = asNumber4(r2.total);
       const uncovered = Array.isArray(r2.uncovered) ? r2.uncovered.filter((n) => typeof n === "string") : [];
       importCoverage = {
         imported,
@@ -14884,11 +15332,11 @@ function aggregateHistory(stateDir, onWarning) {
       const r2 = record;
       const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
       readiness = {
-        score: asNumber3(r2.score),
+        score: asNumber4(r2.score),
         frameName: typeof r2.frameName === "string" ? r2.frameName : "",
         deductions: deductions.map((d) => ({
           reason: RULE_REASON[d.rule] ?? d.rule,
-          points: asNumber3(d.points)
+          points: asNumber4(d.points)
         }))
       };
       continue;
@@ -14900,8 +15348,8 @@ function aggregateHistory(stateDir, onWarning) {
         level: r2.level === "AAA" ? "AAA" : "AA",
         modes: modes2.map((m) => ({
           mode: typeof m.mode === "string" ? m.mode : "",
-          passed: asNumber3(m.passed),
-          failed: asNumber3(m.failed)
+          passed: asNumber4(m.passed),
+          failed: asNumber4(m.failed)
         }))
       };
       continue;
@@ -14909,10 +15357,10 @@ function aggregateHistory(stateDir, onWarning) {
     if (record.kind === "impact") {
       const r2 = record;
       impact = {
-        breaking: asNumber3(r2.breaking),
-        additive: asNumber3(r2.additive),
-        cosmetic: asNumber3(r2.cosmetic),
-        touchedCallSites: asNumber3(r2.touchedCallSites)
+        breaking: asNumber4(r2.breaking),
+        additive: asNumber4(r2.additive),
+        cosmetic: asNumber4(r2.cosmetic),
+        touchedCallSites: asNumber4(r2.touchedCallSites)
       };
     }
   }
@@ -14928,10 +15376,10 @@ function aggregateHistory(stateDir, onWarning) {
   };
 }
 function computeSystemScore(stateDir, weights) {
-  const historyPath = join13(stateDir, "history.jsonl");
+  const historyPath = join14(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync11(historyPath, "utf8");
+    text = readFileSync12(historyPath, "utf8");
   } catch {
     return void 0;
   }
@@ -14944,10 +15392,10 @@ function computeSystemScore(stateDir, weights) {
   };
 }
 function readParity(stateDir, onWarning) {
-  const registryPath = join13(stateDir, "registry.json");
+  const registryPath = join14(stateDir, "registry.json");
   let text;
   try {
-    text = readFileSync11(registryPath, "utf8");
+    text = readFileSync12(registryPath, "utf8");
   } catch {
     return void 0;
   }
@@ -14964,8 +15412,8 @@ function readParity(stateDir, onWarning) {
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync9(dirname6(outPath), { recursive: true });
-    writeFileSync7(outPath, html, "utf8");
+    mkdirSync10(dirname7(outPath), { recursive: true });
+    writeFileSync8(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -15015,11 +15463,11 @@ function resolveSelection(targetDir, options) {
   let dashboardView;
   let dashboardArtifacts;
   let scoreWeights;
-  const configPath = join13(targetDir, ".ds-bridge.json");
-  if (existsSync11(configPath)) {
+  const configPath = join14(targetDir, ".ds-bridge.json");
+  if (existsSync12(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync11(configPath, "utf8");
+      projectFileText = readFileSync12(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -15080,23 +15528,23 @@ function resolveSelection(targetDir, options) {
     }
   }
 }
-function readHistoryText(stateDir) {
+function readHistoryText2(stateDir) {
   try {
-    return readFileSync11(join13(stateDir, "history.jsonl"), "utf8");
+    return readFileSync12(join14(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
 function runMarkdownReport(targetDir, options, weights) {
-  const stateDir = join13(targetDir, ".ds-bridge");
-  const currentText = readHistoryText(stateDir);
+  const stateDir = join14(targetDir, ".ds-bridge");
+  const currentText = readHistoryText2(stateDir);
   let baseText;
   let noBaseline = false;
   const baseLabel = options.delta;
   if (options.delta !== void 0) {
     const outcome = readFileAtRef({
       ref: options.delta,
-      path: join13(".ds-bridge", "history.jsonl"),
+      path: join14(".ds-bridge", "history.jsonl"),
       cwd: targetDir,
       exec: spawnGitExec
     });
@@ -15123,7 +15571,7 @@ function runMarkdownReport(targetDir, options, weights) {
     ...noBaseline ? { noBaseline: true } : {}
   });
   if (options.out !== void 0) {
-    const outPath = resolve8(options.out);
+    const outPath = resolve9(options.out);
     const written = writeDashboard(outPath, markdown);
     if (written.kind === "error") {
       failReport(written.message);
@@ -15153,8 +15601,8 @@ function runReport(path, options) {
     );
     return;
   }
-  const targetDir = resolve8(path);
-  if (!existsSync11(targetDir) || !statSync8(targetDir).isDirectory()) {
+  const targetDir = resolve9(path);
+  if (!existsSync12(targetDir) || !statSync9(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -15167,7 +15615,7 @@ function runReport(path, options) {
     runMarkdownReport(targetDir, options, selection.scoreWeights);
     return;
   }
-  const stateDir = join13(targetDir, ".ds-bridge");
+  const stateDir = join14(targetDir, ".ds-bridge");
   const warn = (message) => {
     process.stderr.write(`${message}
 `);
@@ -15194,7 +15642,7 @@ function runReport(path, options) {
     selection.artifacts,
     selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
   );
-  const outPath = options.out !== void 0 ? resolve8(options.out) : join13(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve9(options.out) : join14(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -15236,14 +15684,14 @@ function registerReportCommand(program2) {
 // src/cli-commands/tokens.ts
 import {
   appendFileSync as appendFileSync6,
-  existsSync as existsSync12,
-  mkdirSync as mkdirSync10,
+  existsSync as existsSync13,
+  mkdirSync as mkdirSync11,
   readdirSync as readdirSync2,
-  readFileSync as readFileSync12,
-  statSync as statSync9,
-  writeFileSync as writeFileSync8
+  readFileSync as readFileSync13,
+  statSync as statSync10,
+  writeFileSync as writeFileSync9
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join14, relative as relative2, resolve as resolve9, sep as sep3 } from "path";
+import { isAbsolute as isAbsolute3, join as join15, relative as relative2, resolve as resolve10, sep as sep3 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -15430,8 +15878,8 @@ function scanTsTheme(content) {
         i += 1;
         parseObjectBody(name);
       } else if (ch === '"' || ch === "'" || ch === "`") {
-        const value = parseString();
-        if (value !== void 0) values.push({ name, raw: value });
+        const value2 = parseString();
+        if (value2 !== void 0) values.push({ name, raw: value2 });
       } else {
         const num3 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
         if (num3 !== null) {
@@ -15455,17 +15903,17 @@ var PARSERS4 = {
   "tokens-studio": parseTokensStudio,
   "style-dictionary": parseStyleDictionary
 };
-function previewValue(value) {
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  return JSON.stringify(value);
+function previewValue(value2) {
+  if (typeof value2 === "string") return value2;
+  if (typeof value2 === "number") return String(value2);
+  return JSON.stringify(value2);
 }
 function countsByType(map) {
   const counts = /* @__PURE__ */ new Map();
   for (const token of map.tokens) {
     counts.set(token.type, (counts.get(token.type) ?? 0) + 1);
   }
-  return [...counts.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
+  return [...counts.entries()].map(([label, value2]) => ({ label, value: value2 })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
 }
 function renderTerm10(filePath, map, color) {
   const heading = `${filePath} \u2014 format: ${map.format} \u2014 ${map.tokens.length} tokens`;
@@ -15481,7 +15929,7 @@ function renderTerm10(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync12(filePath, "utf8");
+    raw = readFileSync13(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -15558,7 +16006,7 @@ function walkOutputFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join14(dir, entry.name);
+    const full = join15(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkOutputFiles(full, acc);
@@ -15585,7 +16033,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join14(dir, entry.name);
+    const full = join15(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       collectTokenCandidates2(
@@ -15602,7 +16050,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
 function detectFileFormat3(absPath) {
   let raw;
   try {
-    raw = readFileSync12(absPath, "utf8");
+    raw = readFileSync13(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -15626,8 +16074,8 @@ function discoverFirstTokenSource2(root) {
 }
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve9(process.cwd(), flagTokens);
-    if (!existsSync12(abs2)) {
+    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve10(process.cwd(), flagTokens);
+    if (!existsSync13(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -15635,11 +16083,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join14(targetDir, ".ds-bridge.json");
-  if (existsSync12(configPath)) {
+  const configPath = join15(targetDir, ".ds-bridge.json");
+  if (existsSync13(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync12(configPath, "utf8");
+      projectFileText = readFileSync13(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -15647,8 +16095,8 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute3(src) ? src : resolve9(targetDir, src);
-        if (existsSync12(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute3(src) ? src : resolve10(targetDir, src);
+        if (existsSync13(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -15667,7 +16115,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync12(tokenPath, "utf8");
+    raw = readFileSync13(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -15714,10 +16162,10 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    if (resolve9(file) === resolve9(tokenSourcePath)) continue;
+    if (resolve10(file) === resolve10(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync12(file, "utf8");
+      content = readFileSync13(file, "utf8");
     } catch {
       continue;
     }
@@ -15726,15 +16174,15 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
     for (const warning of outcome.warnings) {
       warnings.push(`${relative2(outputsDir, file)}: ${warning}`);
     }
-    for (const value of outcome.values) {
-      const prior = ownerByName.get(value.name);
+    for (const value2 of outcome.values) {
+      const prior = ownerByName.get(value2.name);
       if (prior !== void 0 && prior !== file) {
         warnings.push(
-          `output "${value.name}" defined in both ${relative2(outputsDir, prior)} and ${relative2(outputsDir, file)} \u2014 later wins`
+          `output "${value2.name}" defined in both ${relative2(outputsDir, prior)} and ${relative2(outputsDir, file)} \u2014 later wins`
         );
       }
-      merged.set(value.name, value);
-      ownerByName.set(value.name, file);
+      merged.set(value2.name, value2);
+      ownerByName.set(value2.name, file);
     }
   }
   const values = [...merged.values()].sort(
@@ -15807,19 +16255,19 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync10(stateDir, { recursive: true });
+  mkdirSync11(stateDir, { recursive: true });
   appendFileSync6(
-    join14(stateDir, "history.jsonl"),
+    join15(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join14(stateDir, "history.jsonl");
+  const historyPath = join15(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync12(historyPath, "utf8");
+    text = readFileSync13(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -15851,11 +16299,11 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join14(stateDir, "reports");
-  mkdirSync10(reportsDir, { recursive: true });
+  const reportsDir = join15(stateDir, "reports");
+  mkdirSync11(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join14(reportsDir, `tokens-${date}.html`);
-  writeFileSync8(reportPath, html, "utf8");
+  const reportPath = join15(reportsDir, `tokens-${date}.html`);
+  writeFileSync9(reportPath, html, "utf8");
   return reportPath;
 }
 function failCheck(message) {
@@ -15871,8 +16319,8 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve9(path);
-  if (!existsSync12(targetDir) || !statSync9(targetDir).isDirectory()) {
+  const targetDir = resolve10(path);
+  if (!existsSync13(targetDir) || !statSync10(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -15886,8 +16334,8 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve9(options.outputs) : targetDir;
-  if (!existsSync12(outputsDir) || !statSync9(outputsDir).isDirectory()) {
+  const outputsDir = options.outputs !== void 0 ? resolve10(options.outputs) : targetDir;
+  if (!existsSync13(outputsDir) || !statSync10(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -15899,7 +16347,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join14(targetDir, ".ds-bridge");
+  const stateDir = join15(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -15976,6 +16424,7 @@ function buildProgram() {
   registerChangelogCommand(program2);
   registerDocsCommand(program2);
   registerDashboardCommand(program2);
+  registerDigestCommand(program2);
   return program2;
 }
 buildProgram().parse();
