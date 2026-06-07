@@ -21,6 +21,11 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import {
+	type AdoptionTally,
+	countTokenRefs,
+	tallyAdoption,
+} from "../engines/lint/adoption.js";
+import {
 	type ExtractedLiteral,
 	extractLiterals,
 } from "../engines/lint/extract.js";
@@ -80,6 +85,17 @@ const KIND_SEVERITY: Record<LiteralMatch["kind"], Severity> = {
 };
 
 /**
+ * The css/scss-scoped adoption block on a directory lint line (A2 / SPEC-adoption
+ * §2). Optional: absent on old lines and on single-file (hook) runs, so old
+ * readers (report reads only `byKind`) are unaffected.
+ */
+interface LintAdoption {
+	refs: number;
+	literals: number;
+	byDirectory: AdoptionTally["byDirectory"];
+}
+
+/**
  * One appended lint history record (read back by `report` for the lint-by-type
  * section). Mirrors the tokens-check append pattern in tokens.ts.
  */
@@ -91,6 +107,7 @@ interface LintHistoryRecord {
 		near: number;
 		offSystem: number;
 	};
+	adoption?: LintAdoption;
 }
 
 /** Tally findings into the by-kind history shape (offSystem is camelCased). */
@@ -105,19 +122,81 @@ function countByKind(findings: ReportFinding[]): LintHistoryRecord["byKind"] {
 }
 
 /**
+ * Compute the css/scss-scoped adoption block for a directory run.
+ *
+ * SCOPE DECISION (SPEC-adoption §1, quoted): the on-system ratio counts CSS/SCSS
+ * occurrences ONLY — `var(--…)` references are on-system, extracted color/dimension
+ * literals are off-system. TSX/JSX literals are deliberately EXCLUDED here because
+ * TSX token-reference syntax varies per codebase; counting its literals without its
+ * references would bias the ratio downward dishonestly.
+ *
+ * refs per file = countTokenRefs over a RE-READ of the css/scss file (the --fix
+ * path has already rewritten files on disk, so the re-read reflects post-fix state).
+ * literals per file = the count of findings the run produced for that css/scss file.
+ */
+function computeAdoption(
+	files: { abs: string; rel: string }[],
+	findings: ReportFinding[],
+): LintAdoption {
+	const cssFiles = files.filter((f) => isCssLike(f.rel));
+	// literals per css/scss file = number of findings on that file.
+	const literalsByFile = new Map<string, number>();
+	for (const finding of findings) {
+		const rel = finding.literal.file;
+		if (!isCssLike(rel)) continue;
+		literalsByFile.set(rel, (literalsByFile.get(rel) ?? 0) + 1);
+	}
+
+	const perFile = cssFiles.map((file) => {
+		let refs = 0;
+		try {
+			refs = countTokenRefs(readFileSync(file.abs, "utf8"));
+		} catch {
+			refs = 0; // best-effort: an unreadable file contributes nothing
+		}
+		return {
+			path: file.rel,
+			refs,
+			literals: literalsByFile.get(file.rel) ?? 0,
+		};
+	});
+
+	const tally = tallyAdoption(perFile);
+	return {
+		refs: tally.totals.refs,
+		literals: tally.totals.literals,
+		byDirectory: tally.byDirectory,
+	};
+}
+
+/** True for css/scss paths (the §1 adoption scope). */
+function isCssLike(path: string): boolean {
+	const lower = path.toLowerCase();
+	return lower.endsWith(".css") || lower.endsWith(".scss");
+}
+
+/**
  * Append ONE lint history line to <targetDir>/.ds-bridge/history.jsonl.
  *
  * Only called for a DIRECTORY lint — a single-file lint (the PostToolUse hook,
  * which fires on every edit) stays side-effect-free so the log is not polluted
  * with per-keystroke noise. A `--fix` run appends its POST-fix state (the
  * findings after fixes are applied) so the log reflects the file on disk.
+ *
+ * `files` is the in-scope file list; the css/scss subset is re-read to attach the
+ * adoption block (A2). Old readers ignore the extra field (report reads `byKind`).
  */
-function appendLintHistory(targetDir: string, findings: ReportFinding[]): void {
+function appendLintHistory(
+	targetDir: string,
+	findings: ReportFinding[],
+	files: { abs: string; rel: string }[],
+): void {
 	const stateDir = join(targetDir, ".ds-bridge");
 	const record: LintHistoryRecord = {
 		at: new Date().toISOString(),
 		kind: "lint",
 		byKind: countByKind(findings),
+		adoption: computeAdoption(files, findings),
 	};
 	mkdirSync(stateDir, { recursive: true });
 	appendFileSync(
@@ -655,8 +734,14 @@ export function registerLintCommand(program: Command): void {
 
 			emitReport(linted.findings, format);
 			// History: only a DIRECTORY lint records a line — a single-file lint
-			// (the PostToolUse hook) must stay side-effect-free.
-			if (!isFile) appendLintHistory(targetDir, linted.findings);
+			// (the PostToolUse hook) must stay side-effect-free. The in-scope file
+			// list threads in so the line carries the css/scss adoption block (A2).
+			if (!isFile) {
+				const adoption = computeAdoption(files, linted.findings);
+				appendLintHistory(targetDir, linted.findings, files);
+				// On-system summary line — directory runs only, term format only.
+				if (format === "term") emitAdoptionSummary(adoption);
+			}
 			process.exitCode = linted.findings.length > 0 ? 1 : 0;
 		});
 }
@@ -665,6 +750,19 @@ export function registerLintCommand(program: Command): void {
 function toRelative(targetDir: string, abs: string): string {
 	const rel = relative(targetDir, abs);
 	return rel.split(sep).join("/");
+}
+
+/**
+ * Print the on-system summary line (directory term runs only). The pct is the
+ * css/scss-scoped ratio refs / (refs + literals) — see the §1 scope note on
+ * computeAdoption. Zero css/scss values yields 0%.
+ */
+function emitAdoptionSummary(adoption: LintAdoption): void {
+	const total = adoption.refs + adoption.literals;
+	const pct = total === 0 ? 0 : Math.round((adoption.refs / total) * 100);
+	process.stdout.write(
+		`on-system: ${pct}% (${adoption.refs} token refs / ${total} css/scss values)\n`,
+	);
 }
 
 /** Print findings in the requested format. */
@@ -727,9 +825,12 @@ function runFix(
 	// (planFixes skips them) so any leftover exact also keeps the exit non-zero.
 	const hasRemaining = remaining.length > 0 || stillExact.length > 0;
 	// History: one POST-fix line for a directory run (single-file runs pass
-	// undefined and stay side-effect-free).
+	// undefined and stay side-effect-free). The re-read inside computeAdoption
+	// reflects the POST-fix files on disk. The summary line mirrors a plain run.
 	if (historyDir !== undefined) {
-		appendLintHistory(historyDir, relinted.findings);
+		const adoption = computeAdoption(files, relinted.findings);
+		appendLintHistory(historyDir, relinted.findings, files);
+		emitAdoptionSummary(adoption);
 	}
 	process.exitCode = hasRemaining ? 1 : 0;
 }

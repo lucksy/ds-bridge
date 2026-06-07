@@ -77,11 +77,26 @@ async function freshTmp(prefix: string): Promise<string> {
 	return dir;
 }
 
-/** One parsed lint history record (the T5.5b append shape). */
+/** One directory bucket in a lint line's adoption breakdown (A2). */
+interface DirectoryAdoption {
+	dir: string;
+	refs: number;
+	literals: number;
+}
+
+/** The A2 adoption block attached to a DIRECTORY lint line (absent on old lines). */
+interface LintAdoption {
+	refs: number;
+	literals: number;
+	byDirectory: DirectoryAdoption[];
+}
+
+/** One parsed lint history record (T5.5b append shape; A2 adds optional adoption). */
 interface LintHistoryRecord {
 	at: string;
 	kind: string;
 	byKind: { exact: number; near: number; offSystem: number };
+	adoption?: LintAdoption;
 }
 
 /** Read + parse the lint records in <dir>/.ds-bridge/history.jsonl (or []). */
@@ -339,6 +354,106 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 
 		// No history file is created by a single-file lint.
 		expect(await historyExists(dir)).toBe(false);
+	});
+
+	it("A2: a directory lint line carries adoption with css/scss refs+literals", async () => {
+		const dir = await freshTmp("ds-lint-adopt-dir-");
+		await cp(sampleProject, dir, { recursive: true });
+		const tokensInTmp = join(dir, "tokens.json");
+
+		const { code } = await runCli(["lint", dir, "--tokens", tokensInTmp]);
+		expect(code).toBe(1);
+
+		const records = await readLintHistory(dir);
+		expect(records.length).toBe(1);
+		const adoption = records[0]?.adoption;
+		expect(adoption).toBeDefined();
+		if (adoption === undefined) return;
+		// css/scss only: button.css refs=2 literals=3; card.module.css refs=5
+		// literals=1 → totals refs=7 literals=4. TSX literals are EXCLUDED (§1).
+		expect(adoption.refs).toBe(7);
+		expect(adoption.literals).toBe(4);
+		// Both css files live under src/ → one directory bucket.
+		expect(adoption.byDirectory).toEqual([
+			{ dir: "src", refs: 7, literals: 4 },
+		]);
+	});
+
+	it("A2: byDirectory orders worst on-system pct first across dirs", async () => {
+		const dir = await freshTmp("ds-lint-adopt-order-");
+		await cp(sampleTokens, join(dir, "tokens.json"));
+		// good/: 2 refs, 0 literals → 100%. bad/: 0 refs, 1 literal → 0%.
+		await writeFile(
+			join(dir, "good.css"),
+			".x {\n\tcolor: var(--color-brand-primary);\n\tpadding: var(--space-md);\n}\n",
+			"utf8",
+		);
+		await writeFile(join(dir, "bad.css"), ".y { color: #ff00aa; }\n", "utf8");
+		const { code } = await runCli([
+			"lint",
+			dir,
+			"--tokens",
+			join(dir, "tokens.json"),
+		]);
+		expect(code).toBe(1);
+
+		const adoption = (await readLintHistory(dir))[0]?.adoption;
+		expect(adoption).toBeDefined();
+		// Worst (lowest pct) first: the file at dir "" (bad.css) before "" — both
+		// are root dir, so they aggregate: refs=2 literals=1 in one root bucket.
+		expect(adoption?.refs).toBe(2);
+		expect(adoption?.literals).toBe(1);
+	});
+
+	it("A2: term output for a directory run shows an on-system summary line", async () => {
+		const dir = await freshTmp("ds-lint-adopt-term-");
+		await cp(sampleProject, dir, { recursive: true });
+		const { code, stdout } = await runCli([
+			"lint",
+			dir,
+			"--tokens",
+			join(dir, "tokens.json"),
+		]);
+		expect(code).toBe(1);
+		// refs=7 of refs+literals=11 → 64% on-system.
+		expect(stdout.toLowerCase()).toContain("on-system");
+		expect(stdout).toMatch(/64%/);
+	});
+
+	it("A2: a single-FILE lint carries no adoption (hook branch untouched)", async () => {
+		const dir = await freshTmp("ds-lint-adopt-file-");
+		await cp(sampleProject, dir, { recursive: true });
+		const buttonCss = join(dir, "src", "button.css");
+		const { code, stdout } = await runCli([
+			"lint",
+			buttonCss,
+			"--tokens",
+			join(dir, "tokens.json"),
+		]);
+		expect(code).toBe(1);
+		// No history at all for a single-file run; no on-system summary line either.
+		expect(await historyExists(dir)).toBe(false);
+		expect(stdout.toLowerCase()).not.toContain("on-system");
+	});
+
+	it("A2: a --fix directory run attaches post-fix adoption to its line", async () => {
+		const dir = await freshTmp("ds-lint-adopt-fix-");
+		await cp(sampleProject, dir, { recursive: true });
+		const tokensInTmp = join(dir, "tokens.json");
+
+		const run1 = await runCli(["lint", dir, "--fix", "--tokens", tokensInTmp]);
+		expect(run1.code).toBe(1);
+
+		const records = await readLintHistory(dir);
+		expect(records.length).toBe(1);
+		const adoption = records[0]?.adoption;
+		expect(adoption).toBeDefined();
+		if (adoption === undefined) return;
+		// --fix rewrites button.css #3b82f6 → var(--color-brand-primary): one more
+		// ref, one fewer literal. button.css now refs=3 literals=2; card.module.css
+		// refs=5 literals=1 → totals refs=8 literals=3.
+		expect(adoption.refs).toBe(8);
+		expect(adoption.literals).toBe(3);
 	});
 
 	it("T5.5b: a --fix directory run appends ONE post-fix lint history line", async () => {
