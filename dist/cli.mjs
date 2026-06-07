@@ -8311,11 +8311,11 @@ function appendAdoptionHistory(targetDir, coverage) {
 }
 function renderTerm2(coverage, color) {
   const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct2 = total > 0 ? Math.round(imported / total * 100) : 0;
+  const pct3 = total > 0 ? Math.round(imported / total * 100) : 0;
   const clean = uncoveredTotal === 0;
   const summary = severityColor(
     clean ? "ok" : "warn",
-    `Import coverage: ${imported}/${total} registry components imported (${pct2}%).`,
+    `Import coverage: ${imported}/${total} registry components imported (${pct3}%).`,
     { color }
   );
   const lines = [summary];
@@ -9424,6 +9424,31 @@ function readGitLog(input) {
     if (commit !== void 0) commits.push(commit);
   }
   return { kind: "ok", commits };
+}
+function classifyGitFailure(run) {
+  if (run.error !== void 0) {
+    return { kind: "git-error", message: run.error };
+  }
+  const stderr = run.stderr;
+  if (stderr.includes("does not exist in") || stderr.includes("exists on disk, but not in")) {
+    return { kind: "missing", message: stderr };
+  }
+  return { kind: "git-error", message: stderr.trim() };
+}
+function readFileAtRef(input) {
+  const { ref, path, cwd: cwd3, exec } = input;
+  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd3);
+  if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
+    const { kind, message } = classifyGitFailure(prefixRun);
+    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  }
+  const prefix = prefixRun.stdout.trim();
+  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd3);
+  if (showRun.error !== void 0 || showRun.status !== 0) {
+    const { kind, message } = classifyGitFailure(showRun);
+    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  }
+  return { kind: "ok", text: showRun.stdout };
 }
 function spawnGitExec(args, cwd3) {
   const run = spawnSync("git", args, { cwd: cwd3, encoding: "utf8" });
@@ -12819,9 +12844,9 @@ function toRelative(targetDir, abs2) {
 }
 function emitAdoptionSummary(adoption) {
   const total = adoption.refs + adoption.literals;
-  const pct2 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
+  const pct3 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
   process.stdout.write(
-    `on-system: ${pct2}% (${adoption.refs} token refs / ${total} css/scss values)
+    `on-system: ${pct3}% (${adoption.refs} token refs / ${total} css/scss values)
 `
   );
 }
@@ -13097,8 +13122,8 @@ function renderMarkdown(report) {
     (row) => `| ${mdCell(row.component)} | ${mdCell(row.status)} | ${mdCell(row.detail)} |`
   );
   const { summary } = report;
-  const summaryLine = `_ok: ${summary.ok} \xB7 prop-mismatch: ${summary.propMismatch} \xB7 missing-in-code: ${summary.missingInCode} \xB7 missing-in-figma: ${summary.missingInFigma}_`;
-  return [header, separator, ...rows, "", summaryLine].join("\n");
+  const summaryLine2 = `_ok: ${summary.ok} \xB7 prop-mismatch: ${summary.propMismatch} \xB7 missing-in-code: ${summary.missingInCode} \xB7 missing-in-figma: ${summary.missingInFigma}_`;
+  return [header, separator, ...rows, "", summaryLine2].join("\n");
 }
 function hasRegistry2(candidate) {
   return existsSync9(
@@ -13691,6 +13716,433 @@ import {
 import { basename, dirname as dirname6, join as join13, resolve as resolve8 } from "path";
 import { platform } from "process";
 
+// src/engines/report/scorecard.ts
+var ROW_ORDER = [
+  "score",
+  "on-system",
+  "lint-violations",
+  "drift",
+  "import-coverage",
+  "contrast",
+  "readiness"
+];
+function asNumber2(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+function pct2(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function asRecord(value) {
+  return typeof value === "object" && value !== null ? value : void 0;
+}
+function extractLatest(text) {
+  const latest = {};
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = (lines[i] ?? "").trim();
+    if (trimmed === "") continue;
+    let record;
+    try {
+      record = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+    if (typeof record !== "object" || record === null) continue;
+    switch (record.kind) {
+      case "tokens-check":
+        latest.tokensCheck = record;
+        break;
+      case "lint": {
+        latest.lint = record;
+        if (asRecord(record.adoption) !== void 0) {
+          latest.adoption = record;
+        }
+        break;
+      }
+      case "adoption":
+        latest.adoptionLine = record;
+        break;
+      case "handoff":
+        latest.handoff = record;
+        break;
+      case "a11y":
+        latest.a11y = record;
+        break;
+      default:
+        break;
+    }
+  }
+  return latest;
+}
+function scoreFor(text, weights) {
+  const outcome = scoreFromHistory(text, weights);
+  if (outcome.kind === "no-data") return void 0;
+  return {
+    current: outcome.current,
+    components: outcome.components.map((c2) => ({
+      kind: c2.kind,
+      score: c2.score,
+      weight: c2.weight
+    }))
+  };
+}
+function onSystemPct(record) {
+  const adoption = record === void 0 ? void 0 : asRecord(record.adoption);
+  if (adoption === void 0) return void 0;
+  const refs = asNumber2(adoption.refs);
+  const literals = asNumber2(adoption.literals);
+  return pct2(refs, refs + literals);
+}
+function violations(record) {
+  if (record === void 0) return void 0;
+  const byKind = asRecord(record.byKind) ?? {};
+  return asNumber2(byKind.exact) + asNumber2(byKind.near) + asNumber2(byKind.offSystem);
+}
+function driftCounts(record) {
+  if (record === void 0) return void 0;
+  return {
+    stale: asNumber2(record.stale),
+    missing: asNumber2(record.missing),
+    orphan: asNumber2(record.orphan)
+  };
+}
+function coverageCounts(record) {
+  if (record === void 0) return void 0;
+  return { imported: asNumber2(record.imported), total: asNumber2(record.total) };
+}
+function contrastPct(record) {
+  if (record === void 0) return void 0;
+  const modes2 = Array.isArray(record.modes) ? record.modes : [];
+  let passed = 0;
+  let failed = 0;
+  for (const m of modes2) {
+    const mm = asRecord(m);
+    if (mm === void 0) continue;
+    passed += asNumber2(mm.passed);
+    failed += asNumber2(mm.failed);
+  }
+  return pct2(passed, passed + failed);
+}
+function readinessValue(record) {
+  if (record === void 0) return void 0;
+  return {
+    score: asNumber2(record.score),
+    frame: typeof record.frameName === "string" ? record.frameName : ""
+  };
+}
+function scalarRow(id, now, base) {
+  if (now === void 0 && base === void 0) return void 0;
+  const row = { id };
+  if (now !== void 0) row.now = now;
+  if (base !== void 0) row.base = base;
+  if (now !== void 0 && base !== void 0) row.delta = now - base;
+  return row;
+}
+function buildScorecard(currentText, baseText, weights) {
+  const currentOnly = baseText === void 0;
+  const cur = extractLatest(currentText);
+  const bas = baseText === void 0 ? void 0 : extractLatest(baseText);
+  const rows = [];
+  const nowScore = scoreFor(currentText, weights);
+  const baseScore = baseText === void 0 ? void 0 : scoreFor(baseText, weights);
+  if (nowScore !== void 0 || baseScore !== void 0) {
+    const row = {
+      id: "score",
+      components: nowScore?.components ?? []
+    };
+    if (nowScore !== void 0) row.now = nowScore.current;
+    if (baseScore !== void 0) row.base = baseScore.current;
+    if (nowScore !== void 0 && baseScore !== void 0) {
+      row.delta = nowScore.current - baseScore.current;
+    }
+    rows.push(row);
+  }
+  const onSystem = scalarRow(
+    "on-system",
+    onSystemPct(cur.adoption),
+    bas === void 0 ? void 0 : onSystemPct(bas.adoption)
+  );
+  if (onSystem !== void 0) rows.push(onSystem);
+  const lintViolations = scalarRow(
+    "lint-violations",
+    violations(cur.lint),
+    bas === void 0 ? void 0 : violations(bas.lint)
+  );
+  if (lintViolations !== void 0) rows.push(lintViolations);
+  const nowDrift = driftCounts(cur.tokensCheck);
+  const baseDrift = bas === void 0 ? void 0 : driftCounts(bas.tokensCheck);
+  if (nowDrift !== void 0 || baseDrift !== void 0) {
+    const row = { id: "drift" };
+    if (nowDrift !== void 0) row.now = nowDrift;
+    if (baseDrift !== void 0) row.base = baseDrift;
+    rows.push(row);
+  }
+  const nowCov = coverageCounts(cur.adoptionLine);
+  const baseCov = bas === void 0 ? void 0 : coverageCounts(bas.adoptionLine);
+  if (nowCov !== void 0 || baseCov !== void 0) {
+    const row = { id: "import-coverage" };
+    if (nowCov !== void 0) row.now = nowCov;
+    if (baseCov !== void 0) row.base = baseCov;
+    rows.push(row);
+  }
+  const contrast = scalarRow(
+    "contrast",
+    contrastPct(cur.a11y),
+    bas === void 0 ? void 0 : contrastPct(bas.a11y)
+  );
+  if (contrast !== void 0) rows.push(contrast);
+  const nowReady = readinessValue(cur.handoff);
+  const baseReady = bas === void 0 ? void 0 : readinessValue(bas.handoff);
+  if (nowReady !== void 0 || baseReady !== void 0) {
+    const row = { id: "readiness" };
+    if (nowReady !== void 0) row.now = nowReady;
+    if (baseReady !== void 0) row.base = baseReady;
+    if (nowReady !== void 0 && baseReady !== void 0) {
+      row.delta = nowReady.score - baseReady.score;
+    }
+    rows.push(row);
+  }
+  if (rows.length === 0) return { kind: "no-data" };
+  rows.sort((a, b) => ROW_ORDER.indexOf(a.id) - ROW_ORDER.indexOf(b.id));
+  return { kind: "ok", currentOnly, rows };
+}
+
+// src/engines/report/scorecard-md.ts
+var TITLE = "### Design-system scorecard";
+var ROW_LABEL = {
+  score: "System score",
+  "on-system": "On-system",
+  "lint-violations": "Lint violations",
+  drift: "Drift (stale/missing/orphan)",
+  "import-coverage": "Import coverage",
+  contrast: "Contrast",
+  readiness: "Readiness"
+};
+var MOVER_LABEL = {
+  score: "score",
+  "on-system": "on-system",
+  "lint-violations": "lint violations",
+  drift: "drift",
+  "import-coverage": "import coverage",
+  contrast: "contrast",
+  readiness: "readiness"
+};
+var COMPONENT_LABEL = {
+  drift: "Drift",
+  lint: "Lint",
+  readiness: "Readiness",
+  a11y: "A11y",
+  adoption: "Adoption"
+};
+function arrow(delta) {
+  if (delta > 0) return "\u25B2";
+  if (delta < 0) return "\u25BC";
+  return "=";
+}
+function signed(delta) {
+  return delta > 0 ? `+${delta}` : `${delta}`;
+}
+function driftCell(counts, bold) {
+  const text = `${counts.stale}/${counts.missing}/${counts.orphan}`;
+  return bold ? `**${text}**` : text;
+}
+function isPercent(id) {
+  return id === "on-system" || id === "contrast";
+}
+function scalar(id, value) {
+  return isPercent(id) ? `${value}%` : `${value}`;
+}
+function metricLabel(row) {
+  if (row.id === "readiness") {
+    const frame = row.now?.frame ?? row.base?.frame ?? "";
+    return frame === "" ? "Readiness" : `Readiness (${frame})`;
+  }
+  return ROW_LABEL[row.id];
+}
+function hasScalarDelta(row) {
+  return (row.id === "score" || row.id === "on-system" || row.id === "lint-violations" || row.id === "contrast" || row.id === "readiness") && row.delta !== void 0;
+}
+function nowScalar(row) {
+  switch (row.id) {
+    case "score":
+    case "on-system":
+    case "lint-violations":
+    case "contrast":
+      return row.now;
+    case "readiness":
+      return row.now?.score;
+    default:
+      return void 0;
+  }
+}
+function baseScalar(row) {
+  switch (row.id) {
+    case "score":
+    case "on-system":
+    case "lint-violations":
+    case "contrast":
+      return row.base;
+    case "readiness":
+      return row.base?.score;
+    default:
+      return void 0;
+  }
+}
+function moverFragment(label, id, row) {
+  const now = nowScalar(row);
+  const base = baseScalar(row);
+  const delta = hasScalarDelta(row) ? row.delta : 0;
+  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow(delta)}`;
+}
+function breakingTokenIncrease(rows) {
+  const drift = rows.find((r2) => r2.id === "drift");
+  if (drift === void 0 || drift.id !== "drift") return 0;
+  const nowStale = drift.now?.stale ?? 0;
+  const baseStale = drift.base?.stale;
+  if (baseStale === void 0) return 0;
+  return nowStale > baseStale ? nowStale - baseStale : 0;
+}
+function summaryLine(rows) {
+  const scoreRow = rows.find((r2) => r2.id === "score");
+  const movers = rows.filter((r2) => r2.id !== "score" && hasScalarDelta(r2));
+  movers.sort((a, b) => {
+    const da = hasScalarDelta(a) ? Math.abs(a.delta) : 0;
+    const db = hasScalarDelta(b) ? Math.abs(b.delta) : 0;
+    return db - da;
+  });
+  const topMover = movers[0];
+  const fragments = [];
+  if (scoreRow !== void 0 && scoreRow.id === "score") {
+    if (scoreRow.delta !== void 0) {
+      fragments.push(moverFragment("Score", "score", scoreRow));
+    } else if (scoreRow.now !== void 0) {
+      fragments.push(`Score ${scoreRow.now}`);
+    }
+    if (topMover !== void 0) {
+      fragments.push(
+        moverFragment(MOVER_LABEL[topMover.id], topMover.id, topMover)
+      );
+    }
+  } else if (topMover !== void 0) {
+    fragments.push(
+      moverFragment(ROW_LABEL[topMover.id], topMover.id, topMover)
+    );
+  }
+  const breaking = breakingTokenIncrease(rows);
+  if (breaking > 0) {
+    const noun = breaking === 1 ? "breaking token change" : "breaking token changes";
+    fragments.push(`**${breaking} ${noun}**`);
+  }
+  return fragments.join(" \xB7 ");
+}
+function primaryNow(row) {
+  if (row.id === "drift") return row.now?.stale;
+  if (row.id === "import-coverage") return row.now?.imported;
+  return nowScalar(row);
+}
+function currentOnlySummary(rows) {
+  const scoreRow = rows.find((r2) => r2.id === "score");
+  if (scoreRow !== void 0 && scoreRow.id === "score" && scoreRow.now !== void 0) {
+    return `Score ${scoreRow.now}`;
+  }
+  for (const row of rows) {
+    const now = primaryNow(row);
+    if (now === void 0) continue;
+    const value = row.id === "drift" || row.id === "import-coverage" ? `${now}` : scalar(row.id, now);
+    return `${ROW_LABEL[row.id]} ${value}`;
+  }
+  return "No movement";
+}
+function renderCompareRow(row, breaking) {
+  const label = metricLabel(row);
+  if (row.id === "drift") {
+    const base2 = row.base !== void 0 ? driftCell(row.base, false) : "\u2014";
+    const now2 = row.now !== void 0 ? driftCell(row.now, breaking) : "\u2014";
+    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.stale - row.base.stale)} ${arrow(row.now.stale - row.base.stale)}` : "\u2014";
+    return `| ${label} | ${base2} | ${now2} | ${delta} |`;
+  }
+  if (row.id === "import-coverage") {
+    const base2 = row.base !== void 0 ? `${row.base.imported}/${row.base.total}` : "\u2014";
+    const now2 = row.now !== void 0 ? `${row.now.imported}/${row.now.total}` : "\u2014";
+    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.imported - row.base.imported)} ${arrow(row.now.imported - row.base.imported)}` : "\u2014";
+    return `| ${label} | ${base2} | ${now2} | ${delta} |`;
+  }
+  const now = nowScalar(row);
+  const base = baseScalar(row);
+  const nowCell = now !== void 0 ? scalar(row.id, now) : "\u2014";
+  const baseCell = base !== void 0 ? scalar(row.id, base) : "\u2014";
+  const deltaCell = hasScalarDelta(row) ? `${signed(row.delta)} ${arrow(row.delta)}` : "\u2014";
+  return `| ${label} | ${baseCell} | ${nowCell} | ${deltaCell} |`;
+}
+function renderCurrentRow(row) {
+  const label = metricLabel(row);
+  if (row.id === "drift") {
+    const now2 = row.now !== void 0 ? driftCell(row.now, false) : "\u2014";
+    return `| ${label} | ${now2} |`;
+  }
+  if (row.id === "import-coverage") {
+    const now2 = row.now !== void 0 ? `${row.now.imported}/${row.now.total}` : "\u2014";
+    return `| ${label} | ${now2} |`;
+  }
+  const now = nowScalar(row);
+  const nowCell = now !== void 0 ? scalar(row.id, now) : "\u2014";
+  return `| ${label} | ${nowCell} |`;
+}
+function componentBlock(rows) {
+  const scoreRow = rows.find((r2) => r2.id === "score");
+  if (scoreRow === void 0 || scoreRow.id !== "score") return [];
+  if (scoreRow.components.length === 0) return [];
+  const lines = [
+    "#### Components",
+    "",
+    "| Component | Score | Weight |",
+    "| --- | --- | --- |"
+  ];
+  for (const c2 of scoreRow.components) {
+    lines.push(
+      `| ${COMPONENT_LABEL[c2.kind] ?? c2.kind} | ${c2.score} | ${c2.weight} |`
+    );
+  }
+  return lines;
+}
+function renderScorecardMarkdown(model, options) {
+  const lines = [TITLE, ""];
+  if (model.kind === "no-data") {
+    lines.push(
+      "_No design-system history yet \u2014 run a check to populate the scorecard._",
+      ""
+    );
+    return lines.join("\n");
+  }
+  const currentLabel = options.currentLabel ?? "current";
+  const compare = !model.currentOnly;
+  lines.push(
+    compare ? summaryLine(model.rows) : currentOnlySummary(model.rows),
+    ""
+  );
+  const breaking = breakingTokenIncrease(model.rows) > 0;
+  if (compare) {
+    const baseLabel = options.baseLabel ?? "base";
+    lines.push(
+      `| Metric | ${baseLabel} | ${currentLabel} | \u0394 |`,
+      "| --- | --- | --- | --- |"
+    );
+    for (const row of model.rows) lines.push(renderCompareRow(row, breaking));
+  } else {
+    lines.push(`| Metric | ${currentLabel} |`, "| --- | --- |");
+    for (const row of model.rows) lines.push(renderCurrentRow(row));
+  }
+  lines.push("");
+  const components = componentBlock(model.rows);
+  if (components.length > 0) lines.push(...components, "");
+  if (options.noBaseline === true) {
+    const baseLabel = options.baseLabel ?? "base";
+    lines.push(`_no baseline at ${baseLabel}_`, "");
+  }
+  return lines.join("\n");
+}
+
 // src/render/html/charts.ts
 var DEFAULT_PALETTE = [
   "#2563eb",
@@ -14026,7 +14478,7 @@ function panel(title, body) {
     "</section>"
   ].join("");
 }
-var COMPONENT_LABEL = {
+var COMPONENT_LABEL2 = {
   drift: "drift",
   lint: "lint",
   readiness: "readiness",
@@ -14047,7 +14499,7 @@ function systemScoreSection(data) {
     }
   ];
   const legendRows = score.components.map(
-    (c2) => `<tr><td>${escapeHtml(COMPONENT_LABEL[c2.kind] ?? c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
+    (c2) => `<tr><td>${escapeHtml(COMPONENT_LABEL2[c2.kind] ?? c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
   ).join("");
   const legend = [
     '<table class="weights">',
@@ -14196,7 +14648,7 @@ function impactSection(data) {
     `<div class="chart">${barChart(bars)}</div>${radius}`
   );
 }
-function onSystemPct(refs, literals) {
+function onSystemPct2(refs, literals) {
   const total = refs + literals;
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
@@ -14228,7 +14680,7 @@ function importCoverageSection(data) {
     return panel("Import coverage", emptyState2("adoption"));
   }
   const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct2 = total === 0 ? 0 : Math.round(imported / total * 100);
+  const pct3 = total === 0 ? 0 : Math.round(imported / total * 100);
   const list = uncovered.length > 0 ? [
     '<ul class="offenders">',
     ...uncovered.map(
@@ -14242,7 +14694,7 @@ function importCoverageSection(data) {
   return panel(
     "Import coverage",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(pct2, { label: "Import coverage" })}</div>`,
+      `<div class="chart" style="text-align:center">${donutGauge(pct3, { label: "Import coverage" })}</div>`,
       `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
       list,
       overflow
@@ -14256,13 +14708,13 @@ function leaderboardSection(data) {
   }
   const bars = rows.map((row) => ({
     label: row.dir,
-    value: onSystemPct(row.refs, row.literals)
+    value: onSystemPct2(row.refs, row.literals)
   }));
   const labels = [
     '<ul class="offenders">',
     ...rows.map(
       (row) => `<li><code>${escapeHtml(row.dir)}</code><span class="count">${escapeHtml(
-        String(onSystemPct(row.refs, row.literals))
+        String(onSystemPct2(row.refs, row.literals))
       )}%</span></li>`
     ),
     "</ul>"
@@ -14329,10 +14781,10 @@ var RULE_REASON = {
   component: "Component usage",
   naming: "Naming"
 };
-function asNumber2(value) {
+function asNumber3(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
-function onSystemPct2(refs, literals) {
+function onSystemPct3(refs, literals) {
   const total = refs + literals;
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
@@ -14379,9 +14831,9 @@ function aggregateHistory(stateDir, onWarning) {
       const date = typeof r2.at === "string" ? r2.at.slice(0, 10) : "";
       driftTrend.push({
         date,
-        breaking: asNumber2(r2.stale),
-        additive: asNumber2(r2.missing),
-        cosmetic: asNumber2(r2.orphan)
+        breaking: asNumber3(r2.stale),
+        additive: asNumber3(r2.missing),
+        cosmetic: asNumber3(r2.orphan)
       });
       continue;
     }
@@ -14390,35 +14842,35 @@ function aggregateHistory(stateDir, onWarning) {
       const byKind = r2.byKind ?? { exact: 0, near: 0, offSystem: 0 };
       lint = {
         byKind: {
-          exact: asNumber2(byKind.exact),
-          near: asNumber2(byKind.near),
-          offSystem: asNumber2(byKind.offSystem)
+          exact: asNumber3(byKind.exact),
+          near: asNumber3(byKind.near),
+          offSystem: asNumber3(byKind.offSystem)
         },
         topOffenders: []
       };
       const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
       if (adoption !== void 0) {
-        const refs = asNumber2(adoption.refs);
-        const literals = asNumber2(adoption.literals);
+        const refs = asNumber3(adoption.refs);
+        const literals = asNumber3(adoption.literals);
         if (typeof r2.at === "string") {
           adoptionTrend.push({
             date: r2.at.slice(0, 10),
-            pct: onSystemPct2(refs, literals)
+            pct: onSystemPct3(refs, literals)
           });
         }
         const byDirectory = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
         leaderboard = byDirectory.map((d) => ({
           dir: typeof d.dir === "string" ? d.dir : "",
-          refs: asNumber2(d.refs),
-          literals: asNumber2(d.literals)
+          refs: asNumber3(d.refs),
+          literals: asNumber3(d.literals)
         }));
       }
       continue;
     }
     if (record.kind === "adoption") {
       const r2 = record;
-      const imported = asNumber2(r2.imported);
-      const total = asNumber2(r2.total);
+      const imported = asNumber3(r2.imported);
+      const total = asNumber3(r2.total);
       const uncovered = Array.isArray(r2.uncovered) ? r2.uncovered.filter((n) => typeof n === "string") : [];
       importCoverage = {
         imported,
@@ -14432,11 +14884,11 @@ function aggregateHistory(stateDir, onWarning) {
       const r2 = record;
       const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
       readiness = {
-        score: asNumber2(r2.score),
+        score: asNumber3(r2.score),
         frameName: typeof r2.frameName === "string" ? r2.frameName : "",
         deductions: deductions.map((d) => ({
           reason: RULE_REASON[d.rule] ?? d.rule,
-          points: asNumber2(d.points)
+          points: asNumber3(d.points)
         }))
       };
       continue;
@@ -14448,8 +14900,8 @@ function aggregateHistory(stateDir, onWarning) {
         level: r2.level === "AAA" ? "AAA" : "AA",
         modes: modes2.map((m) => ({
           mode: typeof m.mode === "string" ? m.mode : "",
-          passed: asNumber2(m.passed),
-          failed: asNumber2(m.failed)
+          passed: asNumber3(m.passed),
+          failed: asNumber3(m.failed)
         }))
       };
       continue;
@@ -14457,10 +14909,10 @@ function aggregateHistory(stateDir, onWarning) {
     if (record.kind === "impact") {
       const r2 = record;
       impact = {
-        breaking: asNumber2(r2.breaking),
-        additive: asNumber2(r2.additive),
-        cosmetic: asNumber2(r2.cosmetic),
-        touchedCallSites: asNumber2(r2.touchedCallSites)
+        breaking: asNumber3(r2.breaking),
+        additive: asNumber3(r2.additive),
+        cosmetic: asNumber3(r2.cosmetic),
+        touchedCallSites: asNumber3(r2.touchedCallSites)
       };
     }
   }
@@ -14628,7 +15080,79 @@ function resolveSelection(targetDir, options) {
     }
   }
 }
+function readHistoryText(stateDir) {
+  try {
+    return readFileSync11(join13(stateDir, "history.jsonl"), "utf8");
+  } catch {
+    return "";
+  }
+}
+function runMarkdownReport(targetDir, options, weights) {
+  const stateDir = join13(targetDir, ".ds-bridge");
+  const currentText = readHistoryText(stateDir);
+  let baseText;
+  let noBaseline = false;
+  const baseLabel = options.delta;
+  if (options.delta !== void 0) {
+    const outcome = readFileAtRef({
+      ref: options.delta,
+      path: join13(".ds-bridge", "history.jsonl"),
+      cwd: targetDir,
+      exec: spawnGitExec
+    });
+    if (outcome.kind === "git-error") {
+      failReport(`Could not read "${options.delta}": ${outcome.message}`);
+      return;
+    }
+    if (outcome.kind === "missing") {
+      noBaseline = true;
+    } else {
+      baseText = outcome.text;
+    }
+  }
+  const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
+  const model = buildScorecard(currentText, baseText, effectiveWeights);
+  if (model.kind === "no-data") {
+    failReport(
+      "No design-system history yet \u2014 run a check (e.g. ds-bridge tokens-check) to populate the scorecard."
+    );
+    return;
+  }
+  const markdown = renderScorecardMarkdown(model, {
+    ...baseLabel !== void 0 ? { baseLabel } : {},
+    ...noBaseline ? { noBaseline: true } : {}
+  });
+  if (options.out !== void 0) {
+    const outPath = resolve8(options.out);
+    const written = writeDashboard(outPath, markdown);
+    if (written.kind === "error") {
+      failReport(written.message);
+      return;
+    }
+    process.stdout.write(`${outPath}
+`);
+  } else {
+    process.stdout.write(markdown);
+  }
+  process.exitCode = 0;
+}
 function runReport(path, options) {
+  if (options.format !== "html" && options.format !== "md") {
+    failReport(
+      `Unknown --format "${options.format}". Expected "html" or "md".`
+    );
+    return;
+  }
+  if (options.delta !== void 0 && options.format !== "md") {
+    failReport("--delta requires --format md.");
+    return;
+  }
+  if (options.open && options.format === "md") {
+    failReport(
+      "--open is not valid with --format md (there is no file to open)."
+    );
+    return;
+  }
   const targetDir = resolve8(path);
   if (!existsSync11(targetDir) || !statSync8(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
@@ -14637,6 +15161,10 @@ function runReport(path, options) {
   const selection = resolveSelection(targetDir, options);
   if ("kind" in selection) {
     failReport(selection.message);
+    return;
+  }
+  if (options.format === "md") {
+    runMarkdownReport(targetDir, options, selection.scoreWeights);
     return;
   }
   const stateDir = join13(targetDir, ".ds-bridge");
@@ -14687,8 +15215,15 @@ function registerReportCommand(program2) {
     "--artifacts <ids>",
     "render a custom comma-separated artifact list (mutually exclusive with --view)"
   ).option(
+    "--format <format>",
+    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY)",
+    "html"
+  ).option(
+    "--delta <ref>",
+    "compare against the base ref's committed history (requires --format md)"
+  ).option(
     "--out <file>",
-    "output file (default <path>/.ds-bridge/reports/dashboard.html)"
+    "output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)"
   ).option(
     "--open",
     'open the report after writing (override the opener with the DS_BRIDGE_OPEN_CMD env var; defaults to "open" on macOS, "xdg-open" elsewhere)',
