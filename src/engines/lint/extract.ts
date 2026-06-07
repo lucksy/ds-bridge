@@ -64,22 +64,58 @@ function isSpacingProperty(property: string): boolean {
 }
 
 /**
- * Replace /* *​/ comment spans with equal-length spaces so column offsets are
- * preserved while the commented content becomes invisible to extraction.
+ * Replace comment spans and string contents with equal-length spaces so column
+ * offsets are preserved while the masked content becomes invisible to scanning.
+ *
+ * Blanks three things (A1 — shared by literal extraction and token-ref counting):
+ *   - `/​* … *​/` block comments
+ *   - SCSS `//` line comments to EOL (but NOT a `://` URL scheme, where the char
+ *     before `//` is `:`)
+ *   - the inside of `"…"` / `'…'` string literals (delimiters kept; a string
+ *     opener inside a comment is ignored because the comment is consumed first)
+ *
+ * Single forward pass; never throws. Exported so the adoption engine reuses the
+ * exact same masking the extractor trusts.
  */
-function blankComments(text: string): string {
+export function blankComments(text: string): string {
 	let out = "";
 	let i = 0;
 	while (i < text.length) {
-		if (text[i] === "/" && text[i + 1] === "*") {
+		const ch = text[i];
+		// Block comment /* … */.
+		if (ch === "/" && text[i + 1] === "*") {
 			const end = text.indexOf("*/", i + 2);
 			const stop = end === -1 ? text.length : end + 2;
 			for (let j = i; j < stop; j++) out += text[j] === "\n" ? "\n" : " ";
 			i = stop;
-		} else {
-			out += text[i];
-			i += 1;
+			continue;
 		}
+		// SCSS // line comment — unless it is a `://` URL scheme (prev char is ':').
+		if (ch === "/" && text[i + 1] === "/" && text[i - 1] !== ":") {
+			let j = i;
+			while (j < text.length && text[j] !== "\n") {
+				out += " ";
+				j += 1;
+			}
+			i = j;
+			continue;
+		}
+		// String literal — blank the interior, keep the quotes for offset fidelity.
+		if (ch === '"' || ch === "'") {
+			out += ch;
+			i += 1;
+			while (i < text.length && text[i] !== ch) {
+				out += text[i] === "\n" ? "\n" : " ";
+				i += 1;
+			}
+			if (i < text.length) {
+				out += text[i]; // closing quote
+				i += 1;
+			}
+			continue;
+		}
+		out += ch;
+		i += 1;
 	}
 	return out;
 }
