@@ -89,6 +89,99 @@ export function readGitLog(input: ReadGitLogInput): ReadGitLogResult {
 	return { kind: "ok", commits };
 }
 
+export interface ReadFileAtRefInput {
+	/** Git revision to read from (e.g. a base branch like `origin/main`). */
+	ref: string;
+	/** Path to read, given relative to the caller's `cwd` (e.g. `.ds-bridge/history.jsonl`). */
+	path: string;
+	/**
+	 * The directory to run git in. This MUST be the caller-resolved target
+	 * directory (the report command's resolved `[path]`), NOT `process.cwd()`.
+	 *
+	 * The changelog command's `processCwd()` precedent (changelog.ts:83) is WRONG
+	 * for this helper: report can target a repo elsewhere on disk, so anchoring to
+	 * the process cwd would `git show` the wrong repository — or none at all. We
+	 * anchor to the caller's targetDir so the committed `.ds-bridge/` we compare
+	 * against is the one inside the repo the report actually describes.
+	 *
+	 * Because `cwd` may be a subdirectory of the repo, the pathspec for `git show`
+	 * must be repo-ROOT-relative: we first `git rev-parse --show-prefix` to learn
+	 * the cwd's offset from the root and prepend it to `path`.
+	 */
+	cwd: string;
+	/** Injectable subprocess runner; the CLI passes the real spawnSync wrapper. */
+	exec: GitExec;
+}
+
+export type ReadFileAtRefResult =
+	| { kind: "ok"; text: string }
+	| { kind: "missing" }
+	| { kind: "git-error"; message: string };
+
+/**
+ * Classify a failed `git show`/`git rev-parse` run into a typed outcome from its
+ * STDERR STRING ONLY (per SPEC §1.1, empirically critic-tested: every failure
+ * exits 128 identically, so the exit code carries no signal — the stderr text
+ * is the only discriminator).
+ *
+ * - `error !== undefined` (git absent, status −1) → git-error.
+ * - stderr contains `does not exist in` OR `exists on disk, but not in` → missing
+ *   (the file simply isn't committed at that ref; the second string is the
+ *   realistic case since the committed `.ds-bridge/` dir exists on disk).
+ * - stderr names a repo/ref problem (`not a git repository` / `invalid object
+ *   name` / `bad revision` / `ambiguous argument`) → git-error.
+ * - any unrecognized stderr → git-error (conservative: never silently treat an
+ *   unknown failure as a benign missing-baseline).
+ */
+function classifyGitFailure(run: GitExecResult): {
+	kind: "missing" | "git-error";
+	message: string;
+} {
+	if (run.error !== undefined) {
+		return { kind: "git-error", message: run.error };
+	}
+	const stderr = run.stderr;
+	if (
+		stderr.includes("does not exist in") ||
+		stderr.includes("exists on disk, but not in")
+	) {
+		return { kind: "missing", message: stderr };
+	}
+	// All other stderr — known repo/ref problems and anything unrecognized — is a
+	// git-error. (We don't need to enumerate the known strings to decide: they all
+	// map to git-error, exactly like the conservative default.)
+	return { kind: "git-error", message: stderr.trim() };
+}
+
+/**
+ * Read a file's committed contents at a git ref through the injectable `GitExec`
+ * seam — used to fetch the base ref's `.ds-bridge/` state for the scorecard delta
+ * (SPEC §1.1). Two-step: `git rev-parse --show-prefix` to make the pathspec
+ * repo-root-relative, then `git show <ref>:<prefix><path>`.
+ *
+ * Never throws: a missing file, a bad ref, a non-repo cwd, or an absent git all
+ * surface as typed outcomes the caller translates to exit codes (missing →
+ * no-baseline note, exit 0; git-error → exit 2).
+ */
+export function readFileAtRef(input: ReadFileAtRefInput): ReadFileAtRefResult {
+	const { ref, path, cwd, exec } = input;
+
+	const prefixRun = exec(["rev-parse", "--show-prefix"], cwd);
+	if (prefixRun.error !== undefined || prefixRun.status !== 0) {
+		const { kind, message } = classifyGitFailure(prefixRun);
+		return kind === "missing" ? { kind: "missing" } : { kind, message };
+	}
+	// `--show-prefix` prints "" at the root and "<subdir>/\n" otherwise.
+	const prefix = prefixRun.stdout.trim();
+
+	const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd);
+	if (showRun.error !== undefined || showRun.status !== 0) {
+		const { kind, message } = classifyGitFailure(showRun);
+		return kind === "missing" ? { kind: "missing" } : { kind, message };
+	}
+	return { kind: "ok", text: showRun.stdout };
+}
+
 /** Default real-git exec for the CLI edge — wraps spawnSync. */
 export function spawnGitExec(args: string[], cwd: string): GitExecResult {
 	const run = spawnSync("git", args, { cwd, encoding: "utf8" });

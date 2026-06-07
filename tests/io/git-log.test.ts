@@ -12,6 +12,7 @@ import {
 	GIT_LOG_FIELD_SEP,
 	GIT_LOG_RECORD_SEP,
 	type GitExec,
+	readFileAtRef,
 	readGitLog,
 } from "../../src/io/git-log.js";
 
@@ -192,5 +193,243 @@ describe("readGitLog — failure modes (typed, never throws)", () => {
 		if (result.kind !== "ok") return;
 		// Only the well-formed record survives.
 		expect(result.commits.map((c) => c.hash)).toEqual(["good"]);
+	});
+});
+
+/**
+ * Two-step GitExec double for readFileAtRef: the helper runs
+ * `git rev-parse --show-prefix` then `git show`. This double dispatches a canned
+ * result per first-arg (mirroring the canned-output style of fakeExec) and
+ * records every call so the prefix path-joining and cwd seam can be asserted.
+ */
+type FakeStep = {
+	stdout?: string;
+	stderr?: string;
+	status?: number;
+	error?: string;
+};
+
+function fakeShowExec(steps: { revParse?: FakeStep; show?: FakeStep }): {
+	exec: GitExec;
+	calls: { args: string[]; cwd: string }[];
+} {
+	const calls: { args: string[]; cwd: string }[] = [];
+	const exec: GitExec = (args, cwd) => {
+		calls.push({ args, cwd });
+		const step = args[0] === "rev-parse" ? steps.revParse : steps.show;
+		return {
+			status: step?.status ?? 0,
+			stdout: step?.stdout ?? "",
+			stderr: step?.stderr ?? "",
+			...(step?.error !== undefined ? { error: step.error } : {}),
+		};
+	};
+	return { exec, calls };
+}
+
+describe("readFileAtRef — invocation (the injectable git seam)", () => {
+	it("rev-parses the prefix then shows <ref>:<prefix><path> in the given cwd", () => {
+		const { exec, calls } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: { stdout: "line one\nline two\n" },
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/target/dir",
+			exec,
+		});
+		expect(result.kind).toBe("ok");
+		if (result.kind !== "ok") return;
+		expect(result.text).toBe("line one\nline two\n");
+		expect(calls).toHaveLength(2);
+		expect(calls[0]?.args).toEqual(["rev-parse", "--show-prefix"]);
+		expect(calls[0]?.cwd).toBe("/target/dir");
+		// Root cwd → empty prefix → no prefix prepended to the pathspec.
+		expect(calls[1]?.args).toEqual([
+			"show",
+			"origin/main:.ds-bridge/history.jsonl",
+		]);
+		expect(calls[1]?.cwd).toBe("/target/dir");
+	});
+
+	it("prepends the repo-root-relative prefix when cwd is a subdirectory", () => {
+		// A non-root cwd (e.g. a web/ subpackage) → rev-parse reports "web/" and the
+		// pathspec must be ROOT-relative: <ref>:web/.ds-bridge/history.jsonl.
+		const { exec, calls } = fakeShowExec({
+			revParse: { stdout: "web/\n" },
+			show: { stdout: "data\n" },
+		});
+		const result = readFileAtRef({
+			ref: "abc123",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo/web",
+			exec,
+		});
+		expect(result.kind).toBe("ok");
+		expect(calls[1]?.args).toEqual([
+			"show",
+			"abc123:web/.ds-bridge/history.jsonl",
+		]);
+	});
+});
+
+describe("readFileAtRef — classifier (stderr-string only, never throws)", () => {
+	it("classifies the does-not-exist-in stderr as missing", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: {
+				status: 128,
+				stderr:
+					"fatal: path '.ds-bridge/history.jsonl' does not exist in 'origin/main'\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("missing");
+	});
+
+	it("classifies the exists-on-disk-but-not-in stderr as missing (the realistic case: committed .ds-bridge/ exists on disk)", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: {
+				status: 128,
+				stderr:
+					"fatal: path '.ds-bridge/history.jsonl' exists on disk, but not in 'origin/main'\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("missing");
+	});
+
+	it("classifies an invalid object name (bad ref) as git-error", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: {
+				status: 128,
+				stderr: "fatal: invalid object name 'nope'.\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "nope",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+		if (result.kind !== "git-error") return;
+		expect(result.message).toContain("invalid object name");
+	});
+
+	it("classifies a bad-revision stderr as git-error", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: {
+				status: 128,
+				stderr: "fatal: bad revision 'HEAD~999'\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "HEAD~999",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+	});
+
+	it("classifies an ambiguous-argument stderr as git-error", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: {
+				status: 128,
+				stderr: "fatal: ambiguous argument 'foo': unknown revision\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "foo",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+	});
+
+	it("classifies a not-a-git-repository failure (from rev-parse) as git-error", () => {
+		const { exec, calls } = fakeShowExec({
+			revParse: {
+				status: 128,
+				stderr:
+					"fatal: not a git repository (or any of the parent directories)\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/not/a/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+		// rev-parse failed → never reaches `git show`.
+		expect(calls).toHaveLength(1);
+	});
+
+	it("classifies an unrecognized stderr conservatively as git-error", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: {
+				status: 128,
+				stderr: "fatal: something nobody anticipated\n",
+			},
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+	});
+
+	it("classifies error!==undefined (git absent, status -1) as git-error — mirrors readGitLog's ENOENT case", () => {
+		const { exec } = fakeShowExec({
+			revParse: { stdout: "" },
+			show: { status: -1, error: "spawn git ENOENT" },
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+		if (result.kind !== "git-error") return;
+		expect(result.message).toContain("ENOENT");
+	});
+
+	it("classifies git-absent at the rev-parse step (status -1, error set) as git-error without reaching show", () => {
+		const { exec, calls } = fakeShowExec({
+			revParse: { status: -1, error: "spawn git ENOENT" },
+		});
+		const result = readFileAtRef({
+			ref: "origin/main",
+			path: ".ds-bridge/history.jsonl",
+			cwd: "/repo",
+			exec,
+		});
+		expect(result.kind).toBe("git-error");
+		if (result.kind !== "git-error") return;
+		expect(result.message).toContain("ENOENT");
+		// rev-parse never ran git → never reaches `git show`.
+		expect(calls).toHaveLength(1);
 	});
 });
