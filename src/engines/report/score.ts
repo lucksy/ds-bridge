@@ -9,8 +9,13 @@
 // `aggregateHistory` because its output is lossy (fields renamed into drift
 // buckets, timestamps dropped) and reverse-mapping would be fragile.
 
-/** The four weightable sub-score components. */
-export type ComponentKind = "drift" | "lint" | "readiness" | "a11y";
+/** The five weightable sub-score components (adoption joined in A4). */
+export type ComponentKind =
+	| "drift"
+	| "lint"
+	| "readiness"
+	| "a11y"
+	| "adoption";
 
 /** The composite's weights table — one positive finite number per component. */
 export interface Weights {
@@ -18,14 +23,20 @@ export interface Weights {
 	lint: number;
 	readiness: number;
 	a11y: number;
+	adoption: number;
 }
 
-/** The documented default weights (SPEC-score §2). */
+/**
+ * The documented default weights (SPEC-adoption §3 rebalance). adoption joins
+ * as a true-ratio component; drift/lint drop 30→25 and readiness/a11y 20→15 to
+ * make room. Critic-verified: the seeded composite stays 76 under this set.
+ */
 export const DEFAULT_WEIGHTS: Weights = {
-	drift: 30,
-	lint: 30,
-	readiness: 20,
-	a11y: 20,
+	drift: 25,
+	lint: 25,
+	readiness: 15,
+	a11y: 15,
+	adoption: 20,
 };
 
 /** Validated weights, or a typed configuration error (no throws on bad input). */
@@ -58,12 +69,13 @@ export type ScoreOutcome =
 	  }
 	| { kind: "no-data" };
 
-/** The four component kinds, in canonical (catalog) order. */
+/** The five component kinds, in canonical (catalog) order. */
 const COMPONENT_ORDER: readonly ComponentKind[] = [
 	"drift",
 	"lint",
 	"readiness",
 	"a11y",
+	"adoption",
 ];
 
 /**
@@ -165,12 +177,36 @@ function a11yScore(r: Record<string, unknown>): number | undefined {
 	return (100 * passed) / total;
 }
 
-/** The latest-of-each-kind raw records, as accumulated during a replay. */
+/**
+ * adoption sub-score: 100 · refs / (refs + literals) from a lint line's
+ * `adoption` block (SPEC-adoption §3). No block, or a zero denominator → the
+ * component is absent (`undefined`), never a misleading 0 — mirroring a11y.
+ */
+function adoptionScore(record: Record<string, unknown>): number | undefined {
+	const adoption =
+		typeof record.adoption === "object" && record.adoption !== null
+			? (record.adoption as Record<string, unknown>)
+			: undefined;
+	if (adoption === undefined) return undefined;
+	const refs = asNumber(adoption.refs);
+	const literals = asNumber(adoption.literals);
+	const total = refs + literals;
+	if (total <= 0) return undefined;
+	return (100 * refs) / total;
+}
+
+/**
+ * The latest-of-each-kind raw records, as accumulated during a replay. The
+ * `adoption` slot is a PARALLEL last-wins keyed on field presence (the last
+ * lint line that CARRIES an `adoption` block), tracked independently of the
+ * plain-`lint` last-wins — so adoption survives a later plain lint line.
+ */
 interface LatestRecords {
 	drift?: Record<string, unknown>;
 	lint?: Record<string, unknown>;
 	readiness?: Record<string, unknown>;
 	a11y?: Record<string, unknown>;
+	adoption?: Record<string, unknown>;
 }
 
 /** Map a history `kind` to a component kind, or undefined if not score-relevant. */
@@ -203,6 +239,8 @@ function subScore(
 			return readinessScore(record);
 		case "a11y":
 			return a11yScore(record);
+		case "adoption":
+			return adoptionScore(record);
 	}
 }
 
@@ -291,6 +329,18 @@ export function scoreFromHistory(
 		const date =
 			typeof record.at === "string" ? record.at.slice(0, 10) : undefined;
 		entries.push({ component, date, record });
+
+		// A `lint` line that CARRIES an `adoption` block ALSO contributes a parallel
+		// `adoption` entry (keyed on field presence), tracked independently of the
+		// plain-lint last-wins. A lint line without the block contributes none — so
+		// adoption survives a later plain lint line (SPEC-adoption §3).
+		if (
+			component === "lint" &&
+			typeof record.adoption === "object" &&
+			record.adoption !== null
+		) {
+			entries.push({ component: "adoption", date, record });
+		}
 	}
 
 	// CURRENT: last-wins per kind over ALL score-relevant entries (dated or not).
