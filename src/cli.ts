@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { registerA11yCommand } from "./cli-commands/a11y.js";
+import { registerAdoptionCommand } from "./cli-commands/adoption.js";
 import { registerBadgeCommand } from "./cli-commands/badge.js";
 import { registerChangelogCommand } from "./cli-commands/changelog.js";
 import { registerDashboardCommand } from "./cli-commands/dashboard.js";
@@ -35,6 +36,7 @@ export function buildProgram(): Command {
 	registerParityCommand(program);
 	registerA11yCommand(program);
 	registerImpactCommand(program);
+	registerAdoptionCommand(program);
 	registerChangelogCommand(program);
 	registerDocsCommand(program);
 	registerDashboardCommand(program);
