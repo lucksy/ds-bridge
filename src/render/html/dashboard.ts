@@ -506,6 +506,61 @@ function leaderboardSection(data: ReportData): string {
 	);
 }
 
+/**
+ * Library health → bar chart of the three totals (override hotspots, deprecated
+ * usage, detached candidates) + the top override-hotspot list (name + count) +
+ * the detached-candidate heuristic caveat rendered INLINE next to the detached
+ * count (B5). The caveat is load-bearing: a detached "candidate" over REST is a
+ * guess (SPEC §1.3), so the number never stands alone. Absent data → the shared
+ * empty-state helper.
+ */
+function libraryHealthSection(data: ReportData): string {
+	const health = data.libraryHealth;
+	if (health === undefined) {
+		return panel("Library health", emptyState("library-health"));
+	}
+
+	const { totals } = health;
+	const bars = [
+		{ label: "Override hotspots", value: totals.overrideHotspots },
+		{ label: "Deprecated usage", value: totals.deprecatedUsage },
+		{ label: "Detached candidates", value: totals.detachedCandidates },
+	];
+
+	// The detached-candidate caveat lives INLINE adjacent to the detached count:
+	// the heuristic cannot truly detect detachment, so the number is qualified at
+	// its render site (SPEC §1.3 honest scope).
+	const detachedCaveat = [
+		'<div class="meta">',
+		`Detached candidates: ${escapeHtml(String(totals.detachedCandidates))} `,
+		"— heuristic — REST cannot truly detect detachment; expect false positives.",
+		"</div>",
+	].join("");
+
+	// Top override hotspots (name + count). The list may be empty when the data
+	// was reconstructed from a counts-only history line (SPEC §3).
+	const hotspots =
+		health.overrideHotspots.length > 0
+			? [
+					'<ul class="offenders">',
+					...health.overrideHotspots.map(
+						(h) =>
+							`<li><code>${escapeHtml(h.name)}</code><span class="count">${escapeHtml(String(h.overrideCount))}</span></li>`,
+					),
+					"</ul>",
+				].join("")
+			: "";
+
+	return panel(
+		"Library health",
+		[
+			`<div class="chart">${barChart(bars)}</div>`,
+			detachedCaveat,
+			hotspots,
+		].join(""),
+	);
+}
+
 // Each artifact id maps to the section renderer for its ReportData slice. The
 // keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
 // caller-supplied selection over this map is what gates DOM inclusion (an id
@@ -521,6 +576,7 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"adoption-trend": adoptionTrendSection,
 	"import-coverage": importCoverageSection,
 	leaderboard: leaderboardSection,
+	"library-health": libraryHealthSection,
 };
 
 /** Optional rendering controls that do not affect which sections appear. */

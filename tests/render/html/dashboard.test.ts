@@ -103,6 +103,31 @@ const fullData: ReportData = {
 		{ dir: "src/legacy", refs: 2, literals: 18 },
 		{ dir: "src/components", refs: 211, literals: 9 },
 	],
+	libraryHealth: {
+		overrideHotspots: [
+			{
+				nodeId: "1:10",
+				name: "Primary CTA",
+				componentName: "Button / Primary",
+				overrideCount: 3,
+			},
+			{
+				nodeId: "1:20",
+				name: "Old Button A",
+				componentName: "[deprecated] OldButton",
+				overrideCount: 2,
+			},
+		],
+		deprecatedUsage: [{ componentName: "[deprecated] OldButton", count: 2 }],
+		detachedCandidates: [
+			{ nodeId: "1:30", name: "Button / Primary", heuristic: true },
+		],
+		totals: {
+			overrideHotspots: 2,
+			deprecatedUsage: 2,
+			detachedCandidates: 1,
+		},
+	},
 };
 
 const emptyData: ReportData = {
@@ -167,7 +192,7 @@ describe("renderDashboard — self-containment (offline safe)", () => {
 describe("renderDashboard — full data", () => {
 	const html = renderDashboard(fullData);
 
-	it("renders all ten section titles", () => {
+	it("renders all eleven section titles", () => {
 		expect(html).toMatch(/System score/i);
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
@@ -176,13 +201,26 @@ describe("renderDashboard — full data", () => {
 		expect(html).toMatch(/Adoption trend/i);
 		expect(html).toMatch(/Import coverage/i);
 		expect(html).toMatch(/Adoption leaderboard/i);
+		expect(html).toMatch(/Library health/i);
 	});
 
-	it("emits exactly eleven <svg> charts (one per section + the score gauge & trend)", () => {
+	it("emits exactly twelve <svg> charts (one per section + the score gauge & trend)", () => {
 		// six wave-1 sections (one svg each) + system-score's gauge + trend (2) +
 		// the three owner sections (adoption-trend line, coverage donut,
-		// leaderboard bar) = 6 + 2 + 3 = 11 (B2).
-		expect(countMatches(html, /<svg\b/g)).toBe(11);
+		// leaderboard bar) = 6 + 2 + 3 = 11 (B2) + library-health's totals bar = 12 (B5).
+		expect(countMatches(html, /<svg\b/g)).toBe(12);
+	});
+
+	it("renders the library-health totals as a bar chart with the top hotspot list + the heuristic caveat (B5)", () => {
+		expect(html).toMatch(TITLE_FOR["library-health"]);
+		// the top override-hotspot list surfaces names + counts.
+		expect(html).toContain("Primary CTA");
+		expect(html).toContain("Old Button A");
+		// the detached-candidate heuristic caveat is rendered inline.
+		expect(html.toLowerCase()).toContain("heuristic");
+		expect(html).toContain(
+			"REST cannot truly detect detachment; expect false positives",
+		);
 	});
 
 	it("includes a11y mode labels and failure counts (T7.22)", () => {
@@ -292,15 +330,15 @@ describe("renderDashboard — full data", () => {
 describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
-	it("renders all ten empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+	it("renders all eleven empty-state panels", () => {
+		expect(countMatches(html, /No data yet/gi)).toBe(11);
 	});
 
 	it("emits zero <svg> charts", () => {
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
 	});
 
-	it("still renders all ten section titles", () => {
+	it("still renders all eleven section titles", () => {
 		expect(html).toMatch(/System score/i);
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
@@ -311,10 +349,11 @@ describe("renderDashboard — empty data", () => {
 		expect(html).toMatch(/Adoption trend/i);
 		expect(html).toMatch(/Import coverage/i);
 		expect(html).toMatch(/Adoption leaderboard/i);
+		expect(html).toMatch(/Library health/i);
 	});
 
 	it("mentions the ds-bridge command in each empty state", () => {
-		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(10);
+		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(11);
 	});
 });
 
@@ -328,10 +367,10 @@ describe("renderDashboard — partial mixes", () => {
 			],
 			readiness: { score: 70, frameName: "Frame", deductions: [] },
 		});
-		// two charts present, eight empty states (incl. absent system-score + the
-		// three owner sections).
+		// two charts present, nine empty states (incl. absent system-score + the
+		// three owner sections + library-health).
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(8);
+		expect(countMatches(html, /No data yet/gi)).toBe(9);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -346,7 +385,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(9);
+		expect(countMatches(html, /No data yet/gi)).toBe(10);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -356,7 +395,7 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+		expect(countMatches(html, /No data yet/gi)).toBe(11);
 	});
 
 	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
@@ -366,7 +405,7 @@ describe("renderDashboard — partial mixes", () => {
 			a11y: { level: "AA", modes: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+		expect(countMatches(html, /No data yet/gi)).toBe(11);
 	});
 
 	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
@@ -376,7 +415,7 @@ describe("renderDashboard — partial mixes", () => {
 			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(9);
+		expect(countMatches(html, /No data yet/gi)).toBe(10);
 	});
 
 	it("treats an empty adoptionTrend / leaderboard array as an empty state (B2)", () => {
@@ -387,7 +426,7 @@ describe("renderDashboard — partial mixes", () => {
 			leaderboard: [],
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+		expect(countMatches(html, /No data yet/gi)).toBe(11);
 	});
 
 	it("renders import coverage even when nothing is uncovered (B2)", () => {
@@ -401,9 +440,9 @@ describe("renderDashboard — partial mixes", () => {
 				uncoveredTotal: 0,
 			},
 		});
-		// the donut gauge renders (a real chart), the other nine sections stay empty.
+		// the donut gauge renders (a real chart), the other ten sections stay empty.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(9);
+		expect(countMatches(html, /No data yet/gi)).toBe(10);
 		expect(html).toMatch(/<text[^>]*>100<\/text>/);
 	});
 });
@@ -475,6 +514,7 @@ const TITLE_FOR: Record<ArtifactId, RegExp> = {
 	"adoption-trend": /<h2>Adoption trend<\/h2>/,
 	"import-coverage": /<h2>Import coverage<\/h2>/,
 	leaderboard: /<h2>Adoption leaderboard<\/h2>/,
+	"library-health": /<h2>Library health<\/h2>/,
 };
 
 describe("renderDashboard — default-call equivalence", () => {
