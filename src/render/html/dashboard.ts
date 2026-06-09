@@ -128,6 +128,20 @@ ul.deductions { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px;
 ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
 ul.deductions .pts { color: var(--text-subtle); font-variant-numeric: tabular-nums; }
 .frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 10px; text-align: center; }
+ul.calendar { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
+ul.calendar li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--border); }
+ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+ul.calendar .detail { color: var(--text-subtle); text-align: right; }
+.badge {
+	display: inline-block;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 11px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 1px 6px;
+	border-radius: 6px;
+	margin-right: 4px;
+}
 `.trim();
 
 /** A styled "no data yet" panel body shown when a section is absent. */
@@ -561,6 +575,72 @@ function libraryHealthSection(data: ReportData): string {
 	);
 }
 
+/** Human-readable source badge for a breaking-calendar entry (B6). */
+const BREAKING_SOURCE_LABEL: Record<"tokens" | "figma", string> = {
+	tokens: "tokens",
+	figma: "figma",
+};
+
+/**
+ * Breaking calendar → a date-grouped LIST (NOT a chart), most-recent first
+ * (B6). Each entry reads `<date> — <source badge> <detail>`; the source badge
+ * distinguishes built-output drift ("tokens") from Figma component-API breakage
+ * ("figma"). The assembly hands entries pre-sorted date-desc; the renderer
+ * trusts that order. Absent data → the shared empty-state helper.
+ */
+function breakingCalendarSection(data: ReportData): string {
+	const calendar = data.breakingCalendar;
+	if (calendar === undefined || calendar.entries.length === 0) {
+		return panel("Breaking calendar", emptyState("tokens-check"));
+	}
+
+	const rows = calendar.entries
+		.map((entry) => {
+			const badge = `<span class="badge">${escapeHtml(
+				BREAKING_SOURCE_LABEL[entry.source],
+			)}</span>`;
+			const detail = entry.detail ?? `${entry.count}`;
+			return `<li><span class="date">${escapeHtml(entry.date)}</span><span class="detail">${badge} ${escapeHtml(detail)}</span></li>`;
+		})
+		.join("");
+
+	return panel(
+		"Breaking calendar",
+		[
+			`<div class="meta">${escapeHtml(String(calendar.total))} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first</div>`,
+			`<ul class="calendar">${rows}</ul>`,
+		].join(""),
+	);
+}
+
+/**
+ * Change frequency → a per-kind bar chart of activity density (B6): how many
+ * history records of each surface kind exist. The assembly omits zero-count
+ * kinds and fixes the order; the renderer draws one bar per bucket. Absent (or
+ * no-bucket) data → the shared empty-state helper.
+ */
+function changeFrequencySection(data: ReportData): string {
+	const frequency = data.changeFrequency;
+	if (frequency === undefined || frequency.byKind.length === 0) {
+		return panel("Change frequency", emptyState("tokens-check"));
+	}
+
+	const bars = frequency.byKind.map((bucket) => ({
+		label: bucket.kind,
+		value: bucket.count,
+	}));
+
+	const window =
+		frequency.windowFirst !== undefined && frequency.windowLast !== undefined
+			? `<div class="meta">Records per kind · ${escapeHtml(frequency.windowFirst)} → ${escapeHtml(frequency.windowLast)}</div>`
+			: '<div class="meta">Records per kind</div>';
+
+	return panel(
+		"Change frequency",
+		[window, `<div class="chart">${barChart(bars)}</div>`].join(""),
+	);
+}
+
 // Each artifact id maps to the section renderer for its ReportData slice. The
 // keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
 // caller-supplied selection over this map is what gates DOM inclusion (an id
@@ -577,6 +657,8 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"import-coverage": importCoverageSection,
 	leaderboard: leaderboardSection,
 	"library-health": libraryHealthSection,
+	"breaking-calendar": breakingCalendarSection,
+	"change-frequency": changeFrequencySection,
 };
 
 /** Optional rendering controls that do not affect which sections appear. */

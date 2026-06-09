@@ -128,6 +128,31 @@ const fullData: ReportData = {
 			detachedCandidates: 1,
 		},
 	},
+	breakingCalendar: {
+		entries: [
+			{
+				date: "2026-06-03",
+				source: "figma",
+				count: 2,
+				detail: "2 breaking component changes",
+			},
+			{
+				date: "2026-06-01",
+				source: "tokens",
+				count: 1,
+				detail: "1 stale output",
+			},
+		],
+		total: 3,
+	},
+	changeFrequency: {
+		byKind: [
+			{ kind: "tokens-check", count: 2 },
+			{ kind: "impact", count: 1 },
+		],
+		windowFirst: "2026-06-01T10:00:00.000Z",
+		windowLast: "2026-06-03T10:00:00.000Z",
+	},
 };
 
 const emptyData: ReportData = {
@@ -192,7 +217,7 @@ describe("renderDashboard — self-containment (offline safe)", () => {
 describe("renderDashboard — full data", () => {
 	const html = renderDashboard(fullData);
 
-	it("renders all eleven section titles", () => {
+	it("renders all thirteen section titles", () => {
 		expect(html).toMatch(/System score/i);
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
@@ -202,13 +227,46 @@ describe("renderDashboard — full data", () => {
 		expect(html).toMatch(/Import coverage/i);
 		expect(html).toMatch(/Adoption leaderboard/i);
 		expect(html).toMatch(/Library health/i);
+		expect(html).toMatch(/Breaking calendar/i);
+		expect(html).toMatch(/Change frequency/i);
 	});
 
-	it("emits exactly twelve <svg> charts (one per section + the score gauge & trend)", () => {
+	it("emits exactly thirteen <svg> charts (one per chart section + the score gauge & trend)", () => {
 		// six wave-1 sections (one svg each) + system-score's gauge + trend (2) +
 		// the three owner sections (adoption-trend line, coverage donut,
-		// leaderboard bar) = 6 + 2 + 3 = 11 (B2) + library-health's totals bar = 12 (B5).
-		expect(countMatches(html, /<svg\b/g)).toBe(12);
+		// leaderboard bar) = 6 + 2 + 3 = 11 (B2) + library-health's totals bar = 12
+		// (B5) + change-frequency's per-kind bar = 13 (B6). breaking-calendar is a
+		// LIST, not a chart — it adds NO svg (svg delta is +1, not +2).
+		expect(countMatches(html, /<svg\b/g)).toBe(13);
+	});
+
+	it("renders the breaking-calendar as a date-grouped list with source badges (B6)", () => {
+		expect(html).toMatch(TITLE_FOR["breaking-calendar"]);
+		// Scope the ordering check to the breaking-calendar list (other fixtures
+		// reuse the same dates), tracked via its <ul class="calendar"> container.
+		const listStart = html.indexOf('<ul class="calendar">');
+		expect(listStart).toBeGreaterThan(-1);
+		const listEnd = html.indexOf("</ul>", listStart);
+		const list = html.slice(listStart, listEnd);
+		// most-recent first: the 2026-06-03 figma entry precedes the 2026-06-01 tokens entry.
+		const recentAt = list.indexOf("2026-06-03");
+		const olderAt = list.indexOf("2026-06-01");
+		expect(recentAt).toBeGreaterThan(-1);
+		expect(recentAt).toBeLessThan(olderAt);
+		// the source badges distinguish figma (library) vs tokens (build) breakage.
+		expect(list.toLowerCase()).toContain("figma");
+		expect(list.toLowerCase()).toContain("tokens");
+		// the per-entry detail text is surfaced.
+		expect(html).toContain("2 breaking component changes");
+		expect(html).toContain("1 stale output");
+		// breaking-calendar is a LIST — it draws NO svg of its own.
+	});
+
+	it("renders the change-frequency as a per-kind bar chart (B6)", () => {
+		expect(html).toMatch(TITLE_FOR["change-frequency"]);
+		// the tallied kinds surface as bar labels.
+		expect(html).toContain("tokens-check");
+		expect(html).toContain("impact");
 	});
 
 	it("renders the library-health totals as a bar chart with the top hotspot list + the heuristic caveat (B5)", () => {
@@ -330,15 +388,15 @@ describe("renderDashboard — full data", () => {
 describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
-	it("renders all eleven empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(11);
+	it("renders all thirteen empty-state panels", () => {
+		expect(countMatches(html, /No data yet/gi)).toBe(13);
 	});
 
 	it("emits zero <svg> charts", () => {
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
 	});
 
-	it("still renders all eleven section titles", () => {
+	it("still renders all thirteen section titles", () => {
 		expect(html).toMatch(/System score/i);
 		expect(html).toMatch(/Drift trend/i);
 		expect(html).toMatch(/Lint/i);
@@ -350,10 +408,12 @@ describe("renderDashboard — empty data", () => {
 		expect(html).toMatch(/Import coverage/i);
 		expect(html).toMatch(/Adoption leaderboard/i);
 		expect(html).toMatch(/Library health/i);
+		expect(html).toMatch(/Breaking calendar/i);
+		expect(html).toMatch(/Change frequency/i);
 	});
 
 	it("mentions the ds-bridge command in each empty state", () => {
-		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(11);
+		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(13);
 	});
 });
 
@@ -367,10 +427,10 @@ describe("renderDashboard — partial mixes", () => {
 			],
 			readiness: { score: 70, frameName: "Frame", deductions: [] },
 		});
-		// two charts present, nine empty states (incl. absent system-score + the
-		// three owner sections + library-health).
+		// two charts present, eleven empty states (incl. absent system-score + the
+		// three owner sections + library-health + the two B6 consumer sections).
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(9);
+		expect(countMatches(html, /No data yet/gi)).toBe(11);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -385,7 +445,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+		expect(countMatches(html, /No data yet/gi)).toBe(12);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -395,7 +455,7 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(11);
+		expect(countMatches(html, /No data yet/gi)).toBe(13);
 	});
 
 	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
@@ -405,7 +465,7 @@ describe("renderDashboard — partial mixes", () => {
 			a11y: { level: "AA", modes: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(11);
+		expect(countMatches(html, /No data yet/gi)).toBe(13);
 	});
 
 	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
@@ -415,7 +475,7 @@ describe("renderDashboard — partial mixes", () => {
 			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+		expect(countMatches(html, /No data yet/gi)).toBe(12);
 	});
 
 	it("treats an empty adoptionTrend / leaderboard array as an empty state (B2)", () => {
@@ -426,7 +486,7 @@ describe("renderDashboard — partial mixes", () => {
 			leaderboard: [],
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(11);
+		expect(countMatches(html, /No data yet/gi)).toBe(13);
 	});
 
 	it("renders import coverage even when nothing is uncovered (B2)", () => {
@@ -440,9 +500,9 @@ describe("renderDashboard — partial mixes", () => {
 				uncoveredTotal: 0,
 			},
 		});
-		// the donut gauge renders (a real chart), the other ten sections stay empty.
+		// the donut gauge renders (a real chart), the other twelve sections stay empty.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(10);
+		expect(countMatches(html, /No data yet/gi)).toBe(12);
 		expect(html).toMatch(/<text[^>]*>100<\/text>/);
 	});
 });
@@ -515,6 +575,8 @@ const TITLE_FOR: Record<ArtifactId, RegExp> = {
 	"import-coverage": /<h2>Import coverage<\/h2>/,
 	leaderboard: /<h2>Adoption leaderboard<\/h2>/,
 	"library-health": /<h2>Library health<\/h2>/,
+	"breaking-calendar": /<h2>Breaking calendar<\/h2>/,
+	"change-frequency": /<h2>Change frequency<\/h2>/,
 };
 
 describe("renderDashboard — default-call equivalence", () => {
