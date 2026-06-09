@@ -198,7 +198,8 @@ function fromCommit(commit: GitCommit): ChangelogEntry {
 
 /** Build a designer-facing entry from a labeled Figma version. */
 function fromVersion(version: FigmaVersion): ChangelogEntry {
-	const description = version.description.trim();
+	// label/description are `null` on autosave/Figma versions (live API, F1).
+	const description = (version.description ?? "").trim();
 	return withDetail(
 		{
 			id: `figma:${version.id}`,
@@ -206,9 +207,9 @@ function fromVersion(version: FigmaVersion): ChangelogEntry {
 			source: "figma",
 			audience: "designer",
 			severity: "notable",
-			title: version.label.trim(),
+			title: (version.label ?? "").trim(),
 		},
-		description === "" ? undefined : version.description,
+		description === "" ? undefined : description,
 	);
 }
 
@@ -234,7 +235,7 @@ export function aggregateChangelog(input: AggregateInput): ChangelogEntry[] {
 	const entries: ChangelogEntry[] = [];
 
 	for (const version of input.versions) {
-		if (version.label.trim() === "") continue; // autosave noise
+		if ((version.label ?? "").trim() === "") continue; // autosave noise (null on real API)
 		entries.push(fromVersion(version));
 	}
 

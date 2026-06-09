@@ -161,10 +161,14 @@ describe.skipIf(gated)("live Figma smoke test (shape drift detection)", () => {
 		for (const version of data.versions as FigmaVersion[]) {
 			expect(typeof version.id).toBe("string");
 			expect(typeof version.created_at).toBe("string");
-			// label/description may be empty strings (autosave checkpoint), but the
-			// keys must exist as strings.
-			expect(typeof version.label).toBe("string");
-			expect(typeof version.description).toBe("string");
+			// label/description are `string` on named versions but `null` on
+			// autosave/Figma checkpoints (live API, F1) — never undefined.
+			expect(version.label === null || typeof version.label === "string").toBe(
+				true,
+			);
+			expect(
+				version.description === null || typeof version.description === "string",
+			).toBe(true);
 			expect(isRecord(version.user)).toBe(true);
 			expect(typeof version.user.handle).toBe("string");
 		}

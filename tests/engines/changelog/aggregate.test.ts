@@ -275,6 +275,28 @@ describe("aggregateChangelog — figma version classification + filtering", () =
 		expect(entries).toHaveLength(0);
 	});
 
+	it("treats a null label (autosave/Figma version) as unlabeled, no crash", () => {
+		// The live REST API returns null (not "") for autosave checkpoints — F1.
+		const entries = aggregate({
+			versions: [figmaVersion({ id: "v7", label: null, description: null })],
+		});
+		expect(entries).toHaveLength(0);
+	});
+
+	it("tolerates a null description on a labeled version (no detail, no crash)", () => {
+		const [entry] = aggregate({
+			versions: [
+				figmaVersion({
+					id: "v9",
+					label: "Button hover state",
+					description: null,
+				}),
+			],
+		});
+		expect(entry?.title).toBe("Button hover state");
+		expect(entry?.detail).toBeUndefined();
+	});
+
 	it("carries the figma version description into the detail", () => {
 		const [entry] = aggregate({
 			versions: [

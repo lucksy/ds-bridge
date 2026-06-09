@@ -15,5 +15,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		include: ["e2e/**/*.test.ts"],
+		// Live Figma calls against a large real library exceed vitest's 5s default
+		// (observed ~15s for getVersions on the smoke file, F1) — these are network
+		// shape checks, not unit tests, so allow generous headroom.
+		testTimeout: 60000,
 	},
 });

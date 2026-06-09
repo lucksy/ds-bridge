@@ -106,8 +106,11 @@ export interface FigmaComponentsResponse {
 export interface FigmaVersion {
 	id: string;
 	created_at: string;
-	label: string;
-	description: string;
+	// Autosave checkpoints and Figma-generated versions return `null` here, NOT
+	// "" — verified against the live REST API 2026-06-09 (T4.7 smoke). Consumers
+	// must coalesce before string ops.
+	label: string | null;
+	description: string | null;
 	user: FigmaUser;
 }
 
