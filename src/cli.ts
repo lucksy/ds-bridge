@@ -10,6 +10,7 @@ import { registerDigestCommand } from "./cli-commands/digest.js";
 import { registerDocsCommand } from "./cli-commands/docs.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerImpactCommand } from "./cli-commands/impact.js";
+import { registerLibraryHealthCommand } from "./cli-commands/library-health.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
 import { registerParityCommand } from "./cli-commands/parity.js";
 import { registerRegistryCommand } from "./cli-commands/registry.js";
@@ -37,6 +38,7 @@ export function buildProgram(): Command {
 	registerParityCommand(program);
 	registerA11yCommand(program);
 	registerImpactCommand(program);
+	registerLibraryHealthCommand(program);
 	registerAdoptionCommand(program);
 	registerChangelogCommand(program);
 	registerDocsCommand(program);
