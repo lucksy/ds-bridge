@@ -8464,6 +8464,18 @@ var CATALOG = [
     title: "Library health",
     personas: ["design", "owner"],
     reportDataKey: "libraryHealth"
+  },
+  {
+    id: "breaking-calendar",
+    title: "Breaking calendar",
+    personas: ["consumer", "owner"],
+    reportDataKey: "breakingCalendar"
+  },
+  {
+    id: "change-frequency",
+    title: "Change frequency",
+    personas: ["consumer", "engineering"],
+    reportDataKey: "changeFrequency"
   }
 ];
 var ALL_ARTIFACT_IDS = CATALOG.map((a) => a.id);
@@ -9645,7 +9657,13 @@ var PRESETS = {
   ],
   engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
   design: ["system-score", "readiness", "a11y", "parity", "library-health"],
-  consumer: ["system-score", "parity", "impact"],
+  consumer: [
+    "system-score",
+    "parity",
+    "impact",
+    "breaking-calendar",
+    "change-frequency"
+  ],
   everything: [...ALL_ARTIFACT_IDS]
 };
 var PRESET_NAMES = Object.keys(PRESETS);
@@ -14523,6 +14541,89 @@ import {
 import { basename, dirname as dirname8, join as join16, resolve as resolve9 } from "path";
 import { platform } from "process";
 
+// src/engines/report/consumer.ts
+var SOURCE_RANK = { tokens: 0, figma: 1 };
+function finiteNumber(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : void 0;
+}
+function tokensDetail(count) {
+  return `${count} stale output${count === 1 ? "" : "s"}`;
+}
+function figmaDetail(count) {
+  return `${count} breaking component change${count === 1 ? "" : "s"}`;
+}
+function buildBreakingCalendar(records) {
+  const entries = [];
+  for (const { kind, at, record } of records) {
+    if (at === void 0) continue;
+    const date = at.slice(0, 10);
+    if (kind === "tokens-check") {
+      const stale = finiteNumber(record.stale);
+      if (stale !== void 0 && stale > 0) {
+        entries.push({
+          date,
+          source: "tokens",
+          count: stale,
+          detail: tokensDetail(stale)
+        });
+      }
+    }
+    if (kind === "impact") {
+      const breaking = finiteNumber(record.breaking);
+      if (breaking !== void 0 && breaking > 0) {
+        entries.push({
+          date,
+          source: "figma",
+          count: breaking,
+          detail: figmaDetail(breaking)
+        });
+      }
+    }
+  }
+  entries.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    const bySource = SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
+    if (bySource !== 0) return bySource;
+    return a.detail < b.detail ? -1 : a.detail > b.detail ? 1 : 0;
+  });
+  const total = entries.reduce((sum, e4) => sum + e4.count, 0);
+  return { entries, total };
+}
+var FREQUENCY_ORDER = [
+  "tokens-check",
+  "lint",
+  "handoff",
+  "a11y",
+  "impact",
+  "adoption",
+  "library-health"
+];
+var FREQUENCY_KINDS = new Set(FREQUENCY_ORDER);
+function buildChangeFrequency(records) {
+  const counts = /* @__PURE__ */ new Map();
+  let windowFirst;
+  let windowLast;
+  for (const { kind, at } of records) {
+    if (FREQUENCY_KINDS.has(kind)) {
+      const k4 = kind;
+      counts.set(k4, (counts.get(k4) ?? 0) + 1);
+    }
+    if (at !== void 0) {
+      if (windowFirst === void 0 || at < windowFirst) windowFirst = at;
+      if (windowLast === void 0 || at > windowLast) windowLast = at;
+    }
+  }
+  const byKind = [];
+  for (const kind of FREQUENCY_ORDER) {
+    const count = counts.get(kind) ?? 0;
+    if (count > 0) byKind.push({ kind, count });
+  }
+  const result = { byKind };
+  if (windowFirst !== void 0) result.windowFirst = windowFirst;
+  if (windowLast !== void 0) result.windowLast = windowLast;
+  return result;
+}
+
 // src/engines/report/scorecard.ts
 var ROW_ORDER = [
   "score",
@@ -15258,6 +15359,20 @@ ul.deductions { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px;
 ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
 ul.deductions .pts { color: var(--text-subtle); font-variant-numeric: tabular-nums; }
 .frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 10px; text-align: center; }
+ul.calendar { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
+ul.calendar li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--border); }
+ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+ul.calendar .detail { color: var(--text-subtle); text-align: right; }
+.badge {
+	display: inline-block;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 11px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 1px 6px;
+	border-radius: 6px;
+	margin-right: 4px;
+}
 `.trim();
 function emptyState2(command) {
   return [
@@ -15558,6 +15673,45 @@ function libraryHealthSection(data) {
     ].join("")
   );
 }
+var BREAKING_SOURCE_LABEL = {
+  tokens: "tokens",
+  figma: "figma"
+};
+function breakingCalendarSection(data) {
+  const calendar = data.breakingCalendar;
+  if (calendar === void 0 || calendar.entries.length === 0) {
+    return panel("Breaking calendar", emptyState2("tokens-check"));
+  }
+  const rows = calendar.entries.map((entry) => {
+    const badge2 = `<span class="badge">${escapeHtml(
+      BREAKING_SOURCE_LABEL[entry.source]
+    )}</span>`;
+    const detail = entry.detail ?? `${entry.count}`;
+    return `<li><span class="date">${escapeHtml(entry.date)}</span><span class="detail">${badge2} ${escapeHtml(detail)}</span></li>`;
+  }).join("");
+  return panel(
+    "Breaking calendar",
+    [
+      `<div class="meta">${escapeHtml(String(calendar.total))} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first</div>`,
+      `<ul class="calendar">${rows}</ul>`
+    ].join("")
+  );
+}
+function changeFrequencySection(data) {
+  const frequency = data.changeFrequency;
+  if (frequency === void 0 || frequency.byKind.length === 0) {
+    return panel("Change frequency", emptyState2("tokens-check"));
+  }
+  const bars = frequency.byKind.map((bucket) => ({
+    label: bucket.kind,
+    value: bucket.count
+  }));
+  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `<div class="meta">Records per kind \xB7 ${escapeHtml(frequency.windowFirst)} \u2192 ${escapeHtml(frequency.windowLast)}</div>` : '<div class="meta">Records per kind</div>';
+  return panel(
+    "Change frequency",
+    [window, `<div class="chart">${barChart(bars)}</div>`].join("")
+  );
+}
 var SECTION_RENDERERS = {
   "system-score": systemScoreSection,
   "drift-trend": driftSection,
@@ -15569,7 +15723,9 @@ var SECTION_RENDERERS = {
   "adoption-trend": adoptionTrendSection,
   "import-coverage": importCoverageSection,
   leaderboard: leaderboardSection,
-  "library-health": libraryHealthSection
+  "library-health": libraryHealthSection,
+  "breaking-calendar": breakingCalendarSection,
+  "change-frequency": changeFrequencySection
 };
 function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   const project = escapeHtml(data.project);
@@ -15789,6 +15945,13 @@ function computeSystemScore(stateDir, weights) {
     current: outcome.current,
     components: outcome.components,
     trend: outcome.trend
+  };
+}
+function computeConsumerArtifacts(stateDir) {
+  const records = replayHistory(readHistoryText2(stateDir));
+  return {
+    breakingCalendar: buildBreakingCalendar(records),
+    changeFrequency: buildChangeFrequency(records)
   };
 }
 function readParity(stateDir, onWarning) {
@@ -16023,6 +16186,7 @@ function runReport(path, options) {
   const aggregation = aggregateHistory(stateDir, warn);
   const parity = readParity(stateDir, warn);
   const systemScore = computeSystemScore(stateDir, selection.scoreWeights);
+  const consumer = computeConsumerArtifacts(stateDir);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const html = renderDashboard(
     {
@@ -16038,7 +16202,9 @@ function runReport(path, options) {
       adoptionTrend: aggregation.adoptionTrend,
       ...aggregation.leaderboard !== void 0 ? { leaderboard: aggregation.leaderboard } : {},
       ...aggregation.importCoverage !== void 0 ? { importCoverage: aggregation.importCoverage } : {},
-      ...aggregation.libraryHealth !== void 0 ? { libraryHealth: aggregation.libraryHealth } : {}
+      ...aggregation.libraryHealth !== void 0 ? { libraryHealth: aggregation.libraryHealth } : {},
+      breakingCalendar: consumer.breakingCalendar,
+      changeFrequency: consumer.changeFrequency
     },
     selection.artifacts,
     selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
