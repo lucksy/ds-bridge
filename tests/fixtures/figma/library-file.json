@@ -1,0 +1,147 @@
+{
+	"name": "DS Bridge — Library Health Demo",
+	"role": "editor",
+	"lastModified": "2026-06-09T11:04:33Z",
+	"editorType": "figma",
+	"version": "5099998888777766655",
+	"document": {
+		"id": "0:0",
+		"name": "Document",
+		"type": "DOCUMENT",
+		"children": [
+			{
+				"id": "0:1",
+				"name": "Page 1",
+				"type": "CANVAS",
+				"children": [
+					{
+						"id": "1:2",
+						"name": "Hero",
+						"type": "FRAME",
+						"layoutMode": "VERTICAL",
+						"children": [
+							{
+								"id": "1:10",
+								"name": "Primary CTA",
+								"type": "INSTANCE",
+								"componentId": "10:42",
+								"overrides": [
+									{ "id": "1:10;I1", "overriddenFields": ["characters"] },
+									{ "id": "1:10;I2", "overriddenFields": ["fills"] },
+									{ "id": "1:10;I3", "overriddenFields": ["visible", "fills"] }
+								]
+							},
+							{
+								"id": "1:11",
+								"name": "Secondary CTA",
+								"type": "INSTANCE",
+								"componentId": "10:42",
+								"overrides": [
+									{ "id": "1:11;I1", "overriddenFields": ["characters"] }
+								]
+							},
+							{
+								"id": "1:12",
+								"name": "Untouched Icon",
+								"type": "INSTANCE",
+								"componentId": "10:43",
+								"overrides": []
+							}
+						]
+					},
+					{
+						"id": "1:3",
+						"name": "Legacy Section",
+						"type": "FRAME",
+						"layoutMode": "HORIZONTAL",
+						"children": [
+							{
+								"id": "1:20",
+								"name": "Old Button A",
+								"type": "INSTANCE",
+								"componentId": "10:99",
+								"overrides": [
+									{ "id": "1:20;I1", "overriddenFields": ["characters"] },
+									{ "id": "1:20;I2", "overriddenFields": ["fills"] }
+								]
+							},
+							{
+								"id": "1:21",
+								"name": "Old Button B",
+								"type": "INSTANCE",
+								"componentId": "10:99",
+								"overrides": []
+							},
+							{
+								"id": "1:22",
+								"name": "Do Not Use Banner",
+								"type": "INSTANCE",
+								"componentId": "10:98"
+							}
+						]
+					},
+					{
+						"id": "1:4",
+						"name": "Detached Playground",
+						"type": "FRAME",
+						"layoutMode": "VERTICAL",
+						"children": [
+							{
+								"id": "1:30",
+								"name": "Button / Primary",
+								"type": "FRAME",
+								"layoutMode": "HORIZONTAL"
+							},
+							{
+								"id": "1:31",
+								"name": "Card / Default",
+								"type": "GROUP"
+							},
+							{
+								"id": "1:32",
+								"name": "Button",
+								"type": "FRAME",
+								"layoutMode": "HORIZONTAL"
+							},
+							{
+								"id": "1:33",
+								"name": "Button / Primary",
+								"type": "INSTANCE",
+								"componentId": "10:42",
+								"overrides": []
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"components": {
+		"10:42": {
+			"key": "9c1b8f4e2d6a7b3c5e0f1a2b3c4d5e6f7a8b9c0d",
+			"name": "Button / Primary"
+		},
+		"10:43": {
+			"key": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00",
+			"name": "Icon / Chevron"
+		},
+		"10:98": {
+			"key": "bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11",
+			"name": "⚠ Banner (do not use)"
+		},
+		"10:99": {
+			"key": "cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22",
+			"name": "[deprecated] OldButton"
+		},
+		"10:50": {
+			"key": "dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33",
+			"name": "Card / Default"
+		},
+		"10:51": {
+			"key": "ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44",
+			"name": "Button"
+		}
+	},
+	"componentSets": {},
+	"styles": {}
+}

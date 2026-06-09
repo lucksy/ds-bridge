@@ -18,6 +18,7 @@ Shaped per the official Figma REST API documentation at <https://developers.figm
 | `components-after.json` | `GET /v1/files/:key/components` (snapshot B) | Same shape; the later inventory seeded with one of every diff category against `components-before.json`. |
 | `versions.json` | `GET /v1/files/:key/versions` | `{ versions: [{ id, created_at, label, description, user }, …] }`. The second entry has empty `label`/`description` (autosave checkpoint). |
 | `comments.json` | `GET /v1/files/:key/comments` | `{ comments: [{ id, message, client_meta, created_at, user, resolved_at: null }, …] }`. Includes a reply (`parent_id` set). |
+| `library-file.json` | `GET /v1/files/:key` | **Capture 2026-06-09** (hand-built from the live-confirmed L1 shapes). Like `file.json` but seeded for the library-health engine: INSTANCE nodes carry `overrides[]` + `componentId`, and the top-level `components` map carries a `[deprecated]`/`⚠` deprecation-marked entry. Holds one of every signal — an instance with 3 overrides, two instances of a `[deprecated] OldButton`, one of a `⚠` component, plus three detached-heuristic FRAME/GROUP nodes (a TRUE detached positive `Button / Primary`, and a hand FRAME named `Button` that is a deliberate FALSE positive documenting the heuristic limit). See `tests/engines/figma/library-health.test.ts`. |
 
 ## Auth & rate-limit notes (SPEC §1 "Figma REST" row)
 

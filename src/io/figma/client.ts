@@ -22,6 +22,10 @@ export interface FigmaNode {
 	layoutMode?: string;
 	componentId?: string;
 	fills?: FigmaPaint[];
+	// INSTANCE nodes carry an `overrides` array — each entry names the instance
+	// node id and the fields it overrides from its main component. Verified live
+	// 2026-06-09 (T4.7 smoke): present on the real tree, absent on non-instances.
+	overrides?: { id: string; overriddenFields?: string[] }[];
 }
 
 export interface FigmaBoundingBox {
@@ -64,6 +68,12 @@ export interface FigmaFile {
 	role?: string;
 	editorType?: string;
 	document: FigmaNode;
+	// getFile returns a top-level `components` map keyed by component id (the
+	// INSTANCE.componentId target), inline whether or not the component is
+	// published. Verified live 2026-06-09 (T4.7 smoke): the published-only
+	// `/components` endpoint returned 0 on the test file, so this inline map is the
+	// source of component names for instance resolution.
+	components?: Record<string, { name: string }>;
 }
 
 /** GET /v1/files/:key/nodes?ids=… */
