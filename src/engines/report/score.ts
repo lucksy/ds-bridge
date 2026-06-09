@@ -269,8 +269,15 @@ function combine(
 		(sum, c) => sum + c.score * c.weight,
 		0,
 	);
+	// Composite from the RAW sub-scores; THEN round each component's score for
+	// DISPLAY (the legend/scorecard showed e.g. 92.04545454545455). The composite
+	// is unchanged — it is computed from raw above, before this map.
 	const current = roundHalfUp(weightedSum / totalWeight);
-	return { current, components };
+	const display = components.map((c) => ({
+		...c,
+		score: roundHalfUp(c.score),
+	}));
+	return { current, components: display };
 }
 
 /** Compute just the composite (rounded) for a snapshot — used for trend points. */

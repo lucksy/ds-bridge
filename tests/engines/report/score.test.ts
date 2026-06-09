@@ -220,6 +220,25 @@ describe("scoreFromHistory — sub-score formulas", () => {
 		}
 	});
 
+	it("rounds a fractional sub-score for DISPLAY (composite math stays on raw)", () => {
+		// 81/88 = 92.045… must display as the integer 92, not 92.04545454545455.
+		const text = line({
+			at: "2026-06-01",
+			kind: "a11y",
+			modes: [
+				{ mode: "light", passed: 42, failed: 2 },
+				{ mode: "dark", passed: 39, failed: 5 },
+			],
+		});
+		const outcome = scoreFromHistory(text);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind === "ok") {
+			const a11y = outcome.components.find((c) => c.kind === "a11y");
+			expect(a11y?.score).toBe(92);
+			expect(Number.isInteger(a11y?.score)).toBe(true);
+		}
+	});
+
 	it("a11y: absent component when no pass/fail pairs exist (empty modes / all zero)", () => {
 		const emptyModes = scoreFromHistory(
 			line({ at: "2026-06-01", kind: "a11y", modes: [] }),
