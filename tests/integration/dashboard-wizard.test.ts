@@ -152,6 +152,28 @@ describe("runSetupWizard (injected streams)", () => {
 		expect(written.dashboard_view).toBeUndefined();
 	});
 
+	it("B5: customizing the design preset materializes a list including library-health", async () => {
+		// presets listed 1..5 in PRESET_NAMES order: owner, engineering, design,
+		// consumer, everything. Pick 3 (design = system-score, readiness, a11y,
+		// parity, library-health — wave-6 B5); customize? y; add impact; done;
+		// confirm y. The materialized list preserves design order + the new addition.
+		const { exitCode } = await drive(["3", "y", "add impact", "done", "y"]);
+		expect(exitCode).toBe(0);
+		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
+			string,
+			unknown
+		>;
+		expect(written.dashboard_artifacts).toEqual([
+			"system-score",
+			"readiness",
+			"a11y",
+			"parity",
+			"library-health",
+			"impact",
+		]);
+		expect(written.dashboard_view).toBeUndefined();
+	});
+
 	it("the customize loop shows the current selection each round", async () => {
 		const { output } = await drive(["1", "y", "add impact", "done", "y"]);
 		// current selection echoed at least once with the preset's artifacts

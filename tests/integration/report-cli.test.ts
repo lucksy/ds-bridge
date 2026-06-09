@@ -150,6 +150,18 @@ function adoptionLine(
 	return JSON.stringify({ at, kind: "adoption", imported, total, uncovered });
 }
 
+/** A well-formed `library-health` history record (the L5 append shape, counts only). */
+function libraryHealthLine(
+	at: string,
+	counts: {
+		overrideHotspots: number;
+		deprecatedUsage: number;
+		detachedCandidates: number;
+	},
+): string {
+	return JSON.stringify({ at, kind: "library-health", ...counts });
+}
+
 /** Write <dir>/.ds-bridge/registry.json with the given contents. */
 async function seedRegistry(dir: string, registry: unknown): Promise<void> {
 	const stateDir = join(dir, ".ds-bridge");
@@ -412,7 +424,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("Chip");
 	});
 
-	it("T7.22 ACCEPTANCE (C7) + B3: all ten artifacts present → ELEVEN svg charts", async () => {
+	it("B5 ACCEPTANCE: all eleven artifacts present → TWELVE svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
@@ -432,6 +444,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 				touchedCallSites: 14,
 			}),
 			adoptionLine("2026-06-07T10:00:00.000Z", 1, 3, ["Spinner", "Tooltip"]),
+			libraryHealthLine("2026-06-08T10:00:00.000Z", {
+				overrideHotspots: 3,
+				deprecatedUsage: 3,
+				detachedCandidates: 3,
+			}),
 		]);
 		await seedRegistry(dir, sampleRegistry());
 
@@ -442,9 +459,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const html = await readFile(reportPath, "utf8");
 		// Drift, lint, readiness, parity, contrast, impact: one chart each (6);
 		// plus the system-score section's gauge + trend (2); plus the three owner
-		// sections (adoption-trend line, coverage donut, leaderboard bar) → 11 (B3).
-		expect(countSvgs(html)).toBe(11);
-		// None of the ten sections falls back to the empty state.
+		// sections (adoption-trend line, coverage donut, leaderboard bar) → 11 (B3);
+		// plus the library-health totals bar → 12 (B5).
+		expect(countSvgs(html)).toBe(12);
+		// None of the eleven sections falls back to the empty state.
 		expect(html).not.toContain("No data yet");
 	});
 
@@ -567,6 +585,11 @@ async function seedSixArtifacts(dir: string): Promise<void> {
 			touchedCallSites: 14,
 		}),
 		adoptionLine("2026-06-07T10:00:00.000Z", 1, 3, ["Spinner", "Tooltip"]),
+		libraryHealthLine("2026-06-08T10:00:00.000Z", {
+			overrideHotspots: 3,
+			deprecatedUsage: 3,
+			detachedCandidates: 3,
+		}),
 	]);
 	await seedRegistry(dir, sampleRegistry());
 }
@@ -594,14 +617,14 @@ async function seedProjectConfig(dir: string, config: unknown): Promise<void> {
 
 describe("ds-bridge report — dashboard composer (M1.3)", () => {
 	it("no flags + no .ds-bridge.json → byte-identical to the v1.0.0 golden", async () => {
-		// WAVE-3 RE-ANCHOR (B3): the golden was REGENERATED from this same seed +
+		// WAVE-6 RE-ANCHOR (B5): the golden was REGENERATED from this same seed +
 		// the unchanged sentinel rule (only the fresh "Generated " timestamp is
-		// substituted). The seed now also carries an adoption block on the lint
-		// line and an `adoption` kind line, so the no-config render gains the three
-		// owner sections (adoption-trend, import-coverage, leaderboard) and the
-		// score legend's weight column rebalances 30/30/20/20 → 25/25/15/15 (+ the
-		// adoption row at 20). The composite numeral STAYS 76. New bytes, same
-		// contract.
+		// substituted). The seed now also carries a `library-health` kind line, so
+		// the no-config render gains the eleventh section (library-health) — a
+		// totals bar chart + the heuristic caveat. Verified the diff is ONLY the
+		// appended library-health section + its seed; every other byte is unchanged
+		// (system-score still 2 charts, composite numeral STAYS 76). New bytes, same
+		// contract. (B3 added the three owner sections; B5 adds library-health.)
 		//
 		// The golden's project name is its directory basename ("report-golden"),
 		// so seed under a fixed-name subdir of a fresh tmp dir.
@@ -696,6 +719,38 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(html).toContain("lint");
 		expect(html).toContain("readiness");
 		expect(html).toContain("a11y");
+	});
+
+	it("B5: --view design renders the library-health section (appended last)", async () => {
+		const dir = await freshTmp("ds-report-view-design-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--view", "design"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// design = system-score · readiness · a11y · parity · library-health → the
+		// score's gauge + trend (2) plus one chart each for readiness/a11y/parity +
+		// the library-health totals bar = SIX charts (B5).
+		expect(countSvgs(html)).toBe(6);
+		expect(html).toContain("System score");
+		expect(html).toContain("Readiness");
+		expect(html).toContain("Contrast (a11y)");
+		expect(html).toContain("Parity matrix");
+		// the new library-health section renders, with its heuristic caveat.
+		expect(html).toContain("Library health");
+		expect(html.toLowerCase()).toContain("heuristic");
+		// library-health is appended LAST (after parity) in the design view.
+		const parityAt = html.indexOf("Parity matrix");
+		const libraryAt = html.indexOf("Library health");
+		expect(parityAt).toBeGreaterThan(-1);
+		expect(parityAt).toBeLessThan(libraryAt);
+		// none of the design sections degrade to an empty state.
+		expect(html).not.toContain("No data yet");
+		expect(html).toContain("design");
 	});
 
 	it("--artifacts parity,a11y renders exactly two sections", async () => {

@@ -41,6 +41,7 @@ import type {
 	ImpactSummary,
 	ImportCoverage,
 	LeaderboardRow,
+	LibraryHealth,
 	LintSummary,
 	Parity,
 	Readiness,
@@ -132,6 +133,20 @@ interface ImpactRecord {
 }
 
 /**
+ * One `library-health` history record carrying the three hygiene-signal counts
+ * (B5). The line is lean (SPEC §3): only the totals are persisted, so the
+ * dashboard section reconstructs a minimal {@link LibraryHealth} with empty
+ * lists — its bars come from the totals.
+ */
+interface LibraryHealthRecord {
+	at: string;
+	kind: "library-health";
+	overrideHotspots: number;
+	deprecatedUsage: number;
+	detachedCandidates: number;
+}
+
+/**
  * Human-readable reason per deduction rule (the readiness gauge shows reasons,
  * not raw rule ids). Mirrors the labels handoff.ts uses for its term report.
  */
@@ -155,6 +170,8 @@ interface Aggregation {
 	leaderboard: LeaderboardRow[] | undefined;
 	/** Registry import coverage, last `adoption` kind line wins (B3). */
 	importCoverage: ImportCoverage | undefined;
+	/** Library hygiene signals, last `library-health` kind line wins (B5). */
+	libraryHealth: LibraryHealth | undefined;
 }
 
 function asNumber(value: unknown): number {
@@ -192,6 +209,7 @@ function aggregateHistory(
 			adoptionTrend: [],
 			leaderboard: undefined,
 			importCoverage: undefined,
+			libraryHealth: undefined,
 		};
 	}
 
@@ -207,6 +225,8 @@ function aggregateHistory(
 	let leaderboard: LeaderboardRow[] | undefined;
 	// Import coverage: last `adoption` kind line wins (B3).
 	let importCoverage: ImportCoverage | undefined;
+	// Library health: last `library-health` kind line wins (B5).
+	let libraryHealth: LibraryHealth | undefined;
 
 	const lines = text.split("\n");
 	for (let index = 0; index < lines.length; index += 1) {
@@ -336,6 +356,25 @@ function aggregateHistory(
 				cosmetic: asNumber(r.cosmetic),
 				touchedCallSites: asNumber(r.touchedCallSites),
 			};
+			continue;
+		}
+
+		if (record.kind === "library-health") {
+			const r = record as Partial<LibraryHealthRecord>;
+			// Last library-health line wins — it reflects the most recent crawl.
+			// The line carries COUNTS only (SPEC §3), so reconstruct a minimal
+			// LibraryHealth: the totals drive the section's bars; the three lists
+			// are left empty (the renderer's hotspot list simply renders nothing).
+			libraryHealth = {
+				overrideHotspots: [],
+				deprecatedUsage: [],
+				detachedCandidates: [],
+				totals: {
+					overrideHotspots: asNumber(r.overrideHotspots),
+					deprecatedUsage: asNumber(r.deprecatedUsage),
+					detachedCandidates: asNumber(r.detachedCandidates),
+				},
+			};
 		}
 
 		// Unknown kinds (including missing kind) are skipped silently.
@@ -350,6 +389,7 @@ function aggregateHistory(
 		adoptionTrend,
 		leaderboard,
 		importCoverage,
+		libraryHealth,
 	};
 }
 
@@ -765,6 +805,9 @@ function runReport(path: string, options: ReportOptions): void {
 				: {}),
 			...(aggregation.importCoverage !== undefined
 				? { importCoverage: aggregation.importCoverage }
+				: {}),
+			...(aggregation.libraryHealth !== undefined
+				? { libraryHealth: aggregation.libraryHealth }
 				: {}),
 		},
 		selection.artifacts,
