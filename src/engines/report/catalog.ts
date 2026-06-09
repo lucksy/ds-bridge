@@ -19,7 +19,9 @@ export type ArtifactId =
 	| "adoption-trend"
 	| "import-coverage"
 	| "leaderboard"
-	| "library-health";
+	| "library-health"
+	| "breaking-calendar"
+	| "change-frequency";
 
 /** Persona tags used by presets and `dashboard list`. */
 export type Persona = "owner" | "engineering" | "design" | "consumer";
@@ -113,6 +115,18 @@ export const CATALOG = [
 		title: "Library health",
 		personas: ["design", "owner"],
 		reportDataKey: "libraryHealth",
+	},
+	{
+		id: "breaking-calendar",
+		title: "Breaking calendar",
+		personas: ["consumer", "owner"],
+		reportDataKey: "breakingCalendar",
+	},
+	{
+		id: "change-frequency",
+		title: "Change frequency",
+		personas: ["consumer", "engineering"],
+		reportDataKey: "changeFrequency",
 	},
 ] as const satisfies readonly ArtifactMeta[];
 

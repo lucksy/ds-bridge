@@ -175,6 +175,53 @@ export interface LibraryHealth {
 }
 
 /**
+ * One date-grouped breaking event (B6). A history line carrying a breaking
+ * signal — token breakage (`tokens-check.stale > 0`) or library breakage
+ * (`impact.breaking > 0`) — contributes one entry per signal; `source`
+ * distinguishes them and `count` is the magnitude on that date.
+ */
+export interface BreakingCalendarEntry {
+	/** ISO date (YYYY-MM-DD) the breaking event was recorded. */
+	date: string;
+	/** Which surface broke: built output vs source ("tokens") or Figma API ("figma"). */
+	source: "tokens" | "figma";
+	/** Magnitude of the breakage on this date (stale tokens / breaking changes). */
+	count: number;
+	/** Optional human-readable detail for the entry. */
+	detail?: string;
+}
+
+/**
+ * Date-grouped breaking events from history (B6): the consumer's "what do I
+ * need to react to, and when," most-recent first. Empty → `{entries:[], total:0}`.
+ */
+export interface BreakingCalendar {
+	entries: BreakingCalendarEntry[];
+	/** Sum of every entry's count. */
+	total: number;
+}
+
+/** One per-kind activity count for the change-frequency artifact (B6). */
+export interface ChangeFrequencyBucket {
+	/** The history record kind (drift, lint, handoff, a11y, impact, adoption, …). */
+	kind: string;
+	count: number;
+}
+
+/**
+ * Per-kind event counts over the observed history window (B6): activity density
+ * per surface, the consumer's "how actively is each surface churning." Zero-count
+ * kinds are omitted. Empty → `{byKind:[]}`.
+ */
+export interface ChangeFrequency {
+	byKind: ChangeFrequencyBucket[];
+	/** Earliest dated record observed (ISO date), if any. */
+	windowFirst?: string;
+	/** Latest dated record observed (ISO date), if any. */
+	windowLast?: string;
+}
+
+/**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
  */
@@ -197,4 +244,8 @@ export interface ReportData {
 	leaderboard?: LeaderboardRow[];
 	/** Library hygiene signals from the latest `library-health` crawl (B5). */
 	libraryHealth?: LibraryHealth;
+	/** Date-grouped breaking events replayed from history (B6). */
+	breakingCalendar?: BreakingCalendar;
+	/** Per-kind activity density over the history window (B6). */
+	changeFrequency?: ChangeFrequency;
 }

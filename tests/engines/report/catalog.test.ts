@@ -26,10 +26,12 @@ const SECTION_KEYS: readonly SectionKey[] = [
 	"importCoverage",
 	"leaderboard",
 	"libraryHealth",
+	"breakingCalendar",
+	"changeFrequency",
 ];
 
 describe("CATALOG", () => {
-	it("leads with system-score then the six wave-1 artifacts, the three owner artifacts (positions 8–10), and library-health (position 11)", () => {
+	it("leads with system-score then the six wave-1 artifacts, the three owner artifacts (positions 8–10), library-health (position 11), and the two consumer artifacts (positions 12–13)", () => {
 		expect(CATALOG.map((a) => a.id)).toEqual([
 			"system-score",
 			"drift-trend",
@@ -42,6 +44,8 @@ describe("CATALOG", () => {
 			"import-coverage",
 			"leaderboard",
 			"library-health",
+			"breaking-calendar",
+			"change-frequency",
 		]);
 	});
 
@@ -53,6 +57,26 @@ describe("CATALOG", () => {
 		expect([...(libraryHealth?.personas ?? [])].sort()).toEqual([
 			"design",
 			"owner",
+		]);
+	});
+
+	it("appends the two consumer artifacts at positions 12–13 with their SPEC §3 personas + keys", () => {
+		const breakingCalendar = CATALOG[11];
+		expect(breakingCalendar?.id).toBe("breaking-calendar");
+		expect(breakingCalendar?.title).toBe("Breaking calendar");
+		expect(breakingCalendar?.reportDataKey).toBe("breakingCalendar");
+		expect([...(breakingCalendar?.personas ?? [])].sort()).toEqual([
+			"consumer",
+			"owner",
+		]);
+
+		const changeFrequency = CATALOG[12];
+		expect(changeFrequency?.id).toBe("change-frequency");
+		expect(changeFrequency?.title).toBe("Change frequency");
+		expect(changeFrequency?.reportDataKey).toBe("changeFrequency");
+		expect([...(changeFrequency?.personas ?? [])].sort()).toEqual([
+			"consumer",
+			"engineering",
 		]);
 	});
 
@@ -95,7 +119,7 @@ describe("CATALOG", () => {
 	it("covers exactly the optional ReportData sections (runtime half of the satisfies check)", () => {
 		const keys = CATALOG.map((a) => a.reportDataKey).sort();
 		expect(keys).toEqual([...SECTION_KEYS].sort());
-		// No duplicates: ten ids → ten distinct keys.
+		// No duplicates: thirteen ids → thirteen distinct keys.
 		expect(new Set(keys).size).toBe(SECTION_KEYS.length);
 	});
 
