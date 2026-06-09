@@ -174,6 +174,27 @@ describe("runSetupWizard (injected streams)", () => {
 		expect(written.dashboard_view).toBeUndefined();
 	});
 
+	it("B6: customizing the consumer preset materializes the breaking-calendar + change-frequency list", async () => {
+		// presets listed 1..5 in PRESET_NAMES order: owner, engineering, design,
+		// consumer, everything. Pick 4 (consumer = system-score, parity, impact,
+		// breaking-calendar, change-frequency — wave-7 B6); customize? y; done;
+		// confirm y. With no edits the materialized list equals the consumer preset.
+		const { exitCode } = await drive(["4", "y", "done", "y"]);
+		expect(exitCode).toBe(0);
+		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
+			string,
+			unknown
+		>;
+		expect(written.dashboard_artifacts).toEqual([
+			"system-score",
+			"parity",
+			"impact",
+			"breaking-calendar",
+			"change-frequency",
+		]);
+		expect(written.dashboard_view).toBeUndefined();
+	});
+
 	it("the customize loop shows the current selection each round", async () => {
 		const { output } = await drive(["1", "y", "add impact", "done", "y"]);
 		// current selection echoed at least once with the preset's artifacts

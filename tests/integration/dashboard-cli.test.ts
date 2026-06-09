@@ -71,13 +71,13 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
-		expect(parsed.artifacts).toHaveLength(11);
+		expect(parsed.artifacts).toHaveLength(13);
 		expect(parsed.artifacts.every((a) => a.enabled)).toBe(true);
 		expect(parsed.view.source).toBe("default");
 		expect(parsed.view.viewName).toBe("everything");
 	});
 
-	it("emits the eleven artifacts in catalog order with stable metadata", async () => {
+	it("emits the thirteen artifacts in catalog order with stable metadata", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
@@ -93,6 +93,8 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"import-coverage",
 			"leaderboard",
 			"library-health",
+			"breaking-calendar",
+			"change-frequency",
 		]);
 		// system-score leads (wave-2, S2); drift-trend is now second.
 		const score = parsed.artifacts[0];

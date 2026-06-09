@@ -424,7 +424,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("Chip");
 	});
 
-	it("B5 ACCEPTANCE: all eleven artifacts present → TWELVE svg charts", async () => {
+	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
@@ -460,9 +460,12 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// Drift, lint, readiness, parity, contrast, impact: one chart each (6);
 		// plus the system-score section's gauge + trend (2); plus the three owner
 		// sections (adoption-trend line, coverage donut, leaderboard bar) → 11 (B3);
-		// plus the library-health totals bar → 12 (B5).
-		expect(countSvgs(html)).toBe(12);
-		// None of the eleven sections falls back to the empty state.
+		// plus the library-health totals bar → 12 (B5); plus the change-frequency
+		// per-kind bar → 13 (B6). breaking-calendar is a LIST, not a chart, so the
+		// svg delta is +1, NOT +2 (the seed's stale>0 tokens-check + breaking>0
+		// impact populate the calendar list).
+		expect(countSvgs(html)).toBe(13);
+		// None of the thirteen sections falls back to the empty state.
 		expect(html).not.toContain("No data yet");
 	});
 
@@ -543,9 +546,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("No data yet");
 		// Drift section is populated (1 svg); the single tokens-check line also
 		// yields a drift component so the system-score section computes its gauge +
-		// trend (2 svgs) → THREE svgs total (wave-2 S4b). Readiness + parity stay
-		// empty.
-		expect(countSvgs(html)).toBe(3);
+		// trend (2 svgs) → THREE svgs (wave-2 S4b). The same line is a counted
+		// `tokens-check` kind, so change-frequency draws its per-kind bar (+1) →
+		// FOUR svgs total (B6). Its stale=1 also populates the breaking-calendar
+		// LIST (no svg). Readiness + parity stay empty.
+		expect(countSvgs(html)).toBe(4);
 	});
 });
 
@@ -753,6 +758,39 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(html).toContain("design");
 	});
 
+	it("B6: --view consumer renders the breaking-calendar list + the change-frequency bar", async () => {
+		const dir = await freshTmp("ds-report-view-consumer-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--view", "consumer"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// consumer = system-score · parity · impact · breaking-calendar ·
+		// change-frequency → the score's gauge + trend (2) plus one chart each for
+		// parity/impact + the change-frequency per-kind bar = FIVE charts.
+		// breaking-calendar is a LIST (no svg), so the count is 5, not 6 (B6).
+		expect(countSvgs(html)).toBe(5);
+		expect(html).toContain("System score");
+		expect(html).toContain("Parity matrix");
+		expect(html).toContain("Change impact");
+		// both new consumer sections render with real data, not empty states.
+		expect(html).toContain("Breaking calendar");
+		expect(html).toContain("Change frequency");
+		expect(html).not.toContain("No data yet");
+		// the breaking calendar surfaces the seeded breakage: a tokens stale line
+		// (2026-06-01, stale 1) and an impact breaking line (2026-06-06, breaking 2).
+		expect(html).toContain("1 stale output");
+		expect(html).toContain("2 breaking component changes");
+		// change-frequency tallies the seeded kinds as bar labels.
+		expect(html).toContain("tokens-check");
+		expect(html).toContain("impact");
+		expect(html).toContain("consumer");
+	});
+
 	it("--artifacts parity,a11y renders exactly two sections", async () => {
 		const dir = await freshTmp("ds-report-artifacts-");
 		await seedSixArtifacts(dir);
@@ -807,9 +845,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// consumer = system-score · parity · impact → the score's gauge + trend (2)
-		// plus one chart each for parity/impact = FOUR; engineering's lint absent.
-		expect(countSvgs(html)).toBe(4);
+		// consumer = system-score · parity · impact · breaking-calendar ·
+		// change-frequency → the score's gauge + trend (2) plus one chart each for
+		// parity/impact + the change-frequency per-kind bar = FIVE (B6);
+		// breaking-calendar is a LIST (no svg). engineering's lint absent.
+		expect(countSvgs(html)).toBe(5);
 		expect(html).toContain("System score");
 		expect(html).toContain("Parity matrix");
 		expect(html).toContain("Change impact");
