@@ -25,10 +25,11 @@ const SECTION_KEYS: readonly SectionKey[] = [
 	"adoptionTrend",
 	"importCoverage",
 	"leaderboard",
+	"libraryHealth",
 ];
 
 describe("CATALOG", () => {
-	it("leads with system-score then the six wave-1 artifacts and the three owner artifacts (positions 8–10)", () => {
+	it("leads with system-score then the six wave-1 artifacts, the three owner artifacts (positions 8–10), and library-health (position 11)", () => {
 		expect(CATALOG.map((a) => a.id)).toEqual([
 			"system-score",
 			"drift-trend",
@@ -40,6 +41,18 @@ describe("CATALOG", () => {
 			"adoption-trend",
 			"import-coverage",
 			"leaderboard",
+			"library-health",
+		]);
+	});
+
+	it("appends library-health at index 10 (position 11) with the SPEC §3 personas + key", () => {
+		const libraryHealth = CATALOG[10];
+		expect(libraryHealth?.id).toBe("library-health");
+		expect(libraryHealth?.title).toBe("Library health");
+		expect(libraryHealth?.reportDataKey).toBe("libraryHealth");
+		expect([...(libraryHealth?.personas ?? [])].sort()).toEqual([
+			"design",
+			"owner",
 		]);
 	});
 

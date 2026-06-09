@@ -37,14 +37,15 @@ describe("PRESETS", () => {
 			"readiness",
 			"a11y",
 			"parity",
+			"library-health",
 		]);
 		expect(PRESETS.consumer).toEqual(["system-score", "parity", "impact"]);
 	});
 
-	it("defines `everything` as all ten artifacts in catalog order (system-score leads)", () => {
+	it("defines `everything` as all eleven artifacts in catalog order (system-score leads)", () => {
 		expect(PRESETS.everything).toEqual([...ALL_ARTIFACT_IDS]);
 		expect(PRESETS.everything[0]).toBe("system-score");
-		expect(PRESETS.everything).toHaveLength(10);
+		expect(PRESETS.everything).toHaveLength(11);
 	});
 
 	it("exports PRESET_NAMES as the five view names", () => {
@@ -115,6 +116,7 @@ describe("resolveView — precedence permutations", () => {
 				"readiness",
 				"a11y",
 				"parity",
+				"library-health",
 			]);
 		}
 	});

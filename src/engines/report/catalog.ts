@@ -18,7 +18,8 @@ export type ArtifactId =
 	| "impact"
 	| "adoption-trend"
 	| "import-coverage"
-	| "leaderboard";
+	| "leaderboard"
+	| "library-health";
 
 /** Persona tags used by presets and `dashboard list`. */
 export type Persona = "owner" | "engineering" | "design" | "consumer";
@@ -106,6 +107,12 @@ export const CATALOG = [
 		title: "Adoption leaderboard",
 		personas: ["owner"],
 		reportDataKey: "leaderboard",
+	},
+	{
+		id: "library-health",
+		title: "Library health",
+		personas: ["design", "owner"],
+		reportDataKey: "libraryHealth",
 	},
 ] as const satisfies readonly ArtifactMeta[];
 

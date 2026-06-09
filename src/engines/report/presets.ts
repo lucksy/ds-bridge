@@ -36,7 +36,7 @@ export const PRESETS = {
 		"a11y",
 	],
 	engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
-	design: ["system-score", "readiness", "a11y", "parity"],
+	design: ["system-score", "readiness", "a11y", "parity", "library-health"],
 	consumer: ["system-score", "parity", "impact"],
 	everything: [...ALL_ARTIFACT_IDS],
 } as const satisfies Record<PresetName, readonly ArtifactId[]>;

@@ -6,6 +6,13 @@
 // testable. Every section is optional — an absent section is a first-class
 // "empty state", not an error.
 
+import type {
+	DeprecatedUsageGroup,
+	DetachedCandidate,
+	LibraryHealthTotals,
+	OverrideHotspot,
+} from "../figma/library-health.js";
+
 /** One day's drift counts, bucketed by change severity. */
 export interface DriftTrendPoint {
 	/** ISO date (e.g. "2026-06-05"); used as an x-axis category label. */
@@ -154,6 +161,20 @@ export interface LeaderboardRow {
 }
 
 /**
+ * Library-health hygiene signals from the latest `library-health` crawl (B5).
+ * Mirrors the L1 engine's return shape verbatim (the engine types are imported,
+ * not redeclared, to stay DRY) so the CLI threads `assessLibraryHealth`'s output
+ * straight through. The renderer draws its bars from `totals`; the lists may be
+ * empty when reconstructed from a counts-only history line (SPEC §3).
+ */
+export interface LibraryHealth {
+	overrideHotspots: OverrideHotspot[];
+	deprecatedUsage: DeprecatedUsageGroup[];
+	detachedCandidates: DetachedCandidate[];
+	totals: LibraryHealthTotals;
+}
+
+/**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
  */
@@ -174,4 +195,6 @@ export interface ReportData {
 	importCoverage?: ImportCoverage;
 	/** On-system % by directory, worst-first, from the latest lint line (B1). */
 	leaderboard?: LeaderboardRow[];
+	/** Library hygiene signals from the latest `library-health` crawl (B5). */
+	libraryHealth?: LibraryHealth;
 }
