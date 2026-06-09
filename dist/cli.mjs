@@ -7430,7 +7430,7 @@ function aliasTarget2(value2) {
   return match ? match[1] : void 0;
 }
 function collectSet(setName, tree, out, errors) {
-  const walk = (node, pathParts) => {
+  const walk2 = (node, pathParts) => {
     const leaf = readLeaf(node);
     if (leaf !== void 0) {
       const path = pathParts.join(".");
@@ -7473,10 +7473,10 @@ function collectSet(setName, tree, out, errors) {
         });
         continue;
       }
-      walk(child, [...pathParts, key]);
+      walk2(child, [...pathParts, key]);
     }
   };
-  walk(tree, []);
+  walk2(tree, []);
 }
 function resolveSetOrder(root, setNames) {
   const metadata = root.$metadata;
@@ -8458,6 +8458,12 @@ var CATALOG = [
     title: "Adoption leaderboard",
     personas: ["owner"],
     reportDataKey: "leaderboard"
+  },
+  {
+    id: "library-health",
+    title: "Library health",
+    personas: ["design", "owner"],
+    reportDataKey: "libraryHealth"
   }
 ];
 var ALL_ARTIFACT_IDS = CATALOG.map((a) => a.id);
@@ -9165,7 +9171,7 @@ function fromCommit(commit) {
   };
 }
 function fromVersion(version) {
-  const description = version.description.trim();
+  const description = (version.description ?? "").trim();
   return withDetail(
     {
       id: `figma:${version.id}`,
@@ -9173,9 +9179,9 @@ function fromVersion(version) {
       source: "figma",
       audience: "designer",
       severity: "notable",
-      title: version.label.trim()
+      title: (version.label ?? "").trim()
     },
-    description === "" ? void 0 : version.description
+    description === "" ? void 0 : description
   );
 }
 function compareEntries(a, b) {
@@ -9192,7 +9198,7 @@ function compareEntries(a, b) {
 function aggregateChangelog(input) {
   const entries = [];
   for (const version of input.versions) {
-    if (version.label.trim() === "") continue;
+    if ((version.label ?? "").trim() === "") continue;
     entries.push(fromVersion(version));
   }
   for (const commit of input.commits) {
@@ -9436,22 +9442,22 @@ function classifyGitFailure(run) {
   return { kind: "git-error", message: stderr.trim() };
 }
 function readFileAtRef(input) {
-  const { ref, path, cwd: cwd3, exec } = input;
-  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd3);
+  const { ref, path, cwd: cwd4, exec } = input;
+  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd4);
   if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
     const { kind, message } = classifyGitFailure(prefixRun);
     return kind === "missing" ? { kind: "missing" } : { kind, message };
   }
   const prefix = prefixRun.stdout.trim();
-  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd3);
+  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd4);
   if (showRun.error !== void 0 || showRun.status !== 0) {
     const { kind, message } = classifyGitFailure(showRun);
     return kind === "missing" ? { kind: "missing" } : { kind, message };
   }
   return { kind: "ok", text: showRun.stdout };
 }
-function spawnGitExec(args, cwd3) {
-  const run = spawnSync("git", args, { cwd: cwd3, encoding: "utf8" });
+function spawnGitExec(args, cwd4) {
+  const run = spawnSync("git", args, { cwd: cwd4, encoding: "utf8" });
   if (run.error !== void 0) {
     return { status: -1, stdout: "", stderr: "", error: run.error.message };
   }
@@ -9638,7 +9644,7 @@ var PRESETS = {
     "a11y"
   ],
   engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
-  design: ["system-score", "readiness", "a11y", "parity"],
+  design: ["system-score", "readiness", "a11y", "parity", "library-health"],
   consumer: ["system-score", "parity", "impact"],
   everything: [...ALL_ARTIFACT_IDS]
 };
@@ -9855,7 +9861,7 @@ async function customizeLoop(reader, output, start) {
   }
 }
 async function runSetupWizard(deps) {
-  const { input, output, cwd: cwd3, isTTY } = deps;
+  const { input, output, cwd: cwd4, isTTY } = deps;
   if (!isTTY) {
     output.write(
       "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead.\n"
@@ -9885,12 +9891,12 @@ async function runSetupWizard(deps) {
       return { exitCode: 0 };
     }
     if (chosen.kind === "view") {
-      writeProjectConfig(cwd3, {
+      writeProjectConfig(cwd4, {
         dashboard_view: chosen.view,
         dashboard_artifacts: void 0
       });
     } else {
-      writeProjectConfig(cwd3, {
+      writeProjectConfig(cwd4, {
         dashboard_artifacts: chosen.artifacts,
         dashboard_view: void 0
       });
@@ -12299,18 +12305,361 @@ function registerImpactCommand(program2) {
   });
 }
 
-// src/cli-commands/lint.ts
-import { spawnSync as spawnSync2 } from "child_process";
+// src/cli-commands/library-health.ts
 import {
   appendFileSync as appendFileSync5,
   existsSync as existsSync9,
   mkdirSync as mkdirSync8,
-  readdirSync,
   readFileSync as readFileSync9,
-  statSync as statSync6,
   writeFileSync as writeFileSync6
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join11, relative, resolve as resolve8, sep as sep2 } from "path";
+import { join as join12 } from "path";
+import { cwd as cwd3, env as processEnv2 } from "process";
+
+// src/engines/figma/library-health.ts
+var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
+var CAP = 20;
+function componentNameOf(file, componentId) {
+  if (componentId === void 0) return void 0;
+  const components = file.components;
+  if (components === void 0) return void 0;
+  return components[componentId]?.name;
+}
+function walk(root, visit) {
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    visit(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (const child of children) {
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+}
+function compareStrings(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function assessLibraryHealth(file, opts) {
+  const deprecatedPattern = opts?.deprecatedPattern ?? DEFAULT_DEPRECATED_PATTERN;
+  const hasComponents = file.components !== void 0;
+  const componentNames = /* @__PURE__ */ new Set();
+  if (file.components !== void 0) {
+    for (const id of Object.keys(file.components)) {
+      const entry = file.components[id];
+      if (entry !== void 0) componentNames.add(entry.name);
+    }
+  }
+  const hotspots = [];
+  const deprecatedCounts = /* @__PURE__ */ new Map();
+  const detached = [];
+  walk(file.document, (node) => {
+    const isInstance = node.type === "INSTANCE";
+    if (isInstance) {
+      const overrides = node.overrides;
+      const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
+      if (overrideCount > 0) {
+        const componentName = componentNameOf(file, node.componentId);
+        hotspots.push({
+          nodeId: node.id,
+          name: node.name,
+          ...componentName !== void 0 ? { componentName } : {},
+          overrideCount
+        });
+      }
+      if (hasComponents) {
+        const componentName = componentNameOf(file, node.componentId);
+        if (componentName !== void 0 && deprecatedPattern.test(componentName)) {
+          deprecatedCounts.set(
+            componentName,
+            (deprecatedCounts.get(componentName) ?? 0) + 1
+          );
+        }
+      }
+    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && componentNames.has(node.name)) {
+      detached.push({ nodeId: node.id, name: node.name, heuristic: true });
+    }
+  });
+  let deprecatedUsageTotal = 0;
+  for (const count of deprecatedCounts.values()) deprecatedUsageTotal += count;
+  const totals = {
+    overrideHotspots: hotspots.length,
+    deprecatedUsage: deprecatedUsageTotal,
+    detachedCandidates: detached.length
+  };
+  hotspots.sort((a, b) => {
+    if (a.overrideCount !== b.overrideCount) {
+      return b.overrideCount - a.overrideCount;
+    }
+    return compareStrings(a.name, b.name);
+  });
+  const deprecatedUsage = [
+    ...deprecatedCounts.entries()
+  ].map(([componentName, count]) => ({ componentName, count })).sort((a, b) => compareStrings(a.componentName, b.componentName)).slice(0, CAP);
+  const detachedCandidates = [...detached].sort((a, b) => compareStrings(a.nodeId, b.nodeId)).slice(0, CAP);
+  return {
+    overrideHotspots: hotspots.slice(0, CAP),
+    deprecatedUsage,
+    detachedCandidates,
+    totals
+  };
+}
+
+// src/io/figma/cache.ts
+import { dirname as dirname6, join as join11 } from "path";
+function cachePath(args) {
+  const fileName = `library-${args.key}.json`;
+  const dataDir = args.env.CLAUDE_PLUGIN_DATA;
+  if (dataDir !== void 0 && dataDir !== "") {
+    return join11(dataDir, "figma", fileName);
+  }
+  return join11(args.cwd, ".ds-bridge", "cache", fileName);
+}
+function isEnvelope(value2) {
+  return typeof value2 === "object" && value2 !== null && typeof value2.stampedAtMs === "number";
+}
+function readCache(args) {
+  const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
+  if (!args.fs.exists(path)) return { kind: "miss" };
+  let envelope;
+  try {
+    const parsed = JSON.parse(args.fs.read(path));
+    if (!isEnvelope(parsed)) return { kind: "miss" };
+    envelope = parsed;
+  } catch {
+    return { kind: "miss" };
+  }
+  const ageMs = args.now - envelope.stampedAtMs;
+  if (ageMs > args.ttlMs) return { kind: "stale", ageMs };
+  return { kind: "hit", data: envelope.data, ageMs };
+}
+function writeCache(args) {
+  const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
+  const envelope = { stampedAtMs: args.now, data: args.data };
+  try {
+    args.fs.mkdir(dirname6(path));
+    args.fs.write(path, `${JSON.stringify(envelope, null, 2)}
+`);
+  } catch {
+  }
+}
+
+// src/cli-commands/library-health.ts
+var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
+var CACHE_TTL_MS = 60 * 60 * 1e3;
+function fail8(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage3() {
+  return [
+    "No Figma personal access token configured.",
+    "",
+    "Connect Figma via the plugin config dialog (stored in the system keychain)",
+    "or, for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
+    "",
+    "  export FIGMA_TOKEN=figd_your_token_here",
+    "",
+    "The token needs the file_content:read scope, and must come from a Dev or",
+    "Full seat \u2014 a View seat is rate-limited and cannot be used here."
+  ].join("\n");
+}
+function missingFileKeyMessage2() {
+  return [
+    "No Figma library file key configured.",
+    "",
+    "Pass --file-key <key>, set the figma_file_key plugin option, or export it:",
+    "",
+    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
+    "",
+    "The key is the segment after /file/ or /design/ in the library file URL."
+  ].join("\n");
+}
+function clientErrorMessage3(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
+    case "not-found":
+      return "Figma could not find that file. Check the file key is correct and the token's account can access the library.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+var fsAdapter = {
+  exists: (path) => existsSync9(path),
+  read: (path) => readFileSync9(path, "utf8"),
+  mkdir: (path) => {
+    mkdirSync8(path, { recursive: true });
+  },
+  write: (path, content) => {
+    writeFileSync6(path, content, "utf8");
+  }
+};
+function appendLibraryHealthHistory(totals) {
+  const stateDir = join12(cwd3(), ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "library-health",
+    overrideHotspots: totals.overrideHotspots,
+    deprecatedUsage: totals.deprecatedUsage,
+    detachedCandidates: totals.detachedCandidates
+  };
+  mkdirSync8(stateDir, { recursive: true });
+  appendFileSync5(
+    join12(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
+function renderTerm8(report, color) {
+  const { totals } = report;
+  const clean = totals.overrideHotspots === 0 && totals.deprecatedUsage === 0 && totals.detachedCandidates === 0;
+  const header = severityColor(
+    clean ? "ok" : "warn",
+    clean ? "Library health: no hygiene signals found." : "Library health \u2014 hygiene signals found (informational).",
+    { color }
+  );
+  const summary = renderTable(
+    ["signal", "count"],
+    [
+      ["override hotspots", String(totals.overrideHotspots)],
+      ["deprecated usage", String(totals.deprecatedUsage)],
+      ["detached candidates", String(totals.detachedCandidates)]
+    ],
+    { color }
+  );
+  const lines = [header, "", summary];
+  if (report.overrideHotspots.length > 0) {
+    lines.push("", "Top override hotspots:");
+    for (const h of report.overrideHotspots) {
+      const named2 = h.componentName !== void 0 ? ` (${h.componentName})` : "";
+      lines.push(`  ${h.name}${named2}: ${h.overrideCount} override(s)`);
+    }
+  }
+  lines.push(
+    "",
+    `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
+  );
+  return lines.join("\n");
+}
+async function runLibraryHealth(options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail8(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const resolved = resolveConfig({ env: process.env });
+  if (resolved.kind !== "ok") {
+    fail8(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail8(missingTokenMessage3());
+    return;
+  }
+  const fileKey = options.fileKey ?? config.figmaFileKey;
+  if (fileKey === void 0 || fileKey === "") {
+    fail8(missingFileKeyMessage2());
+    return;
+  }
+  const cacheEnv = processEnv2.CLAUDE_PLUGIN_DATA !== void 0 ? { CLAUDE_PLUGIN_DATA: processEnv2.CLAUDE_PLUGIN_DATA } : {};
+  const cacheArgs = {
+    key: fileKey,
+    env: cacheEnv,
+    cwd: cwd3()
+  };
+  let file;
+  if (!options.refresh) {
+    const cached = readCache({
+      ...cacheArgs,
+      fs: fsAdapter,
+      now: Date.now(),
+      ttlMs: CACHE_TTL_MS
+    });
+    if (cached.kind === "hit") {
+      file = cached.data;
+    }
+  }
+  if (file === void 0) {
+    const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
+    const client = createFigmaClient({
+      token: config.figmaToken.value,
+      baseUrl
+    });
+    const result = await client.getFile(fileKey);
+    if (result.kind === "ok") {
+      file = result.data;
+      writeCache({
+        ...cacheArgs,
+        fs: fsAdapter,
+        now: Date.now(),
+        data: result.data
+      });
+    } else if (result.kind === "rate-limited") {
+      process.stderr.write(`warning: ${clientErrorMessage3(result)}
+`);
+      const fallback = existsSync9(cachePath(cacheArgs)) ? readCache({
+        ...cacheArgs,
+        fs: fsAdapter,
+        now: Date.now(),
+        // A huge TTL so any present envelope counts as a hit.
+        ttlMs: Number.MAX_SAFE_INTEGER
+      }) : { kind: "miss" };
+      if (fallback.kind === "hit") {
+        file = fallback.data;
+      } else {
+        process.exitCode = 2;
+        return;
+      }
+    } else {
+      fail8(clientErrorMessage3(result));
+      return;
+    }
+  }
+  const report = assessLibraryHealth(file);
+  appendLibraryHealthHistory(report.totals);
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm8(report, color)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerLibraryHealthCommand(program2) {
+  program2.command("library-health").description(
+    "Crawl a Figma file for design-system hygiene signals (override hotspots, deprecated usage, detached-instance candidates)"
+  ).option("--file-key <key>", "Figma library file key (overrides config)").option("--format <format>", "output format: term | json", "term").option("--refresh", "bypass the response cache and re-crawl", false).action((options) => {
+    void runLibraryHealth(options);
+  });
+}
+
+// src/cli-commands/lint.ts
+import { spawnSync as spawnSync2 } from "child_process";
+import {
+  appendFileSync as appendFileSync6,
+  existsSync as existsSync10,
+  mkdirSync as mkdirSync9,
+  readdirSync,
+  readFileSync as readFileSync10,
+  statSync as statSync6,
+  writeFileSync as writeFileSync7
+} from "fs";
+import { isAbsolute as isAbsolute2, join as join13, relative, resolve as resolve8, sep as sep2 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -12884,7 +13233,7 @@ function computeAdoption(files, findings) {
   const perFile = cssFiles.map((file) => {
     let refs = 0;
     try {
-      refs = countTokenRefs(readFileSync9(file.abs, "utf8"));
+      refs = countTokenRefs(readFileSync10(file.abs, "utf8"));
     } catch {
       refs = 0;
     }
@@ -12906,16 +13255,16 @@ function isCssLike(path) {
   return lower.endsWith(".css") || lower.endsWith(".scss");
 }
 function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join11(targetDir, ".ds-bridge");
+  const stateDir = join13(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
     byKind: countByKind(findings),
     adoption: computeAdoption(files, findings)
   };
-  mkdirSync8(stateDir, { recursive: true });
-  appendFileSync5(
-    join11(stateDir, "history.jsonl"),
+  mkdirSync9(stateDir, { recursive: true });
+  appendFileSync6(
+    join13(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -12933,7 +13282,7 @@ function walkLintableFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join11(dir, entry.name);
+    const full = join13(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       walkLintableFiles(full, acc);
@@ -12945,7 +13294,7 @@ function walkLintableFiles(dir, acc) {
 function resolveTokenSource(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
     const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve8(process.cwd(), flagTokens);
-    if (!existsSync9(abs2)) {
+    if (!existsSync10(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -12953,11 +13302,11 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join11(targetDir, ".ds-bridge.json");
-  if (existsSync9(configPath)) {
+  const configPath = join13(targetDir, ".ds-bridge.json");
+  if (existsSync10(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync9(configPath, "utf8");
+      projectFileText = readFileSync10(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -12966,7 +13315,7 @@ function resolveTokenSource(targetDir, flagTokens) {
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
         const abs2 = isAbsolute2(src) ? src : resolve8(targetDir, src);
-        if (existsSync9(abs2)) return { kind: "ok", path: abs2 };
+        if (existsSync10(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -13009,7 +13358,7 @@ function collectTokenCandidates(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join11(dir, entry.name);
+    const full = join13(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       collectTokenCandidates(
@@ -13026,7 +13375,7 @@ function collectTokenCandidates(dir, insideTokenDir, acc) {
 function detectFileFormat2(absPath) {
   let raw;
   try {
-    raw = readFileSync9(absPath, "utf8");
+    raw = readFileSync10(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -13042,7 +13391,7 @@ function detectFileFormat2(absPath) {
 function loadTokenMap(tokenPath) {
   let raw;
   try {
-    raw = readFileSync9(tokenPath, "utf8");
+    raw = readFileSync10(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -13084,7 +13433,7 @@ ${lines.join("\n")}`
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync9(absPath, "utf8");
+    content = readFileSync10(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -13133,7 +13482,7 @@ function suggestionFor(match) {
       return "no matching token (off-system)";
   }
 }
-function renderTerm8(findings, color) {
+function renderTerm9(findings, color) {
   const blocks = [];
   const byFile = /* @__PURE__ */ new Map();
   for (const finding of findings) {
@@ -13190,7 +13539,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync9(absPath, "utf8");
+      content = readFileSync10(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -13201,7 +13550,7 @@ function applyFixes(editsByFile) {
     const next = applyEdits(content, edits);
     if (next === content) continue;
     try {
-      writeFileSync6(absPath, next, "utf8");
+      writeFileSync7(absPath, next, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -13222,7 +13571,7 @@ function lintAll(files, tokens) {
   }
   return { kind: "ok", findings: all };
 }
-function fail8(message) {
+function fail9(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
@@ -13231,20 +13580,20 @@ function registerLintCommand(program2) {
   program2.command("lint").description("Find raw values that should be design tokens").argument("[path]", "file or directory to lint", ".").option("--fix", "rewrite fixable exact matches to var() in place", false).option("--format <format>", "output format: term | json", "term").option("--tokens <file>", "explicit token source file").option("--changed", "limit to files changed vs git HEAD", false).action((path, options) => {
     const format = options.format;
     if (format !== "json" && format !== "term") {
-      fail8(
+      fail9(
         `Unknown --format "${options.format}". Expected "json" or "term".`
       );
       return;
     }
     const targetPath = resolve8(path);
-    if (!existsSync9(targetPath)) {
-      fail8(`Path "${targetPath}" does not exist.`);
+    if (!existsSync10(targetPath)) {
+      fail9(`Path "${targetPath}" does not exist.`);
       return;
     }
     const stat2 = statSync6(targetPath);
     const isFile = stat2.isFile();
     if (isFile && !hasExtension(targetPath)) {
-      fail8(
+      fail9(
         `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
       );
       return;
@@ -13252,12 +13601,12 @@ function registerLintCommand(program2) {
     const targetDir = isFile ? process.cwd() : targetPath;
     const tokenSource = resolveTokenSource(targetDir, options.tokens);
     if (tokenSource.kind === "error") {
-      fail8(tokenSource.message);
+      fail9(tokenSource.message);
       return;
     }
     const loaded = loadTokenMap(tokenSource.path);
     if (loaded.kind === "error") {
-      fail8(loaded.message);
+      fail9(loaded.message);
       return;
     }
     const tokens = {
@@ -13272,7 +13621,7 @@ function registerLintCommand(program2) {
     if (options.changed) {
       const changed = changedFiles(targetDir);
       if (changed.kind === "error") {
-        fail8(changed.message);
+        fail9(changed.message);
         return;
       }
       inScope = walked.filter((abs2) => changed.files.has(abs2));
@@ -13280,7 +13629,7 @@ function registerLintCommand(program2) {
     const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
     const linted = lintAll(files, tokens);
     if (linted.kind === "error") {
-      fail8(linted.message);
+      fail9(linted.message);
       return;
     }
     if (options.fix) {
@@ -13316,7 +13665,7 @@ function emitReport(findings, format) {
     return;
   }
   const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-  process.stdout.write(`${renderTerm8(findings, color)}
+  process.stdout.write(`${renderTerm9(findings, color)}
 `);
 }
 function runFix(files, tokens, findings, historyDir) {
@@ -13336,7 +13685,7 @@ function runFix(files, tokens, findings, historyDir) {
   }
   const applied = applyFixes(editsByFile);
   if (applied.kind === "error") {
-    fail8(applied.message);
+    fail9(applied.message);
     return;
   }
   process.stdout.write(
@@ -13345,7 +13694,7 @@ function runFix(files, tokens, findings, historyDir) {
   );
   const relinted = lintAll(files, tokens);
   if (relinted.kind === "error") {
-    fail8(relinted.message);
+    fail9(relinted.message);
     return;
   }
   const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
@@ -13360,8 +13709,8 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync10, readFileSync as readFileSync10, statSync as statSync7 } from "fs";
-import { join as join12, resolve as resolvePath3 } from "path";
+import { existsSync as existsSync11, readFileSync as readFileSync11, statSync as statSync7 } from "fs";
+import { join as join14, resolve as resolvePath3 } from "path";
 
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
@@ -13456,7 +13805,7 @@ function toParitySection(report) {
 }
 
 // src/cli-commands/parity.ts
-function fail9(message) {
+function fail10(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
@@ -13476,26 +13825,26 @@ function statusSeverity2(status) {
   }
 }
 function loadRegistry4(targetDir) {
-  const registryPath = join12(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync10(registryPath)) {
-    fail9(
+  const registryPath = join14(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync11(registryPath)) {
+    fail10(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
   }
   let raw;
   try {
-    raw = readFileSync10(registryPath, "utf8");
+    raw = readFileSync11(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail9(`Could not read registry "${registryPath}": ${detail}`);
+    fail10(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail9(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail10(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
@@ -13530,7 +13879,7 @@ function summarize(rows) {
   }
   return summary;
 }
-function renderTerm9(report, color) {
+function renderTerm10(report, color) {
   if (report.rows.length === 0) {
     return "No components in the registry \u2014 nothing to compare.";
   }
@@ -13584,8 +13933,8 @@ function renderMarkdown(report) {
   return [header, separator, ...rows, "", summaryLine2].join("\n");
 }
 function hasRegistry2(candidate) {
-  return existsSync10(
-    join12(resolvePath3(candidate), ".ds-bridge", "registry.json")
+  return existsSync11(
+    join14(resolvePath3(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate2(component, path) {
@@ -13597,13 +13946,13 @@ function disambiguate2(component, path) {
 function runParity(rawComponent, rawPath, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail9(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail10(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
   const { component, path } = disambiguate2(rawComponent, rawPath);
   const targetDir = resolvePath3(path);
-  if (!existsSync10(targetDir) || !statSync7(targetDir).isDirectory()) {
-    fail9(`Path "${targetDir}" is not a directory.`);
+  if (!existsSync11(targetDir) || !statSync7(targetDir).isDirectory()) {
+    fail10(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const registry = loadRegistry4(targetDir);
@@ -13619,7 +13968,7 @@ function runParity(rawComponent, rawPath, options) {
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm9(report, color)}
+    process.stdout.write(`${renderTerm10(report, color)}
 `);
   }
   const allOk = report.rows.every((row) => row.status === "ok");
@@ -13645,13 +13994,13 @@ function registerParityCommand(program2) {
 
 // src/cli-commands/registry.ts
 import {
-  existsSync as existsSync11,
-  mkdirSync as mkdirSync9,
-  readFileSync as readFileSync11,
+  existsSync as existsSync12,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync12,
   statSync as statSync8,
-  writeFileSync as writeFileSync7
+  writeFileSync as writeFileSync8
 } from "fs";
-import { dirname as dirname6, join as join13, resolve as resolvePath4 } from "path";
+import { dirname as dirname7, join as join15, resolve as resolvePath4 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 
 // src/engines/registry/match.ts
@@ -13929,18 +14278,18 @@ async function scanCode2(targetDir) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath4(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname6(filename);
+    globals.__dirname = dirname7(filename);
   }
   const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
   return scanCodeComponents(targetDir);
 }
-var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
-function fail10(message) {
+var DEFAULT_FIGMA_API_BASE5 = "https://api.figma.com";
+function fail11(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function missingTokenMessage3() {
+function missingTokenMessage4() {
   return [
     "No Figma personal access token configured.",
     "",
@@ -13954,7 +14303,7 @@ function missingTokenMessage3() {
     "be used here."
   ].join("\n");
 }
-function missingFileKeyMessage2() {
+function missingFileKeyMessage3() {
   return [
     "No Figma library file key configured.",
     "",
@@ -13965,7 +14314,7 @@ function missingFileKeyMessage2() {
     "The key is the segment after /file/ or /design/ in the library file URL."
   ].join("\n");
 }
-function clientErrorMessage3(result) {
+function clientErrorMessage4(result) {
   switch (result.kind) {
     case "auth-error":
       return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
@@ -13982,17 +14331,17 @@ function clientErrorMessage3(result) {
 async function runBuild(path, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail10(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail11(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
   const targetDir = resolvePath4(path);
-  if (!existsSync11(targetDir) || !statSync8(targetDir).isDirectory()) {
-    fail10(`Path "${targetDir}" is not a directory.`);
+  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
+    fail11(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const resolved = resolveConfig({ env: process.env });
   if (resolved.kind !== "ok") {
-    fail10(resolved.message);
+    fail11(resolved.message);
     return;
   }
   for (const warning of resolved.warnings) {
@@ -14001,27 +14350,27 @@ async function runBuild(path, options) {
   }
   const { config } = resolved;
   if (config.figmaToken.kind === "missing") {
-    fail10(missingTokenMessage3());
+    fail11(missingTokenMessage4());
     return;
   }
   if (config.figmaFileKey === void 0 || config.figmaFileKey === "") {
-    fail10(missingFileKeyMessage2());
+    fail11(missingFileKeyMessage3());
     return;
   }
   const code = await scanCode2(targetDir);
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE5;
   const client = createFigmaClient({
     token: config.figmaToken.value,
     baseUrl
   });
   const componentsResult = await client.getComponents(config.figmaFileKey);
   if (componentsResult.kind !== "ok") {
-    fail10(clientErrorMessage3(componentsResult));
+    fail11(clientErrorMessage4(componentsResult));
     return;
   }
   const fileResult = await client.getFile(config.figmaFileKey);
   if (fileResult.kind !== "ok") {
-    fail10(clientErrorMessage3(fileResult));
+    fail11(clientErrorMessage4(fileResult));
     return;
   }
   const figma = buildFigmaComponentModel({
@@ -14031,11 +14380,11 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join13(targetDir, ".ds-bridge");
-  const registryPath = join13(stateDir, "registry.json");
+  const stateDir = join15(targetDir, ".ds-bridge");
+  const registryPath = join15(stateDir, "registry.json");
   try {
-    mkdirSync9(stateDir, { recursive: true });
-    writeFileSync7(
+    mkdirSync10(stateDir, { recursive: true });
+    writeFileSync8(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
 `,
@@ -14043,7 +14392,7 @@ async function runBuild(path, options) {
     );
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail10(`Could not write registry to "${registryPath}": ${detail}`);
+    fail11(`Could not write registry to "${registryPath}": ${detail}`);
     return;
   }
   if (format === "json") {
@@ -14084,33 +14433,33 @@ function renderBuildSummary(registry, registryPath) {
   return lines.join("\n");
 }
 function loadRegistry5(targetDir) {
-  const registryPath = join13(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync11(registryPath)) {
-    fail10(
+  const registryPath = join15(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync12(registryPath)) {
+    fail11(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
   }
   let raw;
   try {
-    raw = readFileSync11(registryPath, "utf8");
+    raw = readFileSync12(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail10(`Could not read registry "${registryPath}": ${detail}`);
+    fail11(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail10(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail11(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
 function runResolve(nodeNameOrId, path) {
   const targetDir = resolvePath4(path);
-  if (!existsSync11(targetDir) || !statSync8(targetDir).isDirectory()) {
-    fail10(`Path "${targetDir}" is not a directory.`);
+  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
+    fail11(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const registry = loadRegistry5(targetDir);
@@ -14165,13 +14514,13 @@ function registerRegistryCommand(program2) {
 // src/cli-commands/report.ts
 import { spawn } from "child_process";
 import {
-  existsSync as existsSync12,
-  mkdirSync as mkdirSync10,
-  readFileSync as readFileSync12,
+  existsSync as existsSync13,
+  mkdirSync as mkdirSync11,
+  readFileSync as readFileSync13,
   statSync as statSync9,
-  writeFileSync as writeFileSync8
+  writeFileSync as writeFileSync9
 } from "fs";
-import { basename, dirname as dirname7, join as join14, resolve as resolve9 } from "path";
+import { basename, dirname as dirname8, join as join16, resolve as resolve9 } from "path";
 import { platform } from "process";
 
 // src/engines/report/scorecard.ts
@@ -15176,6 +15525,39 @@ function leaderboardSection(data) {
     ].join("")
   );
 }
+function libraryHealthSection(data) {
+  const health = data.libraryHealth;
+  if (health === void 0) {
+    return panel("Library health", emptyState2("library-health"));
+  }
+  const { totals } = health;
+  const bars = [
+    { label: "Override hotspots", value: totals.overrideHotspots },
+    { label: "Deprecated usage", value: totals.deprecatedUsage },
+    { label: "Detached candidates", value: totals.detachedCandidates }
+  ];
+  const detachedCaveat = [
+    '<div class="meta">',
+    `Detached candidates: ${escapeHtml(String(totals.detachedCandidates))} `,
+    "\u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.",
+    "</div>"
+  ].join("");
+  const hotspots = health.overrideHotspots.length > 0 ? [
+    '<ul class="offenders">',
+    ...health.overrideHotspots.map(
+      (h) => `<li><code>${escapeHtml(h.name)}</code><span class="count">${escapeHtml(String(h.overrideCount))}</span></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  return panel(
+    "Library health",
+    [
+      `<div class="chart">${barChart(bars)}</div>`,
+      detachedCaveat,
+      hotspots
+    ].join("")
+  );
+}
 var SECTION_RENDERERS = {
   "system-score": systemScoreSection,
   "drift-trend": driftSection,
@@ -15186,7 +15568,8 @@ var SECTION_RENDERERS = {
   impact: impactSection,
   "adoption-trend": adoptionTrendSection,
   "import-coverage": importCoverageSection,
-  leaderboard: leaderboardSection
+  leaderboard: leaderboardSection,
+  "library-health": libraryHealthSection
 };
 function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   const project = escapeHtml(data.project);
@@ -15237,10 +15620,10 @@ function onSystemPct3(refs, literals) {
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join14(stateDir, "history.jsonl");
+  const historyPath = join16(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync12(historyPath, "utf8");
+    text = readFileSync13(historyPath, "utf8");
   } catch {
     return {
       driftTrend: [],
@@ -15250,7 +15633,8 @@ function aggregateHistory(stateDir, onWarning) {
       impact: void 0,
       adoptionTrend: [],
       leaderboard: void 0,
-      importCoverage: void 0
+      importCoverage: void 0,
+      libraryHealth: void 0
     };
   }
   const driftTrend = [];
@@ -15261,6 +15645,7 @@ function aggregateHistory(stateDir, onWarning) {
   const adoptionTrend = [];
   let leaderboard;
   let importCoverage;
+  let libraryHealth;
   const lines = text.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
     const trimmed = (lines[index] ?? "").trim();
@@ -15362,6 +15747,20 @@ function aggregateHistory(stateDir, onWarning) {
         cosmetic: asNumber4(r2.cosmetic),
         touchedCallSites: asNumber4(r2.touchedCallSites)
       };
+      continue;
+    }
+    if (record.kind === "library-health") {
+      const r2 = record;
+      libraryHealth = {
+        overrideHotspots: [],
+        deprecatedUsage: [],
+        detachedCandidates: [],
+        totals: {
+          overrideHotspots: asNumber4(r2.overrideHotspots),
+          deprecatedUsage: asNumber4(r2.deprecatedUsage),
+          detachedCandidates: asNumber4(r2.detachedCandidates)
+        }
+      };
     }
   }
   return {
@@ -15372,14 +15771,15 @@ function aggregateHistory(stateDir, onWarning) {
     impact,
     adoptionTrend,
     leaderboard,
-    importCoverage
+    importCoverage,
+    libraryHealth
   };
 }
 function computeSystemScore(stateDir, weights) {
-  const historyPath = join14(stateDir, "history.jsonl");
+  const historyPath = join16(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync12(historyPath, "utf8");
+    text = readFileSync13(historyPath, "utf8");
   } catch {
     return void 0;
   }
@@ -15392,10 +15792,10 @@ function computeSystemScore(stateDir, weights) {
   };
 }
 function readParity(stateDir, onWarning) {
-  const registryPath = join14(stateDir, "registry.json");
+  const registryPath = join16(stateDir, "registry.json");
   let text;
   try {
-    text = readFileSync12(registryPath, "utf8");
+    text = readFileSync13(registryPath, "utf8");
   } catch {
     return void 0;
   }
@@ -15412,8 +15812,8 @@ function readParity(stateDir, onWarning) {
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync10(dirname7(outPath), { recursive: true });
-    writeFileSync8(outPath, html, "utf8");
+    mkdirSync11(dirname8(outPath), { recursive: true });
+    writeFileSync9(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -15463,11 +15863,11 @@ function resolveSelection(targetDir, options) {
   let dashboardView;
   let dashboardArtifacts;
   let scoreWeights;
-  const configPath = join14(targetDir, ".ds-bridge.json");
-  if (existsSync12(configPath)) {
+  const configPath = join16(targetDir, ".ds-bridge.json");
+  if (existsSync13(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync12(configPath, "utf8");
+      projectFileText = readFileSync13(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -15530,13 +15930,13 @@ function resolveSelection(targetDir, options) {
 }
 function readHistoryText2(stateDir) {
   try {
-    return readFileSync12(join14(stateDir, "history.jsonl"), "utf8");
+    return readFileSync13(join16(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
 function runMarkdownReport(targetDir, options, weights) {
-  const stateDir = join14(targetDir, ".ds-bridge");
+  const stateDir = join16(targetDir, ".ds-bridge");
   const currentText = readHistoryText2(stateDir);
   let baseText;
   let noBaseline = false;
@@ -15544,7 +15944,7 @@ function runMarkdownReport(targetDir, options, weights) {
   if (options.delta !== void 0) {
     const outcome = readFileAtRef({
       ref: options.delta,
-      path: join14(".ds-bridge", "history.jsonl"),
+      path: join16(".ds-bridge", "history.jsonl"),
       cwd: targetDir,
       exec: spawnGitExec
     });
@@ -15602,7 +16002,7 @@ function runReport(path, options) {
     return;
   }
   const targetDir = resolve9(path);
-  if (!existsSync12(targetDir) || !statSync9(targetDir).isDirectory()) {
+  if (!existsSync13(targetDir) || !statSync9(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -15615,7 +16015,7 @@ function runReport(path, options) {
     runMarkdownReport(targetDir, options, selection.scoreWeights);
     return;
   }
-  const stateDir = join14(targetDir, ".ds-bridge");
+  const stateDir = join16(targetDir, ".ds-bridge");
   const warn = (message) => {
     process.stderr.write(`${message}
 `);
@@ -15637,12 +16037,13 @@ function runReport(path, options) {
       ...aggregation.impact !== void 0 ? { impact: aggregation.impact } : {},
       adoptionTrend: aggregation.adoptionTrend,
       ...aggregation.leaderboard !== void 0 ? { leaderboard: aggregation.leaderboard } : {},
-      ...aggregation.importCoverage !== void 0 ? { importCoverage: aggregation.importCoverage } : {}
+      ...aggregation.importCoverage !== void 0 ? { importCoverage: aggregation.importCoverage } : {},
+      ...aggregation.libraryHealth !== void 0 ? { libraryHealth: aggregation.libraryHealth } : {}
     },
     selection.artifacts,
     selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
   );
-  const outPath = options.out !== void 0 ? resolve9(options.out) : join14(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve9(options.out) : join16(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -15683,15 +16084,15 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync as appendFileSync6,
-  existsSync as existsSync13,
-  mkdirSync as mkdirSync11,
+  appendFileSync as appendFileSync7,
+  existsSync as existsSync14,
+  mkdirSync as mkdirSync12,
   readdirSync as readdirSync2,
-  readFileSync as readFileSync13,
+  readFileSync as readFileSync14,
   statSync as statSync10,
-  writeFileSync as writeFileSync9
+  writeFileSync as writeFileSync10
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join15, relative as relative2, resolve as resolve10, sep as sep3 } from "path";
+import { isAbsolute as isAbsolute3, join as join17, relative as relative2, resolve as resolve10, sep as sep3 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -15915,7 +16316,7 @@ function countsByType(map) {
   }
   return [...counts.entries()].map(([label, value2]) => ({ label, value: value2 })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
 }
-function renderTerm10(filePath, map, color) {
+function renderTerm11(filePath, map, color) {
   const heading = `${filePath} \u2014 format: ${map.format} \u2014 ${map.tokens.length} tokens`;
   const chart = renderBarChart(countsByType(map), { width: 24, color });
   const rows = map.tokens.slice(0, TABLE_LIMIT).map((token) => [token.name, token.type, previewValue(token.value)]);
@@ -15929,7 +16330,7 @@ function renderTerm10(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync13(filePath, "utf8");
+    raw = readFileSync14(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -16006,7 +16407,7 @@ function walkOutputFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join15(dir, entry.name);
+    const full = join17(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkOutputFiles(full, acc);
@@ -16033,7 +16434,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join15(dir, entry.name);
+    const full = join17(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       collectTokenCandidates2(
@@ -16050,7 +16451,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
 function detectFileFormat3(absPath) {
   let raw;
   try {
-    raw = readFileSync13(absPath, "utf8");
+    raw = readFileSync14(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -16075,7 +16476,7 @@ function discoverFirstTokenSource2(root) {
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
     const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve10(process.cwd(), flagTokens);
-    if (!existsSync13(abs2)) {
+    if (!existsSync14(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -16083,11 +16484,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join15(targetDir, ".ds-bridge.json");
-  if (existsSync13(configPath)) {
+  const configPath = join17(targetDir, ".ds-bridge.json");
+  if (existsSync14(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync13(configPath, "utf8");
+      projectFileText = readFileSync14(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -16096,7 +16497,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
         const abs2 = isAbsolute3(src) ? src : resolve10(targetDir, src);
-        if (existsSync13(abs2)) return { kind: "ok", path: abs2 };
+        if (existsSync14(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -16115,7 +16516,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync13(tokenPath, "utf8");
+    raw = readFileSync14(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -16165,7 +16566,7 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
     if (resolve10(file) === resolve10(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync13(file, "utf8");
+      content = readFileSync14(file, "utf8");
     } catch {
       continue;
     }
@@ -16255,19 +16656,19 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync11(stateDir, { recursive: true });
-  appendFileSync6(
-    join15(stateDir, "history.jsonl"),
+  mkdirSync12(stateDir, { recursive: true });
+  appendFileSync7(
+    join17(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join15(stateDir, "history.jsonl");
+  const historyPath = join17(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync13(historyPath, "utf8");
+    text = readFileSync14(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -16299,11 +16700,11 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join15(stateDir, "reports");
-  mkdirSync11(reportsDir, { recursive: true });
+  const reportsDir = join17(stateDir, "reports");
+  mkdirSync12(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join15(reportsDir, `tokens-${date}.html`);
-  writeFileSync9(reportPath, html, "utf8");
+  const reportPath = join17(reportsDir, `tokens-${date}.html`);
+  writeFileSync10(reportPath, html, "utf8");
   return reportPath;
 }
 function failCheck(message) {
@@ -16320,7 +16721,7 @@ function runCheck(path, options) {
     return;
   }
   const targetDir = resolve10(path);
-  if (!existsSync13(targetDir) || !statSync10(targetDir).isDirectory()) {
+  if (!existsSync14(targetDir) || !statSync10(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -16335,7 +16736,7 @@ function runCheck(path, options) {
     return;
   }
   const outputsDir = options.outputs !== void 0 ? resolve10(options.outputs) : targetDir;
-  if (!existsSync13(outputsDir) || !statSync10(outputsDir).isDirectory()) {
+  if (!existsSync14(outputsDir) || !statSync10(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -16347,7 +16748,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join15(targetDir, ".ds-bridge");
+  const stateDir = join17(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -16399,7 +16800,7 @@ function registerTokensCommand(program2) {
       return;
     }
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm10(path, map, color)}
+    process.stdout.write(`${renderTerm11(path, map, color)}
 `);
   });
 }
@@ -16420,6 +16821,7 @@ function buildProgram() {
   registerParityCommand(program2);
   registerA11yCommand(program2);
   registerImpactCommand(program2);
+  registerLibraryHealthCommand(program2);
   registerAdoptionCommand(program2);
   registerChangelogCommand(program2);
   registerDocsCommand(program2);
