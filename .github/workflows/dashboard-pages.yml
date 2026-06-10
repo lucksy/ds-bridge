@@ -1,0 +1,62 @@
+# M11.2 — publish the ds-bridge dashboard site to GitHub Pages (SPEC-personas §7).
+#
+# Each consuming repo publishes ITS OWN dashboard site to ITS OWN Pages, separate
+# from any marketing site. The renderer emits self-contained HTML (inline CSS +
+# inline SVG, no CDN/<script>/_next), path-agnostic — it works at the Pages URL
+#   https://<user-or-org>.github.io/<repo>/
+# with no basePath. Enable once in repo Settings → Pages → "Build and deployment"
+# → Source: "GitHub Actions".
+#
+# Consumers who install ds-bridge from npm should replace the build + render
+# steps with a single `npx ds-bridge report . --format site --out site/`.
+name: Dashboard Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least-privilege: read the repo, write the Pages deployment via OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One in-flight Pages deployment at a time; don't cancel a running publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (locked)
+        run: npm ci
+
+      - name: Build the CLI
+        run: npm run build
+
+      - name: Render the dashboard site
+        # Renders the configured publish set (or the active view) to site/:
+        # one <name>.html per dashboard + a generated index.html.
+        run: node dist/cli.mjs report . --format site --out site/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
