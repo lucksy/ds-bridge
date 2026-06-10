@@ -15,6 +15,8 @@
 //
 // Exit codes: 0 success · 2 operational error (bad --format/--audience, git
 // unavailable). It is a generator, not a gate — clean and "has changes" are both 0.
+import { appendFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { cwd as processCwd } from "node:process";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
@@ -22,6 +24,8 @@ import {
 	aggregateChangelog,
 	type ChangelogAudience,
 	type ChangelogEntry,
+	type ChangelogSeverity,
+	type ChangelogSource,
 } from "../engines/changelog/aggregate.js";
 import { renderChangelogMarkdown } from "../engines/changelog/render-md.js";
 import type { TokenDiffResult } from "../engines/tokens/diff.js";
@@ -56,6 +60,44 @@ interface ChangelogOptions {
 	since: string | undefined;
 	audience: string;
 	format: string;
+	/** Commander maps the negatable `--no-history` flag to `history: false`. */
+	history: boolean;
+}
+
+/** How many entries the appended changelog line's `recent[]` keeps. */
+const HISTORY_RECENT_LIMIT = 12;
+
+/** Per-audience severity tally on the changelog history line (C10, M2.3). */
+interface ChangelogSeverityCounts {
+	breaking: number;
+	notable: number;
+	minor: number;
+}
+
+/** One persisted recent entry on the changelog line. */
+interface ChangelogRecentEntry {
+	audience: ChangelogAudience;
+	severity: ChangelogSeverity;
+	source: ChangelogSource;
+	title: string;
+}
+
+/**
+ * One appended changelog history record (read back by `report` for the
+ * audience-changelog panel, C10/M2.3). Per-audience severity counts (bucketed by
+ * each entry's LITERAL audience — the membership "both counts in both" rule is
+ * applied by the report engine off `recent[]`), plus a capped, breaking-first
+ * `recent[]` of {audience, severity, source, title}. Mirrors the handoff/impact
+ * append pattern; the `at` ISO timestamp is read at the io edge.
+ */
+interface ChangelogHistoryRecord {
+	at: string;
+	kind: "changelog";
+	since: string;
+	designer: ChangelogSeverityCounts;
+	developer: ChangelogSeverityCounts;
+	both: ChangelogSeverityCounts;
+	recent: ChangelogRecentEntry[];
 }
 
 /** Injectable dependencies so the command is testable end-to-end. */
@@ -181,6 +223,93 @@ async function fetchVersions(
 	return { versions: result.data.versions };
 }
 
+/** Breaking-first rank: breaking floats to the front, the rest keep source order. */
+function breakingRank(severity: ChangelogSeverity): number {
+	return severity === "breaking" ? 0 : 1;
+}
+
+/** Tally one entry's severity into its literal-audience bucket. */
+function tally(
+	counts: ChangelogSeverityCounts,
+	severity: ChangelogSeverity,
+): void {
+	counts[severity] += 1;
+}
+
+/**
+ * Build the changelog history record from the FULL aggregated entries (audience
+ * unfiltered — the panel needs every audience). Per-audience severity counts are
+ * bucketed by each entry's literal audience; `recent[]` is breaking-first and
+ * capped. The `at` ISO timestamp is read at the io edge (injected `now`).
+ */
+function buildChangelogHistoryRecord(
+	entries: ChangelogEntry[],
+	since: string,
+	at: string,
+): ChangelogHistoryRecord {
+	const designer: ChangelogSeverityCounts = {
+		breaking: 0,
+		notable: 0,
+		minor: 0,
+	};
+	const developer: ChangelogSeverityCounts = {
+		breaking: 0,
+		notable: 0,
+		minor: 0,
+	};
+	const both: ChangelogSeverityCounts = { breaking: 0, notable: 0, minor: 0 };
+
+	for (const entry of entries) {
+		if (entry.audience === "designer") tally(designer, entry.severity);
+		else if (entry.audience === "developer") tally(developer, entry.severity);
+		else tally(both, entry.severity);
+	}
+
+	// recent[]: breaking-first (stable on the aggregate's date-sorted order), capped.
+	const recent: ChangelogRecentEntry[] = entries
+		.map((entry, order) => ({ entry, order }))
+		.sort(
+			(a, b) =>
+				breakingRank(a.entry.severity) - breakingRank(b.entry.severity) ||
+				a.order - b.order,
+		)
+		.slice(0, HISTORY_RECENT_LIMIT)
+		.map(({ entry }) => ({
+			audience: entry.audience,
+			severity: entry.severity,
+			source: entry.source,
+			title: entry.title,
+		}));
+
+	return {
+		at,
+		kind: "changelog",
+		since,
+		designer,
+		developer,
+		both,
+		recent,
+	};
+}
+
+/**
+ * Append ONE changelog history line to <cwd>/.ds-bridge/history.jsonl (the
+ * project the user runs `ds-bridge changelog` from, the same place `report`
+ * reads). Suppressed by `--no-history`. Mirrors the handoff/impact append.
+ */
+function appendChangelogHistory(
+	deps: ChangelogDeps,
+	record: ChangelogHistoryRecord,
+): void {
+	const stateDir = join(deps.cwd, ".ds-bridge");
+	mkdirSync(stateDir, { recursive: true });
+	appendFileSync(
+		join(stateDir, "history.jsonl"),
+		`${JSON.stringify(record)}\n`,
+		"utf8",
+	);
+}
+
 /** Execute the changelog command with injected dependencies. */
 export async function runChangelog(
 	options: ChangelogOptions,
@@ -235,6 +364,16 @@ export async function runChangelog(
 	});
 	const entries = all.filter((entry) => audienceMatches(entry, audience.value));
 
+	// History (C10, M2.3): record the audience-segmented changelog from the FULL
+	// (audience-unfiltered) entry set for the dashboard panel. Suppressible with
+	// `--no-history`. The `at` clock read happens at this io edge (injected `now`).
+	if (options.history) {
+		appendChangelogHistory(
+			deps,
+			buildChangelogHistoryRecord(all, since, deps.now().toISOString()),
+		);
+	}
+
 	if (format === "json") {
 		deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}\n`);
 	} else if (format === "md") {
@@ -260,6 +399,10 @@ export function registerChangelogCommand(program: Command): void {
 		)
 		.option("--audience <who>", "designers | developers | both", "both")
 		.option("--format <format>", "output format: term | json | md", "term")
+		.option(
+			"--no-history",
+			"do not append a changelog record to .ds-bridge/history.jsonl in the current directory",
+		)
 		.action((options: ChangelogOptions) => {
 			void runChangelog(options, defaultDeps());
 		});

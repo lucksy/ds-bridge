@@ -7,7 +7,7 @@
 // file key in env enables the Figma side, their absence exercises offline mode.
 import { execFile, execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -112,6 +112,53 @@ async function runCliIn(
 	} catch (error) {
 		if (!isExecError(error)) throw error;
 		return { code: error.code, stdout: error.stdout, stderr: error.stderr };
+	}
+}
+
+/** One parsed changelog history record (the C10 / M2.3 append shape). */
+interface ChangelogHistoryRecord {
+	at: string;
+	kind: string;
+	since: string;
+	designer?: { breaking: number; notable: number; minor: number };
+	developer?: { breaking: number; notable: number; minor: number };
+	both?: { breaking: number; notable: number; minor: number };
+	recent: {
+		audience: string;
+		severity: string;
+		source: string;
+		title: string;
+	}[];
+}
+
+/** Read + parse the changelog records in <dir>/.ds-bridge/history.jsonl (or []). */
+async function readChangelogHistory(
+	dir: string,
+): Promise<ChangelogHistoryRecord[]> {
+	const historyPath = join(dir, ".ds-bridge", "history.jsonl");
+	let text: string;
+	try {
+		text = await readFile(historyPath, "utf8");
+	} catch {
+		return [];
+	}
+	const records: ChangelogHistoryRecord[] = [];
+	for (const line of text.split("\n")) {
+		const trimmed = line.trim();
+		if (trimmed === "") continue;
+		const record = JSON.parse(trimmed) as ChangelogHistoryRecord;
+		if (record.kind === "changelog") records.push(record);
+	}
+	return records;
+}
+
+/** True when <dir>/.ds-bridge/history.jsonl exists. */
+async function changelogHistoryExists(dir: string): Promise<boolean> {
+	try {
+		await access(join(dir, ".ds-bridge", "history.jsonl"));
+		return true;
+	} catch {
+		return false;
 	}
 }
 
@@ -255,17 +302,69 @@ describe("ds-bridge changelog (built dist/cli.mjs)", () => {
 		expect(result.stderr.toLowerCase()).toContain("git repository");
 	});
 
-	it("writes nothing to disk (stdout-only generator)", async () => {
+	it("--no-history writes nothing to disk (stdout-only generator)", async () => {
 		const repo = await makeRepo();
 		const before = execFileSync("git", ["status", "--porcelain"], {
 			cwd: repo,
 			encoding: "utf8",
 		});
-		await runCliIn(repo, ["changelog", "--since", "2026-01-01"], FIGMA_ENV);
+		await runCliIn(
+			repo,
+			["changelog", "--since", "2026-01-01", "--no-history"],
+			FIGMA_ENV,
+		);
 		const after = execFileSync("git", ["status", "--porcelain"], {
 			cwd: repo,
 			encoding: "utf8",
 		});
 		expect(after).toBe(before);
+		expect(await changelogHistoryExists(repo)).toBe(false);
+	});
+
+	it("C10/M2.3: a real run appends ONE changelog history line (per-audience counts + capped recent[])", async () => {
+		const repo = await makeRepo();
+		const result = await runCliIn(
+			repo,
+			["changelog", "--since", "2026-01-01", "--format", "json"],
+			FIGMA_ENV,
+		);
+		expect(result.code).toBe(0);
+
+		const lines = await readChangelogHistory(repo);
+		expect(lines).toHaveLength(1);
+		const record = lines[0];
+		expect(record?.kind).toBe("changelog");
+		expect(typeof record?.at).toBe("string");
+		expect(record?.since).toBe("2026-01-01");
+		// The membership rule: the labeled Figma version is a designer story; the two
+		// conventional commits are a developer story. Counts are per-audience and use
+		// the line-level severity vocabulary (breaking/notable/minor).
+		expect(record?.designer?.notable).toBe(1); // "Button hover state" (notable)
+		expect(record?.developer?.notable).toBe(1); // feat: add date picker
+		expect(record?.developer?.minor).toBe(1); // fix: correct overflow
+		// recent[] is breaking-first and carries {audience, severity, source, title}.
+		expect(Array.isArray(record?.recent)).toBe(true);
+		expect(record?.recent.length).toBeGreaterThan(0);
+		const titles = record?.recent.map((e) => e.title) ?? [];
+		expect(titles).toContain("add date picker");
+		expect(titles).toContain("Button hover state");
+	});
+
+	it("C10/M2.3: --no-history suppresses the changelog history append", async () => {
+		const repo = await makeRepo();
+		const result = await runCliIn(
+			repo,
+			["changelog", "--since", "2026-01-01", "--no-history"],
+			FIGMA_ENV,
+		);
+		expect(result.code).toBe(0);
+		expect(await changelogHistoryExists(repo)).toBe(false);
+	});
+
+	it("C10/M2.3: the appended line's recent[] is capped (breaking-first survive)", async () => {
+		const repo = await makeRepo();
+		await runCliIn(repo, ["changelog", "--since", "2026-01-01"], FIGMA_ENV);
+		const lines = await readChangelogHistory(repo);
+		expect(lines[0]?.recent.length).toBeLessThanOrEqual(12);
 	});
 });

@@ -25,6 +25,7 @@ import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
+import { buildAudienceChangelog } from "../engines/report/audience-changelog.js";
 import type { ArtifactId } from "../engines/report/catalog.js";
 import {
 	buildBreakingCalendar,
@@ -44,6 +45,7 @@ import { renderScorecardMarkdown } from "../engines/report/scorecard-md.js";
 import type {
 	A11ySummary,
 	AdoptionTrendPoint,
+	AudienceChangelog,
 	BreakingCalendar,
 	ChangeFrequency,
 	DriftTrendPoint,
@@ -485,6 +487,24 @@ function computeMigrationChecklist(
 }
 
 /**
+ * Reconstruct the audience-segmented changelog panel (C10, M2.3) from the LATEST
+ * `changelog` history record via the shared `replayHistory` iterator + the pure
+ * `buildAudienceChangelog` engine. Last-wins over the changelog lines. A line
+ * with no sliceable `recent[]` (empty, or only unknown audiences) → no slices;
+ * the caller only spreads a NON-empty panel into ReportData so an absent/empty
+ * changelog history keeps the section's empty state (and the no-config render
+ * byte-identical).
+ */
+function computeAudienceChangelog(stateDir: string): AudienceChangelog {
+	const records = replayHistory(readHistoryText(stateDir));
+	let latestChangelog: Record<string, unknown> | undefined;
+	for (const entry of records) {
+		if (entry.kind === "changelog") latestChangelog = entry.record;
+	}
+	return buildAudienceChangelog(latestChangelog);
+}
+
+/**
  * Read <stateDir>/registry.json and project it into the dashboard's Parity
  * section. Absent file → undefined (the renderer shows the empty state).
  * Unreadable / non-JSON registry → undefined with one stderr warning (a
@@ -863,6 +883,11 @@ function runReport(path: string, options: ReportOptions): void {
 		stateDir,
 		selection.migrationSitesCap,
 	);
+	// Audience changelog (C10, M2.3): the latest changelog line's recent[] folded
+	// into designer/developer slices. Only spread in when NON-empty so a line
+	// without sliceable entries (or no changelog line) keeps the section's empty
+	// state (golden-neutral).
+	const audienceChangelog = computeAudienceChangelog(stateDir);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -900,6 +925,7 @@ function runReport(path: string, options: ReportOptions): void {
 			changeFrequency: consumer.changeFrequency,
 			...(parityTrend.length > 0 ? { parityTrend } : {}),
 			...(migrationChecklist.sites.length > 0 ? { migrationChecklist } : {}),
+			...(audienceChangelog.slices.length > 0 ? { audienceChangelog } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},

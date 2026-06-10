@@ -559,6 +559,73 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).not.toContain("preview");
 	});
 
+	it("C10/M2.3: a changelog line populates the audience-changelog section", async () => {
+		const dir = await freshTmp("ds-report-audience-changelog-");
+		await seedHistory(dir, [
+			JSON.stringify({
+				at: "2026-06-07T10:00:00.000Z",
+				kind: "changelog",
+				since: "2026-05-01",
+				recent: [
+					{
+						audience: "developer",
+						severity: "breaking",
+						source: "code",
+						title: "drop legacy prop",
+					},
+					{
+						audience: "both",
+						severity: "notable",
+						source: "tokens",
+						title: "Token added: color.brand",
+					},
+				],
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"audience-changelog",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The audience-changelog section is present and NOT empty (the stub renders
+		// a "preview" marker once audienceChangelog is populated).
+		expect(html).toContain("Changelog by audience");
+		expect(html).toContain("preview");
+	});
+
+	it("C10/M2.3: a changelog line with an empty recent[] leaves the section empty", async () => {
+		const dir = await freshTmp("ds-report-audience-changelog-empty-");
+		await seedHistory(dir, [
+			JSON.stringify({
+				at: "2026-06-07T10:00:00.000Z",
+				kind: "changelog",
+				since: "2026-05-01",
+				recent: [],
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"audience-changelog",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Changelog by audience");
+		// No sliceable entries → the stub stays empty-state (no "preview" marker),
+		// keeping the no-config golden byte-identical.
+		expect(html).not.toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
