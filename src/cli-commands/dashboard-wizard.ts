@@ -1,33 +1,80 @@
-// M2.3 — the `dashboard setup` interactive wizard (split from dashboard.ts up
-// front, per SPEC-measure §4). Pure-ish orchestration over INJECTED streams:
-// `node:readline/promises` (Node core — zero new deps) reading from `input`,
-// prompting on `output`, persisting through the sanctioned writeProjectConfig.
+// M7.3 — the persona-first `dashboard setup` interactive wizard. Pure-ish
+// orchestration over INJECTED streams: `node:readline/promises` (Node core —
+// zero new deps) reading from `input`, prompting on `output`, persisting through
+// the sanctioned writeProjectConfig.
 //
 // This is the codebase's first ASYNC injection pattern (the sync git-log.ts
 // exec precedent does not transfer). Tests drive it with canned PassThrough
 // streams across every interactive path; the spawned-CLI integration covers
 // exactly the non-TTY → exit 2 case (a spawned CLI is never a TTY).
 //
-// Flow: numbered preset list → pick → customize? (y/N) → add/remove loop
-// (show current selection; 'add <id>' / 'remove <id>' / 'done') → confirm →
-// writeProjectConfig → print the resulting view + offer `report --open`.
+// Flow (SPEC-personas §2.1/§2.2): numbered persona list (the seven presets) →
+// pick → `everything` escape needs no setup (exit 0, no write) → capture the
+// per-side file-key model (producer confirms the singular library key; consumer
+// pins a `product_file_keys` alias) → confirm → writeProjectConfig writing ONLY
+// `dashboard_view` (a LIVE preset) + any `product_file_keys` (never report_style
+// / readiness_threshold, §2.1) → echo the persona's changelog/digest audience
+// default (§2.3 — derived, not a config key) + offer `report --open`.
 //
 // Outcomes (exitCode mirrors the composer convention — 0 success / 2 abort):
 //   - non-TTY → exit 2 BEFORE any prompt, pointing at `dashboard set`
 //   - EOF (Ctrl-D / piped stdin ends) mid-flow → exit 2, config UNTOUCHED
 //   - confirm declined → exit 0, config untouched
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createInterface, type Interface } from "node:readline/promises";
 import type { Readable, Writable } from "node:stream";
 import { writeProjectConfig } from "../config.js";
-import {
-	type ArtifactId,
-	lookupArtifact,
-} from "./../engines/report/catalog.js";
-import {
-	PRESET_NAMES,
-	PRESETS,
-	type PresetName,
-} from "./../engines/report/presets.js";
+import { PRESET_NAMES, type PresetName } from "./../engines/report/presets.js";
+
+/** The three producer personas (govern the DS library) vs. the three consumers. */
+const PRODUCER_PERSONAS = new Set<PresetName>([
+	"ds-designer",
+	"ds-manager",
+	"ds-engineer",
+]);
+
+/**
+ * The changelog/digest `--audience` default per persona (SPEC-personas §2.3):
+ * designer-side → designers, engineer-side → developers, governance/PM → both.
+ * Echoed by the wizard; the skill derives the same default from `dashboard_view`
+ * — it is NOT persisted as a config key.
+ */
+const PERSONA_AUDIENCE: Record<
+	Exclude<PresetName, "everything">,
+	"designers" | "developers" | "both"
+> = {
+	"ds-designer": "designers",
+	"ds-manager": "both",
+	"ds-engineer": "developers",
+	"product-designer": "designers",
+	"product-manager": "both",
+	"product-engineer": "developers",
+};
+
+const PROJECT_FILE_NAME = ".ds-bridge.json";
+
+/** Read the existing `product_file_keys` map (alias→key), or {} when absent. */
+function readExistingProductFileKeys(dir: string): Record<string, string> {
+	try {
+		const raw = JSON.parse(
+			readFileSync(join(dir, PROJECT_FILE_NAME), "utf8"),
+		) as unknown;
+		if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+			const pfk = (raw as Record<string, unknown>).product_file_keys;
+			if (typeof pfk === "object" && pfk !== null && !Array.isArray(pfk)) {
+				const out: Record<string, string> = {};
+				for (const [alias, key] of Object.entries(pfk)) {
+					if (typeof key === "string") out[alias] = key;
+				}
+				return out;
+			}
+		}
+	} catch {
+		// Missing / unreadable / non-JSON → no existing entries.
+	}
+	return {};
+}
 
 /**
  * A line reader over a readline interface that distinguishes a real (possibly
@@ -107,11 +154,6 @@ async function ask(
 	return reader.next();
 }
 
-/** Render the current selection for the customize loop (ordered, comma-joined). */
-function selectionLine(ids: readonly ArtifactId[]): string {
-	return ids.length > 0 ? ids.join(", ") : "(empty)";
-}
-
 /** Pick a preset by number, re-prompting on out-of-range / non-numeric input. */
 async function pickPreset(
 	reader: LineReader,
@@ -141,57 +183,52 @@ function isYes(answer: string): boolean {
 }
 
 /**
- * Drive the add/remove loop from a materialized starting list. Returns the
- * edited ordered list when the user types 'done'. Unknown ids are reported
- * (with suggestions) and the loop continues; idempotent add/remove print a
- * notice. Throws {@link EofError} on stream end.
+ * Capture the per-side file-key model (SPEC-personas §2.2). Producer personas
+ * confirm the singular library `figma_file_key` (warn if unset — it is env-tier,
+ * never written here). Consumer personas pin THEIR product file as a named
+ * `product_file_keys` alias, merged onto any existing map. Returns the
+ * product_file_keys map to write, or undefined when none was pinned.
+ * Throws {@link EofError} on stream end.
  */
-async function customizeLoop(
+async function captureFileKeys(
 	reader: LineReader,
 	output: Writable,
-	start: readonly ArtifactId[],
-): Promise<ArtifactId[]> {
-	let selection: ArtifactId[] = [...start];
-	for (;;) {
-		output.write(`Current selection: ${selectionLine(selection)}\n`);
-		const raw = (
-			await ask(reader, output, "add <id> / remove <id> / done: ")
-		).trim();
-		if (raw.toLowerCase() === "done") return selection;
-
-		const [verb, ...rest] = raw.split(/\s+/);
-		const target = rest.join("");
-		const command = verb?.toLowerCase();
-		if ((command !== "add" && command !== "remove") || target === "") {
-			output.write("Type 'add <id>', 'remove <id>', or 'done'.\n");
-			continue;
+	cwd: string,
+	persona: Exclude<PresetName, "everything">,
+): Promise<Record<string, string> | undefined> {
+	if (PRODUCER_PERSONAS.has(persona)) {
+		const hasKey = isYes(
+			await ask(
+				reader,
+				output,
+				"Is your DS library file key configured (FIGMA_DESIGN_SYSTEM_FILE / figma_file_key)? (y/N) ",
+			),
+		);
+		if (!hasKey) {
+			output.write(
+				"Heads up: library-health, parity, a11y, impact, and docs stay empty until figma_file_key is set.\n",
+			);
 		}
-
-		const outcome = lookupArtifact(target);
-		if (outcome.kind === "unknown") {
-			const hint =
-				outcome.suggestions.length > 0
-					? ` — did you mean ${outcome.suggestions.join(", ")}?`
-					: "";
-			output.write(`Unknown artifact id "${target}"${hint}\n`);
-			continue;
-		}
-		const id = outcome.artifact.id;
-
-		if (command === "add") {
-			if (selection.includes(id)) {
-				output.write(`"${id}" is already selected — no change.\n`);
-			} else {
-				selection.push(id);
-			}
-		} else {
-			if (!selection.includes(id)) {
-				output.write(`"${id}" is not selected — no change.\n`);
-			} else {
-				selection = selection.filter((existing) => existing !== id);
-			}
-		}
+		return undefined; // producers never write a product file key
 	}
+
+	// Consumer: pin their product file under a named alias (or skip on blank).
+	const alias = (
+		await ask(
+			reader,
+			output,
+			"Name an alias for your product Figma file (e.g. web), or leave blank to skip: ",
+		)
+	).trim();
+	if (alias === "") return undefined;
+	const key = (
+		await ask(reader, output, `Figma file key for "${alias}": `)
+	).trim();
+	if (key === "") {
+		output.write("No file key entered — skipping the product file pin.\n");
+		return undefined;
+	}
+	return { ...readExistingProductFileKeys(cwd), [alias]: key };
 }
 
 /**
@@ -204,7 +241,7 @@ export async function runSetupWizard(deps: WizardDeps): Promise<WizardOutcome> {
 	if (!isTTY) {
 		output.write(
 			"The setup wizard needs an interactive terminal. " +
-				"Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead.\n",
+				"Use `ds-bridge dashboard set --view <preset>` instead.\n",
 		);
 		return { exitCode: 2 };
 	}
@@ -214,45 +251,46 @@ export async function runSetupWizard(deps: WizardDeps): Promise<WizardOutcome> {
 	try {
 		const preset = await pickPreset(reader, output);
 
-		const customize = isYes(
-			await ask(reader, output, `Customize the "${preset}" view? (y/N) `),
-		);
-
-		let chosen:
-			| { kind: "view"; view: PresetName }
-			| { kind: "artifacts"; artifacts: ArtifactId[] };
-		if (customize) {
-			const edited = await customizeLoop(reader, output, PRESETS[preset]);
-			chosen = { kind: "artifacts", artifacts: edited };
-		} else {
-			chosen = { kind: "view", view: preset };
+		// The `everything` escape needs no config — an unconfigured repo already
+		// renders the full catalog (SPEC §2.1 step 2).
+		if (preset === "everything") {
+			output.write(
+				"`everything` needs no setup — an unconfigured repo already renders the full catalog.\n",
+			);
+			return { exitCode: 0 };
 		}
 
-		const summary =
-			chosen.kind === "view"
-				? `preset "${chosen.view}"`
-				: `artifacts ${selectionLine(chosen.artifacts)}`;
+		const productFileKeys = await captureFileKeys(
+			reader,
+			output,
+			cwd,
+			preset,
+		);
+
 		const confirmed = isYes(
-			await ask(reader, output, `Save ${summary}? (y/N) `),
+			await ask(reader, output, `Save the "${preset}" view? (y/N) `),
 		);
 		if (!confirmed) {
 			output.write("No changes made.\n");
 			return { exitCode: 0 };
 		}
 
-		if (chosen.kind === "view") {
-			writeProjectConfig(cwd, {
-				dashboard_view: chosen.view,
-				dashboard_artifacts: undefined,
-			});
-		} else {
-			writeProjectConfig(cwd, {
-				dashboard_artifacts: chosen.artifacts,
-				dashboard_view: undefined,
-			});
-		}
+		// Onboarding writes ONLY dashboard_view (a LIVE preset, clearing any prior
+		// artifacts/default) + product_file_keys — never report_style /
+		// readiness_threshold (SPEC §2.1).
+		writeProjectConfig(cwd, {
+			dashboard_view: preset,
+			dashboard_artifacts: undefined,
+			dashboard_default: undefined,
+			...(productFileKeys !== undefined
+				? { product_file_keys: productFileKeys }
+				: {}),
+		});
 
-		output.write(`Saved. Your dashboard view is now ${summary}.\n`);
+		output.write(`Saved. Your dashboard view is now "${preset}".\n`);
+		output.write(
+			`Default --audience for ${preset}: ${PERSONA_AUDIENCE[preset]} (changelog/digest).\n`,
+		);
 		output.write("Render it now? ds-bridge report --open\n");
 		return { exitCode: 0 };
 	} catch (error) {

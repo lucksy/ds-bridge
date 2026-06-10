@@ -1,7 +1,11 @@
-// M2.3 — the `dashboard setup` wizard. Unit-style specs drive runSetupWizard
-// over INJECTED streams (PassThrough in, capture out) across every interactive
-// path — deterministic, no timers. Plus ONE spawn-harness integration case:
-// piped stdin (non-TTY) → exit 2 pointing at `dashboard set`.
+// M7.3 — the persona-first `dashboard setup` wizard. Unit-style specs drive
+// runSetupWizard over INJECTED streams (PassThrough in, capture out) across
+// every interactive path — deterministic, no timers. The flow: pick a persona
+// (or the `everything` escape) → capture the per-side file-key model (producer
+// confirms the library key; consumer pins a product_file_keys alias) → confirm
+// → write ONLY dashboard_view + product_file_keys (never report_style /
+// readiness_threshold) → echo the persona audience default + a render hint.
+// Plus ONE spawn-harness case: piped stdin (non-TTY) → exit 2.
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -64,6 +68,13 @@ async function drive(
 	return { exitCode: outcome.exitCode, output: captured };
 }
 
+async function readConfig(): Promise<Record<string, unknown>> {
+	return JSON.parse(await readFile(configPath(), "utf8")) as Record<
+		string,
+		unknown
+	>;
+}
+
 async function configExists(): Promise<boolean> {
 	try {
 		await readFile(configPath(), "utf8");
@@ -72,6 +83,9 @@ async function configExists(): Promise<boolean> {
 		return false;
 	}
 }
+
+// PRESET_NAMES order: 1 ds-designer, 2 ds-manager, 3 ds-engineer,
+// 4 product-designer, 5 product-manager, 6 product-engineer, 7 everything.
 
 describe("runSetupWizard (injected streams)", () => {
 	it("non-TTY returns exit 2 pointing at `dashboard set`, before any prompt", async () => {
@@ -92,25 +106,9 @@ describe("runSetupWizard (injected streams)", () => {
 		expect(await configExists()).toBe(false);
 	});
 
-	it("happy path: pick a preset, no customization → persists dashboard_view", async () => {
-		// presets listed 1..7 in PRESET_NAMES order: ds-designer, ds-manager,
-		// ds-engineer, product-designer, product-manager, product-engineer,
-		// everything. Pick 1 (ds-designer), customize? N, confirm y.
-		const { exitCode, output } = await drive(["1", "n", "y"]);
-		expect(exitCode).toBe(0);
-		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
-			string,
-			unknown
-		>;
-		expect(written.dashboard_view).toBe("ds-designer");
-		expect(written.dashboard_artifacts).toBeUndefined();
-		// numbered preset list shown + final view summary + report hint
-		expect(output).toContain("ds-designer");
-		expect(output.toLowerCase()).toContain("report --open");
-	});
-
-	it("the preset list is numbered with every preset name", async () => {
-		const { output } = await drive(["1", "n", "y"]);
+	it("the preset list is numbered with every persona + the everything escape", async () => {
+		// Pick 1 (ds-designer, producer); library key configured? y; confirm y.
+		const { output } = await drive(["1", "y", "y"]);
 		expect(output).toMatch(/1[).:]/);
 		for (const name of [
 			"ds-designer",
@@ -125,133 +123,94 @@ describe("runSetupWizard (injected streams)", () => {
 		}
 	});
 
-	it("customize add+remove loop materializes an explicit artifact list", async () => {
-		// Pick 1 (ds-designer — nine §3.2 artifacts); customize? y; add impact;
-		// remove parity; done; confirm y. → ds-designer materialized (catalog order),
-		// + impact (appended), − parity (dropped).
-		const { exitCode } = await drive([
-			"1",
-			"y",
-			"add impact",
-			"remove parity",
-			"done",
-			"y",
-		]);
+	it("producer persona: confirm library key → writes ONLY dashboard_view", async () => {
+		// Pick 1 (ds-designer); library key configured? y; confirm y.
+		const { exitCode, output } = await drive(["1", "y", "y"]);
 		expect(exitCode).toBe(0);
-		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
-			string,
-			unknown
-		>;
-		expect(written.dashboard_artifacts).toEqual([
-			"system-score",
-			"readiness",
-			"a11y",
-			"library-health",
-			"parity-trend",
-			"component-health",
-			"library-health-trend",
-			"data-freshness",
-			"impact",
-		]);
-		expect(written.dashboard_view).toBeUndefined();
+		const written = await readConfig();
+		expect(written.dashboard_view).toBe("ds-designer");
+		// Onboarding writes ONLY dashboard_view (+ product_file_keys) — never these.
+		expect(written.dashboard_artifacts).toBeUndefined();
+		expect(written.product_file_keys).toBeUndefined();
+		expect(written.report_style).toBeUndefined();
+		expect(written.readiness_threshold).toBeUndefined();
+		expect(Object.keys(written)).toEqual(["dashboard_view"]);
+		// The persona audience default is echoed (ds-designer → designers).
+		expect(output.toLowerCase()).toContain("designers");
+		expect(output.toLowerCase()).toContain("report --open");
 	});
 
-	it("B5: customizing the ds-designer preset materializes a list including library-health", async () => {
-		// Pick 1 (ds-designer — includes library-health); customize? y; add impact;
-		// done; confirm y. The materialized list preserves catalog order + addition.
-		const { exitCode } = await drive(["1", "y", "add impact", "done", "y"]);
+	it("producer with the library key UNSET warns about empty sections but still saves", async () => {
+		// Pick 2 (ds-manager); library key configured? n (warn); confirm y.
+		const { exitCode, output } = await drive(["2", "n", "y"]);
 		expect(exitCode).toBe(0);
-		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
-			string,
-			unknown
-		>;
-		expect(written.dashboard_artifacts).toEqual([
-			"system-score",
-			"readiness",
-			"parity",
-			"a11y",
-			"library-health",
-			"parity-trend",
-			"component-health",
-			"library-health-trend",
-			"data-freshness",
-			"impact",
-		]);
-		expect(written.dashboard_view).toBeUndefined();
+		expect(output.toLowerCase()).toContain("empty");
+		const written = await readConfig();
+		expect(written.dashboard_view).toBe("ds-manager");
+		// ds-manager → both audiences.
+		expect(output.toLowerCase()).toContain("both");
 	});
 
-	it("B6: customizing the product-designer preset materializes the breaking-calendar + change-frequency list", async () => {
-		// Pick 4 (product-designer — includes breaking-calendar + change-frequency);
-		// customize? y; done; confirm y. With no edits the materialized list equals
-		// the product-designer preset (catalog order).
-		const { exitCode } = await drive(["4", "y", "done", "y"]);
+	it("consumer persona: pins a product_file_keys alias + writes dashboard_view", async () => {
+		// Pick 4 (product-designer, consumer); alias "web"; key "ABC123"; confirm y.
+		const { exitCode, output } = await drive(["4", "web", "ABC123", "y"]);
 		expect(exitCode).toBe(0);
-		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
-			string,
-			unknown
-		>;
-		expect(written.dashboard_artifacts).toEqual([
-			"system-score",
-			"readiness",
-			"parity",
-			"a11y",
-			"library-health",
-			"breaking-calendar",
-			"change-frequency",
-			"parity-trend",
-			"component-health",
-			"audience-changelog",
-			"frame-implementability",
-			"data-freshness",
+		const written = await readConfig();
+		expect(written.dashboard_view).toBe("product-designer");
+		expect(written.product_file_keys).toEqual({ web: "ABC123" });
+		// Onboarding still writes nothing else.
+		expect(Object.keys(written).sort()).toEqual([
+			"dashboard_view",
+			"product_file_keys",
 		]);
-		expect(written.dashboard_view).toBeUndefined();
+		expect(output.toLowerCase()).toContain("designers");
 	});
 
-	it("the customize loop shows the current selection each round", async () => {
-		// Pick 2 (ds-manager — includes drift-trend + parity).
-		const { output } = await drive(["2", "y", "add impact", "done", "y"]);
-		// current selection echoed at least once with the preset's artifacts
-		expect(output).toContain("drift-trend");
-		expect(output).toContain("parity");
+	it("consumer merges the new alias onto any existing product_file_keys", async () => {
+		await drive(["4", "web", "ABC123", "y"]); // first product file
+		// Pick 6 (product-engineer); alias "ios"; key "XYZ789"; confirm y.
+		const { exitCode } = await drive(["6", "ios", "XYZ789", "y"]);
+		expect(exitCode).toBe(0);
+		const written = await readConfig();
+		expect(written.product_file_keys).toEqual({
+			web: "ABC123",
+			ios: "XYZ789",
+		});
+		expect(written.dashboard_view).toBe("product-engineer");
 	});
 
-	it("an unknown add target in the loop is reported and the loop continues", async () => {
-		const { exitCode, output } = await drive([
-			"1",
-			"y",
-			"add paritee",
-			"done",
-			"y",
-		]);
+	it("consumer may skip the product file pin with a blank alias", async () => {
+		// Pick 5 (product-manager); blank alias → skip; confirm y.
+		const { exitCode, output } = await drive(["5", "", "y"]);
 		expect(exitCode).toBe(0);
-		expect(output.toLowerCase()).toContain("parity"); // suggestion echoed
-		// unknown add did not corrupt the selection: ds-designer preset persisted
-		// as its full nine-artifact §3.2 list.
-		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
-			string,
-			unknown
-		>;
-		expect(written.dashboard_artifacts).toEqual([
-			"system-score",
-			"readiness",
-			"parity",
-			"a11y",
-			"library-health",
-			"parity-trend",
-			"component-health",
-			"library-health-trend",
-			"data-freshness",
-		]);
+		const written = await readConfig();
+		expect(written.dashboard_view).toBe("product-manager");
+		expect(written.product_file_keys).toBeUndefined();
+		// product-manager → both audiences.
+		expect(output.toLowerCase()).toContain("both");
+	});
+
+	it("the `everything` escape needs no setup and writes nothing", async () => {
+		// Pick 7 (everything) → no config written, exit 0.
+		const { exitCode, output } = await drive(["7"]);
+		expect(exitCode).toBe(0);
+		expect(output.toLowerCase()).toContain("everything");
+		expect(await configExists()).toBe(false);
+	});
+
+	it("ds-engineer echoes the developers audience default", async () => {
+		// Pick 3 (ds-engineer, producer); key y; confirm y.
+		const { output } = await drive(["3", "y", "y"]);
+		expect(output.toLowerCase()).toContain("developers");
 	});
 
 	it("declining at the confirm step aborts without writing (exit 0)", async () => {
-		const { exitCode } = await drive(["1", "n", "n"]);
+		const { exitCode } = await drive(["1", "y", "n"]);
 		expect(exitCode).toBe(0);
 		expect(await configExists()).toBe(false);
 	});
 
 	it("EOF mid-flow (no preset answer) → exit 2, config untouched", async () => {
-		// Input ends immediately with no lines → the first question hits EOF.
 		const { exitCode } = await drive([]);
 		expect(exitCode).toBe(2);
 		expect(await configExists()).toBe(false);
@@ -264,13 +223,10 @@ describe("runSetupWizard (injected streams)", () => {
 	});
 
 	it("an out-of-range preset number is re-prompted, not crashed", async () => {
-		// 9 is out of range (1..7) → re-prompt; 1 picks ds-designer; N; y.
-		const { exitCode } = await drive(["9", "1", "n", "y"]);
+		// 9 is out of range (1..7) → re-prompt; 1 picks ds-designer; key y; confirm y.
+		const { exitCode } = await drive(["9", "1", "y", "y"]);
 		expect(exitCode).toBe(0);
-		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
-			string,
-			unknown
-		>;
+		const written = await readConfig();
 		expect(written.dashboard_view).toBe("ds-designer");
 	});
 });
