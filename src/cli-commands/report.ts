@@ -33,6 +33,7 @@ import {
 } from "../engines/report/consumer.js";
 import { buildFrameImplementability } from "../engines/report/frame-implementability.js";
 import { replayHistory } from "../engines/report/history-lines.js";
+import { buildLibraryHealthTrend } from "../engines/report/library-health-trend.js";
 import { buildMigrationChecklist } from "../engines/report/migration-checklist.js";
 import { buildParityTrend } from "../engines/report/parity-trend.js";
 import { resolveView } from "../engines/report/presets.js";
@@ -59,6 +60,7 @@ import type {
 	ImportCoverage,
 	LeaderboardRow,
 	LibraryHealth,
+	LibraryHealthTrendPoint,
 	LintSummary,
 	MigrationChecklist,
 	Parity,
@@ -471,6 +473,20 @@ function computeConsumerArtifacts(stateDir: string): {
  */
 function computeParityTrend(stateDir: string): ParityTrendPoint[] {
 	return buildParityTrend(replayHistory(readHistoryText(stateDir)));
+}
+
+/**
+ * Replay <stateDir>/history.jsonl into the library-health-trend series (C6, M3.4)
+ * via the shared `replayHistory` iterator + the pure `buildLibraryHealthTrend`
+ * engine — the dated `library-health` lines folded into a hygiene-count series.
+ * Empty when no dated library-health line exists (the caller only spreads a
+ * NON-empty series into ReportData, so an absent library-health history keeps the
+ * section in its empty state rather than the populated stub).
+ */
+function computeLibraryHealthTrend(
+	stateDir: string,
+): LibraryHealthTrendPoint[] {
+	return buildLibraryHealthTrend(replayHistory(readHistoryText(stateDir)));
 }
 
 /**
@@ -1084,6 +1100,10 @@ function runReport(path: string, options: ReportOptions): void {
 		selection.metricTargets,
 		systemScore?.current,
 	);
+	// Library-health trend (C6, M3.4): the dated `library-health` lines folded into
+	// a hygiene-count series. Only spread in when NON-empty so an absent (or only
+	// dateless) library-health history keeps the section's empty state.
+	const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -1124,6 +1144,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(audienceChangelog.slices.length > 0 ? { audienceChangelog } : {}),
 			...(frameImplementability.total > 0 ? { frameImplementability } : {}),
 			...(targets.length > 0 ? { targets } : {}),
+			...(libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},

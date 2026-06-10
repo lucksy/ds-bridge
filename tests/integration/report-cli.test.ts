@@ -720,9 +720,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// svg delta is +1, NOT +2 (the seed's stale>0 tokens-check + breaking>0
 		// impact populate the calendar list).
 		expect(countSvgs(html)).toBe(13);
-		// None of the thirteen DATA sections falls back to the empty state; the 11
-		// metric artifacts (C1–C13) have no engine yet → 11 empty-state stubs.
-		expect(html.split("No data yet").length - 1).toBe(11);
+		// None of the thirteen DATA sections falls back to the empty state; of the 11
+		// metric-artifact stubs (C1–C13), C6 library-health-trend now POPULATES from
+		// the seed's dated library-health line → 10 empty-state stubs remain.
+		expect(html.split("No data yet").length - 1).toBe(10);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {
@@ -1508,5 +1509,63 @@ describe("ds-bridge report — targets RAG + --gate (C1)", () => {
 		const result = await runCli(["report", dir, "--format", "html", "--gate"]);
 		expect(result.code).toBe(2);
 		expect(result.stderr.toLowerCase()).toContain("gate");
+	});
+});
+
+// ---------- C6 / M3.4 — library-health-trend engine ----------
+
+describe("ds-bridge report — library-health trend (C6)", () => {
+	it("dated library-health lines populate the library-health-trend section", async () => {
+		const dir = await freshTmp("ds-report-lh-trend-");
+		await seedHistory(dir, [
+			libraryHealthLine("2026-06-01T10:00:00.000Z", {
+				overrideHotspots: 5,
+				deprecatedUsage: 4,
+				detachedCandidates: 3,
+			}),
+			libraryHealthLine("2026-06-08T10:00:00.000Z", {
+				overrideHotspots: 2,
+				deprecatedUsage: 1,
+				detachedCandidates: 0,
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"library-health-trend",
+		]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Library health trend");
+		// Two dated points → the section is populated (no longer the empty stub).
+		expect(html).toContain("preview");
+	});
+
+	it("no library-health line → the trend section stays in its empty state", async () => {
+		const dir = await freshTmp("ds-report-no-lh-trend-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"library-health-trend",
+		]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Library health trend");
+		expect(html).not.toContain("preview");
 	});
 });
