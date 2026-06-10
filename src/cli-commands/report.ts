@@ -66,9 +66,12 @@ import type {
 	Parity,
 	ParityTrendPoint,
 	Readiness,
+	ScoreVelocity,
 	SystemScore,
+	SystemScoreTrendPoint,
 	TargetVerdict,
 } from "../engines/report/types.js";
+import { computeVelocity } from "../engines/report/velocity.js";
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 
@@ -489,6 +492,52 @@ function computeLibraryHealthTrend(
 	return buildLibraryHealthTrend(replayHistory(readHistoryText(stateDir)));
 }
 
+/** The `--velocity-window` grammar: a positive integer count, then `d` or `w`. */
+const VELOCITY_WINDOW = /^(\d+)([dw])$/;
+
+/**
+ * Parse a `--velocity-window <N>d|<N>w` flag into a positive day count (C8),
+ * mirroring `parseSince`'s relative-window grammar (`w` = 7 days). `undefined`
+ * input → undefined (the caller falls back to config / the 30-day default); a
+ * malformed value → a typed error translated to exit 2 at the edge.
+ */
+function parseVelocityWindow(
+	raw: string | undefined,
+):
+	| { kind: "ok"; days: number | undefined }
+	| { kind: "error"; message: string } {
+	if (raw === undefined) return { kind: "ok", days: undefined };
+	const match = VELOCITY_WINDOW.exec(raw);
+	if (match === null) {
+		return {
+			kind: "error",
+			message: `Invalid --velocity-window "${raw}". Expected a relative window "<N>d" or "<N>w".`,
+		};
+	}
+	const count = Number.parseInt(match[1] ?? "", 10);
+	if (count <= 0) {
+		return {
+			kind: "error",
+			message: `Invalid --velocity-window "${raw}". The count must be a positive integer.`,
+		};
+	}
+	return { kind: "ok", days: match[2] === "w" ? count * 7 : count };
+}
+
+/**
+ * Compute the windowed score velocity (C8, M3.5) from the system-score trend via
+ * the pure `computeVelocity` engine. `now` is the injected render instant so the
+ * result is reproducible. Fewer than two trend points → undefined (the caller
+ * leaves the section in its empty state). Pure derivation — writes no history.
+ */
+function computeScoreVelocity(
+	trend: readonly SystemScoreTrendPoint[],
+	nowIso: string,
+	windowDays: number,
+): ScoreVelocity | undefined {
+	return computeVelocity(trend, nowIso, windowDays);
+}
+
 /**
  * Reconstruct the per-call-site migration checklist (C7, M2.2) from the LATEST
  * `impact` history record's optional `sites[]`, capped at `cap`, via the pure
@@ -762,6 +811,8 @@ interface ReportOptions {
 	delta: string | undefined;
 	/** `--gate`: a red metric-target verdict exits 1 (md only; html → exit 2). */
 	gate: boolean;
+	/** `--velocity-window <N>d|<N>w`: C8 score-velocity look-back (flag > config > 30d). */
+	velocityWindow: string | undefined;
 }
 
 function failReport(message: string): void {
@@ -780,6 +831,8 @@ interface ResolvedSelection {
 	migrationSitesCap: number;
 	/** Validated `metric_targets` map (C1); undefined when no targets configured. */
 	metricTargets?: MetricTargets;
+	/** Score-velocity window in days (C8); the config default (30) when no file. */
+	scoreVelocityWindow: number;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -810,10 +863,12 @@ function resolveSelection(
 	let dashboardArtifacts: ArtifactId[] | undefined;
 	let scoreWeights: Weights | undefined;
 	let metricTargets: MetricTargets | undefined;
-	// Default to the config's own default (200, C7) when there is no project file.
+	// Default to the config's own defaults (200, C7 / 30, C8) when there is no file.
 	const defaults = resolveConfig({});
 	let migrationSitesCap =
 		defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
+	let scoreVelocityWindow =
+		defaults.kind === "ok" ? defaults.config.scoreVelocityWindow : 30;
 
 	const configPath = join(targetDir, ".ds-bridge.json");
 	if (existsSync(configPath)) {
@@ -836,6 +891,7 @@ function resolveSelection(
 		scoreWeights = resolved.config.scoreWeights;
 		migrationSitesCap = resolved.config.migrationSitesCap;
 		metricTargets = resolved.config.metricTargets;
+		scoreVelocityWindow = resolved.config.scoreVelocityWindow;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -895,6 +951,7 @@ function resolveSelection(
 			return {
 				artifacts: outcome.artifacts,
 				migrationSitesCap,
+				scoreVelocityWindow,
 				...(viewLabel !== undefined ? { viewLabel } : {}),
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
 				...(metricTargets !== undefined ? { metricTargets } : {}),
@@ -1035,6 +1092,13 @@ function runReport(path: string, options: ReportOptions): void {
 		);
 		return;
 	}
+	// --velocity-window (C8): parse the flag grammar up front so a malformed value
+	// exits 2 before any I/O. `ok.days` undefined → fall back to config / the default.
+	const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
+	if (velocityWindowFlag.kind === "error") {
+		failReport(velocityWindowFlag.message);
+		return;
+	}
 
 	const targetDir = resolve(path);
 	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
@@ -1110,6 +1174,16 @@ function runReport(path: string, options: ReportOptions): void {
 	// `exactOptionalPropertyTypes` keeps an absent section a genuine "not
 	// provided" rather than an explicit `undefined`.
 	const generatedAt = new Date().toISOString();
+	// Score velocity (C8, M3.5): the windowed delta of the composite over the
+	// system-score trend, evaluated at `generatedAt` (injected → reproducible).
+	// Window precedence: --velocity-window flag > score_velocity_window config > 30.
+	// Only spread in when DEFINED (<2 trend points → undefined → empty state).
+	const velocityWindowDays =
+		velocityWindowFlag.days ?? selection.scoreVelocityWindow;
+	const scoreVelocity =
+		systemScore !== undefined
+			? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays)
+			: undefined;
 	const html = renderDashboard(
 		{
 			generatedAt,
@@ -1145,6 +1219,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(frameImplementability.total > 0 ? { frameImplementability } : {}),
 			...(targets.length > 0 ? { targets } : {}),
 			...(libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {}),
+			...(scoreVelocity !== undefined ? { scoreVelocity } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
@@ -1197,6 +1272,10 @@ export function registerReportCommand(program: Command): void {
 			"--gate",
 			"exit 1 when a metric_targets verdict is red (requires --format md; CI gate, C1)",
 			false,
+		)
+		.option(
+			"--velocity-window <window>",
+			"score-velocity look-back window as <N>d|<N>w (C8; overrides score_velocity_window, default 30d)",
 		)
 		.option(
 			"--out <file>",

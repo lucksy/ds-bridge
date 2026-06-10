@@ -721,9 +721,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// impact populate the calendar list).
 		expect(countSvgs(html)).toBe(13);
 		// None of the thirteen DATA sections falls back to the empty state; of the 11
-		// metric-artifact stubs (C1–C13), C6 library-health-trend now POPULATES from
-		// the seed's dated library-health line → 10 empty-state stubs remain.
-		expect(html.split("No data yet").length - 1).toBe(10);
+		// metric-artifact stubs (C1–C13), two now POPULATE from this seed — C6
+		// library-health-trend (a dated library-health line) and C8 score-velocity
+		// (a multi-point system-score trend) → 9 empty-state stubs remain.
+		expect(html.split("No data yet").length - 1).toBe(9);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {
@@ -1567,5 +1568,116 @@ describe("ds-bridge report — library-health trend (C6)", () => {
 		);
 		expect(html).toContain("Library health trend");
 		expect(html).not.toContain("preview");
+	});
+});
+
+// ---------- C8 / M3.5 — score-velocity engine + --velocity-window ----------
+
+describe("ds-bridge report — score velocity (C8)", () => {
+	it("a multi-point system-score trend populates the score-velocity section", async () => {
+		const dir = await freshTmp("ds-report-velocity-");
+		// Two dated drift states → a two-point system-score trend → velocity defined.
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 2, 0, 0),
+			tokensCheckLine("2026-06-08T10:00:00.000Z", 0, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"score-velocity",
+		]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Score velocity");
+		// Two trend points → the section is populated (no longer the empty stub).
+		expect(html).toContain("preview");
+	});
+
+	it("a single-point trend (<2 points) → the score-velocity section stays empty", async () => {
+		const dir = await freshTmp("ds-report-velocity-single-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"score-velocity",
+		]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Score velocity");
+		expect(html).not.toContain("preview");
+	});
+
+	it("accepts a --velocity-window flag and still renders the velocity section", async () => {
+		const dir = await freshTmp("ds-report-velocity-flag-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 2, 0, 0),
+			tokensCheckLine("2026-06-08T10:00:00.000Z", 0, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"score-velocity",
+			"--velocity-window",
+			"7d",
+		]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Score velocity");
+		expect(html).toContain("preview");
+	});
+
+	it("reads score_velocity_window from config (a multi-point trend still populates)", async () => {
+		const dir = await freshTmp("ds-report-velocity-config-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 2, 0, 0),
+			tokensCheckLine("2026-06-08T10:00:00.000Z", 0, 0, 0),
+		]);
+		await seedProjectConfig(dir, { score_velocity_window: 14 });
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"score-velocity",
+		]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Score velocity");
+		expect(html).toContain("preview");
+	});
+
+	it("rejects a malformed --velocity-window with exit 2", async () => {
+		const dir = await freshTmp("ds-report-velocity-bad-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli(["report", dir, "--velocity-window", "soon"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("velocity-window");
 	});
 });
