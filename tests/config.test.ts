@@ -5,7 +5,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { resolveConfig, writeProjectConfig } from "../src/config.js";
+import {
+	atomicWriteJson,
+	parseSelectionFile,
+	resolveConfig,
+	writeProjectConfig,
+} from "../src/config.js";
 
 describe("resolveConfig", () => {
 	it("returns userConfig defaults when no sources provide values", () => {
@@ -1422,5 +1427,77 @@ describe("writeProjectConfig", () => {
 
 		expect(existsSync(configPath())).toBe(true);
 		expect(() => JSON.parse(readFileSync(configPath(), "utf8"))).not.toThrow();
+	});
+});
+
+// ─── M8.1 — extracted parseSelectionFile + atomicWriteJson ──────────────────
+// The saved-dashboard schema's selection (view XOR artifacts, ids CATALOG-
+// validated with suggestions) is parsed by the SAME helper resolveView consumes,
+// and every sanctioned writer shares one atomic temp+rename JSON seam.
+
+describe("parseSelectionFile", () => {
+	it("parses a `view` selection (a preset name, syntactic only)", () => {
+		const out = parseSelectionFile(JSON.stringify({ view: "ds-manager" }));
+		expect(out).toEqual({ kind: "view", view: "ds-manager" });
+	});
+
+	it("parses an `artifacts` selection, validating ids against the catalog", () => {
+		const out = parseSelectionFile(
+			JSON.stringify({ artifacts: ["system-score", "parity"] }),
+		);
+		expect(out).toEqual({
+			kind: "artifacts",
+			artifacts: ["system-score", "parity"],
+		});
+	});
+
+	it("rejects view + artifacts together (mutually exclusive)", () => {
+		const out = parseSelectionFile(
+			JSON.stringify({ view: "ds-manager", artifacts: ["parity"] }),
+		);
+		expect(out.kind).toBe("invalid");
+	});
+
+	it("rejects neither view nor artifacts", () => {
+		const out = parseSelectionFile(JSON.stringify({ name: "exec" }));
+		expect(out.kind).toBe("invalid");
+	});
+
+	it("rejects an unknown artifact id with a nearest-match suggestion", () => {
+		const out = parseSelectionFile(JSON.stringify({ artifacts: ["parityy"] }));
+		expect(out.kind).toBe("invalid");
+		if (out.kind === "invalid") {
+			expect(out.message).toContain("parityy");
+			expect(out.message).toContain("parity");
+		}
+	});
+
+	it("rejects malformed JSON", () => {
+		expect(parseSelectionFile("{ not json").kind).toBe("invalid");
+	});
+
+	it("rejects a non-object JSON value", () => {
+		expect(parseSelectionFile("[]").kind).toBe("invalid");
+		expect(parseSelectionFile('"x"').kind).toBe("invalid");
+	});
+});
+
+describe("atomicWriteJson", () => {
+	let tmp: string;
+	beforeEach(async () => {
+		tmp = await mkdtemp(join(tmpdir(), "ds-atomic-"));
+	});
+	afterEach(async () => {
+		await rm(tmp, { recursive: true, force: true });
+	});
+
+	it("writes pretty-printed JSON with a trailing newline, atomically", () => {
+		const filePath = join(tmp, "out.json");
+		atomicWriteJson(filePath, { b: 2, a: 1 });
+		const text = readFileSync(filePath, "utf8");
+		// key order preserved, 2-space indent, trailing newline.
+		expect(text).toBe(`${JSON.stringify({ b: 2, a: 1 }, null, 2)}\n`);
+		// no temp files left behind.
+		expect(readdirSync(tmp)).toEqual(["out.json"]);
 	});
 });

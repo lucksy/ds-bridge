@@ -8988,25 +8988,12 @@ function parseProjectFile(text) {
         message: "dashboard_artifacts must be an array of artifact ids"
       };
     }
-    const artifacts = [];
-    for (const entry of obj.dashboard_artifacts) {
-      if (typeof entry !== "string") {
-        return {
-          kind: "invalid",
-          message: `dashboard_artifacts must contain only strings, got ${JSON.stringify(entry)}`
-        };
-      }
-      const lookup = lookupArtifact(entry);
-      if (lookup.kind === "unknown") {
-        const hint = lookup.suggestions.length > 0 ? ` \u2014 did you mean ${lookup.suggestions.join(", ")}?` : "";
-        return {
-          kind: "invalid",
-          message: `dashboard_artifacts has an unknown artifact id ${JSON.stringify(entry)}${hint}`
-        };
-      }
-      artifacts.push(lookup.artifact.id);
-    }
-    values.dashboardArtifacts = artifacts;
+    const validated = validateArtifactIdList(
+      obj.dashboard_artifacts,
+      "dashboard_artifacts"
+    );
+    if (validated.kind === "invalid") return validated;
+    values.dashboardArtifacts = validated.artifacts;
   }
   if (obj.dashboard_default !== void 0) {
     if (typeof obj.dashboard_default !== "string" || obj.dashboard_default === "") {
@@ -9401,6 +9388,34 @@ function resolveConfig(inputs) {
   return { kind: "ok", config, warnings };
 }
 var PROJECT_FILE_NAME = ".ds-bridge.json";
+function validateArtifactIdList(entries, label) {
+  const artifacts = [];
+  for (const entry of entries) {
+    if (typeof entry !== "string") {
+      return {
+        kind: "invalid",
+        message: `${label} must contain only strings, got ${JSON.stringify(entry)}`
+      };
+    }
+    const lookup = lookupArtifact(entry);
+    if (lookup.kind === "unknown") {
+      const hint = lookup.suggestions.length > 0 ? ` \u2014 did you mean ${lookup.suggestions.join(", ")}?` : "";
+      return {
+        kind: "invalid",
+        message: `${label} has an unknown artifact id ${JSON.stringify(entry)}${hint}`
+      };
+    }
+    artifacts.push(lookup.artifact.id);
+  }
+  return { kind: "ok", artifacts };
+}
+function atomicWriteJson(filePath, obj) {
+  const text = `${JSON.stringify(obj, null, 2)}
+`;
+  const tempPath = `${filePath}.${process.pid}.tmp`;
+  writeFileSync(tempPath, text, "utf8");
+  renameSync(tempPath, filePath);
+}
 function writeProjectConfig(dir, patch) {
   const filePath = join4(dir, PROJECT_FILE_NAME);
   let existing = {};
@@ -9418,11 +9433,7 @@ function writeProjectConfig(dir, patch) {
       merged[key] = value2;
     }
   }
-  const text = `${JSON.stringify(merged, null, 2)}
-`;
-  const tempPath = join4(dir, `${PROJECT_FILE_NAME}.${process.pid}.tmp`);
-  writeFileSync(tempPath, text, "utf8");
-  renameSync(tempPath, filePath);
+  atomicWriteJson(filePath, merged);
 }
 
 // src/engines/report/presets.ts
@@ -10625,12 +10636,7 @@ async function runSetupWizard(deps) {
       );
       return { exitCode: 0 };
     }
-    const productFileKeys = await captureFileKeys(
-      reader,
-      output,
-      cwd5,
-      preset
-    );
+    const productFileKeys = await captureFileKeys(reader, output, cwd5, preset);
     const confirmed = isYes(
       await ask(reader, output, `Save the "${preset}" view? (y/N) `)
     );

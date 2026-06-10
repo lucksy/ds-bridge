@@ -424,29 +424,14 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 				message: "dashboard_artifacts must be an array of artifact ids",
 			};
 		}
-		const artifacts: ArtifactId[] = [];
-		for (const entry of obj.dashboard_artifacts) {
-			if (typeof entry !== "string") {
-				return {
-					kind: "invalid",
-					message: `dashboard_artifacts must contain only strings, got ${JSON.stringify(entry)}`,
-				};
-			}
-			// Semantic check HERE: every id must resolve in the frozen catalog.
-			const lookup = lookupArtifact(entry);
-			if (lookup.kind === "unknown") {
-				const hint =
-					lookup.suggestions.length > 0
-						? ` — did you mean ${lookup.suggestions.join(", ")}?`
-						: "";
-				return {
-					kind: "invalid",
-					message: `dashboard_artifacts has an unknown artifact id ${JSON.stringify(entry)}${hint}`,
-				};
-			}
-			artifacts.push(lookup.artifact.id);
-		}
-		values.dashboardArtifacts = artifacts;
+		// Semantic check: every id must resolve in the frozen catalog. Shared
+		// with parseSelectionFile (M8.1) — one id-validation loop, contextual label.
+		const validated = validateArtifactIdList(
+			obj.dashboard_artifacts,
+			"dashboard_artifacts",
+		);
+		if (validated.kind === "invalid") return validated;
+		values.dashboardArtifacts = validated.artifacts;
 	}
 	if (obj.dashboard_default !== undefined) {
 		// Syntactic check only (SPEC-personas §7): any NON-EMPTY string is a valid
@@ -952,6 +937,118 @@ export type JsonPatchValue =
 	| { readonly [key: string]: JsonPatchValue };
 
 /**
+ * The selection a saved-dashboard file (or the project config) declares: a
+ * preset `view` name XOR an ordered, catalog-validated `artifacts` list — the
+ * exact shape `resolveView({}, …)` consumes. `invalid` carries a typed message
+ * (bad JSON, both/neither key, an unknown id with a nearest-match suggestion).
+ */
+export type ParsedSelection =
+	| { kind: "view"; view: string }
+	| { kind: "artifacts"; artifacts: ArtifactId[] }
+	| { kind: "invalid"; message: string };
+
+/**
+ * Validate a raw array as catalog artifact ids (the one id-validation loop,
+ * shared by `parseProjectFile`'s `dashboard_artifacts` and `parseSelectionFile`,
+ * M8.1). `label` names the offending field in error messages so each caller
+ * keeps its own contextual wording. Unknown ids carry nearest-match suggestions.
+ */
+function validateArtifactIdList(
+	entries: readonly unknown[],
+	label: string,
+):
+	| { kind: "ok"; artifacts: ArtifactId[] }
+	| { kind: "invalid"; message: string } {
+	const artifacts: ArtifactId[] = [];
+	for (const entry of entries) {
+		if (typeof entry !== "string") {
+			return {
+				kind: "invalid",
+				message: `${label} must contain only strings, got ${JSON.stringify(entry)}`,
+			};
+		}
+		const lookup = lookupArtifact(entry);
+		if (lookup.kind === "unknown") {
+			const hint =
+				lookup.suggestions.length > 0
+					? ` — did you mean ${lookup.suggestions.join(", ")}?`
+					: "";
+			return {
+				kind: "invalid",
+				message: `${label} has an unknown artifact id ${JSON.stringify(entry)}${hint}`,
+			};
+		}
+		artifacts.push(lookup.artifact.id);
+	}
+	return { kind: "ok", artifacts };
+}
+
+/**
+ * Parse a saved-dashboard file's raw JSON text into its SELECTION (SPEC-personas
+ * §7): a `view` preset name XOR a catalog-validated `artifacts` list. Advisory
+ * keys (`name`, `persona`, `report_type`, `audience`, `score_weights`) are
+ * ignored here — `readDashboardFile` (M8.2) reads those. Never throws; every
+ * domain failure is `{ kind: "invalid", message }`.
+ */
+export function parseSelectionFile(text: string): ParsedSelection {
+	let raw: unknown;
+	try {
+		raw = JSON.parse(text);
+	} catch {
+		return { kind: "invalid", message: "dashboard file is not valid JSON" };
+	}
+	if (!isPlainObject(raw)) {
+		return { kind: "invalid", message: "dashboard file must be a JSON object" };
+	}
+	const obj = raw;
+	const hasView = obj.view !== undefined;
+	const hasArtifacts = obj.artifacts !== undefined;
+	if (hasView && hasArtifacts) {
+		return {
+			kind: "invalid",
+			message: "view and artifacts are mutually exclusive — set exactly one",
+		};
+	}
+	if (!hasView && !hasArtifacts) {
+		return {
+			kind: "invalid",
+			message: "dashboard file must set either view or artifacts",
+		};
+	}
+	if (hasView) {
+		if (typeof obj.view !== "string" || obj.view === "") {
+			return {
+				kind: "invalid",
+				message: "view must be a non-empty string (a preset name)",
+			};
+		}
+		return { kind: "view", view: obj.view };
+	}
+	if (!Array.isArray(obj.artifacts)) {
+		return {
+			kind: "invalid",
+			message: "artifacts must be an array of artifact ids",
+		};
+	}
+	const validated = validateArtifactIdList(obj.artifacts, "artifacts");
+	if (validated.kind === "invalid") return validated;
+	return { kind: "artifacts", artifacts: validated.artifacts };
+}
+
+/**
+ * Atomic, order-preserving JSON write (SPEC-personas §7): serialize as
+ * `JSON.stringify(obj, null, 2) + "\n"`, write a uniquely-named temp file beside
+ * the target, then rename over it so a reader never sees a partial file. The one
+ * write seam shared by `writeProjectConfig` and `writeDashboardFile` (M8.2).
+ */
+export function atomicWriteJson(filePath: string, obj: unknown): void {
+	const text = `${JSON.stringify(obj, null, 2)}\n`;
+	const tempPath = `${filePath}.${process.pid}.tmp`;
+	writeFileSync(tempPath, text, "utf8");
+	renameSync(tempPath, filePath);
+}
+
+/**
  * Atomic, order-preserving writer for `.ds-bridge.json` (SPEC-measure §3 write
  * contract). The sanctioned writer (wizard + `dashboard set`); `parseProjectFile`
  * is NOT a round-trip path (it extracts only known keys), so preservation lives
@@ -992,11 +1089,7 @@ export function writeProjectConfig(
 		}
 	}
 
-	const text = `${JSON.stringify(merged, null, 2)}\n`;
-
-	// Atomic: write a same-dir temp file, then rename over the target. A unique
-	// name avoids collisions between concurrent writers; rename is the swap.
-	const tempPath = join(dir, `${PROJECT_FILE_NAME}.${process.pid}.tmp`);
-	writeFileSync(tempPath, text, "utf8");
-	renameSync(tempPath, filePath);
+	// Delegate to the shared atomic seam (M8.1) — temp-write beside the target,
+	// then rename over it. Byte-identical to the prior inline writer.
+	atomicWriteJson(filePath, merged);
 }

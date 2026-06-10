@@ -260,12 +260,7 @@ export async function runSetupWizard(deps: WizardDeps): Promise<WizardOutcome> {
 			return { exitCode: 0 };
 		}
 
-		const productFileKeys = await captureFileKeys(
-			reader,
-			output,
-			cwd,
-			preset,
-		);
+		const productFileKeys = await captureFileKeys(reader, output, cwd, preset);
 
 		const confirmed = isYes(
 			await ask(reader, output, `Save the "${preset}" view? (y/N) `),
