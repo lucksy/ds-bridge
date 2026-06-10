@@ -1,7 +1,19 @@
 #!/usr/bin/env node
-// T3.8 — SessionStart freshness hook. A thin, dependency-free ESM staleness probe
-// that nudges the user toward /ds-bridge:token-check when the design-token source
-// changed since the last drift check (or was never checked).
+// T3.8 — SessionStart freshness hook. A thin, dependency-free ESM probe that emits
+// up to two getting-started nudges and otherwise stays silent. It NEVER blocks the
+// user's flow, makes no network calls, and never spawns the CLI.
+//
+// Nudge 1 — token-source staleness: nudges toward /ds-bridge:token-check when the
+// design-token source changed since the last drift check (or was never checked).
+//
+// Nudge 2 — unbuilt registry: nudges toward `registry build` when Figma is fully
+// configured (a PAT AND a library file key are both resolvable) but
+// <cwd>/.ds-bridge/registry.json does not exist yet. This is exactly the state
+// right after the user saves their plugin config and restarts — the userConfig
+// values are now in the env, but no registry has been built, so every
+// registry-backed command (docs, parity, impact, figma-impl) would otherwise fail
+// with "run registry build first". The nudge turns that lurking dead-end into an
+// upfront, actionable next step.
 //
 // Contract (intentionally fail-quiet AND cheap — a SessionStart hook runs on every
 // session and must never break the user's flow or block on it; target <200ms):
@@ -9,13 +21,14 @@
 //   • Locates the project token source CHEAPLY (a few statSync probes, NOT a tree
 //     walk): .ds-bridge.json token_source if set, else the conventional names
 //     tokens.json / design-tokens.json at <cwd> root or under <cwd>/tokens/.
-//   • No token source found → exit 0, silent.
 //   • Reads the LAST line of <cwd>/.ds-bridge/history.jsonl and takes its `at`
 //     timestamp as the last-check instant (missing/empty/unparseable → never-checked).
-//   • token-source mtime > last-check  OR  never-checked → stdout a
-//     hookSpecificOutput block (hookEventName "SessionStart", additionalContext
-//     pointing at /ds-bridge:token-check) and exit 0.
-//   • Otherwise → exit 0, silent.
+//   • Figma config is read with the same precedence as src/config.ts: the token
+//     from CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN / FIGMA_TOKEN (env only, never a file),
+//     the file key from CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY else .ds-bridge.json.
+//   • Emits a single hookSpecificOutput block (hookEventName "SessionStart") whose
+//     additionalContext carries whichever nudges apply (newline-joined), or stays
+//     silent when none do, and exits 0.
 //   • ANY error anywhere → exit 0, silent. NEVER lints, never spawns the CLI.
 import { readFileSync, statSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
@@ -149,6 +162,82 @@ function baseName(path) {
 	return parts[parts.length - 1] || path;
 }
 
+/** A trimmed-to-presence string, or undefined for empty/non-string. */
+function nonEmpty(value) {
+	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/** True when <cwd>/.ds-bridge/registry.json exists as a regular file. */
+function registryExists(cwd) {
+	return fileMtimeMs(join(cwd, ".ds-bridge", "registry.json")) !== undefined;
+}
+
+/**
+ * Read `figma_file_key` from <cwd>/.ds-bridge.json (a non-empty string), or
+ * undefined when the config is absent, unreadable, not JSON, or lacks the key.
+ * Mirrors `configuredTokenSource`: cheap, single small read, never throws. The
+ * Figma TOKEN is deliberately NOT read from any file (secret) — env only.
+ */
+function configuredFigmaFileKey(cwd) {
+	let text;
+	try {
+		text = readFileSync(join(cwd, ".ds-bridge.json"), "utf8");
+	} catch {
+		return undefined;
+	}
+	let parsed;
+	try {
+		parsed = JSON.parse(text);
+	} catch {
+		return undefined;
+	}
+	if (typeof parsed !== "object" || parsed === null) return undefined;
+	return nonEmpty(parsed.figma_file_key);
+}
+
+/**
+ * Token-source staleness nudge (Nudge 1), or undefined when there is no token
+ * source or the last drift check is already current. Same precedence/logic as
+ * before — just hoisted out of main() so both nudges compose cleanly.
+ */
+function tokenCheckNudge(cwd) {
+	const source = findTokenSource(cwd);
+	if (source === undefined) return undefined;
+
+	const checkedAt = lastCheckMs(cwd);
+	const neverChecked = checkedAt === undefined;
+	const changedSince = !neverChecked && source.mtimeMs > checkedAt;
+	if (!neverChecked && !changedSince) return undefined;
+
+	const name = baseName(source.path);
+	return `ds-bridge: token source ${name} changed since the last drift check (or was never checked) - consider running /ds-bridge:token-check`;
+}
+
+/**
+ * Unbuilt-registry nudge (Nudge 2), or undefined. Fires only when BOTH a Figma
+ * PAT and a library file key are resolvable (so `registry build` could actually
+ * succeed) AND the registry has not been built yet. Env precedence matches
+ * src/config.ts; the file key may also come from .ds-bridge.json.
+ */
+function registryBuildNudge(cwd, env) {
+	const token =
+		nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN) ?? nonEmpty(env.FIGMA_TOKEN);
+	const fileKey =
+		nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY) ??
+		configuredFigmaFileKey(cwd);
+	if (token === undefined || fileKey === undefined) return undefined;
+	if (registryExists(cwd)) return undefined;
+
+	return (
+		"ds-bridge: Figma is configured but the component registry has not been built yet, " +
+		"so registry-backed commands (/ds-bridge:ds-docs, /ds-bridge:parity-audit, " +
+		'/ds-bridge:impact, /ds-bridge:figma-impl) will report "run registry build first". ' +
+		"Build it once with `ds-bridge registry build` — it scans this project's components and " +
+		"fetches the Figma library into .ds-bridge/registry.json. Offer to run it for the user " +
+		"(it needs network access to Figma); after it succeeds, those commands work."
+	);
+}
+
 async function main() {
 	const raw = await readStdin();
 
@@ -166,28 +255,23 @@ async function main() {
 
 	const cwd = typeof payload.cwd === "string" ? payload.cwd : process.cwd();
 
-	const source = findTokenSource(cwd);
-	if (source === undefined) {
+	// The registry nudge leads: it is the just-configured getting-started step.
+	// The token-staleness nudge follows. Either, both, or neither may apply.
+	const nudges = [
+		registryBuildNudge(cwd, process.env),
+		tokenCheckNudge(cwd),
+	].filter((nudge) => nudge !== undefined);
+
+	if (nudges.length === 0) {
 		exitSilent();
 		return;
 	}
 
-	const checkedAt = lastCheckMs(cwd);
-	const neverChecked = checkedAt === undefined;
-	const changedSince = !neverChecked && source.mtimeMs > checkedAt;
-
-	if (!neverChecked && !changedSince) {
-		exitSilent();
-		return;
-	}
-
-	const name = baseName(source.path);
-	const additionalContext = `ds-bridge: token source ${name} changed since the last drift check (or was never checked) - consider running /ds-bridge:token-check`;
 	process.stdout.write(
 		JSON.stringify({
 			hookSpecificOutput: {
 				hookEventName: "SessionStart",
-				additionalContext,
+				additionalContext: nudges.join("\n"),
 			},
 		}),
 	);

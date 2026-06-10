@@ -24,14 +24,29 @@ async function freshTmp(prefix: string): Promise<string> {
 	return dir;
 }
 
-/** Run the hook with the given stdin payload; resolve with code + stdout. */
+/**
+ * The hook's environment with all Figma config stripped, so tests are hermetic
+ * regardless of the runner's own env (the registry nudge keys off these vars).
+ * Pass overrides to opt a specific test INTO a configured-Figma state.
+ */
+function baseEnv(overrides: Record<string, string> = {}): NodeJS.ProcessEnv {
+	const env = { ...process.env };
+	delete env.FIGMA_TOKEN;
+	delete env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN;
+	delete env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY;
+	return { ...env, ...overrides };
+}
+
+/** Run the hook with the given stdin payload (+ env); resolve with code + stdout. */
 function runHook(
 	stdin: string,
+	env: NodeJS.ProcessEnv = baseEnv(),
 ): Promise<{ code: number; stdout: string; stderr: string }> {
 	return new Promise((resolvePromise, reject) => {
 		const child = execFile(
 			process.execPath,
 			[hookScript],
+			{ env },
 			(error, stdout, stderr) => {
 				// execFile reports a non-zero exit via `error`; the hook should always
 				// exit 0, but resolve with whatever code surfaced so we can assert it.
@@ -45,6 +60,22 @@ function runHook(
 		);
 		child.stdin?.end(stdin);
 	});
+}
+
+/** Figma env (token + file key) that satisfies the registry-nudge gate. */
+const FIGMA_CONFIGURED = {
+	CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN: "figd_test_token",
+	CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "abc123filekey",
+};
+
+/** Write a minimal valid registry.json so registryExists() sees it. */
+async function writeRegistry(stateDir: string): Promise<void> {
+	await mkdir(stateDir, { recursive: true });
+	await writeFile(
+		join(stateDir, "registry.json"),
+		`${JSON.stringify({ matches: [], unmatchedCode: [], unmatchedFigma: [] })}\n`,
+		"utf8",
+	);
 }
 
 /** Set a file's mtime (and atime) to a fixed epoch-millis instant. */
@@ -176,6 +207,95 @@ describe("ds-bridge SessionStart freshness hook (scripts/hook-freshness.mjs)", (
 		);
 		expect(parsed.hookSpecificOutput.additionalContext).toContain(
 			"design-tokens.json",
+		);
+	});
+
+	it("(f) Figma configured (env) + no registry + no token source → SessionStart nudge to build the registry", async () => {
+		const dir = await freshTmp("ds-fresh-noreg-");
+		// No token source, no registry, no history — just the just-configured state.
+		const payload = JSON.stringify({ cwd: dir });
+		const { code, stdout } = await runHook(payload, baseEnv(FIGMA_CONFIGURED));
+		expect(code).toBe(0);
+
+		const parsed = JSON.parse(stdout) as {
+			hookSpecificOutput: { hookEventName: string; additionalContext: string };
+		};
+		expect(parsed.hookSpecificOutput.hookEventName).toBe("SessionStart");
+		expect(parsed.hookSpecificOutput.additionalContext).toContain(
+			"registry build",
+		);
+		// No token source present → the token-check nudge must NOT also fire.
+		expect(parsed.hookSpecificOutput.additionalContext).not.toContain(
+			"token-check",
+		);
+	});
+
+	it("(g) Figma configured + registry already exists → silent (no build nudge)", async () => {
+		const dir = await freshTmp("ds-fresh-hasreg-");
+		await writeRegistry(join(dir, ".ds-bridge"));
+
+		const payload = JSON.stringify({ cwd: dir });
+		const { code, stdout } = await runHook(payload, baseEnv(FIGMA_CONFIGURED));
+		expect(code).toBe(0);
+		expect(stdout.trim()).toBe("");
+	});
+
+	it("(h) file key from .ds-bridge.json (token from env) + no registry → build nudge", async () => {
+		const dir = await freshTmp("ds-fresh-keyfile-");
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ figma_file_key: "key-from-project-file" })}\n`,
+			"utf8",
+		);
+
+		const payload = JSON.stringify({ cwd: dir });
+		const { code, stdout } = await runHook(
+			payload,
+			baseEnv({ CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN: "figd_test_token" }),
+		);
+		expect(code).toBe(0);
+
+		const parsed = JSON.parse(stdout) as {
+			hookSpecificOutput: { additionalContext: string };
+		};
+		expect(parsed.hookSpecificOutput.additionalContext).toContain(
+			"registry build",
+		);
+	});
+
+	it("(i) token set but NO file key + no registry → silent (not fully configured)", async () => {
+		const dir = await freshTmp("ds-fresh-nokey-");
+		const payload = JSON.stringify({ cwd: dir });
+		const { code, stdout } = await runHook(
+			payload,
+			baseEnv({ CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN: "figd_test_token" }),
+		);
+		expect(code).toBe(0);
+		expect(stdout.trim()).toBe("");
+	});
+
+	it("(j) Figma configured + no registry + token source never checked → BOTH nudges", async () => {
+		const dir = await freshTmp("ds-fresh-both-");
+		await writeFile(
+			join(dir, "tokens.json"),
+			JSON.stringify({
+				color: { primary: { $type: "color", $value: "#3b82f6" } },
+			}),
+			"utf8",
+		);
+		// No history (never checked) and no registry, with Figma configured.
+		const payload = JSON.stringify({ cwd: dir });
+		const { code, stdout } = await runHook(payload, baseEnv(FIGMA_CONFIGURED));
+		expect(code).toBe(0);
+
+		const parsed = JSON.parse(stdout) as {
+			hookSpecificOutput: { additionalContext: string };
+		};
+		expect(parsed.hookSpecificOutput.additionalContext).toContain(
+			"registry build",
+		);
+		expect(parsed.hookSpecificOutput.additionalContext).toContain(
+			"token-check",
 		);
 	});
 });
