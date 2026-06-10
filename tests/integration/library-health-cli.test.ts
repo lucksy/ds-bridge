@@ -356,4 +356,51 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(2);
 		expect(result.stderr.toLowerCase()).toContain("format");
 	});
+
+	it("M1.3: --file-key resolves a product_file_keys alias to its mapped key", async () => {
+		const dir = await freshTmp("ds-lh-alias-");
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ product_file_keys: { checkout: FILE_KEY } }, null, 2)}\n`,
+			"utf8",
+		);
+		// Default points at an unserved key; success via the alias proves resolution.
+		const result = await runCli(
+			dir,
+			["library-health", "--file-key=checkout", "--format=json"],
+			{ CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "UNSERVED_DEFAULT_KEY" },
+		);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as {
+			totals: { overrideHotspots: number };
+		};
+		expect(parsed.totals.overrideHotspots).toBe(3);
+	});
+
+	it("M1.3: --file-key passes a raw figma key straight through", async () => {
+		const dir = await freshTmp("ds-lh-rawkey-");
+		const result = await runCli(
+			dir,
+			["library-health", `--file-key=${FILE_KEY}`, "--format=json"],
+			{ CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "UNSERVED_DEFAULT_KEY" },
+		);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as {
+			totals: { overrideHotspots: number };
+		};
+		expect(parsed.totals.overrideHotspots).toBe(3);
+	});
+
+	it("M1.3: an unknown --file-key alias exits 2 with a nearest-match suggestion", async () => {
+		const dir = await freshTmp("ds-lh-badalias-");
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ product_file_keys: { checkout: FILE_KEY } }, null, 2)}\n`,
+			"utf8",
+		);
+		const result = await runCli(dir, ["library-health", "--file-key=chekcout"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("chekcout");
+		expect(result.stderr).toContain("checkout");
+	});
 });

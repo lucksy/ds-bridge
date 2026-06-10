@@ -144,6 +144,12 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 		fail(missingTokenMessage());
 		return;
 	}
+	// PRIVILEGED: registry build binds to the singular `figma_file_key` home
+	// library ONLY — it deliberately does NOT go through the generalized,
+	// alias-aware --file-key resolver (M1.3). The registry is a stateful artifact
+	// keyed to the DS library; a product `product_file_keys` alias must never
+	// hijack it (SPEC-personas §6.3 — the library key stays privileged for
+	// stateful ops; impact's version cursor keys on it for the same reason).
 	if (config.figmaFileKey === undefined || config.figmaFileKey === "") {
 		fail(missingFileKeyMessage());
 		return;

@@ -46,6 +46,7 @@ import {
 	type FigmaFile,
 	type FigmaResult,
 } from "../io/figma/client.js";
+import { resolveFileKey } from "../io/figma/file-key.js";
 import {
 	renderTable,
 	severityColor,
@@ -98,6 +99,37 @@ function missingFileKeyMessage(): string {
 		"",
 		"The key is the segment after /file/ or /design/ in the library file URL.",
 	].join("\n");
+}
+
+/** Read <cwd>/.ds-bridge.json text (for product_file_keys), or undefined when absent. */
+function readProjectConfigText(): string | undefined {
+	const configPath = join(cwd(), ".ds-bridge.json");
+	if (!existsSync(configPath)) return undefined;
+	try {
+		return readFileSync(configPath, "utf8");
+	} catch {
+		return undefined;
+	}
+}
+
+/** Guidance shown when --file-key names an unknown product alias (M1.3). */
+function unknownAliasMessage(
+	outcome: { alias: string; suggestions: string[] },
+	productFileKeys: Record<string, string>,
+): string {
+	const aliases = Object.keys(productFileKeys);
+	const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+	if (outcome.suggestions.length > 0) {
+		lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+	}
+	lines.push(
+		"",
+		aliases.length > 0
+			? `Available product_file_keys aliases: ${aliases.join(", ")}.`
+			: "No product_file_keys aliases are configured.",
+		"Or pass --file-key <raw-figma-file-key> directly.",
+	);
+	return lines.join("\n");
 }
 
 /** Translate a non-ok Figma client result into an actionable stderr message. */
@@ -228,7 +260,13 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 		return;
 	}
 
-	const resolved = resolveConfig({ env: process.env });
+	// Read the project file so `product_file_keys` aliases are available to the
+	// generalized --file-key resolver (M1.3); env still merges its own aliases.
+	const projectFileText = readProjectConfigText();
+	const resolved = resolveConfig({
+		env: process.env,
+		...(projectFileText !== undefined ? { projectFileText } : {}),
+	});
 	if (resolved.kind !== "ok") {
 		fail(resolved.message);
 		return;
@@ -242,11 +280,24 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 		fail(missingTokenMessage());
 		return;
 	}
-	const fileKey = options.fileKey ?? config.figmaFileKey;
-	if (fileKey === undefined || fileKey === "") {
+	// Generalized --file-key (M1.3): accept a raw key OR a product_file_keys
+	// alias; precedence flag (alias-resolved, else raw) > figma_file_key default.
+	const fileKeyOutcome = resolveFileKey({
+		...(options.fileKey !== undefined ? { flagValue: options.fileKey } : {}),
+		productFileKeys: config.productFileKeys,
+		...(config.figmaFileKey !== undefined
+			? { defaultKey: config.figmaFileKey }
+			: {}),
+	});
+	if (fileKeyOutcome.kind === "unknown-alias") {
+		fail(unknownAliasMessage(fileKeyOutcome, config.productFileKeys));
+		return;
+	}
+	if (fileKeyOutcome.kind === "missing") {
 		fail(missingFileKeyMessage());
 		return;
 	}
+	const fileKey = fileKeyOutcome.key;
 
 	// Build the cache env conditionally so `exactOptionalPropertyTypes` keeps an
 	// unset CLAUDE_PLUGIN_DATA genuinely-absent (the L2 fallback path triggers).
@@ -343,7 +394,10 @@ export function registerLibraryHealthCommand(program: Command): void {
 		.description(
 			"Crawl a Figma file for design-system hygiene signals (override hotspots, deprecated usage, detached-instance candidates)",
 		)
-		.option("--file-key <key>", "Figma library file key (overrides config)")
+		.option(
+			"--file-key <keyOrAlias>",
+			"Figma file key OR a product_file_keys alias (overrides config)",
+		)
 		.option("--format <format>", "output format: term | json", "term")
 		.option("--refresh", "bypass the response cache and re-crawl", false)
 		.action((options: LibraryHealthOptions) => {

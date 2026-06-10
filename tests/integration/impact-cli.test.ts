@@ -438,4 +438,46 @@ describe("ds-bridge impact (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(2);
 		expect(result.stderr.toLowerCase()).toContain("format");
 	});
+
+	it("M1.3: --file-key resolves a product_file_keys alias to its mapped key", async () => {
+		const dir = await freshTmp("ds-impact-alias-");
+		// Map an alias "checkout" → the served FILE_KEY in the project file.
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ product_file_keys: { checkout: FILE_KEY } }, null, 2)}\n`,
+			"utf8",
+		);
+		// Point the default file key at something the server does NOT serve, so a
+		// successful baseline proves the alias (not the default) drove the fetch.
+		const result = await runCli(dir, ["impact", "--file-key=checkout"], {
+			CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "UNSERVED_DEFAULT_KEY",
+		});
+		expect(result.code).toBe(0);
+		const cursor = await readCursor(dir);
+		expect(cursor?.fileKey).toBe(FILE_KEY);
+	});
+
+	it("M1.3: --file-key passes a raw figma key straight through", async () => {
+		const dir = await freshTmp("ds-impact-rawkey-");
+		const result = await runCli(dir, ["impact", `--file-key=${FILE_KEY}`], {
+			CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "UNSERVED_DEFAULT_KEY",
+		});
+		expect(result.code).toBe(0);
+		const cursor = await readCursor(dir);
+		expect(cursor?.fileKey).toBe(FILE_KEY);
+	});
+
+	it("M1.3: an unknown --file-key alias exits 2 with a nearest-match suggestion", async () => {
+		const dir = await freshTmp("ds-impact-badalias-");
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ product_file_keys: { checkout: FILE_KEY } }, null, 2)}\n`,
+			"utf8",
+		);
+		const result = await runCli(dir, ["impact", "--file-key=chekcout"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("chekcout");
+		// Nearest-match suggestion plus the available-alias list.
+		expect(result.stderr).toContain("checkout");
+	});
 });
