@@ -105,6 +105,8 @@ import {
 } from "../io/dashboards.js";
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
+import { renderTerminalDashboard } from "../render/terminal/dashboard.js";
+import { shouldColor } from "../render/terminal/index.js";
 
 /** A typed operational failure, translated to exit code 2 + stderr at the edge. */
 interface ReportError {
@@ -1568,10 +1570,11 @@ function runReport(path: string, options: ReportOptions): void {
 	if (
 		options.format !== undefined &&
 		options.format !== "html" &&
-		options.format !== "md"
+		options.format !== "md" &&
+		options.format !== "terminal"
 	) {
 		failReport(
-			`Unknown --format "${options.format}". Expected "html" or "md".`,
+			`Unknown --format "${options.format}". Expected "html", "md", or "terminal".`,
 		);
 		return;
 	}
@@ -1599,24 +1602,24 @@ function runReport(path: string, options: ReportOptions): void {
 	}
 
 	// Effective format (M9.3): the explicit --format flag wins; else a saved
-	// dashboard's report_type; else html. terminal/site land in later waves — until
-	// then an unsupported resolved target is a typed error.
+	// dashboard's report_type; else html. `site` lands in M11 — until then an
+	// unsupported resolved target is a typed error.
 	const format = options.format ?? selection.reportType ?? "html";
-	if (format !== "html" && format !== "md") {
+	if (format !== "html" && format !== "md" && format !== "terminal") {
 		failReport(
-			`report_type "${format}" is not a supported render target yet — pass --format html|md.`,
+			`report_type "${format}" is not a supported render target yet — pass --format html|md|terminal.`,
 		);
 		return;
 	}
-	// Combo validations against the EFFECTIVE format: --delta/--gate require md,
-	// --open is invalid with md (no file to open).
+	// Combo validations against the EFFECTIVE format: --delta/--gate require md;
+	// --open is only valid with the file-producing html target.
 	if (options.delta !== undefined && format !== "md") {
 		failReport("--delta requires --format md.");
 		return;
 	}
-	if (options.open && format === "md") {
+	if (options.open && format !== "html") {
 		failReport(
-			"--open is not valid with --format md (there is no file to open).",
+			`--open is not valid with --format ${format} (there is no file to open).`,
 		);
 		return;
 	}
@@ -1741,62 +1744,84 @@ function runReport(path: string, options: ReportOptions): void {
 	// still yields three insufficient-data checks → no-go), so any project with a
 	// history populates the section (flipping it out of its empty state).
 	const releaseReadiness = computeReleaseReadiness(stateDir);
-	const html = renderDashboard(
-		{
+	const data = {
+		generatedAt,
+		project: basename(targetDir),
+		...(systemScore !== undefined ? { systemScore } : {}),
+		driftTrend: aggregation.driftTrend,
+		...(aggregation.lintSummary !== undefined
+			? { lintSummary: aggregation.lintSummary }
+			: {}),
+		...(aggregation.readiness !== undefined
+			? { readiness: aggregation.readiness }
+			: {}),
+		...(parity !== undefined ? { parity } : {}),
+		...(aggregation.a11y !== undefined ? { a11y: aggregation.a11y } : {}),
+		...(aggregation.impact !== undefined ? { impact: aggregation.impact } : {}),
+		adoptionTrend: aggregation.adoptionTrend,
+		...(aggregation.leaderboard !== undefined
+			? { leaderboard: aggregation.leaderboard }
+			: {}),
+		...(aggregation.importCoverage !== undefined
+			? { importCoverage: aggregation.importCoverage }
+			: {}),
+		...(aggregation.libraryHealth !== undefined
+			? { libraryHealth: aggregation.libraryHealth }
+			: {}),
+		breakingCalendar: consumer.breakingCalendar,
+		changeFrequency: consumer.changeFrequency,
+		...(parityTrend.length > 0 ? { parityTrend } : {}),
+		...(migrationChecklist.sites.length > 0 ? { migrationChecklist } : {}),
+		...(audienceChangelog.slices.length > 0 ? { audienceChangelog } : {}),
+		...(frameImplementability.total > 0 ? { frameImplementability } : {}),
+		...(targets.length > 0 ? { targets } : {}),
+		...(libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {}),
+		...(scoreVelocity !== undefined ? { scoreVelocity } : {}),
+		...(dataFreshness.length > 0 ? { dataFreshness } : {}),
+		...(componentHealth.length > 0 ? { componentHealth } : {}),
+		...(ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {}),
+		...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
+	};
+
+	// Terminal (M10.3): render the SAME ReportData to stdout (CI-pipeable like md);
+	// color is decided once at the edge via shouldColor; `--out` optionally
+	// redirects; `--open` was already rejected for a non-html target above.
+	if (format === "terminal") {
+		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+		const text = renderTerminalDashboard(data, selection.artifacts, {
 			generatedAt,
-			project: basename(targetDir),
-			...(systemScore !== undefined ? { systemScore } : {}),
-			driftTrend: aggregation.driftTrend,
-			...(aggregation.lintSummary !== undefined
-				? { lintSummary: aggregation.lintSummary }
-				: {}),
-			...(aggregation.readiness !== undefined
-				? { readiness: aggregation.readiness }
-				: {}),
-			...(parity !== undefined ? { parity } : {}),
-			...(aggregation.a11y !== undefined ? { a11y: aggregation.a11y } : {}),
-			...(aggregation.impact !== undefined
-				? { impact: aggregation.impact }
-				: {}),
-			adoptionTrend: aggregation.adoptionTrend,
-			...(aggregation.leaderboard !== undefined
-				? { leaderboard: aggregation.leaderboard }
-				: {}),
-			...(aggregation.importCoverage !== undefined
-				? { importCoverage: aggregation.importCoverage }
-				: {}),
-			...(aggregation.libraryHealth !== undefined
-				? { libraryHealth: aggregation.libraryHealth }
-				: {}),
-			breakingCalendar: consumer.breakingCalendar,
-			changeFrequency: consumer.changeFrequency,
-			...(parityTrend.length > 0 ? { parityTrend } : {}),
-			...(migrationChecklist.sites.length > 0 ? { migrationChecklist } : {}),
-			...(audienceChangelog.slices.length > 0 ? { audienceChangelog } : {}),
-			...(frameImplementability.total > 0 ? { frameImplementability } : {}),
-			...(targets.length > 0 ? { targets } : {}),
-			...(libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {}),
-			...(scoreVelocity !== undefined ? { scoreVelocity } : {}),
-			...(dataFreshness.length > 0 ? { dataFreshness } : {}),
-			...(componentHealth.length > 0 ? { componentHealth } : {}),
-			...(ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {}),
-			...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
-		},
-		selection.artifacts,
-		{
+			color,
 			...(selection.viewLabel !== undefined
 				? { viewLabel: selection.viewLabel }
 				: {}),
-			// Caption the system-score section ONLY for a `view`-source profile; the
-			// renderer renders nothing for project/default (golden-neutral).
-			weightProfile: {
-				source: weightProfile.source,
-				...(weightProfile.name !== undefined
-					? { name: weightProfile.name }
-					: {}),
-			},
+		});
+		if (options.out !== undefined) {
+			const outPath = resolve(options.out);
+			const written = writeDashboard(outPath, text);
+			if (written.kind === "error") {
+				failReport(written.message);
+				return;
+			}
+			process.stdout.write(`${outPath}\n`);
+		} else {
+			process.stdout.write(`${text}\n`);
+		}
+		process.exitCode = 0;
+		return;
+	}
+
+	// HTML (default): the offline self-contained dashboard, written to a file.
+	const html = renderDashboard(data, selection.artifacts, {
+		...(selection.viewLabel !== undefined
+			? { viewLabel: selection.viewLabel }
+			: {}),
+		// Caption the system-score section ONLY for a `view`-source profile; the
+		// renderer renders nothing for project/default (golden-neutral).
+		weightProfile: {
+			source: weightProfile.source,
+			...(weightProfile.name !== undefined ? { name: weightProfile.name } : {}),
 		},
-	);
+	});
 
 	const outPath =
 		options.out !== undefined

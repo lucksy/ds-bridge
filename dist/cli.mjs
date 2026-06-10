@@ -7864,6 +7864,17 @@ function renderBarChart(items, opts) {
 // src/render/terminal/gauge.ts
 var import_picocolors2 = __toESM(require_picocolors(), 1);
 var colors2 = import_picocolors2.default.createColors(true);
+var EMPTY_CELL = "\u2591";
+function renderGauge(value2, opts) {
+  const v = Math.max(0, Math.min(100, value2));
+  const bar = proportionalBar(v / 100, opts.width);
+  const filledCells = [...bar].length;
+  const empty = EMPTY_CELL.repeat(Math.max(0, opts.width - filledCells));
+  const filled = opts.color && bar.length > 0 ? colors2.cyan(bar) : bar;
+  const meter = `[${filled}${empty}]`;
+  const pct5 = `${Math.round(v)}%`;
+  return opts.label !== void 0 && opts.label !== "" ? `${opts.label} ${meter} ${pct5}` : `${meter} ${pct5}`;
+}
 
 // src/render/terminal/severity.ts
 var import_picocolors3 = __toESM(require_picocolors(), 1);
@@ -7937,6 +7948,47 @@ function renderTable(headers, rows, _opts) {
   }
   lines.push(border("\u2514", "\u2534", "\u2518"));
   return lines.join("\n");
+}
+
+// src/render/terminal/matrix.ts
+var GLYPH = {
+  ok: "\u2713",
+  warn: "\u25B3",
+  fail: "\u2717",
+  none: "\xB7"
+};
+var SEVERITY = {
+  ok: "ok",
+  warn: "warn",
+  fail: "error",
+  none: "info"
+};
+function glyphFor(status, color) {
+  return severityColor(SEVERITY[status], GLYPH[status], { color });
+}
+function renderMatrix(rows, columns, opts) {
+  if (rows.length === 0) return "";
+  const headers = ["", ...columns];
+  const tableRows = rows.map((row) => [
+    row.label,
+    ...row.cells.map((cell) => glyphFor(cell, opts.color))
+  ]);
+  return renderTable(headers, tableRows, { color: opts.color });
+}
+
+// src/render/terminal/sparkline.ts
+var TICKS = ["\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"];
+function sparkline(values) {
+  if (values.length === 0) return "";
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min;
+  const lastTick = TICKS.length - 1;
+  return values.map((value2) => {
+    if (range === 0) return TICKS[0];
+    const index = Math.round((value2 - min) / range * lastTick);
+    return TICKS[index];
+  }).join("");
 }
 
 // src/cli-commands/a11y.ts
@@ -18991,6 +19043,524 @@ function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   ].join("\n");
 }
 
+// src/render/terminal/dashboard.ts
+function emptyState3(command) {
+  return `No data yet \u2014 run \`ds-bridge ${command}\` to populate this section.`;
+}
+function panel2(title, body) {
+  return `${title}
+${"\u2500".repeat([...title].length)}
+${body}`;
+}
+function systemScoreTerminalSection(data, color) {
+  const score = data.systemScore;
+  if (score === void 0) {
+    return panel2("System score", emptyState3("report"));
+  }
+  const COMPONENT_LABEL3 = {
+    drift: "drift",
+    lint: "lint",
+    readiness: "readiness",
+    a11y: "a11y",
+    adoption: "adoption",
+    parity: "parity"
+  };
+  const gauge = renderGauge(score.current, {
+    label: "System score",
+    width: 24,
+    color
+  });
+  const trend = sparkline(score.trend.map((point) => point.score));
+  const legend = renderTable(
+    ["Component", "Sub-score", "Weight"],
+    score.components.map((c2) => [
+      COMPONENT_LABEL3[c2.kind] ?? c2.kind,
+      String(c2.score),
+      String(c2.weight)
+    ]),
+    { color }
+  );
+  return panel2("System score", [gauge, trend, legend].join("\n"));
+}
+function driftTrendTerminalSection(data, _color) {
+  const trend = data.driftTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Drift trend", emptyState3("diff --since <ref>"));
+  }
+  const breaking = sparkline(trend.map((point) => point.breaking));
+  const additive = sparkline(trend.map((point) => point.additive));
+  const cosmetic = sparkline(trend.map((point) => point.cosmetic));
+  const dateRange = trend.length > 0 ? `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}` : "";
+  return panel2(
+    "Drift trend",
+    [
+      `Breaking ${breaking}`,
+      `Additive ${additive}`,
+      `Cosmetic ${cosmetic}`,
+      `Breaking \xB7 Additive \xB7 Cosmetic over ${dateRange}`
+    ].join("\n")
+  );
+}
+function lintSummaryTerminalSection(data, color) {
+  const lint = data.lintSummary;
+  if (lint === void 0) {
+    return panel2("Lint violations", emptyState3("ds-lint"));
+  }
+  const bars = renderBarChart(
+    [
+      { label: "Exact", value: lint.byKind.exact },
+      { label: "Near", value: lint.byKind.near },
+      { label: "Off-system", value: lint.byKind.offSystem }
+    ],
+    { width: 24, color }
+  );
+  const offenders = lint.topOffenders.length > 0 ? lint.topOffenders.map((o) => `${o.file}  ${o.count}`).join("\n") : "";
+  const body = offenders === "" ? bars : `${bars}
+${offenders}`;
+  return panel2("Lint violations", body);
+}
+function readinessTerminalSection(data, color) {
+  const readiness = data.readiness;
+  if (readiness === void 0) {
+    return panel2("Readiness", emptyState3("qa <frame>"));
+  }
+  const gauge = renderGauge(readiness.score, {
+    label: "Readiness",
+    width: 24,
+    color
+  });
+  const deductions = readiness.deductions.length > 0 ? readiness.deductions.map((d) => `${d.reason}  -${d.points}`).join("\n") : "";
+  const lines = [gauge, readiness.frameName];
+  if (deductions !== "") {
+    lines.push(deductions);
+  }
+  return panel2("Readiness", lines.join("\n"));
+}
+function parityTerminalSection(data, color) {
+  const parity = data.parity;
+  if (parity === void 0 || parity.rows.length === 0) {
+    return panel2("Parity matrix", emptyState3("parity"));
+  }
+  const STATUS_CELL = {
+    ok: "ok",
+    "prop-mismatch": "warn",
+    "missing-in-code": "fail",
+    "missing-in-figma": "fail"
+  };
+  const rows = parity.rows.map((row) => ({
+    label: row.component,
+    cells: row.cells.map((cell) => STATUS_CELL[cell.status])
+  }));
+  const body = [renderMatrix(rows, parity.columns, { color })];
+  if (parity.columns.length > 0) {
+    body.push(`Columns: ${parity.columns.join(" \xB7 ")}`);
+  }
+  return panel2("Parity matrix", body.join("\n"));
+}
+function a11yTerminalSection(data, color) {
+  const a11y = data.a11y;
+  if (a11y === void 0 || a11y.modes.length === 0) {
+    return panel2("Contrast (a11y)", emptyState3("a11y"));
+  }
+  const bars = a11y.modes.map((m) => ({
+    label: m.mode,
+    value: m.failed
+  }));
+  const tallies = a11y.modes.map(
+    (m) => `${m.mode}  ${m.passed} passed \xB7 ${m.failed} failed`
+  );
+  const body = [
+    `Failures by mode \xB7 level ${a11y.level}`,
+    renderBarChart(bars, { width: 24, color }),
+    ...tallies
+  ].join("\n");
+  return panel2("Contrast (a11y)", body);
+}
+function impactTerminalSection(data, color) {
+  const impact = data.impact;
+  if (impact === void 0) {
+    return panel2("Change impact", emptyState3("impact"));
+  }
+  const bars = [
+    { label: "Breaking", value: impact.breaking },
+    { label: "Additive", value: impact.additive },
+    { label: "Cosmetic", value: impact.cosmetic }
+  ];
+  const sites = impact.touchedCallSites;
+  const radius = `Touches ${sites} call site${sites === 1 ? "" : "s"}`;
+  const body = [renderBarChart(bars, { width: 24, color }), radius].join("\n");
+  return panel2("Change impact", body);
+}
+function adoptionTrendTerminalSection(data, _color) {
+  const trend = data.adoptionTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Adoption trend", emptyState3("lint <dir>"));
+  }
+  const spark = sparkline(trend.map((point) => point.pct));
+  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
+  const body = [
+    `on-system %  ${spark}`,
+    `On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)`
+  ].join("\n");
+  return panel2("Adoption trend", body);
+}
+function importCoverageTerminalSection(data, color) {
+  const coverage = data.importCoverage;
+  if (coverage === void 0) {
+    return panel2("Import coverage", emptyState3("adoption"));
+  }
+  const { imported, total, uncovered, uncoveredTotal } = coverage;
+  const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
+  const lines = [];
+  lines.push(renderGauge(pct5, { label: "Import coverage", width: 24, color }));
+  lines.push(
+    `${imported}/${total} registry components imported \xB7 resolved .tsx imports only (a floor)`
+  );
+  if (uncovered.length > 0) {
+    for (const name of uncovered) {
+      lines.push(`\u2022 ${name}`);
+    }
+  }
+  if (uncoveredTotal > uncovered.length) {
+    lines.push(`\u2026 and ${uncoveredTotal - uncovered.length} more`);
+  }
+  return panel2("Import coverage", lines.join("\n"));
+}
+function leaderboardTerminalSection(data, color) {
+  const rows = data.leaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Adoption leaderboard", emptyState3("lint <dir>"));
+  }
+  const onSystemPct4 = (refs, literals) => {
+    const total = refs + literals;
+    return total === 0 ? 0 : Math.round(refs / total * 100);
+  };
+  const bars = rows.map((row) => ({
+    label: row.dir,
+    value: onSystemPct4(row.refs, row.literals)
+  }));
+  const lines = [];
+  lines.push("On-system % by directory, worst-first \xB7 css/scss values only");
+  lines.push(renderBarChart(bars, { width: 24, color }));
+  return panel2("Adoption leaderboard", lines.join("\n"));
+}
+function libraryHealthTerminalSection(data, color) {
+  const health = data.libraryHealth;
+  if (health === void 0) {
+    return panel2("Library health", emptyState3("library-health"));
+  }
+  const { totals } = health;
+  const bars = [
+    { label: "Override hotspots", value: totals.overrideHotspots },
+    { label: "Deprecated usage", value: totals.deprecatedUsage },
+    { label: "Detached candidates", value: totals.detachedCandidates }
+  ];
+  const lines = [];
+  lines.push(renderBarChart(bars, { width: 24, color }));
+  lines.push(
+    `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
+  );
+  if (health.overrideHotspots.length > 0) {
+    for (const h of health.overrideHotspots) {
+      lines.push(`\u2022 ${h.name} (${h.overrideCount})`);
+    }
+  }
+  return panel2("Library health", lines.join("\n"));
+}
+function breakingCalendarTerminalSection(data, color) {
+  const calendar = data.breakingCalendar;
+  if (calendar === void 0 || calendar.entries.length === 0) {
+    return panel2("Breaking calendar", emptyState3("tokens-check"));
+  }
+  const BREAKING_SOURCE_LABEL2 = {
+    tokens: "tokens",
+    figma: "figma"
+  };
+  const rows = calendar.entries.map((entry) => {
+    const detail = entry.detail ?? `${entry.count}`;
+    return [entry.date, BREAKING_SOURCE_LABEL2[entry.source], detail];
+  });
+  const lines = [];
+  lines.push(
+    `${calendar.total} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first`
+  );
+  lines.push(renderTable(["Date", "Source", "Detail"], rows, { color }));
+  return panel2("Breaking calendar", lines.join("\n"));
+}
+function changeFrequencyTerminalSection(data, color) {
+  const frequency = data.changeFrequency;
+  if (frequency === void 0 || frequency.byKind.length === 0) {
+    return panel2("Change frequency", emptyState3("tokens-check"));
+  }
+  const items = frequency.byKind.map((bucket) => ({
+    label: bucket.kind,
+    value: bucket.count
+  }));
+  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `Records per kind \xB7 ${frequency.windowFirst} \u2192 ${frequency.windowLast}` : "Records per kind";
+  const body = [window, renderBarChart(items, { width: 24, color })].join("\n");
+  return panel2("Change frequency", body);
+}
+function targetsTerminalSection(data, color) {
+  const targets = data.targets;
+  if (targets === void 0 || targets.length === 0) {
+    return panel2("Targets / SLAs", emptyState3("report"));
+  }
+  const COMPONENT_LABEL3 = {
+    drift: "drift",
+    lint: "lint",
+    readiness: "readiness",
+    a11y: "a11y",
+    adoption: "adoption",
+    parity: "parity"
+  };
+  const bandLevel = (band) => band === "green" ? "ok" : band === "amber" ? "warn" : band === "red" ? "error" : "info";
+  const rows = targets.map((verdict) => [
+    COMPONENT_LABEL3[verdict.metric] ?? verdict.metric,
+    verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
+    `${verdict.op} ${verdict.target}`,
+    severityColor(bandLevel(verdict.band), verdict.band, { color })
+  ]);
+  const table = renderTable(["Metric", "Measured", "Target", "Status"], rows, {
+    color
+  });
+  const legend = [
+    "green = meets target",
+    "amber = near target",
+    "red = misses target",
+    "unknown = not measured"
+  ].join("  \xB7  ");
+  return panel2("Targets / SLAs", [table, legend].join("\n"));
+}
+function parityTrendTerminalSection(data, _color) {
+  const trend = data.parityTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Parity trend", emptyState3("registry build"));
+  }
+  const values = trend.map((point) => point.pct);
+  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
+  const body = [
+    `parity %  ${sparkline(values)}`,
+    `Component parity pass-% over ${dateRange}`
+  ].join("\n");
+  return panel2("Parity trend", body);
+}
+function componentHealthTerminalSection(data, color) {
+  const rows = data.componentHealth;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Component health", emptyState3("registry build"));
+  }
+  const tableRows = rows.map((row) => [
+    row.component,
+    String(row.healthScore),
+    row.issues.length > 0 ? row.issues.join(", ") : "no issues"
+  ]);
+  const table = renderTable(["Component", "Health", "Issues"], tableRows, {
+    color
+  });
+  const body = ["Composite health per component, worst-first", table].join(
+    "\n"
+  );
+  return panel2("Component health", body);
+}
+function libraryHealthTrendTerminalSection(data, _color) {
+  const trend = data.libraryHealthTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Library health trend", emptyState3("library-health"));
+  }
+  const overrides = sparkline(trend.map((p4) => p4.overrides));
+  const deprecated = sparkline(trend.map((p4) => p4.deprecated));
+  const detached = sparkline(trend.map((p4) => p4.detached));
+  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
+  const detachedCaveat = "Detached: \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.";
+  const body = [
+    `Overrides  ${overrides}`,
+    `Deprecated ${deprecated}`,
+    `Detached   ${detached}`,
+    `over ${dateRange}`,
+    detachedCaveat
+  ].join("\n");
+  return panel2("Library health trend", body);
+}
+function migrationChecklistTerminalSection(data, color) {
+  const checklist = data.migrationChecklist;
+  if (checklist === void 0 || checklist.sites.length === 0) {
+    return panel2("Migration checklist", emptyState3("impact --checklist"));
+  }
+  const headers = ["site", "subject", "from \u2192 to"];
+  const rows = checklist.sites.map((site) => [
+    `${site.file}:${site.line}`,
+    site.subject,
+    `${site.from} \u2192 ${site.to}`
+  ]);
+  const count = checklist.sites.length;
+  const meta = `${count} call site${count === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to`;
+  const overflow = checklist.truncated ? "\u2026 and more sites beyond the cap" : "";
+  const mapUsageCaveat = "mapUsage scans resolved .tsx imports only, so the number is a floor.";
+  const body = [
+    meta,
+    renderTable(headers, rows, { color }),
+    ...overflow !== "" ? [overflow] : [],
+    mapUsageCaveat
+  ].join("\n");
+  return panel2("Migration checklist", body);
+}
+function scoreVelocityTerminalSection(data, color) {
+  const velocity = data.scoreVelocity;
+  if (velocity === void 0) {
+    return panel2("Score velocity", emptyState3("report"));
+  }
+  const { delta, windowDays, direction, regressionStreak } = velocity;
+  const ARROW = {
+    up: "\u25B2",
+    down: "\u25BC",
+    flat: "\u25AC"
+  };
+  const arrow3 = ARROW[direction];
+  const signedDelta = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
+  const streakText = regressionStreak > 0 ? severityColor("warn", `${regressionStreak}-decline streak`, { color }) : "0-decline streak";
+  const headline = `${arrow3} ${signedDelta} over ${windowDays} day${windowDays === 1 ? "" : "s"}`;
+  const body = [headline, `${direction} \xB7 ${streakText}`].join("\n");
+  return panel2("Score velocity", body);
+}
+function ownershipLeaderboardTerminalSection(data, color) {
+  const rows = data.ownershipLeaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Ownership leaderboard", emptyState3("lint"));
+  }
+  const bars = rows.map((row) => ({ label: row.owner, value: row.pct }));
+  const labels = rows.map(
+    (row) => `${row.owner}: ${row.pct}% \xB7 ${row.refs} refs / ${row.literals} literals`
+  ).join("\n");
+  const body = [
+    "On-system % by owner, worst-first \xB7 css/scss values only",
+    renderBarChart(bars, { width: 24, color }),
+    labels
+  ].join("\n");
+  return panel2("Ownership leaderboard", body);
+}
+function audienceChangelogTerminalSection(data, color) {
+  const changelog = data.audienceChangelog;
+  if (changelog === void 0 || changelog.slices.length === 0) {
+    return panel2("Changelog by audience", emptyState3("ds-changelog"));
+  }
+  const headers = ["audience", "breaking", "additive", "cosmetic", "recent"];
+  const rows = changelog.slices.map((slice) => [
+    slice.audience,
+    String(slice.breaking),
+    String(slice.additive),
+    String(slice.cosmetic),
+    slice.recent.length > 0 ? slice.recent.join(", ") : "No recent entries"
+  ]);
+  return panel2("Changelog by audience", renderTable(headers, rows, { color }));
+}
+function frameImplementabilityTerminalSection(data, color) {
+  const frame = data.frameImplementability;
+  if (frame === void 0) {
+    return panel2("Frame implementability", emptyState3("frame-impl"));
+  }
+  const { pct: pct5, resolved, total, gaps } = frame;
+  const gauge = renderGauge(pct5, {
+    label: "Frame implementability",
+    width: 24,
+    color
+  });
+  const meta = `${resolved}/${total} requirements resolve to the system`;
+  const body = [gauge, meta];
+  if (gaps.length > 0) {
+    body.push(
+      renderBarChart(
+        gaps.map((gap) => ({ label: gap.reason, value: gap.count })),
+        { width: 24, color }
+      )
+    );
+  }
+  return panel2("Frame implementability", body.join("\n"));
+}
+function releaseReadinessTerminalSection(data, color) {
+  const readiness = data.releaseReadiness;
+  if (readiness === void 0 || readiness.checks.length === 0) {
+    return panel2("Release readiness", emptyState3("release-check"));
+  }
+  const verdict = readiness.go ? severityColor("ok", "GO", { color }) : severityColor("error", "NO-GO", { color });
+  const headers = ["check", "pass", "detail"];
+  const rows = readiness.checks.map((check) => [
+    check.name,
+    check.pass ? severityColor("ok", "\u2713", { color }) : severityColor("error", "\u2717", { color }),
+    check.detail !== void 0 && check.detail.length > 0 ? check.detail : ""
+  ]);
+  return panel2(
+    "Release readiness",
+    [verdict, renderTable(headers, rows, { color })].join("\n")
+  );
+}
+function dataFreshnessTerminalSection(data, color) {
+  const rows = data.dataFreshness;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Data freshness", emptyState3("report"));
+  }
+  const BAND_SEVERITY = {
+    green: "ok",
+    amber: "warn",
+    red: "error",
+    unknown: "info"
+  };
+  const ageLabel = (row) => {
+    if (row.ageDays === void 0) return "never";
+    if (row.ageDays === 0) return "today";
+    return `${row.ageDays}d ago`;
+  };
+  const headers = ["kind", "lastRun", "age", "band"];
+  const tableRows = rows.map((row) => [
+    row.kind,
+    row.lastRun ?? "never",
+    ageLabel(row),
+    severityColor(BAND_SEVERITY[row.band], row.band, { color })
+  ]);
+  return panel2(
+    "Data freshness",
+    [
+      "Measurement age per check-kind \xB7 band signals trust",
+      renderTable(headers, tableRows, { color })
+    ].join("\n")
+  );
+}
+var SECTION_RENDERERS_TERMINAL = {
+  "system-score": systemScoreTerminalSection,
+  "drift-trend": driftTrendTerminalSection,
+  "lint-summary": lintSummaryTerminalSection,
+  readiness: readinessTerminalSection,
+  parity: parityTerminalSection,
+  a11y: a11yTerminalSection,
+  impact: impactTerminalSection,
+  "adoption-trend": adoptionTrendTerminalSection,
+  "import-coverage": importCoverageTerminalSection,
+  leaderboard: leaderboardTerminalSection,
+  "library-health": libraryHealthTerminalSection,
+  "breaking-calendar": breakingCalendarTerminalSection,
+  "change-frequency": changeFrequencyTerminalSection,
+  targets: targetsTerminalSection,
+  "parity-trend": parityTrendTerminalSection,
+  "component-health": componentHealthTerminalSection,
+  "library-health-trend": libraryHealthTrendTerminalSection,
+  "migration-checklist": migrationChecklistTerminalSection,
+  "score-velocity": scoreVelocityTerminalSection,
+  "ownership-leaderboard": ownershipLeaderboardTerminalSection,
+  "audience-changelog": audienceChangelogTerminalSection,
+  "frame-implementability": frameImplementabilityTerminalSection,
+  "release-readiness": releaseReadinessTerminalSection,
+  "data-freshness": dataFreshnessTerminalSection
+};
+function renderTerminalDashboard(data, selection, opts) {
+  const headerLines = [`ds-bridge report \xB7 ${data.project}`];
+  if (opts.viewLabel !== void 0) headerLines.push(`View: ${opts.viewLabel}`);
+  headerLines.push(`Generated ${opts.generatedAt}`);
+  const header = headerLines.join("\n");
+  const sections = selection.map(
+    (id) => SECTION_RENDERERS_TERMINAL[id](data, opts.color)
+  );
+  return [header, ...sections].join("\n\n");
+}
+
 // src/cli-commands/report.ts
 var RULE_REASON = {
   "var-binding": "Variable binding",
@@ -19779,9 +20349,9 @@ function runMarkdownReport(targetDir, options, selection) {
   process.exitCode = 0;
 }
 function runReport(path, options) {
-  if (options.format !== void 0 && options.format !== "html" && options.format !== "md") {
+  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal") {
     failReport(
-      `Unknown --format "${options.format}". Expected "html" or "md".`
+      `Unknown --format "${options.format}". Expected "html", "md", or "terminal".`
     );
     return;
   }
@@ -19801,9 +20371,9 @@ function runReport(path, options) {
     return;
   }
   const format = options.format ?? selection.reportType ?? "html";
-  if (format !== "html" && format !== "md") {
+  if (format !== "html" && format !== "md" && format !== "terminal") {
     failReport(
-      `report_type "${format}" is not a supported render target yet \u2014 pass --format html|md.`
+      `report_type "${format}" is not a supported render target yet \u2014 pass --format html|md|terminal.`
     );
     return;
   }
@@ -19811,9 +20381,9 @@ function runReport(path, options) {
     failReport("--delta requires --format md.");
     return;
   }
-  if (options.open && format === "md") {
+  if (options.open && format !== "html") {
     failReport(
-      "--open is not valid with --format md (there is no file to open)."
+      `--open is not valid with --format ${format} (there is no file to open).`
     );
     return;
   }
@@ -19873,46 +20443,66 @@ function runReport(path, options) {
     resolveOwnership(targetDir, selection.ownership, selection.ownershipFile)
   );
   const releaseReadiness = computeReleaseReadiness(stateDir);
-  const html = renderDashboard(
-    {
+  const data = {
+    generatedAt,
+    project: basename(targetDir),
+    ...systemScore !== void 0 ? { systemScore } : {},
+    driftTrend: aggregation.driftTrend,
+    ...aggregation.lintSummary !== void 0 ? { lintSummary: aggregation.lintSummary } : {},
+    ...aggregation.readiness !== void 0 ? { readiness: aggregation.readiness } : {},
+    ...parity !== void 0 ? { parity } : {},
+    ...aggregation.a11y !== void 0 ? { a11y: aggregation.a11y } : {},
+    ...aggregation.impact !== void 0 ? { impact: aggregation.impact } : {},
+    adoptionTrend: aggregation.adoptionTrend,
+    ...aggregation.leaderboard !== void 0 ? { leaderboard: aggregation.leaderboard } : {},
+    ...aggregation.importCoverage !== void 0 ? { importCoverage: aggregation.importCoverage } : {},
+    ...aggregation.libraryHealth !== void 0 ? { libraryHealth: aggregation.libraryHealth } : {},
+    breakingCalendar: consumer.breakingCalendar,
+    changeFrequency: consumer.changeFrequency,
+    ...parityTrend.length > 0 ? { parityTrend } : {},
+    ...migrationChecklist.sites.length > 0 ? { migrationChecklist } : {},
+    ...audienceChangelog.slices.length > 0 ? { audienceChangelog } : {},
+    ...frameImplementability.total > 0 ? { frameImplementability } : {},
+    ...targets.length > 0 ? { targets } : {},
+    ...libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {},
+    ...scoreVelocity !== void 0 ? { scoreVelocity } : {},
+    ...dataFreshness.length > 0 ? { dataFreshness } : {},
+    ...componentHealth.length > 0 ? { componentHealth } : {},
+    ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
+    ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}
+  };
+  if (format === "terminal") {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    const text = renderTerminalDashboard(data, selection.artifacts, {
       generatedAt,
-      project: basename(targetDir),
-      ...systemScore !== void 0 ? { systemScore } : {},
-      driftTrend: aggregation.driftTrend,
-      ...aggregation.lintSummary !== void 0 ? { lintSummary: aggregation.lintSummary } : {},
-      ...aggregation.readiness !== void 0 ? { readiness: aggregation.readiness } : {},
-      ...parity !== void 0 ? { parity } : {},
-      ...aggregation.a11y !== void 0 ? { a11y: aggregation.a11y } : {},
-      ...aggregation.impact !== void 0 ? { impact: aggregation.impact } : {},
-      adoptionTrend: aggregation.adoptionTrend,
-      ...aggregation.leaderboard !== void 0 ? { leaderboard: aggregation.leaderboard } : {},
-      ...aggregation.importCoverage !== void 0 ? { importCoverage: aggregation.importCoverage } : {},
-      ...aggregation.libraryHealth !== void 0 ? { libraryHealth: aggregation.libraryHealth } : {},
-      breakingCalendar: consumer.breakingCalendar,
-      changeFrequency: consumer.changeFrequency,
-      ...parityTrend.length > 0 ? { parityTrend } : {},
-      ...migrationChecklist.sites.length > 0 ? { migrationChecklist } : {},
-      ...audienceChangelog.slices.length > 0 ? { audienceChangelog } : {},
-      ...frameImplementability.total > 0 ? { frameImplementability } : {},
-      ...targets.length > 0 ? { targets } : {},
-      ...libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {},
-      ...scoreVelocity !== void 0 ? { scoreVelocity } : {},
-      ...dataFreshness.length > 0 ? { dataFreshness } : {},
-      ...componentHealth.length > 0 ? { componentHealth } : {},
-      ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
-      ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}
-    },
-    selection.artifacts,
-    {
-      ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {},
-      // Caption the system-score section ONLY for a `view`-source profile; the
-      // renderer renders nothing for project/default (golden-neutral).
-      weightProfile: {
-        source: weightProfile.source,
-        ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
+      color,
+      ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
+    });
+    if (options.out !== void 0) {
+      const outPath2 = resolve11(options.out);
+      const written2 = writeDashboard(outPath2, text);
+      if (written2.kind === "error") {
+        failReport(written2.message);
+        return;
       }
+      process.stdout.write(`${outPath2}
+`);
+    } else {
+      process.stdout.write(`${text}
+`);
     }
-  );
+    process.exitCode = 0;
+    return;
+  }
+  const html = renderDashboard(data, selection.artifacts, {
+    ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {},
+    // Caption the system-score section ONLY for a `view`-source profile; the
+    // renderer renders nothing for project/default (golden-neutral).
+    weightProfile: {
+      source: weightProfile.source,
+      ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
+    }
+  });
   const outPath = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {

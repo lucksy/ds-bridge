@@ -2253,3 +2253,115 @@ describe("ds-bridge report — dashboard report_type default (M9.3)", () => {
 		expect(html).toContain("Parity matrix");
 	});
 });
+
+// ---------- M10.3 — `report --format terminal` (selection-aware text report) ----------
+
+/** Repo-relative path to the recorded terminal golden. */
+const terminalGoldenPath = join(
+	repoRoot,
+	"tests",
+	"fixtures",
+	"report",
+	"golden-terminal.txt",
+);
+
+/** Replace the fresh ISO timestamp on the terminal header's "Generated " line. */
+function withSentinelTimestampTxt(text: string): string {
+	return text.replace(/(Generated )[^\n]*/, "$1__GENERATED_AT__");
+}
+
+describe("ds-bridge report — terminal format (M10.3)", () => {
+	it("--format terminal prints the selection-aware report to stdout (no file)", async () => {
+		const dir = await freshTmp("ds-report-term-");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--format", "terminal"]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("ds-bridge report ·");
+		expect(result.stdout).toContain("Parity matrix");
+		expect(result.stdout).toContain("System score");
+		// Pipe-clean: no HTML file path on stdout.
+		expect(result.stdout).not.toContain(".html");
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		await expect(readFile(reportPath, "utf8")).rejects.toThrow();
+	});
+
+	it("--format terminal --open → exit 2 (no file to open)", async () => {
+		const dir = await freshTmp("ds-report-term-open-");
+		await seedSixArtifacts(dir);
+		const result = await runCli(["report", dir, "--format", "terminal", "--open"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("--open");
+	});
+
+	it("--format terminal --out redirects to a file and prints the path", async () => {
+		const dir = await freshTmp("ds-report-term-out-");
+		await seedSixArtifacts(dir);
+		const outFile = join(dir, "report.txt");
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"terminal",
+			"--out",
+			outFile,
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout.trim()).toBe(outFile);
+		const txt = await readFile(outFile, "utf8");
+		expect(txt).toContain("ds-bridge report ·");
+	});
+
+	it("an unknown --format lists html, md, and terminal", async () => {
+		const dir = await freshTmp("ds-report-term-badfmt-");
+		await seedSixArtifacts(dir);
+		const result = await runCli(["report", dir, "--format", "xml"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("terminal");
+	});
+
+	it("--format terminal honors --artifacts (only the selected sections)", async () => {
+		const dir = await freshTmp("ds-report-term-sel-");
+		await seedSixArtifacts(dir);
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"terminal",
+			"--artifacts",
+			"parity,a11y",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Parity matrix");
+		expect(result.stdout).toContain("Contrast (a11y)");
+		expect(result.stdout).not.toContain("System score");
+	});
+
+	it("NO_COLOR strips ANSI from the terminal output", async () => {
+		const dir = await freshTmp("ds-report-term-nocolor-");
+		await seedSixArtifacts(dir);
+		const result = await runCli(["report", dir, "--format", "terminal"], {
+			NO_COLOR: "1",
+		});
+		expect(result.code).toBe(0);
+		expect(result.stdout.includes(String.fromCharCode(27))).toBe(false);
+	});
+
+	it("--format terminal is byte-identical to the terminal golden", async () => {
+		const base = await freshTmp("ds-report-term-golden-");
+		const dir = join(base, "report-golden");
+		await seedSixArtifacts(dir);
+
+		const result = await runCli(["report", dir, "--format", "terminal"], {
+			NO_COLOR: "1",
+		});
+		expect(result.code).toBe(0);
+		const normalized = withSentinelTimestampTxt(result.stdout);
+		if (process.env.DS_BRIDGE_UPDATE_GOLDEN) {
+			await writeFile(terminalGoldenPath, normalized, "utf8");
+			return;
+		}
+		const golden = await readFile(terminalGoldenPath, "utf8");
+		expect(normalized).toBe(golden);
+	});
+});

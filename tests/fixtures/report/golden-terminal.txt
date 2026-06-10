@@ -1,0 +1,184 @@
+ds-bridge report · report-golden
+Generated __GENERATED_AT__
+
+System score
+────────────
+System score [██████████████████▎░░░░░] 76%
+▁▇▇▇█
+┌───────────┬───────────┬────────┐
+│ Component │ Sub-score │ Weight │
+├───────────┼───────────┼────────┤
+│ drift     │        75 │     25 │
+│ lint      │        74 │     25 │
+│ readiness │        72 │     15 │
+│ a11y      │        85 │     15 │
+│ adoption  │        75 │     20 │
+└───────────┴───────────┴────────┘
+
+Drift trend
+───────────
+Breaking █▁
+Additive ▁█
+Cosmetic ▁█
+Breaking · Additive · Cosmetic over 2026-06-01 → 2026-06-02
+
+Lint violations
+───────────────
+Exact      │████████████████████████ 3
+Near       │████████████████ 2
+Off-system │████████ 1
+
+Readiness
+─────────
+Readiness [█████████████████▎░░░░░░] 72%
+Card / Primary
+Variable binding  -8
+
+Parity matrix
+─────────────
+┌─────────┬────────┐
+│         │ Status │
+├─────────┼────────┤
+│ Chip    │ ✗      │
+│ Spinner │ ✗      │
+│ Button  │ ✓      │
+└─────────┴────────┘
+Columns: Status
+
+Contrast (a11y)
+───────────────
+Failures by mode · level AA
+light │████████████ 1
+dark  │████████████████████████ 2
+light  9 passed · 1 failed
+dark  8 passed · 2 failed
+
+Change impact
+─────────────
+Breaking │████████████████ 2
+Additive │████████████████████████ 3
+Cosmetic │████████ 1
+Touches 14 call sites
+
+Adoption trend
+──────────────
+on-system %  ▁
+On-system % over 2026-06-03 → 2026-06-03 · css/scss values only (var(--…) vs literals)
+
+Import coverage
+───────────────
+Import coverage [███████▉░░░░░░░░░░░░░░░░] 33%
+1/3 registry components imported · resolved .tsx imports only (a floor)
+• Spinner
+• Tooltip
+
+Adoption leaderboard
+────────────────────
+On-system % by directory, worst-first · css/scss values only
+src/legacy     │   0
+src/components │████████████████████████ 100
+
+Library health
+──────────────
+Override hotspots   │████████████████████████ 3
+Deprecated usage    │████████████████████████ 3
+Detached candidates │████████████████████████ 3
+Detached candidates: 3 — heuristic — REST cannot truly detect detachment; expect false positives.
+
+Breaking calendar
+─────────────────
+3 breaking events, most-recent first
+┌────────────┬────────┬──────────────────────────────┐
+│ Date       │ Source │ Detail                       │
+├────────────┼────────┼──────────────────────────────┤
+│ 2026-06-06 │ figma  │ 2 breaking component changes │
+│ 2026-06-01 │ tokens │ 1 stale output               │
+└────────────┴────────┴──────────────────────────────┘
+
+Change frequency
+────────────────
+Records per kind · 2026-06-01T10:00:00.000Z → 2026-06-08T10:00:00.000Z
+tokens-check   │████████████████████████ 2
+lint           │████████████ 1
+handoff        │████████████ 1
+a11y           │████████████ 1
+impact         │████████████ 1
+adoption       │████████████ 1
+library-health │████████████ 1
+
+Targets / SLAs
+──────────────
+No data yet — run `ds-bridge report` to populate this section.
+
+Parity trend
+────────────
+No data yet — run `ds-bridge registry build` to populate this section.
+
+Component health
+────────────────
+Composite health per component, worst-first
+┌───────────┬────────┬──────────────────────────┐
+│ Component │ Health │ Issues                   │
+├───────────┼────────┼──────────────────────────┤
+│ Chip      │     70 │ parity: missing-in-code  │
+│ Spinner   │     70 │ parity: missing-in-figma │
+│ Button    │    100 │ no issues                │
+└───────────┴────────┴──────────────────────────┘
+
+Library health trend
+────────────────────
+Overrides  ▁
+Deprecated ▁
+Detached   ▁
+over 2026-06-08 → 2026-06-08
+Detached: — heuristic — REST cannot truly detect detachment; expect false positives.
+
+Migration checklist
+───────────────────
+No data yet — run `ds-bridge impact --checklist` to populate this section.
+
+Score velocity
+──────────────
+▲ +11 over 30 days
+up · 0-decline streak
+
+Ownership leaderboard
+─────────────────────
+No data yet — run `ds-bridge lint` to populate this section.
+
+Changelog by audience
+─────────────────────
+No data yet — run `ds-bridge ds-changelog` to populate this section.
+
+Frame implementability
+──────────────────────
+No data yet — run `ds-bridge frame-impl` to populate this section.
+
+Release readiness
+─────────────────
+NO-GO
+┌────────┬──────┬────────────────────┐
+│ check  │ pass │ detail             │
+├────────┼──────┼────────────────────┤
+│ impact │ ✗    │ 2 breaking changes │
+│ drift  │ ✗    │ 0 stale, 2 missing │
+│ parity │ ✗    │ no parity data     │
+└────────┴──────┴────────────────────┘
+
+Data freshness
+──────────────
+Measurement age per check-kind · band signals trust
+┌────────────────┬────────────┬────────┬─────────┐
+│ kind           │ lastRun    │ age    │ band    │
+├────────────────┼────────────┼────────┼─────────┤
+│ drift          │ 2026-06-02 │ 8d ago │ green   │
+│ lint           │ 2026-06-03 │ 7d ago │ green   │
+│ readiness      │ 2026-06-04 │ 6d ago │ green   │
+│ a11y           │ 2026-06-05 │ 5d ago │ green   │
+│ impact         │ 2026-06-06 │ 4d ago │ green   │
+│ adoption       │ 2026-06-07 │ 3d ago │ green   │
+│ parity         │ never      │ never  │ unknown │
+│ library-health │ 2026-06-08 │ 2d ago │ green   │
+│ changelog      │ never      │ never  │ unknown │
+│ frame-impl     │ never      │ never  │ unknown │
+└────────────────┴────────────┴────────┴─────────┘

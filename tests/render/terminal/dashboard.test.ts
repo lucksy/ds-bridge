@@ -14,7 +14,10 @@ import { renderTerminalDashboard } from "../../../src/render/terminal/dashboard.
 const hasAnsi = (s: string): boolean => s.includes(String.fromCharCode(27));
 
 /** A bare ReportData — every section absent → each renders its empty-state. */
-const BARE: ReportData = { generatedAt: "2026-06-10T00:00:00.000Z", project: "demo" };
+const BARE: ReportData = {
+	generatedAt: "2026-06-10T00:00:00.000Z",
+	project: "demo",
+};
 
 const OPTS = { generatedAt: "2026-06-10T00:00:00.000Z", color: false } as const;
 
@@ -61,7 +64,9 @@ describe("renderTerminalDashboard", () => {
 			["parity", "system-score"] as ArtifactId[],
 			OPTS,
 		);
-		expect(out.indexOf("Parity matrix")).toBeLessThan(out.indexOf("System score"));
+		expect(out.indexOf("Parity matrix")).toBeLessThan(
+			out.indexOf("System score"),
+		);
 	});
 
 	it("renders real content for a populated section (gauge + percent)", () => {
@@ -76,7 +81,11 @@ describe("renderTerminalDashboard", () => {
 				],
 			},
 		};
-		const out = renderTerminalDashboard(data, ["system-score"] as ArtifactId[], OPTS);
+		const out = renderTerminalDashboard(
+			data,
+			["system-score"] as ArtifactId[],
+			OPTS,
+		);
 		expect(out).toContain("System score");
 		expect(out).toContain("76%");
 		expect(out).not.toContain("No data yet");
