@@ -11,6 +11,13 @@ coverage/
 .env
 .env.*
 
+# ds-bridge restart-survival dotenv (SPEC-personas §6.1) — holds the Figma PAT, so it
+# must NEVER be committed and must stay out of the published plugin tarball (no `files`
+# allowlist / `.npmignore`, so this line is the sole exclusion). The `.env.*` glob above
+# does NOT match it (that needs a literal `.env.` prefix), hence this explicit line. The
+# persist-token writer (M1.4) creates it 0600.
+.ds-bridge.env
+
 # OS noise
 .DS_Store
 
