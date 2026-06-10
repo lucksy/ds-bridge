@@ -17,6 +17,10 @@
 					{
 						"type": "command",
 						"command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/hook-freshness.mjs"
+					},
+					{
+						"type": "command",
+						"command": "node ${CLAUDE_PLUGIN_ROOT}/scripts/hook-save-config.mjs"
 					}
 				]
 			}
