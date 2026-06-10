@@ -19106,6 +19106,15 @@ function renderIndex(entries) {
   ].join("\n");
 }
 
+// src/render/html/snapshot.ts
+var SNAPSHOT_SENTINEL = "__GENERATED_AT__";
+function normalizeSnapshot(html) {
+  return html.replace(
+    /(<span class="generated">Generated )[^<]*(<\/span>)/,
+    `$1${SNAPSHOT_SENTINEL}$2`
+  );
+}
+
 // src/render/terminal/dashboard.ts
 function emptyState3(command) {
   return `No data yet \u2014 run \`ds-bridge ${command}\` to populate this section.`;
@@ -20431,18 +20440,24 @@ function resolvePublishNames(targetDir, options) {
   }
   return readPublishConfig(targetDir) ?? [];
 }
-function runSiteReport(targetDir, options, selection, data, weightProfile) {
+function runSiteReport(targetDir, options, selection, data, weightProfile, mode) {
   const stateDir = join22(targetDir, ".ds-bridge");
-  const outDir = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, "reports");
+  const snapshot = mode === "snapshot";
+  const suffix = snapshot ? ".snapshot.html" : ".html";
+  const transform = snapshot ? normalizeSnapshot : (html) => html;
+  const outDir = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, snapshot ? "snapshots" : "reports");
   const names = resolvePublishNames(targetDir, options);
   const entries = [];
   const writePage = (name, html) => {
-    const written = writeDashboard(join22(outDir, `${name}.html`), html);
+    const written = writeDashboard(
+      join22(outDir, `${name}${suffix}`),
+      transform(html)
+    );
     if (written.kind === "error") {
       failReport(written.message);
       return false;
     }
-    entries.push({ name, href: `./${name}.html` });
+    entries.push({ name, href: `./${name}${suffix}` });
     return true;
   };
   if (names.length === 0) {
@@ -20481,9 +20496,10 @@ function runSiteReport(targetDir, options, selection, data, weightProfile) {
       if (!writePage(name, html)) return;
     }
   }
+  const indexName = snapshot ? "index.snapshot.html" : "index.html";
   const indexWritten = writeDashboard(
-    join22(outDir, "index.html"),
-    renderIndex(entries)
+    join22(outDir, indexName),
+    transform(renderIndex(entries))
   );
   if (indexWritten.kind === "error") {
     failReport(indexWritten.message);
@@ -20535,6 +20551,12 @@ function runReport(path, options) {
   if (options.gate && format !== "md") {
     failReport(
       "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
+    );
+    return;
+  }
+  if (options.snapshot && format !== "html" && format !== "site") {
+    failReport(
+      `--snapshot renders HTML snapshots \u2014 not valid with --format ${format}.`
     );
     return;
   }
@@ -20616,8 +20638,19 @@ function runReport(path, options) {
     ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
     ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}
   };
+  if (options.snapshot === true) {
+    runSiteReport(
+      targetDir,
+      options,
+      selection,
+      data,
+      weightProfile,
+      "snapshot"
+    );
+    return;
+  }
   if (format === "site") {
-    runSiteReport(targetDir, options, selection, data, weightProfile);
+    runSiteReport(targetDir, options, selection, data, weightProfile, "live");
     return;
   }
   if (format === "terminal") {
@@ -20694,6 +20727,10 @@ function registerReportCommand(program2) {
   ).option(
     "--all-dashboards",
     "with --format site: publish every committed (non-.local) saved dashboard",
+    false
+  ).option(
+    "--snapshot",
+    "write normalized committed HTML snapshots to .ds-bridge/snapshots/ (M12.1)",
     false
   ).option(
     "--out <file>",

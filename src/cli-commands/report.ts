@@ -106,6 +106,7 @@ import {
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 import { type IndexEntry, renderIndex } from "../render/html/index.js";
+import { normalizeSnapshot } from "../render/html/snapshot.js";
 import { renderTerminalDashboard } from "../render/terminal/dashboard.js";
 import { shouldColor } from "../render/terminal/index.js";
 
@@ -1034,6 +1035,8 @@ interface ReportOptions {
 	dashboards: string | undefined;
 	/** `--all-dashboards`: publish every committed (non-`.local`) saved dashboard. */
 	allDashboards: boolean | undefined;
+	/** `--snapshot`: write normalized committed HTML snapshots (M12.1). */
+	snapshot: boolean | undefined;
 }
 
 function failReport(message: string): void {
@@ -1617,22 +1620,34 @@ function runSiteReport(
 	selection: ResolvedSelection,
 	data: Parameters<typeof renderDashboard>[0],
 	weightProfile: ReturnType<typeof resolveWeightProfile>,
+	mode: "live" | "snapshot",
 ): void {
 	const stateDir = join(targetDir, ".ds-bridge");
+	// Snapshots (M12.1): normalized HTML committed to .ds-bridge/snapshots/ with a
+	// `.snapshot.html` suffix, so a content-free re-render is a zero-byte diff. The
+	// live site goes to .ds-bridge/reports/ unchanged.
+	const snapshot = mode === "snapshot";
+	const suffix = snapshot ? ".snapshot.html" : ".html";
+	const transform = snapshot
+		? normalizeSnapshot
+		: (html: string): string => html;
 	const outDir =
 		options.out !== undefined
 			? resolve(options.out)
-			: join(stateDir, "reports");
+			: join(stateDir, snapshot ? "snapshots" : "reports");
 	const names = resolvePublishNames(targetDir, options);
 	const entries: IndexEntry[] = [];
 
 	const writePage = (name: string, html: string): boolean => {
-		const written = writeDashboard(join(outDir, `${name}.html`), html);
+		const written = writeDashboard(
+			join(outDir, `${name}${suffix}`),
+			transform(html),
+		);
 		if (written.kind === "error") {
 			failReport(written.message);
 			return false;
 		}
-		entries.push({ name, href: `./${name}.html` });
+		entries.push({ name, href: `./${name}${suffix}` });
 		return true;
 	};
 
@@ -1676,9 +1691,10 @@ function runSiteReport(
 		}
 	}
 
+	const indexName = snapshot ? "index.snapshot.html" : "index.html";
 	const indexWritten = writeDashboard(
-		join(outDir, "index.html"),
-		renderIndex(entries),
+		join(outDir, indexName),
+		transform(renderIndex(entries)),
 	);
 	if (indexWritten.kind === "error") {
 		failReport(indexWritten.message);
@@ -1758,6 +1774,14 @@ function runReport(path: string, options: ReportOptions): void {
 	if (options.gate && format !== "md") {
 		failReport(
 			"--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard).",
+		);
+		return;
+	}
+	// --snapshot writes normalized HTML snapshots; it is incompatible with the
+	// text targets (md/terminal). html/site are fine (site implies html pages).
+	if (options.snapshot && format !== "html" && format !== "site") {
+		failReport(
+			`--snapshot renders HTML snapshots — not valid with --format ${format}.`,
 		);
 		return;
 	}
@@ -1915,11 +1939,26 @@ function runReport(path: string, options: ReportOptions): void {
 		...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
 	};
 
+	// Snapshots (M12.1): write normalized committed HTML snapshots and return,
+	// regardless of the (html/site) format. Reuses the publish set, so canonical
+	// named dashboards (never `.local`) snapshot to .ds-bridge/snapshots/.
+	if (options.snapshot === true) {
+		runSiteReport(
+			targetDir,
+			options,
+			selection,
+			data,
+			weightProfile,
+			"snapshot",
+		);
+		return;
+	}
+
 	// Static site (M11.1): render the explicit publish set — each dashboard to
 	// reports/<name>.html + a generated reports/index.html. Returns before the
 	// single-page html/terminal tails.
 	if (format === "site") {
-		runSiteReport(targetDir, options, selection, data, weightProfile);
+		runSiteReport(targetDir, options, selection, data, weightProfile, "live");
 		return;
 	}
 
@@ -2025,6 +2064,11 @@ export function registerReportCommand(program: Command): void {
 		.option(
 			"--all-dashboards",
 			"with --format site: publish every committed (non-.local) saved dashboard",
+			false,
+		)
+		.option(
+			"--snapshot",
+			"write normalized committed HTML snapshots to .ds-bridge/snapshots/ (M12.1)",
 			false,
 		)
 		.option(

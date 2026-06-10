@@ -1520,7 +1520,9 @@ describe("publish config key", () => {
 	});
 
 	it("rejects an empty publish array", () => {
-		const out = resolveConfig({ projectFileText: JSON.stringify({ publish: [] }) });
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({ publish: [] }),
+		});
 		expect(out.kind).toBe("invalid-project-file");
 	});
 

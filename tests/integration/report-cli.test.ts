@@ -2449,9 +2449,9 @@ describe("ds-bridge report — static site (M11.1)", () => {
 		]);
 		expect(result.code).toBe(0);
 		expect(result.stdout.trim()).toBe(siteDir);
-		await expect(readFile(join(siteDir, "index.html"), "utf8")).resolves.toContain(
-			"ds-bridge dashboards",
-		);
+		await expect(
+			readFile(join(siteDir, "index.html"), "utf8"),
+		).resolves.toContain("ds-bridge dashboards");
 	});
 
 	it("an unknown dashboard in the publish set exits 2", async () => {
@@ -2467,5 +2467,65 @@ describe("ds-bridge report — static site (M11.1)", () => {
 		]);
 		expect(result.code).toBe(2);
 		expect(result.stderr).toContain("nope");
+	});
+});
+
+// ---------- M12.1 — committed HTML snapshots ----------
+
+describe("ds-bridge report — snapshots (M12.1)", () => {
+	it("--snapshot writes a normalized <name>.snapshot.html + index.snapshot.html", async () => {
+		const dir = await freshTmp("ds-report-snap-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, { dashboard_view: "ds-manager" });
+
+		const result = await runCli(["report", dir, "--snapshot"]);
+		expect(result.code).toBe(0);
+		const snapDir = join(dir, ".ds-bridge", "snapshots");
+		const page = await readFile(join(snapDir, "ds-manager.snapshot.html"), "utf8");
+		// Normalized: the live timestamp is the fixed sentinel.
+		expect(page).toContain("Generated __GENERATED_AT__");
+		expect(page).not.toMatch(/Generated \d{4}-\d\d-\d\dT/);
+		await expect(
+			readFile(join(snapDir, "index.snapshot.html"), "utf8"),
+		).resolves.toContain("ds-bridge dashboards");
+	});
+
+	it("a content-free re-render is a ZERO-byte diff", async () => {
+		const dir = await freshTmp("ds-report-snap-stable-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, { dashboard_view: "ds-manager" });
+		const snapFile = join(
+			dir,
+			".ds-bridge",
+			"snapshots",
+			"ds-manager.snapshot.html",
+		);
+
+		await runCli(["report", dir, "--snapshot"]);
+		const first = await readFile(snapFile, "utf8");
+		await runCli(["report", dir, "--snapshot"]);
+		const second = await readFile(snapFile, "utf8");
+		expect(second).toBe(first);
+	});
+
+	it("snapshots carry no absolute paths / run-ids", async () => {
+		const dir = await freshTmp("ds-report-snap-clean-");
+		await seedSixArtifacts(dir);
+		const result = await runCli(["report", dir, "--snapshot"]);
+		expect(result.code).toBe(0);
+		const page = await readFile(
+			join(dir, ".ds-bridge", "snapshots", "dashboard.snapshot.html"),
+			"utf8",
+		);
+		expect(page).not.toContain(dir); // no absolute tmp path leaked
+		expect(page).not.toContain("/Users/");
+	});
+
+	it("--snapshot with --format md → exit 2 (HTML-only)", async () => {
+		const dir = await freshTmp("ds-report-snap-md-");
+		await seedSixArtifacts(dir);
+		const result = await runCli(["report", dir, "--snapshot", "--format", "md"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("--snapshot");
 	});
 });
