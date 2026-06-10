@@ -13,7 +13,13 @@ import {
 } from "../../engines/report/catalog.js";
 import type { ParityStatus, ReportData } from "../../engines/report/types.js";
 import type { LineSeries } from "./charts.js";
-import { barChart, donutGauge, heatGrid, lineChart } from "./charts.js";
+import {
+	barChart,
+	donutGauge,
+	heatGrid,
+	lineChart,
+	statusGrid,
+} from "./charts.js";
 
 /** Escape the five XML-significant characters for safe HTML text/attributes. */
 function escapeHtml(value: string): string {
@@ -654,6 +660,54 @@ function changeFrequencySection(data: ReportData): string {
 	);
 }
 
+/**
+ * C1 — Targets / SLAs → a RAG status grid (one row per verdict: metric label ·
+ * measured · target+op · a band-colored pill) plus a band-key legend table. The
+ * `band` discriminator drives the pill fill (green/amber/red, neutral for
+ * "unknown"); a never-recorded `measured` reads "—". Absent (or empty) data →
+ * the shared empty-state helper with a run-a-report hint.
+ */
+function targetsSection(data: ReportData): string {
+	const targets = data.targets;
+	if (targets === undefined || targets.length === 0) {
+		return panel("Targets / SLAs", emptyState("report"));
+	}
+
+	const rows = targets.map((verdict) => ({
+		label: COMPONENT_LABEL[verdict.metric] ?? verdict.metric,
+		measured: verdict.measured === undefined ? "—" : String(verdict.measured),
+		target: `${verdict.op} ${verdict.target}`,
+		band: verdict.band,
+	}));
+
+	const legendRows = (["green", "amber", "red", "unknown"] as const)
+		.map(
+			(band) =>
+				`<tr><td>${escapeHtml(band)}</td><td>${escapeHtml(
+					band === "green"
+						? "meets target"
+						: band === "amber"
+							? "near target"
+							: band === "red"
+								? "misses target"
+								: "not measured",
+				)}</td></tr>`,
+		)
+		.join("");
+
+	const legend = [
+		'<table class="weights">',
+		"<thead><tr><th>Band</th><th>Meaning</th></tr></thead>",
+		`<tbody>${legendRows}</tbody>`,
+		"</table>",
+	].join("");
+
+	return panel(
+		"Targets / SLAs",
+		[`<div class="chart">${statusGrid(rows)}</div>`, legend].join(""),
+	);
+}
+
 // Each artifact id maps to the section renderer for its ReportData slice. The
 // keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
 // caller-supplied selection over this map is what gates DOM inclusion (an id
@@ -672,10 +726,10 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"library-health": libraryHealthSection,
 	"breaking-calendar": breakingCalendarSection,
 	"change-frequency": changeFrequencySection,
-	// M0.1 stubs — empty-state when absent, a placeholder body when present.
-	// Real chart renderers land in M4; keys exist now so the composer/catalog
-	// completeness gate (24 artifacts) holds.
-	targets: (d) => panel("Targets / SLAs", stubBody(d.targets, "report")),
+	// C1 targets now renders its real RAG status grid (M4.1). The remaining ten
+	// metric artifacts (C3–C13) stay M0.1 stubs until M4.2; keys exist now so the
+	// composer/catalog completeness gate (24 artifacts) holds.
+	targets: targetsSection,
 	"parity-trend": (d) =>
 		panel("Parity trend", stubBody(d.parityTrend, "registry build")),
 	"component-health": (d) =>

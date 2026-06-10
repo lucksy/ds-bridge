@@ -311,6 +311,87 @@ export function donutGauge(
 	].join("");
 }
 
+/** A RAG band for a status row; "unknown" renders neutral. */
+export type StatusBand = "green" | "amber" | "red" | "unknown";
+
+/** One status-grid row: a metric label, its measured/target text and a band. */
+export interface StatusRow {
+	label: string;
+	measured: string;
+	target: string;
+	band: StatusBand;
+}
+
+export interface StatusGridOptions {
+	width?: number;
+	height?: number;
+}
+
+// RAG pill fills, mirroring badge.ts BAND_GREEN/AMBER/RED; "unknown" is neutral.
+const STATUS_BAND_FILL: Record<StatusBand, string> = {
+	green: "#16a34a",
+	amber: "#d97706",
+	red: "#dc2626",
+	unknown: TRACK_COLOR,
+};
+
+/**
+ * Render a RAG status grid: one row per verdict — a metric label, its measured
+ * value, the target+operator, and a band-colored pill carrying the band name.
+ * Deterministic, self-contained SVG. Returns an empty-state SVG when there are
+ * no rows.
+ */
+export function statusGrid(
+	rows: StatusRow[],
+	opts: StatusGridOptions = {},
+): string {
+	const width = opts.width ?? 480;
+	const rowH = 28;
+	const height = opts.height ?? Math.max(rowH, rows.length * rowH + 8);
+
+	if (rows.length === 0) {
+		return emptyState(width, height, "Status grid (no data)");
+	}
+
+	const pad = { top: 4, left: 8, right: 8 };
+	const pillW = 76;
+	const pillX = round(width - pad.right - pillW);
+	const measuredX = round(width * 0.42);
+	const targetX = round(width * 0.62);
+
+	const parts: string[] = [];
+	parts.push(svgOpen(width, height));
+	parts.push(
+		`<title>Status grid: ${escapeXml(rows.map((r) => r.label).join(", "))}</title>`,
+	);
+
+	rows.forEach((row, index) => {
+		const y = pad.top + index * rowH;
+		const midY = round(y + rowH / 2 + 3);
+		const fill = STATUS_BAND_FILL[row.band];
+		const pillTextColor = row.band === "unknown" ? TEXT_COLOR : "#ffffff";
+
+		parts.push(
+			`<text x="${pad.left}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR}" font-family="sans-serif" font-size="11" font-weight="600">${escapeXml(row.label)}</text>`,
+		);
+		parts.push(
+			`<text x="${measuredX}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR}" font-family="sans-serif" font-size="11">${escapeXml(row.measured)}</text>`,
+		);
+		parts.push(
+			`<text x="${targetX}" y="${midY}" text-anchor="start" fill="${AXIS_COLOR}" font-family="sans-serif" font-size="11">${escapeXml(row.target)}</text>`,
+		);
+		parts.push(
+			`<rect class="pill" x="${pillX}" y="${round(y + 5)}" width="${pillW}" height="${rowH - 10}" fill="${fill}" rx="9" />`,
+		);
+		parts.push(
+			`<text x="${round(pillX + pillW / 2)}" y="${midY}" text-anchor="middle" fill="${pillTextColor}" font-family="sans-serif" font-size="10" font-weight="600">${escapeXml(row.band)}</text>`,
+		);
+	});
+
+	parts.push("</svg>");
+	return parts.join("");
+}
+
 /**
  * Render a grid of cells whose `intensity` (clamped to [0, 1]) maps onto the
  * fill opacity, with row labels. Returns an empty-state SVG when there are no
