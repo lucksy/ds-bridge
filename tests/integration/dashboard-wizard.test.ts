@@ -93,18 +93,19 @@ describe("runSetupWizard (injected streams)", () => {
 	});
 
 	it("happy path: pick a preset, no customization → persists dashboard_view", async () => {
-		// presets listed 1..5 in PRESET_NAMES order: owner, engineering, design,
-		// consumer, everything. Pick 1 (owner), customize? N, confirm y.
+		// presets listed 1..7 in PRESET_NAMES order: ds-designer, ds-manager,
+		// ds-engineer, product-designer, product-manager, product-engineer,
+		// everything. Pick 1 (ds-designer), customize? N, confirm y.
 		const { exitCode, output } = await drive(["1", "n", "y"]);
 		expect(exitCode).toBe(0);
 		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
 			string,
 			unknown
 		>;
-		expect(written.dashboard_view).toBe("owner");
+		expect(written.dashboard_view).toBe("ds-designer");
 		expect(written.dashboard_artifacts).toBeUndefined();
 		// numbered preset list shown + final view summary + report hint
-		expect(output).toContain("owner");
+		expect(output).toContain("ds-designer");
 		expect(output.toLowerCase()).toContain("report --open");
 	});
 
@@ -112,10 +113,12 @@ describe("runSetupWizard (injected streams)", () => {
 		const { output } = await drive(["1", "n", "y"]);
 		expect(output).toMatch(/1[).:]/);
 		for (const name of [
-			"owner",
-			"engineering",
-			"design",
-			"consumer",
+			"ds-designer",
+			"ds-manager",
+			"ds-engineer",
+			"product-designer",
+			"product-manager",
+			"product-engineer",
 			"everything",
 		]) {
 			expect(output).toContain(name);
@@ -123,10 +126,9 @@ describe("runSetupWizard (injected streams)", () => {
 	});
 
 	it("customize add+remove loop materializes an explicit artifact list", async () => {
-		// Pick owner (the seven owner artifacts — wave-3 B3); customize? y; add
-		// impact; remove parity; done; confirm y.
-		// → [system-score, adoption-trend, import-coverage, leaderboard, drift-trend,
-		//    a11y, impact]
+		// Pick 1 (ds-designer — nine §3.2 artifacts); customize? y; add impact;
+		// remove parity; done; confirm y. → ds-designer materialized (catalog order),
+		// + impact (appended), − parity (dropped).
 		const { exitCode } = await drive([
 			"1",
 			"y",
@@ -142,22 +144,22 @@ describe("runSetupWizard (injected streams)", () => {
 		>;
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
-			"drift-trend",
+			"readiness",
 			"a11y",
+			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 			"impact",
 		]);
 		expect(written.dashboard_view).toBeUndefined();
 	});
 
-	it("B5: customizing the design preset materializes a list including library-health", async () => {
-		// presets listed 1..5 in PRESET_NAMES order: owner, engineering, design,
-		// consumer, everything. Pick 3 (design = system-score, readiness, a11y,
-		// parity, library-health — wave-6 B5); customize? y; add impact; done;
-		// confirm y. The materialized list preserves design order + the new addition.
-		const { exitCode } = await drive(["3", "y", "add impact", "done", "y"]);
+	it("B5: customizing the ds-designer preset materializes a list including library-health", async () => {
+		// Pick 1 (ds-designer — includes library-health); customize? y; add impact;
+		// done; confirm y. The materialized list preserves catalog order + addition.
+		const { exitCode } = await drive(["1", "y", "add impact", "done", "y"]);
 		expect(exitCode).toBe(0);
 		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
 			string,
@@ -166,19 +168,22 @@ describe("runSetupWizard (injected streams)", () => {
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
 			"readiness",
-			"a11y",
 			"parity",
+			"a11y",
 			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 			"impact",
 		]);
 		expect(written.dashboard_view).toBeUndefined();
 	});
 
-	it("B6: customizing the consumer preset materializes the breaking-calendar + change-frequency list", async () => {
-		// presets listed 1..5 in PRESET_NAMES order: owner, engineering, design,
-		// consumer, everything. Pick 4 (consumer = system-score, parity, impact,
-		// breaking-calendar, change-frequency — wave-7 B6); customize? y; done;
-		// confirm y. With no edits the materialized list equals the consumer preset.
+	it("B6: customizing the product-designer preset materializes the breaking-calendar + change-frequency list", async () => {
+		// Pick 4 (product-designer — includes breaking-calendar + change-frequency);
+		// customize? y; done; confirm y. With no edits the materialized list equals
+		// the product-designer preset (catalog order).
 		const { exitCode } = await drive(["4", "y", "done", "y"]);
 		expect(exitCode).toBe(0);
 		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
@@ -187,16 +192,24 @@ describe("runSetupWizard (injected streams)", () => {
 		>;
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
+			"readiness",
 			"parity",
-			"impact",
+			"a11y",
+			"library-health",
 			"breaking-calendar",
 			"change-frequency",
+			"parity-trend",
+			"component-health",
+			"audience-changelog",
+			"frame-implementability",
+			"data-freshness",
 		]);
 		expect(written.dashboard_view).toBeUndefined();
 	});
 
 	it("the customize loop shows the current selection each round", async () => {
-		const { output } = await drive(["1", "y", "add impact", "done", "y"]);
+		// Pick 2 (ds-manager — includes drift-trend + parity).
+		const { output } = await drive(["2", "y", "add impact", "done", "y"]);
 		// current selection echoed at least once with the preset's artifacts
 		expect(output).toContain("drift-trend");
 		expect(output).toContain("parity");
@@ -212,20 +225,22 @@ describe("runSetupWizard (injected streams)", () => {
 		]);
 		expect(exitCode).toBe(0);
 		expect(output.toLowerCase()).toContain("parity"); // suggestion echoed
-		// unknown add did not corrupt the selection: owner preset persisted as list
-		// (wave-3 B3: the full seven-artifact owner view).
+		// unknown add did not corrupt the selection: ds-designer preset persisted
+		// as its full nine-artifact §3.2 list.
 		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
 			string,
 			unknown
 		>;
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
-			"drift-trend",
+			"readiness",
 			"parity",
 			"a11y",
+			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 		]);
 	});
 
@@ -249,14 +264,14 @@ describe("runSetupWizard (injected streams)", () => {
 	});
 
 	it("an out-of-range preset number is re-prompted, not crashed", async () => {
-		// 9 is out of range → re-prompt; 1 picks owner; N; y.
+		// 9 is out of range (1..7) → re-prompt; 1 picks ds-designer; N; y.
 		const { exitCode } = await drive(["9", "1", "n", "y"]);
 		expect(exitCode).toBe(0);
 		const written = JSON.parse(await readFile(configPath(), "utf8")) as Record<
 			string,
 			unknown
 		>;
-		expect(written.dashboard_view).toBe("owner");
+		expect(written.dashboard_view).toBe("ds-designer");
 	});
 });
 

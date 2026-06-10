@@ -9426,25 +9426,18 @@ function writeProjectConfig(dir, patch) {
 }
 
 // src/engines/report/presets.ts
+function presetFor(persona) {
+  return CATALOG.filter(
+    (meta) => meta.personas.includes(persona)
+  ).map((meta) => meta.id);
+}
 var PRESETS = {
-  owner: [
-    "system-score",
-    "adoption-trend",
-    "import-coverage",
-    "leaderboard",
-    "drift-trend",
-    "parity",
-    "a11y"
-  ],
-  engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
-  design: ["system-score", "readiness", "a11y", "parity", "library-health"],
-  consumer: [
-    "system-score",
-    "parity",
-    "impact",
-    "breaking-calendar",
-    "change-frequency"
-  ],
+  "ds-designer": presetFor("ds-designer"),
+  "ds-manager": presetFor("ds-manager"),
+  "ds-engineer": presetFor("ds-engineer"),
+  "product-designer": presetFor("product-designer"),
+  "product-manager": presetFor("product-manager"),
+  "product-engineer": presetFor("product-engineer"),
   everything: [...ALL_ARTIFACT_IDS]
 };
 var PRESET_NAMES = Object.keys(PRESETS);

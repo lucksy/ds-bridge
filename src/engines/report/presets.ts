@@ -1,51 +1,48 @@
-// M0.2 — Persona presets + view resolution. Pure: the five frozen wave-1
-// views (SPEC-measure §3) and `resolveView`, which collapses the
-// flags > project > default-`everything` precedence chain into one ordered
-// ArtifactId selection or a typed error. No I/O, no throws — every domain
-// outcome (conflict, unknown view, unknown artifact) is a discriminated union,
-// and a deduped custom list reports its dedup via a notice rather than failing.
+// M6.1 — Persona presets + view resolution. Pure: the seven views — the SIX
+// clean persona names (`Persona == PresetName`) plus the default `everything` —
+// and `resolveView`, which collapses the flags > project > default-`everything`
+// precedence chain into one ordered ArtifactId selection or a typed error. No
+// I/O, no throws — every domain outcome (conflict, unknown view, unknown
+// artifact) is a discriminated union, and a deduped custom list reports its
+// dedup via a notice rather than failing.
+//
+// Each persona preset is its FULL intended set (SPEC-personas §3.2), derived as
+// the single source of truth from the catalog's per-artifact persona tags, in
+// catalog render order. So `system-score` (catalog index 0, every persona) leads
+// every view automatically, and a preset can never drift from the tags.
 import {
 	ALL_ARTIFACT_IDS,
 	type ArtifactId,
+	CATALOG,
 	lookupArtifact,
+	type Persona,
 } from "./catalog.js";
 
-/** The five view names — four personas plus the default `everything`. */
-export type PresetName =
-	| "owner"
-	| "engineering"
-	| "design"
-	| "consumer"
-	| "everything";
+/** The seven view names — the six clean personas plus the default `everything`. */
+export type PresetName = Persona | "everything";
+
+/** A persona's full set: the catalog artifacts tagged for it, in catalog order. */
+function presetFor(persona: Persona): ArtifactId[] {
+	return CATALOG.filter((meta) =>
+		(meta.personas as readonly Persona[]).includes(persona),
+	).map((meta) => meta.id);
+}
 
 /**
- * The preset contents, each an ordered ArtifactId list. `system-score` leads
- * every view (SPEC-score §3 — the score tops every view); the wave-1 contents
- * follow in their frozen order (ids stay the stable contract). `everything`
- * mirrors the catalog order (system-score already at catalog index 0) so the
- * no-config default stays identical to the catalog.
+ * The preset contents, each an ordered ArtifactId list projected from the catalog
+ * persona tags. The six persona keys are listed explicitly (DS producers →
+ * product consumers) so the `satisfies Record<PresetName,…>` gate proves every
+ * view name has an entry; `everything` mirrors the full catalog order.
  */
 export const PRESETS = {
-	owner: [
-		"system-score",
-		"adoption-trend",
-		"import-coverage",
-		"leaderboard",
-		"drift-trend",
-		"parity",
-		"a11y",
-	],
-	engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
-	design: ["system-score", "readiness", "a11y", "parity", "library-health"],
-	consumer: [
-		"system-score",
-		"parity",
-		"impact",
-		"breaking-calendar",
-		"change-frequency",
-	],
+	"ds-designer": presetFor("ds-designer"),
+	"ds-manager": presetFor("ds-manager"),
+	"ds-engineer": presetFor("ds-engineer"),
+	"product-designer": presetFor("product-designer"),
+	"product-manager": presetFor("product-manager"),
+	"product-engineer": presetFor("product-engineer"),
 	everything: [...ALL_ARTIFACT_IDS],
-} as const satisfies Record<PresetName, readonly ArtifactId[]>;
+} satisfies Record<PresetName, readonly ArtifactId[]>;
 
 /** Every preset name (the view-resolution lookup surface). */
 export const PRESET_NAMES = Object.keys(PRESETS) as readonly PresetName[];
@@ -76,7 +73,7 @@ export type ResolveOutcome =
 	| { kind: "unknown-view"; view: string; suggestions: PresetName[] }
 	| { kind: "unknown-artifact"; id: string; suggestions: ArtifactId[] };
 
-/** Levenshtein edit distance — tiny and sufficient for the fixed five-name set. */
+/** Levenshtein edit distance — tiny and sufficient for the fixed seven-name set. */
 function editDistance(a: string, b: string): number {
 	const rows = a.length + 1;
 	const cols = b.length + 1;
@@ -104,7 +101,7 @@ function editDistance(a: string, b: string): number {
  * Nearest preset names for a user-supplied view string: prefix matches rank
  * first, then ascending edit distance (PRESET_NAMES order breaks ties).
  * Case-insensitive; nothing within distance 4 → no suggestions. Scoped to the
- * five view names — catalog's `suggestArtifactIds` is for artifact ids only.
+ * seven view names — catalog's `suggestArtifactIds` is for artifact ids only.
  */
 function suggestViewNames(input: string, limit = 3): PresetName[] {
 	const needle = input.toLowerCase();

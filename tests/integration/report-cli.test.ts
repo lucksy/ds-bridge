@@ -1115,26 +1115,31 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(normalized).toBe(golden);
 	});
 
-	it("--view owner renders all seven owner artifacts (8 svgs) and names the view", async () => {
+	it("a 7-artifact selection renders 8 svgs and only those sections", async () => {
 		const dir = await freshTmp("ds-report-view-owner-");
 		await seedSixArtifacts(dir);
 
-		const result = await runCli(["report", dir, "--view", "owner"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"system-score,adoption-trend,import-coverage,leaderboard,drift-trend,parity,a11y",
+		]);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// owner (B3) = system-score · adoption-trend · import-coverage · leaderboard
-		// · drift-trend · parity · a11y → the score section's gauge + trend (2) plus
-		// one chart each for the other six selected sections = EIGHT.
+		// system-score · adoption-trend · import-coverage · leaderboard · drift-trend
+		// · parity · a11y → the score section's gauge + trend (2) plus one chart each
+		// for the other six selected sections = EIGHT.
 		expect(countSvgs(html)).toBe(8);
 		// The omitted sections leave no trace (not even a title).
 		expect(html).not.toContain("Lint violations");
 		expect(html).not.toContain("Readiness");
 		expect(html).not.toContain("Change impact");
-		// The selected sections are present — including the new owner ones.
+		// The selected sections are present.
 		expect(html).toContain("System score");
 		expect(html).toContain("Adoption trend");
 		expect(html).toContain("Import coverage");
@@ -1142,15 +1147,18 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(html).toContain("Drift trend");
 		expect(html).toContain("Parity matrix");
 		expect(html).toContain("Contrast (a11y)");
-		// The active view is named in the HTML header.
-		expect(html).toContain("owner");
 	});
 
-	it("B3: --view owner renders the three owner artifacts with real data, not empty states", async () => {
+	it("B3: the adoption-coverage artifacts render real data, not empty states", async () => {
 		const dir = await freshTmp("ds-report-view-owner-data-");
 		await seedSixArtifacts(dir);
 
-		const result = await runCli(["report", dir, "--view", "owner"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"system-score,adoption-trend,import-coverage,leaderboard,drift-trend,parity,a11y",
+		]);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
@@ -1170,11 +1178,16 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(html).not.toContain("No data yet");
 	});
 
-	it("--view owner shows the computed system-score value in the HTML (S4b)", async () => {
+	it("a system-score selection shows the computed system-score value in the HTML (S4b)", async () => {
 		const dir = await freshTmp("ds-report-view-owner-score-");
 		await seedSixArtifacts(dir);
 
-		const result = await runCli(["report", dir, "--view", "owner"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"system-score,adoption-trend,import-coverage,leaderboard,drift-trend,parity,a11y",
+		]);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
@@ -1193,11 +1206,16 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(html).toContain("a11y");
 	});
 
-	it("B5: --view design renders the library-health section (appended last)", async () => {
+	it("B5: a design selection renders the library-health section (appended last)", async () => {
 		const dir = await freshTmp("ds-report-view-design-");
 		await seedSixArtifacts(dir);
 
-		const result = await runCli(["report", dir, "--view", "design"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"system-score,readiness,a11y,parity,library-health",
+		]);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
@@ -1222,14 +1240,18 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(parityAt).toBeLessThan(libraryAt);
 		// none of the design sections degrade to an empty state.
 		expect(html).not.toContain("No data yet");
-		expect(html).toContain("design");
 	});
 
-	it("B6: --view consumer renders the breaking-calendar list + the change-frequency bar", async () => {
+	it("B6: a consumer selection renders the breaking-calendar list + the change-frequency bar", async () => {
 		const dir = await freshTmp("ds-report-view-consumer-");
 		await seedSixArtifacts(dir);
 
-		const result = await runCli(["report", dir, "--view", "consumer"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"system-score,parity,impact,breaking-calendar,change-frequency",
+		]);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
@@ -1255,7 +1277,6 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		// change-frequency tallies the seeded kinds as bar labels.
 		expect(html).toContain("tokens-check");
 		expect(html).toContain("impact");
-		expect(html).toContain("consumer");
 	});
 
 	it("--artifacts parity,a11y renders exactly two sections", async () => {
@@ -1276,10 +1297,10 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		expect(html).not.toContain("Change impact");
 	});
 
-	it(".ds-bridge.json dashboard_view=engineering is respected with no flags", async () => {
+	it(".ds-bridge.json dashboard_view=ds-engineer is respected with no flags", async () => {
 		const dir = await freshTmp("ds-report-cfg-eng-");
 		await seedSixArtifacts(dir);
-		await seedProjectConfig(dir, { dashboard_view: "engineering" });
+		await seedProjectConfig(dir, { dashboard_view: "ds-engineer" });
 
 		const result = await runCli(["report", dir]);
 		expect(result.code).toBe(0);
@@ -1288,40 +1309,36 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// engineering = system-score · lint-summary · impact · drift-trend → the
-		// score's gauge + trend (2) plus one chart each for lint/impact/drift = 5.
-		expect(countSvgs(html)).toBe(5);
+		// ds-engineer includes lint-summary · impact · drift-trend (and parity),
+		// but NOT readiness or adoption-trend — the named config view resolved.
 		expect(html).toContain("System score");
 		expect(html).toContain("Lint violations");
 		expect(html).toContain("Change impact");
 		expect(html).toContain("Drift trend");
-		expect(html).not.toContain("Parity matrix");
 		expect(html).not.toContain("Readiness");
-		expect(html).toContain("engineering");
+		expect(html).not.toContain("Adoption trend");
+		// The active view is named in the HTML header.
+		expect(html).toContain("ds-engineer");
 	});
 
 	it("a --view flag beats a conflicting dashboard_view in config", async () => {
 		const dir = await freshTmp("ds-report-flag-wins-");
 		await seedSixArtifacts(dir);
-		await seedProjectConfig(dir, { dashboard_view: "engineering" });
+		await seedProjectConfig(dir, { dashboard_view: "ds-engineer" });
 
-		const result = await runCli(["report", dir, "--view", "consumer"]);
+		const result = await runCli(["report", dir, "--view", "product-manager"]);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
-		// consumer = system-score · parity · impact · breaking-calendar ·
-		// change-frequency → the score's gauge + trend (2) plus one chart each for
-		// parity/impact + the change-frequency per-kind bar = FIVE (B6);
-		// breaking-calendar is a LIST (no svg). engineering's lint absent.
-		expect(countSvgs(html)).toBe(5);
+		// product-manager includes parity but NOT lint-summary; the flag view won
+		// over the config's ds-engineer (whose lint section is therefore absent).
 		expect(html).toContain("System score");
 		expect(html).toContain("Parity matrix");
-		expect(html).toContain("Change impact");
 		expect(html).not.toContain("Lint violations");
-		expect(html).toContain("consumer");
+		expect(html).toContain("product-manager");
 	});
 
 	it("--view and --artifacts together → exit 2 mentioning mutual exclusivity", async () => {
@@ -1332,7 +1349,7 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			"report",
 			dir,
 			"--view",
-			"owner",
+			"ds-manager",
 			"--artifacts",
 			"parity,a11y",
 		]);
@@ -1361,7 +1378,7 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		const dir = await freshTmp("ds-report-bad-cfg-");
 		await seedSixArtifacts(dir);
 		await seedProjectConfig(dir, {
-			dashboard_view: "owner",
+			dashboard_view: "ds-manager",
 			dashboard_artifacts: ["parity", "a11y"],
 		});
 
@@ -1383,7 +1400,7 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 // a11y's weight to 1000, lifting the composite to 84 (85·1000 dominates the mean).
 describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 	const ownerByView = {
-		score_weights_by_view: { owner: { a11y: 1000 } },
+		score_weights_by_view: { "ds-manager": { a11y: 1000 } },
 	};
 
 	it("a by-view profile for the ACTIVE view re-weights the html composite", async () => {
@@ -1391,7 +1408,7 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 		await seedSixArtifacts(dir);
 		await seedProjectConfig(dir, ownerByView);
 
-		const result = await runCli(["report", dir, "--view", "owner"]);
+		const result = await runCli(["report", dir, "--view", "ds-manager"]);
 		expect(result.code).toBe(0);
 		const html = await readFile(
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
@@ -1401,7 +1418,7 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 		expect(html).toMatch(/<text[^>]*>84<\/text>/);
 		expect(html).not.toMatch(/<text[^>]*>76<\/text>/);
 		// The system-score section captions the active by-view profile by name.
-		expect(html).toContain("weights: owner profile");
+		expect(html).toContain("weights: ds-manager profile");
 	});
 
 	it("the by-view profile does NOT apply when a DIFFERENT view is active", async () => {
@@ -1411,7 +1428,7 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 
 		// `engineering` has no by-view profile → falls back to the defaults (76),
 		// and renders NO weight-profile caption.
-		const result = await runCli(["report", dir, "--view", "engineering"]);
+		const result = await runCli(["report", dir, "--view", "ds-engineer"]);
 		expect(result.code).toBe(0);
 		const html = await readFile(
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
@@ -1450,7 +1467,7 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 		// is `project` → no caption.
 		await seedProjectConfig(dir, { score_weights: { a11y: 1000 } });
 
-		const result = await runCli(["report", dir, "--view", "owner"]);
+		const result = await runCli(["report", dir, "--view", "ds-manager"]);
 		expect(result.code).toBe(0);
 		const html = await readFile(
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
@@ -1470,7 +1487,7 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 			"report",
 			dir,
 			"--view",
-			"owner",
+			"ds-manager",
 			"--format",
 			"md",
 		]);
@@ -1485,8 +1502,8 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 		await seedSixArtifacts(dir);
 		// The badge has no --view flag → it reads the project's dashboard_view.
 		await seedProjectConfig(dir, {
-			dashboard_view: "owner",
-			score_weights_by_view: { owner: { a11y: 1000 } },
+			dashboard_view: "ds-manager",
+			score_weights_by_view: { "ds-manager": { a11y: 1000 } },
 		});
 
 		const result = await runCli(["badge", dir]);

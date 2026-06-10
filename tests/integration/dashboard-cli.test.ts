@@ -116,29 +116,31 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		expect(drift?.personas).toEqual(["ds-manager", "ds-engineer"]);
 	});
 
-	it("with dashboard_view=owner, exactly system-score/drift-trend/parity/a11y are enabled", async () => {
+	it("with dashboard_view=ds-designer, exactly the ds-designer §3.2 set is enabled", async () => {
 		await writeFile(
 			configPath(),
-			`${JSON.stringify({ dashboard_view: "owner" }, null, 2)}\n`,
+			`${JSON.stringify({ dashboard_view: "ds-designer" }, null, 2)}\n`,
 			"utf8",
 		);
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
 		const enabled = parsed.artifacts.filter((a) => a.enabled).map((a) => a.id);
-		// owner is the full seven-artifact owner view (wave-3, B3). `list` reports
-		// the ENABLED set in CATALOG order, not preset order.
+		// ds-designer's full §3.2 set. `list` reports the ENABLED set in CATALOG
+		// order (which, for a persona projection, equals the preset order).
 		expect(enabled).toEqual([
 			"system-score",
-			"drift-trend",
+			"readiness",
 			"parity",
 			"a11y",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
+			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 		]);
 		expect(parsed.view.source).toBe("project");
-		expect(parsed.view.viewName).toBe("owner");
+		expect(parsed.view.viewName).toBe("ds-designer");
 	});
 
 	it("with a custom dashboard_artifacts list, only those are enabled and no viewName", async () => {
@@ -187,20 +189,26 @@ async function readConfig(): Promise<Record<string, unknown>> {
 }
 
 describe("ds-bridge dashboard set (built dist/cli.mjs)", () => {
-	it("set --view owner persists dashboard_view and resolves to owner on list", async () => {
-		const setResult = await run(["dashboard", "set", "--view", "owner", dir]);
+	it("set --view persists dashboard_view and resolves it on list", async () => {
+		const setResult = await run([
+			"dashboard",
+			"set",
+			"--view",
+			"ds-designer",
+			dir,
+		]);
 		expect(setResult.code).toBe(0);
 		const written = await readConfig();
-		expect(written.dashboard_view).toBe("owner");
+		expect(written.dashboard_view).toBe("ds-designer");
 		expect(written.dashboard_artifacts).toBeUndefined();
 
 		const listResult = await run(["dashboard", "list", "--format=json", dir]);
 		const parsed = JSON.parse(listResult.stdout) as JsonList;
-		expect(parsed.view.viewName).toBe("owner");
+		expect(parsed.view.viewName).toBe("ds-designer");
 	});
 
 	it("set --artifacts persists dashboard_artifacts and clears any prior view", async () => {
-		await run(["dashboard", "set", "--view", "owner", dir]);
+		await run(["dashboard", "set", "--view", "ds-designer", dir]);
 		const setResult = await run([
 			"dashboard",
 			"set",
@@ -219,7 +227,7 @@ describe("ds-bridge dashboard set (built dist/cli.mjs)", () => {
 			"dashboard",
 			"set",
 			"--view",
-			"owner",
+			"ds-designer",
 			"--artifacts",
 			"parity",
 			dir,
@@ -233,9 +241,9 @@ describe("ds-bridge dashboard set (built dist/cli.mjs)", () => {
 	});
 
 	it("set --view with an unknown preset exits 2 with suggestions", async () => {
-		const result = await run(["dashboard", "set", "--view", "ownr", dir]);
+		const result = await run(["dashboard", "set", "--view", "ds-designe", dir]);
 		expect(result.code).toBe(2);
-		expect(result.stderr.toLowerCase()).toContain("owner");
+		expect(result.stderr.toLowerCase()).toContain("designer");
 	});
 
 	it("set --artifacts with an unknown id exits 2 with suggestions", async () => {
@@ -253,19 +261,21 @@ describe("ds-bridge dashboard set (built dist/cli.mjs)", () => {
 
 describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 	it("materializes the current preset into an explicit list, with a notice", async () => {
-		await run(["dashboard", "set", "--view", "owner", dir]);
+		await run(["dashboard", "set", "--view", "ds-designer", dir]);
 		const result = await run(["dashboard", "add", "impact", dir]);
 		expect(result.code).toBe(0);
-		// owner = the seven owner artifacts → + impact = 8 (wave-3 B3).
+		// ds-designer's nine §3.2 artifacts → + impact (appended) = ten.
 		const written = await readConfig();
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
-			"drift-trend",
+			"readiness",
 			"parity",
 			"a11y",
+			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 			"impact",
 		]);
 		expect(written.dashboard_view).toBeUndefined();
@@ -282,18 +292,20 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 	});
 
 	it("removing an artifact materializes then drops it", async () => {
-		await run(["dashboard", "set", "--view", "owner", dir]);
+		await run(["dashboard", "set", "--view", "ds-designer", dir]);
 		const result = await run(["dashboard", "remove", "parity", dir]);
 		expect(result.code).toBe(0);
 		const written = await readConfig();
-		// owner = the seven owner artifacts → drop parity = six (wave-3 B3).
+		// ds-designer's nine §3.2 artifacts → drop parity = eight.
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
-			"drift-trend",
+			"readiness",
 			"a11y",
+			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 		]);
 	});
 
@@ -309,7 +321,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 	});
 
 	it("add with an unknown id exits 2 with suggestions and does not write", async () => {
-		await run(["dashboard", "set", "--view", "owner", dir]);
+		await run(["dashboard", "set", "--view", "ds-designer", dir]);
 		const before = await readFile(configPath(), "utf8");
 		const result = await run(["dashboard", "add", "paritee", dir]);
 		expect(result.code).toBe(2);
@@ -324,7 +336,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		const original = {
 			figma_file_key: "ABC123",
 			report_style: "html",
-			dashboard_view: "owner",
+			dashboard_view: "ds-designer",
 		};
 		await writeFile(
 			configPath(),
@@ -338,15 +350,17 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		expect(written.figma_file_key).toBe("ABC123");
 		expect(written.report_style).toBe("html");
 		expect(written.dashboard_view).toBeUndefined();
-		// owner = the seven owner artifacts → + impact (wave-3 B3)
+		// ds-designer's nine §3.2 artifacts → + impact (appended)
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
-			"drift-trend",
+			"readiness",
 			"parity",
 			"a11y",
+			"library-health",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"data-freshness",
 			"impact",
 		]);
 		// order preserved: unrelated keys first, dashboard_artifacts at the end
