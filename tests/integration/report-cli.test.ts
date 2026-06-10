@@ -457,9 +457,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		// The parity-trend section is present (titled) and NOT in its empty state
-		// (the stub renders a "preview" marker once parityTrend is populated).
+		// (the real renderer draws a line chart once parityTrend is populated).
 		expect(html).toContain("Parity trend");
-		expect(html).toContain("preview");
+		// M4: the real renderer draws a line chart with the date-range scope line.
+		expect(html).toContain("Component parity pass-% over");
 	});
 
 	it("C3/M2.1: no parity line → parity-trend section stays in its empty state", async () => {
@@ -474,9 +475,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Parity trend");
-		// No parity line → the stub stays empty-state (no "preview" marker), which is
-		// what keeps the no-config golden byte-identical.
-		expect(html).not.toContain("preview");
+		// No parity line → the section stays empty-state, which is what keeps the
+		// no-config golden byte-identical.
+		expect(html).toContain("No data yet");
 	});
 
 	it("C3/M2.1: a parity line contributes a parity component to the system score", async () => {
@@ -526,10 +527,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The migration-checklist section is present and NOT empty (the stub renders
-		// a "preview" marker once migrationChecklist is populated).
+		// The migration-checklist section is present and NOT empty: the real
+		// renderer lists the call site(s) to migrate.
 		expect(html).toContain("Migration checklist");
-		expect(html).toContain("preview");
+		expect(html).toContain("call site");
+		expect(html).toContain('<ul class="calendar">');
 	});
 
 	it("C7/M2.2: an impact line WITHOUT sites leaves the migration-checklist empty", async () => {
@@ -554,9 +556,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Migration checklist");
-		// No sites → the checklist is count-only/empty (no "preview" marker), keeping
-		// the no-config golden byte-identical.
-		expect(html).not.toContain("preview");
+		// No sites → the checklist is count-only/empty, keeping the no-config golden
+		// byte-identical.
+		expect(html).toContain("No data yet");
 	});
 
 	it("C10/M2.3: a changelog line populates the audience-changelog section", async () => {
@@ -593,10 +595,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The audience-changelog section is present and NOT empty (the stub renders
-		// a "preview" marker once audienceChangelog is populated).
+		// The audience-changelog section is present and NOT empty: the real renderer
+		// draws an audience column per slice.
 		expect(html).toContain("Changelog by audience");
-		expect(html).toContain("preview");
+		expect(html).toContain('class="audience-col"');
 	});
 
 	it("C10/M2.3: a changelog line with an empty recent[] leaves the section empty", async () => {
@@ -621,9 +623,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Changelog by audience");
-		// No sliceable entries → the stub stays empty-state (no "preview" marker),
-		// keeping the no-config golden byte-identical.
-		expect(html).not.toContain("preview");
+		// No sliceable entries → the section stays empty-state, keeping the no-config
+		// golden byte-identical.
+		expect(html).toContain("No data yet");
 	});
 
 	it("C11/M2.4: a frame-impl line populates the frame-implementability section", async () => {
@@ -651,10 +653,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The frame-implementability section is present and NOT empty (the stub
-		// renders a "preview" marker once frameImplementability is populated).
+		// The frame-implementability section is present and NOT empty: the real
+		// renderer draws a donut gauge + the resolved/total caption.
 		expect(html).toContain("Frame implementability");
-		expect(html).toContain("preview");
+		expect(html).toContain("requirements resolve to the system");
 	});
 
 	it("C11/M2.4: no frame-impl line → the frame-implementability section stays empty", async () => {
@@ -674,9 +676,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Frame implementability");
-		// No frame-impl line → the stub stays empty-state (no "preview" marker),
-		// keeping the no-config golden byte-identical.
-		expect(html).not.toContain("preview");
+		// No frame-impl line → the section stays empty-state, keeping the no-config
+		// golden byte-identical.
+		expect(html).toContain("No data yet");
 	});
 
 	it("C4/M3.2: a dated history line populates the data-freshness section", async () => {
@@ -695,11 +697,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The data-freshness section is present and NOT empty (the stub renders a
-		// "preview" marker once dataFreshness is populated). buildFreshness ALWAYS
-		// returns one row per tracked kind, so any tracked-kind run populates it.
+		// The data-freshness section is present and NOT empty: the real renderer
+		// draws a per-kind freshness list. buildFreshness ALWAYS returns one row per
+		// tracked kind, so any tracked-kind run populates it.
 		expect(html).toContain("Data freshness");
-		expect(html).toContain("preview");
+		expect(html).toContain("Measurement age per check-kind");
 	});
 
 	it("C5/M3.3: a registry populates the component-health section", async () => {
@@ -719,10 +721,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The component-health section is present and NOT empty (the stub renders a
-		// "preview" marker once componentHealth is populated from the parity join).
+		// The component-health section is present and NOT empty: the real renderer
+		// draws a worst-first bar chart + offenders list.
 		expect(html).toContain("Component health");
-		expect(html).toContain("preview");
+		expect(html).toContain("Composite health per component, worst-first");
 	});
 
 	it("C5/M3.3: no registry → the component-health section stays empty", async () => {
@@ -742,9 +744,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Component health");
-		// No registry + no handoff/a11y → no joinable signal → the stub stays
-		// empty-state (no "preview" marker), keeping the no-config golden neutral.
-		expect(html).not.toContain("preview");
+		// No registry + no handoff/a11y → no joinable signal → the section stays
+		// empty-state, keeping the no-config golden neutral.
+		expect(html).toContain("No data yet");
 	});
 
 	it("C9/M3.6: an `ownership` config + adoption byDirectory populates the ownership-leaderboard", async () => {
@@ -768,10 +770,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The leaderboard is present and NOT empty (the stub renders "preview" once
-		// ownershipLeaderboard is populated from the byDirectory ⋈ ownership join).
+		// The leaderboard is present and NOT empty: the real renderer draws a
+		// worst-first bar chart with the per-owner refs/literals split.
 		expect(html).toContain("Ownership leaderboard");
-		expect(html).toContain("preview");
+		expect(html).toContain("On-system % by owner, worst-first");
 	});
 
 	it("C9/M3.6: an `ownership_file` (CODEOWNERS) populates the ownership-leaderboard", async () => {
@@ -795,7 +797,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Ownership leaderboard");
-		expect(html).toContain("preview");
+		expect(html).toContain("On-system % by owner, worst-first");
 	});
 
 	it("C9/M3.6: no ownership config → the ownership-leaderboard stays empty", async () => {
@@ -813,9 +815,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Ownership leaderboard");
-		// byDirectory present but no ownership rules → rollup is [] → empty-state (no
-		// "preview" marker), keeping the no-config golden byte-identical.
-		expect(html).not.toContain("preview");
+		// byDirectory present but no ownership rules → rollup is [] → empty-state,
+		// keeping the no-config golden byte-identical.
+		expect(html).toContain("No data yet");
 	});
 
 	it("C13/M3.7: a release signal populates the release-readiness section", async () => {
@@ -839,10 +841,12 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
-		// The section populates (the stub renders "preview" once releaseReadiness has
-		// checks — here impact passes, drift/parity insufficient → no-go).
+		// The section populates (releaseReadiness has checks — here impact passes,
+		// drift/parity insufficient → no-go). The real renderer draws a go/no-go
+		// badge + a checklist.
 		expect(html).toContain("Release readiness");
-		expect(html).toContain("preview");
+		expect(html).toContain("NO-GO");
+		expect(html).toContain('<ul class="calendar">');
 	});
 
 	it("C13/M3.7: no release signal → the release-readiness section stays empty", async () => {
@@ -861,12 +865,12 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
 		expect(html).toContain("Release readiness");
-		// No release signal → empty-checks rollup → empty-state (no "preview"),
-		// keeping a signal-free project's section neutral.
-		expect(html).not.toContain("preview");
+		// No release signal → empty-checks rollup → empty-state, keeping a
+		// signal-free project's section neutral.
+		expect(html).toContain("No data yet");
 	});
 
-	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
+	it("B6 ACCEPTANCE: all thirteen artifacts present → FIFTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
@@ -906,7 +910,12 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// per-kind bar → 13 (B6). breaking-calendar is a LIST, not a chart, so the
 		// svg delta is +1, NOT +2 (the seed's stale>0 tokens-check + breaking>0
 		// impact populate the calendar list).
-		expect(countSvgs(html)).toBe(13);
+		// M4: of the five metric sections this seed populates, two draw a chart —
+		// C6 library-health-trend (a line chart) and C5 component-health (a bar
+		// chart) → +2 → 15. The other three populated sections are a stat block
+		// (C8 score-velocity) and lists (C4 data-freshness, C13 release-readiness),
+		// which draw NO svg.
+		expect(countSvgs(html)).toBe(15);
 		// None of the thirteen DATA sections falls back to the empty state; of the 11
 		// metric-artifact stubs (C1–C13), five now POPULATE from this seed — C6
 		// library-health-trend (a dated library-health line), C8 score-velocity
@@ -1610,7 +1619,7 @@ describe("ds-bridge report — markdown scorecard (C4)", () => {
 // ---------- C1 / M3.1 — targets RAG engine + --gate CI exit ----------
 
 describe("ds-bridge report — targets RAG + --gate (C1)", () => {
-	it("a metric_targets config populates the targets section (preview flip)", async () => {
+	it("a metric_targets config populates the targets section", async () => {
 		const dir = await freshTmp("ds-report-targets-");
 		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
 		// on-system from the adoption block is 75% → a >=90 target is amber/red.
@@ -1626,8 +1635,10 @@ describe("ds-bridge report — targets RAG + --gate (C1)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Targets");
-		// The targets section is populated (no longer the empty stub).
-		expect(html).toContain("preview");
+		// The targets section is populated: the real renderer draws a RAG status
+		// grid + a band-key legend.
+		expect(html).toContain("Status grid:");
+		expect(html).toContain("<th>Band</th>");
 	});
 
 	it("no metric_targets config → the targets section stays in its empty state", async () => {
@@ -1642,8 +1653,8 @@ describe("ds-bridge report — targets RAG + --gate (C1)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Targets");
-		// No config → empty state (no preview marker), keeping the golden neutral.
-		expect(html).not.toContain("preview");
+		// No config → empty state, keeping the golden neutral.
+		expect(html).toContain("No data yet");
 	});
 
 	it("--gate exits 1 when a metric_targets verdict is red (md)", async () => {
@@ -1735,8 +1746,11 @@ describe("ds-bridge report — library-health trend (C6)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Library health trend");
-		// Two dated points → the section is populated (no longer the empty stub).
-		expect(html).toContain("preview");
+		// Two dated points → the section is populated: the real renderer draws a
+		// multi-series line chart over the date range.
+		expect(html).toContain(
+			"<b>Overrides</b> · <b>Deprecated</b> · <b>Detached</b>",
+		);
 	});
 
 	it("no library-health line → the trend section stays in its empty state", async () => {
@@ -1758,7 +1772,7 @@ describe("ds-bridge report — library-health trend (C6)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Library health trend");
-		expect(html).not.toContain("preview");
+		expect(html).toContain("No data yet");
 	});
 });
 
@@ -1786,8 +1800,9 @@ describe("ds-bridge report — score velocity (C8)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Score velocity");
-		// Two trend points → the section is populated (no longer the empty stub).
-		expect(html).toContain("preview");
+		// Two trend points → the section is populated: the real renderer draws the
+		// signed delta over the window + a regression-streak line.
+		expect(html).toContain("regression streak");
 	});
 
 	it("a single-point trend (<2 points) → the score-velocity section stays empty", async () => {
@@ -1809,7 +1824,7 @@ describe("ds-bridge report — score velocity (C8)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Score velocity");
-		expect(html).not.toContain("preview");
+		expect(html).toContain("No data yet");
 	});
 
 	it("accepts a --velocity-window flag and still renders the velocity section", async () => {
@@ -1834,7 +1849,7 @@ describe("ds-bridge report — score velocity (C8)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Score velocity");
-		expect(html).toContain("preview");
+		expect(html).toContain("regression streak");
 	});
 
 	it("reads score_velocity_window from config (a multi-point trend still populates)", async () => {
@@ -1858,7 +1873,7 @@ describe("ds-bridge report — score velocity (C8)", () => {
 			"utf8",
 		);
 		expect(html).toContain("Score velocity");
-		expect(html).toContain("preview");
+		expect(html).toContain("regression streak");
 	});
 
 	it("rejects a malformed --velocity-window with exit 2", async () => {

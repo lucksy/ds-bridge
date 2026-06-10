@@ -288,13 +288,19 @@ describe("renderDashboard — full data", () => {
 		expect(html).toMatch(/Change frequency/i);
 	});
 
-	it("emits exactly thirteen <svg> charts (one per chart section + the score gauge & trend)", () => {
+	it("emits exactly nineteen <svg> charts (one per chart section + the score gauge & trend)", () => {
 		// six wave-1 sections (one svg each) + system-score's gauge + trend (2) +
 		// the three owner sections (adoption-trend line, coverage donut,
 		// leaderboard bar) = 6 + 2 + 3 = 11 (B2) + library-health's totals bar = 12
 		// (B5) + change-frequency's per-kind bar = 13 (B6). breaking-calendar is a
-		// LIST, not a chart — it adds NO svg (svg delta is +1, not +2).
-		expect(countMatches(html, /<svg\b/g)).toBe(13);
+		// LIST, not a chart — it adds NO svg.
+		// M4: the persona-wave metric sections add six more chart svgs — targets
+		// (statusGrid) + parity-trend (line) + component-health (bar) +
+		// library-health-trend (line) + ownership-leaderboard (bar) +
+		// frame-implementability (donut) = +6 → 19. The LIST/stat-block sections
+		// (migration-checklist, score-velocity, audience-changelog,
+		// release-readiness, data-freshness) draw NO svg.
+		expect(countMatches(html, /<svg\b/g)).toBe(19);
 	});
 
 	it("renders the breaking-calendar as a date-grouped list with source badges (B6)", () => {
@@ -362,8 +368,10 @@ describe("renderDashboard — full data", () => {
 	it("includes a line chart with one polyline per drift series", () => {
 		// drift: breaking, additive, cosmetic → three series; the system-score
 		// trend adds one (S3) and the adoption-trend line adds one (B2) → five
-		// polylines document-wide.
-		expect(countMatches(html, /<polyline\b/g)).toBe(5);
+		// polylines from the wave-1/owner sections.
+		// M4: parity-trend's single pct series adds one and library-health-trend's
+		// three hygiene series add three → +4 → nine polylines document-wide.
+		expect(countMatches(html, /<polyline\b/g)).toBe(9);
 	});
 
 	it("includes lint counts in the bar chart", () => {

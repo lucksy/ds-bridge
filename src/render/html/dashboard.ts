@@ -11,7 +11,11 @@ import {
 	ALL_ARTIFACT_IDS,
 	type ArtifactId,
 } from "../../engines/report/catalog.js";
-import type { ParityStatus, ReportData } from "../../engines/report/types.js";
+import type {
+	FreshnessRow,
+	ParityStatus,
+	ReportData,
+} from "../../engines/report/types.js";
 import type { LineSeries } from "./charts.js";
 import {
 	barChart,
@@ -168,17 +172,6 @@ function panel(title: string, body: string): string {
 		body,
 		"</section>",
 	].join("");
-}
-
-/**
- * M0.1 placeholder body for a not-yet-rendered metric artifact (C1–C13): a
- * non-empty marker when its ReportData section is present, the shared
- * empty-state otherwise. Replaced by the real chart renderer in M4.
- */
-function stubBody(section: unknown, command: string): string {
-	return section === undefined
-		? emptyState(command)
-		: '<div class="meta">preview</div>';
 }
 
 // The human label for each score component kind in the legend table.
@@ -708,6 +701,415 @@ function targetsSection(data: ReportData): string {
 	);
 }
 
+/**
+ * Parity trend → line chart of component parity pass-% over dated points (C3).
+ * Mirrors {@link adoptionTrendSection}: one series of `pct` over `parityTrend`
+ * points, with a date-range scope line. Absent/empty data → the shared
+ * empty-state helper with a run-a-build hint.
+ */
+function parityTrendSection(data: ReportData): string {
+	const trend = data.parityTrend;
+	if (trend === undefined || trend.length === 0) {
+		return panel("Parity trend", emptyState("registry build"));
+	}
+
+	const series: LineSeries[] = [
+		{
+			label: "parity %",
+			points: trend.map((point, index) => ({ x: index, y: point.pct })),
+		},
+	];
+
+	const dateRange = `${escapeHtml(trend[0]?.date ?? "")} → ${escapeHtml(
+		trend[trend.length - 1]?.date ?? "",
+	)}`;
+
+	return panel(
+		"Parity trend",
+		[
+			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="meta">Component parity pass-% over ${dateRange}</div>`,
+		].join(""),
+	);
+}
+
+/**
+ * Component health → bar chart of each component's 0–100 composite health,
+ * worst-first (C5), plus an offenders-style list of the worst few with their
+ * contributing issues. The assembly hands rows pre-sorted worst-first; the
+ * renderer trusts that order (mirroring `leaderboardSection`). The red bar
+ * accent matches the worst-first leaderboard. Absent (or empty) data → the
+ * shared empty-state helper.
+ */
+function componentHealthSection(data: ReportData): string {
+	const rows = data.componentHealth;
+	if (rows === undefined || rows.length === 0) {
+		return panel("Component health", emptyState("registry build"));
+	}
+
+	const bars = rows.map((row) => ({
+		label: row.component,
+		value: row.healthScore,
+	}));
+
+	// The worst few components (already worst-first) with their joined issues.
+	const offenders = rows.slice(0, 5);
+	const list = [
+		'<ul class="offenders">',
+		...offenders.map((row) => {
+			const issues =
+				row.issues.length > 0 ? row.issues.join(", ") : "no issues";
+			return `<li><code>${escapeHtml(row.component)}</code><span class="count">${escapeHtml(String(row.healthScore))} · ${escapeHtml(issues)}</span></li>`;
+		}),
+		"</ul>",
+	].join("");
+
+	return panel(
+		"Component health",
+		[
+			'<div class="meta">Composite health per component, worst-first</div>',
+			`<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+			list,
+		].join(""),
+	);
+}
+
+/**
+ * Library health trend → multi-series line chart of the three hygiene counts
+ * (overrides / deprecated / detached) over dated states (C6). Mirrors
+ * driftSection's multi-series idiom: each series maps the trend with `x: index`
+ * so the polylines share the date ordering. Absent (or empty) data → the shared
+ * empty-state helper.
+ */
+function libraryHealthTrendSection(data: ReportData): string {
+	const trend = data.libraryHealthTrend;
+	if (trend === undefined || trend.length === 0) {
+		return panel("Library health trend", emptyState("library-health"));
+	}
+
+	const toSeries = (
+		label: string,
+		pick: (p: {
+			overrides: number;
+			deprecated: number;
+			detached: number;
+		}) => number,
+	): LineSeries => ({
+		label,
+		points: trend.map((point, index) => ({ x: index, y: pick(point) })),
+	});
+
+	const series: LineSeries[] = [
+		toSeries("overrides", (p) => p.overrides),
+		toSeries("deprecated", (p) => p.deprecated),
+		toSeries("detached", (p) => p.detached),
+	];
+
+	const dateRange = `${escapeHtml(trend[0]?.date ?? "")} → ${escapeHtml(
+		trend[trend.length - 1]?.date ?? "",
+	)}`;
+
+	return panel(
+		"Library health trend",
+		[
+			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="cols"><b>Overrides</b> · <b>Deprecated</b> · <b>Detached</b> over ${dateRange}</div>`,
+		].join(""),
+	);
+}
+
+/**
+ * Migration checklist → a per-call-site LIST (NOT a chart) of where each
+ * breaking change lands and the fix to apply (C7). Each entry reads
+ * `<file:line> · <subject> · <from> → <to>`; the assembly hands the sites
+ * pre-ordered and capped, and a `truncated` flag drives a "+N more" overflow
+ * note when sites were dropped at the cap. Absent (or no-site) data → the
+ * shared empty-state helper.
+ */
+function migrationChecklistSection(data: ReportData): string {
+	const checklist = data.migrationChecklist;
+	if (checklist === undefined || checklist.sites.length === 0) {
+		return panel("Migration checklist", emptyState("impact --checklist"));
+	}
+
+	const rows = checklist.sites
+		.map((site) => {
+			const where = `${site.file}:${site.line}`;
+			const detail = `${escapeHtml(site.subject)} · ${escapeHtml(site.from)} → ${escapeHtml(site.to)}`;
+			return `<li><code>${escapeHtml(where)}</code><span class="detail">${detail}</span></li>`;
+		})
+		.join("");
+
+	const overflow = checklist.truncated
+		? '<div class="meta">… and more sites beyond the cap</div>'
+		: "";
+
+	return panel(
+		"Migration checklist",
+		[
+			`<div class="meta">${escapeHtml(String(checklist.sites.length))} call site${checklist.sites.length === 1 ? "" : "s"} to migrate · file:line · subject · from → to</div>`,
+			`<ul class="calendar">${rows}</ul>`,
+			overflow,
+		].join(""),
+	);
+}
+
+/**
+ * Score velocity → a compact stat block (NO chart) of the windowed composite
+ * motion (C8). Reads the signed `delta` with a direction arrow (▲ up / ▼ down /
+ * ▬ flat), the `windowDays` window, and the consecutive `regressionStreak` as a
+ * trailing badge. The delta is rendered with an explicit sign so a positive
+ * move reads "+N" and a negative one "−N"; the arrow mirrors `direction`
+ * verbatim (the assembly owns the up/down/flat classification). Absent data →
+ * the shared empty-state helper.
+ */
+function scoreVelocitySection(data: ReportData): string {
+	const velocity = data.scoreVelocity;
+	if (velocity === undefined) {
+		return panel("Score velocity", emptyState("report"));
+	}
+
+	const { delta, windowDays, direction, regressionStreak } = velocity;
+
+	// Direction arrow mirrors the assembly's classification; the signed delta
+	// carries an explicit "+"/"−" so the number never reads ambiguously.
+	const ARROW: Record<"up" | "down" | "flat", string> = {
+		up: "▲",
+		down: "▼",
+		flat: "▬",
+	};
+	const arrow = ARROW[direction];
+	const signedDelta =
+		delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "0";
+
+	const streakBadge =
+		regressionStreak > 0
+			? `<span class="badge">${escapeHtml(String(regressionStreak))} regression${regressionStreak === 1 ? "" : "s"}</span>`
+			: "";
+
+	return panel(
+		"Score velocity",
+		[
+			`<div class="cols"><b>${escapeHtml(arrow)} ${escapeHtml(signedDelta)}</b> over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</div>`,
+			`<div class="meta">${escapeHtml(direction)} · regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`,
+		].join(""),
+	);
+}
+
+/**
+ * Ownership leaderboard → bar chart of on-system % by owner, worst-first (C9).
+ * Mirrors the adoption leaderboard: the renderer trusts the assembly's
+ * worst-first ordering; each bar's value is the owner's precomputed on-system
+ * percentage. A per-owner list pairs the pct with its refs/literals tally so the
+ * accountability number never stands alone. Absent (or empty) data → the shared
+ * empty-state helper.
+ */
+function ownershipLeaderboardSection(data: ReportData): string {
+	const rows = data.ownershipLeaderboard;
+	if (rows === undefined || rows.length === 0) {
+		return panel("Ownership leaderboard", emptyState("lint"));
+	}
+
+	const bars = rows.map((row) => ({
+		label: row.owner,
+		value: row.pct,
+	}));
+
+	// Per-owner pct labels with the refs/literals split (the bar widths are the
+	// same percentages); css/scss values only, worst-first.
+	const labels = [
+		'<ul class="offenders">',
+		...rows.map(
+			(row) =>
+				`<li><code>${escapeHtml(row.owner)}</code><span class="count">${escapeHtml(
+					String(row.pct),
+				)}% · ${escapeHtml(String(row.refs))} refs / ${escapeHtml(
+					String(row.literals),
+				)} literals</span></li>`,
+		),
+		"</ul>",
+	].join("");
+
+	return panel(
+		"Ownership leaderboard",
+		[
+			`<div class="meta">On-system % by owner, worst-first · css/scss values only</div>`,
+			`<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+			labels,
+		].join(""),
+	);
+}
+
+/**
+ * Changelog by audience → two labeled columns (designers / developers), each
+ * showing breaking/additive/cosmetic counts as badges plus a short recent list
+ * (C10). The assembly hands slices pre-shaped (recent capped, breaking-first);
+ * the renderer trusts that order. Pure markup — no chart fns. Absent (or
+ * no-slice) data → the shared empty-state helper.
+ */
+function audienceChangelogSection(data: ReportData): string {
+	const changelog = data.audienceChangelog;
+	if (changelog === undefined || changelog.slices.length === 0) {
+		return panel("Changelog by audience", emptyState("ds-changelog"));
+	}
+
+	const columns = changelog.slices
+		.map((slice) => {
+			const badges = [
+				`<span class="badge">breaking ${escapeHtml(String(slice.breaking))}</span>`,
+				`<span class="badge">additive ${escapeHtml(String(slice.additive))}</span>`,
+				`<span class="badge">cosmetic ${escapeHtml(String(slice.cosmetic))}</span>`,
+			].join("");
+
+			const recent =
+				slice.recent.length > 0
+					? [
+							'<ul class="offenders">',
+							...slice.recent.map(
+								(entry) => `<li><code>${escapeHtml(entry)}</code></li>`,
+							),
+							"</ul>",
+						].join("")
+					: '<div class="meta">No recent entries</div>';
+
+			return [
+				'<div class="audience-col">',
+				`<div class="cols"><b>${escapeHtml(slice.audience)}</b></div>`,
+				`<div class="meta">${badges}</div>`,
+				recent,
+				"</div>",
+			].join("");
+		})
+		.join("");
+
+	return panel("Changelog by audience", `<div class="cols">${columns}</div>`);
+}
+
+/**
+ * Frame implementability → donut gauge of the on-system pct (resolved/total) +
+ * a gaps-by-reason list (C11). The gauge shows how many of the frame's
+ * requirements resolve to the design system; each gap row names a reason and
+ * its count. Absent data → the shared empty-state helper.
+ */
+function frameImplementabilitySection(data: ReportData): string {
+	const frame = data.frameImplementability;
+	if (frame === undefined) {
+		return panel("Frame implementability", emptyState("frame-impl"));
+	}
+
+	const { pct, resolved, total, gaps } = frame;
+
+	const gapList =
+		gaps.length > 0
+			? [
+					'<ul class="offenders">',
+					...gaps.map(
+						(gap) =>
+							`<li><code>${escapeHtml(gap.reason)}</code><span class="count">${escapeHtml(String(gap.count))}</span></li>`,
+					),
+					"</ul>",
+				].join("")
+			: "";
+
+	return panel(
+		"Frame implementability",
+		[
+			`<div class="chart" style="text-align:center">${donutGauge(pct, { label: "Frame implementability" })}</div>`,
+			`<div class="meta">${escapeHtml(String(resolved))}/${escapeHtml(String(total))} requirements resolve to the system</div>`,
+			gapList,
+		].join(""),
+	);
+}
+
+/**
+ * Release readiness (C13) → a go/no-go header badge + a per-check checklist.
+ * The badge fill follows the RAG palette (green when `go`, red otherwise; band
+ * hexes mirror badge.ts) and each check renders `✓|✗ · name · detail`, its mark
+ * tinted by the same green/red. The assembly hands the rollup pre-composed; the
+ * renderer trusts the `go` flag and the per-check order. Absent data — or a
+ * present-but-checkless rollup — degrades to the shared empty-state helper.
+ */
+function releaseReadinessSection(data: ReportData): string {
+	const readiness = data.releaseReadiness;
+	if (readiness === undefined || readiness.checks.length === 0) {
+		return panel("Release readiness", emptyState("release-check"));
+	}
+
+	// RAG palette (mirrors badge.ts BAND_GREEN/BAND_RED): green = go, red = no-go.
+	const GO_FILL = "#16a34a";
+	const NO_GO_FILL = "#dc2626";
+
+	const headerFill = readiness.go ? GO_FILL : NO_GO_FILL;
+	const headerText = readiness.go ? "GO" : "NO-GO";
+	const header = `<div class="meta"><span class="badge" style="background:${headerFill};color:#ffffff">${escapeHtml(headerText)}</span></div>`;
+
+	const items = readiness.checks
+		.map((check) => {
+			const mark = check.pass ? "✓" : "✗";
+			const markFill = check.pass ? GO_FILL : NO_GO_FILL;
+			const detail =
+				check.detail !== undefined && check.detail.length > 0
+					? `<span class="detail">${escapeHtml(check.detail)}</span>`
+					: "";
+			return `<li><span class="date" style="color:${markFill}">${mark}</span><span class="detail">${escapeHtml(check.name)}</span>${detail}</li>`;
+		})
+		.join("");
+
+	return panel(
+		"Release readiness",
+		[header, `<ul class="calendar">${items}</ul>`].join(""),
+	);
+}
+
+/**
+ * Data freshness → a per-kind LIST (NOT a chart): one row per check-kind with
+ * its measurement age ("today" / "3d ago" / "never") and a band-colored pill
+ * (green/amber/red/unknown) signalling how trustworthy that surface's numbers
+ * are (C4). The renderer trusts the assembly's row order. A kind that has never
+ * run reports "never" with the neutral "unknown" pill; an absent (or empty)
+ * section → the shared empty-state helper.
+ */
+function dataFreshnessSection(data: ReportData): string {
+	const rows = data.dataFreshness;
+	if (rows === undefined || rows.length === 0) {
+		return panel("Data freshness", emptyState("report"));
+	}
+
+	// Band → pill fill. Greens/ambers/reds mirror the RAG palette (badge.ts);
+	// "unknown" (never run) gets a neutral subtle fill so it reads as absence,
+	// not a verdict. Inlined here because the section may import no new modules.
+	const BAND_FILL: Record<"green" | "amber" | "red" | "unknown", string> = {
+		green: "#16a34a",
+		amber: "#d97706",
+		red: "#dc2626",
+		unknown: "#57606a",
+	};
+
+	// Human age label: never-run → "never"; 0 days → "today"; else "Nd ago".
+	const ageLabel = (row: FreshnessRow): string => {
+		if (row.ageDays === undefined) return "never";
+		if (row.ageDays === 0) return "today";
+		return `${row.ageDays}d ago`;
+	};
+
+	const items = rows
+		.map((row) => {
+			const fill = BAND_FILL[row.band];
+			const pill = `<span class="badge" style="background:${fill};color:#ffffff">${escapeHtml(row.band)}</span>`;
+			const age = escapeHtml(ageLabel(row));
+			return `<li><span class="date">${escapeHtml(row.kind)}</span><span class="detail">${pill} ${age}</span></li>`;
+		})
+		.join("");
+
+	return panel(
+		"Data freshness",
+		[
+			'<div class="meta">Measurement age per check-kind · band signals trust</div>',
+			`<ul class="calendar">${items}</ul>`,
+		].join(""),
+	);
+}
+
 // Each artifact id maps to the section renderer for its ReportData slice. The
 // keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
 // caller-supplied selection over this map is what gates DOM inclusion (an id
@@ -726,39 +1128,19 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"library-health": libraryHealthSection,
 	"breaking-calendar": breakingCalendarSection,
 	"change-frequency": changeFrequencySection,
-	// C1 targets now renders its real RAG status grid (M4.1). The remaining ten
-	// metric artifacts (C3–C13) stay M0.1 stubs until M4.2; keys exist now so the
-	// composer/catalog completeness gate (24 artifacts) holds.
+	// Persona-wave metric sections (C1–C13). Real chart/list renderers (M4.1 +
+	// M4.2); the completeness gate (24 artifacts) holds via the Record type.
 	targets: targetsSection,
-	"parity-trend": (d) =>
-		panel("Parity trend", stubBody(d.parityTrend, "registry build")),
-	"component-health": (d) =>
-		panel("Component health", stubBody(d.componentHealth, "registry build")),
-	"library-health-trend": (d) =>
-		panel(
-			"Library health trend",
-			stubBody(d.libraryHealthTrend, "library-health"),
-		),
-	"migration-checklist": (d) =>
-		panel(
-			"Migration checklist",
-			stubBody(d.migrationChecklist, "impact --checklist"),
-		),
-	"score-velocity": (d) =>
-		panel("Score velocity", stubBody(d.scoreVelocity, "report")),
-	"ownership-leaderboard": (d) =>
-		panel("Ownership leaderboard", stubBody(d.ownershipLeaderboard, "lint")),
-	"audience-changelog": (d) =>
-		panel("Changelog by audience", stubBody(d.audienceChangelog, "changelog")),
-	"frame-implementability": (d) =>
-		panel(
-			"Frame implementability",
-			stubBody(d.frameImplementability, "frame-impl"),
-		),
-	"release-readiness": (d) =>
-		panel("Release readiness", stubBody(d.releaseReadiness, "report")),
-	"data-freshness": (d) =>
-		panel("Data freshness", stubBody(d.dataFreshness, "report")),
+	"parity-trend": parityTrendSection,
+	"component-health": componentHealthSection,
+	"library-health-trend": libraryHealthTrendSection,
+	"migration-checklist": migrationChecklistSection,
+	"score-velocity": scoreVelocitySection,
+	"ownership-leaderboard": ownershipLeaderboardSection,
+	"audience-changelog": audienceChangelogSection,
+	"frame-implementability": frameImplementabilitySection,
+	"release-readiness": releaseReadinessSection,
+	"data-freshness": dataFreshnessSection,
 };
 
 /** Optional rendering controls that do not affect which sections appear. */
