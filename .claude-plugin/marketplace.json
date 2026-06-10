@@ -1,0 +1,13 @@
+{
+	"name": "ds-bridge-dev",
+	"description": "Local development marketplace for the ds-bridge plugin",
+	"owner": {
+		"name": "lucksy"
+	},
+	"plugins": [
+		{
+			"name": "ds-bridge",
+			"source": "."
+		}
+	]
+}

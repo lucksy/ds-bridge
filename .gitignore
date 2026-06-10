@@ -22,6 +22,9 @@ npm-debug.log*
 .idea/
 .vscode/
 
+# Claude Code per-machine local state (plugin enablement, etc.) — never committed
+.claude/settings.local.json
+
 # Next.js (website/)
 website/.next/
 website/out/
