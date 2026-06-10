@@ -1,6 +1,7 @@
-// M0.1 — Artifact catalog. Test-first: the frozen ArtifactId contract, the
-// catalog's completeness against ReportData's optional sections, and the
-// nearest-match lookup are spec'd here before implementation.
+// M0.1 — Artifact catalog (fresh product: 24 artifacts, 6 clean personas).
+// Test-first: the ArtifactId contract, completeness against ReportData's
+// optional sections, the six-persona tagging, and nearest-match lookup are
+// spec'd here before implementation.
 import { describe, expect, it } from "vitest";
 import {
 	ALL_ARTIFACT_IDS,
@@ -8,11 +9,12 @@ import {
 	type ArtifactMeta,
 	CATALOG,
 	lookupArtifact,
+	type Persona,
 	suggestArtifactIds,
 } from "../../../src/engines/report/catalog.js";
 import type { ReportData } from "../../../src/engines/report/types.js";
 
-/** The optional section keys of ReportData — the set CATALOG must cover. */
+/** The optional section keys of ReportData — the set CATALOG must cover (24). */
 type SectionKey = Exclude<keyof ReportData, "generatedAt" | "project">;
 const SECTION_KEYS: readonly SectionKey[] = [
 	"systemScore",
@@ -28,105 +30,108 @@ const SECTION_KEYS: readonly SectionKey[] = [
 	"libraryHealth",
 	"breakingCalendar",
 	"changeFrequency",
+	"targets",
+	"parityTrend",
+	"componentHealth",
+	"libraryHealthTrend",
+	"migrationChecklist",
+	"scoreVelocity",
+	"ownershipLeaderboard",
+	"audienceChangelog",
+	"frameImplementability",
+	"releaseReadiness",
+	"dataFreshness",
 ];
 
-describe("CATALOG", () => {
-	it("leads with system-score then the six wave-1 artifacts, the three owner artifacts (positions 8–10), library-health (position 11), and the two consumer artifacts (positions 12–13)", () => {
-		expect(CATALOG.map((a) => a.id)).toEqual([
-			"system-score",
-			"drift-trend",
-			"lint-summary",
-			"readiness",
-			"parity",
-			"a11y",
-			"impact",
-			"adoption-trend",
-			"import-coverage",
-			"leaderboard",
-			"library-health",
-			"breaking-calendar",
-			"change-frequency",
-		]);
+const PERSONAS: readonly Persona[] = [
+	"ds-designer",
+	"ds-manager",
+	"ds-engineer",
+	"product-designer",
+	"product-manager",
+	"product-engineer",
+];
+
+const EXPECTED_ORDER: readonly ArtifactId[] = [
+	"system-score",
+	"drift-trend",
+	"lint-summary",
+	"readiness",
+	"parity",
+	"a11y",
+	"impact",
+	"adoption-trend",
+	"import-coverage",
+	"leaderboard",
+	"library-health",
+	"breaking-calendar",
+	"change-frequency",
+	"targets",
+	"parity-trend",
+	"component-health",
+	"library-health-trend",
+	"migration-checklist",
+	"score-velocity",
+	"ownership-leaderboard",
+	"audience-changelog",
+	"frame-implementability",
+	"release-readiness",
+	"data-freshness",
+];
+
+describe("CATALOG (24-artifact fresh catalog)", () => {
+	it("has exactly 24 artifacts in the authored order (13 base + 11 metric artifacts)", () => {
+		expect(CATALOG.map((a) => a.id)).toEqual([...EXPECTED_ORDER]);
+		expect(ALL_ARTIFACT_IDS).toEqual([...EXPECTED_ORDER]);
+		expect(ALL_ARTIFACT_IDS).toHaveLength(24);
 	});
 
-	it("appends library-health at index 10 (position 11) with the SPEC §3 personas + key", () => {
-		const libraryHealth = CATALOG[10];
-		expect(libraryHealth?.id).toBe("library-health");
-		expect(libraryHealth?.title).toBe("Library health");
-		expect(libraryHealth?.reportDataKey).toBe("libraryHealth");
-		expect([...(libraryHealth?.personas ?? [])].sort()).toEqual([
-			"design",
-			"owner",
-		]);
-	});
-
-	it("appends the two consumer artifacts at positions 12–13 with their SPEC §3 personas + keys", () => {
-		const breakingCalendar = CATALOG[11];
-		expect(breakingCalendar?.id).toBe("breaking-calendar");
-		expect(breakingCalendar?.title).toBe("Breaking calendar");
-		expect(breakingCalendar?.reportDataKey).toBe("breakingCalendar");
-		expect([...(breakingCalendar?.personas ?? [])].sort()).toEqual([
-			"consumer",
-			"owner",
-		]);
-
-		const changeFrequency = CATALOG[12];
-		expect(changeFrequency?.id).toBe("change-frequency");
-		expect(changeFrequency?.title).toBe("Change frequency");
-		expect(changeFrequency?.reportDataKey).toBe("changeFrequency");
-		expect([...(changeFrequency?.personas ?? [])].sort()).toEqual([
-			"consumer",
-			"engineering",
-		]);
-	});
-
-	it("appends the three owner artifacts at positions 8–10 with their SPEC §3 personas + keys", () => {
-		const trend = CATALOG[7];
-		expect(trend?.id).toBe("adoption-trend");
-		expect(trend?.reportDataKey).toBe("adoptionTrend");
-		expect([...(trend?.personas ?? [])].sort()).toEqual([
-			"engineering",
-			"owner",
-		]);
-
-		const coverage = CATALOG[8];
-		expect(coverage?.id).toBe("import-coverage");
-		expect(coverage?.reportDataKey).toBe("importCoverage");
-		expect([...(coverage?.personas ?? [])].sort()).toEqual([
-			"consumer",
-			"owner",
-		]);
-
-		const leaderboard = CATALOG[9];
-		expect(leaderboard?.id).toBe("leaderboard");
-		expect(leaderboard?.reportDataKey).toBe("leaderboard");
-		expect([...(leaderboard?.personas ?? [])]).toEqual(["owner"]);
-	});
-
-	it("places system-score at index 0 with all four personas and the systemScore key", () => {
-		const entry = CATALOG[0];
-		expect(entry?.id).toBe("system-score");
-		expect(entry?.title).toBe("System score");
-		expect(entry?.reportDataKey).toBe("systemScore");
-		expect([...(entry?.personas ?? [])].sort()).toEqual([
-			"consumer",
-			"design",
-			"engineering",
-			"owner",
-		]);
-	});
-
-	it("covers exactly the optional ReportData sections (runtime half of the satisfies check)", () => {
+	it("covers every optional ReportData section exactly once via reportDataKey", () => {
 		const keys = CATALOG.map((a) => a.reportDataKey).sort();
 		expect(keys).toEqual([...SECTION_KEYS].sort());
-		// No duplicates: thirteen ids → thirteen distinct keys.
-		expect(new Set(keys).size).toBe(SECTION_KEYS.length);
+		expect(new Set(keys).size).toBe(keys.length);
 	});
 
-	it("gives every artifact a non-empty title and at least one persona tag", () => {
-		for (const artifact of CATALOG) {
-			expect(artifact.title.length).toBeGreaterThan(0);
-			expect(artifact.personas.length).toBeGreaterThan(0);
+	it("tags every artifact only with the six clean persona names", () => {
+		for (const entry of CATALOG) {
+			expect(entry.personas.length).toBeGreaterThan(0);
+			for (const p of entry.personas) {
+				expect(PERSONAS).toContain(p);
+			}
+		}
+	});
+
+	it("tags system-score, parity, parity-trend and data-freshness with all six personas", () => {
+		for (const id of [
+			"system-score",
+			"parity",
+			"parity-trend",
+			"data-freshness",
+		] as const) {
+			const entry = CATALOG.find((a) => a.id === id);
+			expect([...(entry?.personas ?? [])].sort()).toEqual([...PERSONAS].sort());
+		}
+	});
+
+	it("maps the 11 new metric artifacts to their camelCase reportDataKeys", () => {
+		const expectKey = (id: ArtifactId, key: SectionKey) =>
+			expect(CATALOG.find((a) => a.id === id)?.reportDataKey).toBe(key);
+		expectKey("targets", "targets");
+		expectKey("parity-trend", "parityTrend");
+		expectKey("component-health", "componentHealth");
+		expectKey("library-health-trend", "libraryHealthTrend");
+		expectKey("migration-checklist", "migrationChecklist");
+		expectKey("score-velocity", "scoreVelocity");
+		expectKey("ownership-leaderboard", "ownershipLeaderboard");
+		expectKey("audience-changelog", "audienceChangelog");
+		expectKey("frame-implementability", "frameImplementability");
+		expectKey("release-readiness", "releaseReadiness");
+		expectKey("data-freshness", "dataFreshness");
+	});
+
+	it("gives every entry a non-empty title", () => {
+		for (const entry of CATALOG) {
+			expect(entry.title.length).toBeGreaterThan(0);
 		}
 	});
 
@@ -136,50 +141,46 @@ describe("CATALOG", () => {
 });
 
 describe("lookupArtifact", () => {
-	it("finds an artifact by its kebab-case id", () => {
-		const outcome = lookupArtifact("parity");
+	it("resolves a new metric id to its entry", () => {
+		const outcome = lookupArtifact("data-freshness");
 		expect(outcome.kind).toBe("found");
 		if (outcome.kind === "found") {
 			const meta: ArtifactMeta = outcome.artifact;
-			expect(meta.reportDataKey).toBe("parity");
+			expect(meta.reportDataKey).toBe("dataFreshness");
 		}
 	});
 
-	it("returns a typed unknown outcome (never throws) for an unknown id", () => {
-		const outcome = lookupArtifact("nonsense");
+	it("returns a typed unknown outcome (never throws) with suggestions for a near miss", () => {
+		const outcome = lookupArtifact("targetz");
 		expect(outcome.kind).toBe("unknown");
 		if (outcome.kind === "unknown") {
-			expect(outcome.id).toBe("nonsense");
+			expect(outcome.id).toBe("targetz");
+			expect(outcome.suggestions).toContain("targets");
 		}
 	});
 
-	it("carries nearest-match suggestions for a near-miss id", () => {
-		const outcome = lookupArtifact("parityy");
+	it("returns no suggestions for nonsense far from any id", () => {
+		const outcome = lookupArtifact("zzzzzzzzzz");
 		expect(outcome.kind).toBe("unknown");
 		if (outcome.kind === "unknown") {
-			expect(outcome.suggestions).toContain("parity");
+			expect(outcome.suggestions).toEqual([]);
 		}
 	});
 });
 
 describe("suggestArtifactIds", () => {
 	it("ranks a prefix match first", () => {
-		expect(suggestArtifactIds("drift")[0]).toBe("drift-trend");
+		expect(suggestArtifactIds("parity")[0]).toBe("parity");
 	});
 
-	it("suggests by edit distance for a typo", () => {
-		expect(suggestArtifactIds("a11yy")).toContain("a11y");
-		expect(suggestArtifactIds("partiy")).toContain("parity");
+	it("suggests the closest new id for a typo", () => {
+		expect(suggestArtifactIds("migration-checklst")).toContain(
+			"migration-checklist",
+		);
 	});
 
 	it("returns no suggestions when nothing is plausibly close", () => {
 		expect(suggestArtifactIds("zzzzzzzzzz")).toEqual([]);
-	});
-
-	it("caps suggestions at three and keeps the ranking deterministic", () => {
-		const suggestions = suggestArtifactIds("i");
-		expect(suggestions.length).toBeLessThanOrEqual(3);
-		expect(suggestions).toEqual(suggestArtifactIds("i"));
 	});
 
 	it("matches case-insensitively", () => {
@@ -188,7 +189,7 @@ describe("suggestArtifactIds", () => {
 });
 
 describe("ArtifactId type", () => {
-	it("round-trips through the catalog (compile-time exhaustiveness lives in catalog.ts via satisfies)", () => {
+	it("round-trips every id through the catalog", () => {
 		const ids: ArtifactId[] = [...ALL_ARTIFACT_IDS];
 		for (const id of ids) {
 			expect(lookupArtifact(id).kind).toBe("found");

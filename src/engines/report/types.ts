@@ -221,6 +221,130 @@ export interface ChangeFrequency {
 	windowLast?: string;
 }
 
+// ─── Persona-wave metric sections (C1–C13) ──────────────────────────────────
+// Each is an optional ReportData section with a matching catalog artifact; the
+// engines that populate them land in later milestones (M2/M3).
+
+/** C1 — one target verdict: a measured scalar compared to a configured goal. */
+export interface TargetVerdict {
+	/** The metric key/label (e.g. "on-system", "drift", "parity"). */
+	metric: string;
+	/** Measured scalar, or undefined when the metric was never recorded. */
+	measured: number | undefined;
+	target: number;
+	op: ">=" | "<=" | "==";
+	band: "green" | "amber" | "red" | "unknown";
+}
+
+/** C3 — one parity-trend point: component parity pass-% on a dated state. */
+export interface ParityTrendPoint {
+	date: string;
+	/** 0–100 parity pass percentage. */
+	pct: number;
+}
+
+/** C5 — one component's joined health rollup (worst-first in the section). */
+export interface ComponentHealthRow {
+	component: string;
+	/** 0–100 composite health for this component. */
+	healthScore: number;
+	/** Human-readable issues contributing to the score. */
+	issues: string[];
+}
+
+/** C6 — one library-health-trend point: hygiene counts on a dated state. */
+export interface LibraryHealthTrendPoint {
+	date: string;
+	overrides: number;
+	deprecated: number;
+	detached: number;
+}
+
+/** C7 — one migration call site: where a breaking change lands + the fix. */
+export interface MigrationSite {
+	file: string;
+	line: number;
+	/** The component or token that changed. */
+	subject: string;
+	from: string;
+	to: string;
+}
+
+/** C7 — per-call-site migration checklist from the latest impact run. */
+export interface MigrationChecklist {
+	sites: MigrationSite[];
+	/** True when more sites existed than the configured cap. */
+	truncated: boolean;
+}
+
+/** C8 — windowed velocity of the composite score (motion, not snapshot). */
+export interface ScoreVelocity {
+	/** Signed delta over the window (now − window-start). */
+	delta: number;
+	windowDays: number;
+	direction: "up" | "down" | "flat";
+	/** Consecutive down-moves ending at the latest point. */
+	regressionStreak: number;
+}
+
+/** C9 — one per-owner accountability row (ownership-mapped adoption). */
+export interface OwnershipRow {
+	owner: string;
+	refs: number;
+	literals: number;
+	/** On-system percentage, 0–100. */
+	pct: number;
+}
+
+/** C10 — one audience slice of the changelog (designers | developers). */
+export interface AudienceChangelogSlice {
+	audience: "designers" | "developers";
+	breaking: number;
+	additive: number;
+	cosmetic: number;
+	/** Most-recent entries (capped), breaking-first. */
+	recent: string[];
+}
+
+/** C10 — audience-segmented changelog panel from the latest changelog line. */
+export interface AudienceChangelog {
+	slices: AudienceChangelogSlice[];
+}
+
+/** C11 — frame implementability: how on-system a Figma frame is. */
+export interface FrameImplementability {
+	/** 0–100 share of requirements that resolve to the system. */
+	pct: number;
+	resolved: number;
+	total: number;
+	/** Gap counts by reason (e.g. no-registry-match, near-token-only). */
+	gaps: { reason: string; count: number }[];
+}
+
+/** C13 — one pre-publish release-readiness check. */
+export interface ReleaseReadinessCheck {
+	name: string;
+	pass: boolean;
+	detail?: string;
+}
+
+/** C13 — pre-publish go/no-go rollup composed from existing engines. */
+export interface ReleaseReadiness {
+	go: boolean;
+	checks: ReleaseReadinessCheck[];
+}
+
+/** C4 — one check-kind's measurement freshness (trust gauge). */
+export interface FreshnessRow {
+	/** The history record kind (drift, lint, handoff, a11y, impact, …). */
+	kind: string;
+	/** ISO date of the most recent run, or undefined when never run. */
+	lastRun?: string;
+	/** Whole days since the last run, or undefined when never run. */
+	ageDays?: number;
+	band: "green" | "amber" | "red" | "unknown";
+}
+
 /**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
@@ -248,4 +372,26 @@ export interface ReportData {
 	breakingCalendar?: BreakingCalendar;
 	/** Per-kind activity density over the history window (B6). */
 	changeFrequency?: ChangeFrequency;
+	/** C1 — RAG verdicts for configured metric targets. */
+	targets?: TargetVerdict[];
+	/** C3 — component parity pass-% over time. */
+	parityTrend?: ParityTrendPoint[];
+	/** C5 — per-component health rollup, worst-first. */
+	componentHealth?: ComponentHealthRow[];
+	/** C6 — library hygiene counts over time. */
+	libraryHealthTrend?: LibraryHealthTrendPoint[];
+	/** C7 — per-call-site migration checklist from the latest impact run. */
+	migrationChecklist?: MigrationChecklist;
+	/** C8 — windowed velocity of the composite score. */
+	scoreVelocity?: ScoreVelocity;
+	/** C9 — per-owner accountability breakdown. */
+	ownershipLeaderboard?: OwnershipRow[];
+	/** C10 — audience-segmented changelog panel. */
+	audienceChangelog?: AudienceChangelog;
+	/** C11 — frame implementability from the latest frame-impl run. */
+	frameImplementability?: FrameImplementability;
+	/** C13 — pre-publish release-readiness rollup. */
+	releaseReadiness?: ReleaseReadiness;
+	/** C4 — measurement freshness per check-kind. */
+	dataFreshness?: FreshnessRow[];
 }

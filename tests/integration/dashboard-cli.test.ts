@@ -71,13 +71,13 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
-		expect(parsed.artifacts).toHaveLength(13);
+		expect(parsed.artifacts).toHaveLength(24);
 		expect(parsed.artifacts.every((a) => a.enabled)).toBe(true);
 		expect(parsed.view.source).toBe("default");
 		expect(parsed.view.viewName).toBe("everything");
 	});
 
-	it("emits the thirteen artifacts in catalog order with stable metadata", async () => {
+	it("emits the twenty-four artifacts in catalog order with stable metadata", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
@@ -95,14 +95,25 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"library-health",
 			"breaking-calendar",
 			"change-frequency",
+			"targets",
+			"parity-trend",
+			"component-health",
+			"library-health-trend",
+			"migration-checklist",
+			"score-velocity",
+			"ownership-leaderboard",
+			"audience-changelog",
+			"frame-implementability",
+			"release-readiness",
+			"data-freshness",
 		]);
-		// system-score leads (wave-2, S2); drift-trend is now second.
+		// system-score leads; drift-trend is second.
 		const score = parsed.artifacts[0];
 		expect(score?.id).toBe("system-score");
 		expect(score?.title).toBe("System score");
 		const drift = parsed.artifacts[1];
 		expect(drift?.title).toBe("Token drift");
-		expect(drift?.personas).toEqual(["owner", "engineering"]);
+		expect(drift?.personas).toEqual(["ds-manager", "ds-engineer"]);
 	});
 
 	it("with dashboard_view=owner, exactly system-score/drift-trend/parity/a11y are enabled", async () => {

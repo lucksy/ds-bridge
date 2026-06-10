@@ -21,10 +21,33 @@ export type ArtifactId =
 	| "leaderboard"
 	| "library-health"
 	| "breaking-calendar"
-	| "change-frequency";
+	| "change-frequency"
+	// Persona-wave metric artifacts (C1–C13):
+	| "targets"
+	| "parity-trend"
+	| "component-health"
+	| "library-health-trend"
+	| "migration-checklist"
+	| "score-velocity"
+	| "ownership-leaderboard"
+	| "audience-changelog"
+	| "frame-implementability"
+	| "release-readiness"
+	| "data-freshness";
 
-/** Persona tags used by presets and `dashboard list`. */
-export type Persona = "owner" | "engineering" | "design" | "consumer";
+/**
+ * Persona tags used by presets and `dashboard list` — the six clean roles
+ * across the DS-producer ⇄ product-consumer bridge. `Persona == PresetName`
+ * (the preset names are widened to match in presets.ts, M6). Advisory display
+ * metadata only — `resolveView` does NOT consult these tags.
+ */
+export type Persona =
+	| "ds-designer"
+	| "ds-manager"
+	| "ds-engineer"
+	| "product-designer"
+	| "product-manager"
+	| "product-engineer";
 
 /** The optional section keys of ReportData (everything but the header pair). */
 export type ReportSectionKey = Exclude<
@@ -49,84 +72,170 @@ export interface ArtifactMeta {
  * (no ReportData section without an artifact). The runtime half lives in the
  * spec.
  */
+const ALL_PERSONAS = [
+	"ds-designer",
+	"ds-manager",
+	"ds-engineer",
+	"product-designer",
+	"product-manager",
+	"product-engineer",
+] as const satisfies readonly Persona[];
+
 export const CATALOG = [
 	{
 		id: "system-score",
 		title: "System score",
-		personas: ["owner", "engineering", "design", "consumer"],
+		personas: ALL_PERSONAS,
 		reportDataKey: "systemScore",
 	},
 	{
 		id: "drift-trend",
 		title: "Token drift",
-		personas: ["owner", "engineering"],
+		personas: ["ds-manager", "ds-engineer"],
 		reportDataKey: "driftTrend",
 	},
 	{
 		id: "lint-summary",
 		title: "Lint violations",
-		personas: ["engineering"],
+		personas: ["ds-engineer", "product-engineer"],
 		reportDataKey: "lintSummary",
 	},
 	{
 		id: "readiness",
 		title: "Handoff readiness",
-		personas: ["design"],
+		personas: ["ds-designer", "product-designer", "product-manager"],
 		reportDataKey: "readiness",
 	},
 	{
 		id: "parity",
 		title: "Component parity",
-		personas: ["owner", "design", "consumer"],
+		personas: ALL_PERSONAS,
 		reportDataKey: "parity",
 	},
 	{
 		id: "a11y",
 		title: "Contrast (a11y)",
-		personas: ["design", "owner"],
+		personas: ["ds-designer", "ds-manager", "ds-engineer", "product-designer"],
 		reportDataKey: "a11y",
 	},
 	{
 		id: "impact",
 		title: "Change impact",
-		personas: ["engineering", "consumer"],
+		personas: ["ds-engineer", "product-engineer"],
 		reportDataKey: "impact",
 	},
 	{
 		id: "adoption-trend",
 		title: "Adoption trend",
-		personas: ["owner", "engineering"],
+		personas: ["ds-manager", "product-manager", "product-engineer"],
 		reportDataKey: "adoptionTrend",
 	},
 	{
 		id: "import-coverage",
 		title: "Import coverage",
-		personas: ["owner", "consumer"],
+		personas: ["ds-manager", "product-manager", "product-engineer"],
 		reportDataKey: "importCoverage",
 	},
 	{
 		id: "leaderboard",
 		title: "Adoption leaderboard",
-		personas: ["owner"],
+		personas: ["ds-manager", "product-engineer"],
 		reportDataKey: "leaderboard",
 	},
 	{
 		id: "library-health",
 		title: "Library health",
-		personas: ["design", "owner"],
+		personas: ["ds-designer", "ds-manager", "ds-engineer", "product-designer"],
 		reportDataKey: "libraryHealth",
 	},
 	{
 		id: "breaking-calendar",
 		title: "Breaking calendar",
-		personas: ["consumer", "owner"],
+		personas: [
+			"ds-manager",
+			"product-designer",
+			"product-manager",
+			"product-engineer",
+		],
 		reportDataKey: "breakingCalendar",
 	},
 	{
 		id: "change-frequency",
 		title: "Change frequency",
-		personas: ["consumer", "engineering"],
+		personas: ["product-designer", "product-manager"],
 		reportDataKey: "changeFrequency",
+	},
+	// ─── Persona-wave metric artifacts (C1–C13) ─────────────────────────────
+	{
+		id: "targets",
+		title: "Targets / SLAs",
+		personas: [
+			"ds-manager",
+			"ds-engineer",
+			"product-manager",
+			"product-engineer",
+		],
+		reportDataKey: "targets",
+	},
+	{
+		id: "parity-trend",
+		title: "Parity trend",
+		personas: ALL_PERSONAS,
+		reportDataKey: "parityTrend",
+	},
+	{
+		id: "component-health",
+		title: "Component health",
+		personas: ["ds-designer", "ds-engineer", "product-designer"],
+		reportDataKey: "componentHealth",
+	},
+	{
+		id: "library-health-trend",
+		title: "Library health trend",
+		personas: ["ds-designer", "ds-manager"],
+		reportDataKey: "libraryHealthTrend",
+	},
+	{
+		id: "migration-checklist",
+		title: "Migration checklist",
+		personas: ["ds-engineer", "product-engineer"],
+		reportDataKey: "migrationChecklist",
+	},
+	{
+		id: "score-velocity",
+		title: "Score velocity",
+		personas: ["ds-manager", "product-manager"],
+		reportDataKey: "scoreVelocity",
+	},
+	{
+		id: "ownership-leaderboard",
+		title: "Ownership leaderboard",
+		personas: ["ds-manager"],
+		reportDataKey: "ownershipLeaderboard",
+	},
+	{
+		id: "audience-changelog",
+		title: "Changelog by audience",
+		personas: ["product-designer", "product-manager", "product-engineer"],
+		reportDataKey: "audienceChangelog",
+	},
+	{
+		id: "frame-implementability",
+		title: "Frame implementability",
+		personas: ["product-designer", "product-engineer"],
+		reportDataKey: "frameImplementability",
+	},
+	{
+		id: "release-readiness",
+		title: "Release readiness",
+		personas: ["ds-engineer"],
+		reportDataKey: "releaseReadiness",
+	},
+	{
+		id: "data-freshness",
+		title: "Data freshness",
+		personas: ALL_PERSONAS,
+		reportDataKey: "dataFreshness",
 	},
 ] as const satisfies readonly ArtifactMeta[];
 

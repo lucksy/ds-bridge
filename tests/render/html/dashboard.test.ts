@@ -153,6 +153,63 @@ const fullData: ReportData = {
 		windowFirst: "2026-06-01T10:00:00.000Z",
 		windowLast: "2026-06-03T10:00:00.000Z",
 	},
+	// Persona-wave metric sections (C1–C13) — present so the full render has no
+	// empty-state stub. Real chart renderers land in M4.
+	targets: [
+		{ metric: "on-system", measured: 88, target: 90, op: ">=", band: "amber" },
+	],
+	parityTrend: [{ date: "2026-06-01", pct: 80 }],
+	componentHealth: [
+		{ component: "Button", healthScore: 70, issues: ["prop-mismatch"] },
+	],
+	libraryHealthTrend: [
+		{ date: "2026-06-01", overrides: 2, deprecated: 1, detached: 0 },
+	],
+	migrationChecklist: {
+		sites: [
+			{
+				file: "src/Button.tsx",
+				line: 9,
+				subject: "Button",
+				from: "a",
+				to: "b",
+			},
+		],
+		truncated: false,
+	},
+	scoreVelocity: {
+		delta: 4,
+		windowDays: 30,
+		direction: "up",
+		regressionStreak: 0,
+	},
+	ownershipLeaderboard: [
+		{ owner: "team-web", refs: 100, literals: 5, pct: 95 },
+	],
+	audienceChangelog: {
+		slices: [
+			{
+				audience: "designers",
+				breaking: 1,
+				additive: 2,
+				cosmetic: 0,
+				recent: ["Button renamed"],
+			},
+		],
+	},
+	frameImplementability: {
+		pct: 80,
+		resolved: 8,
+		total: 10,
+		gaps: [{ reason: "no-token-match", count: 2 }],
+	},
+	releaseReadiness: {
+		go: false,
+		checks: [{ name: "drift-zero", pass: true }],
+	},
+	dataFreshness: [
+		{ kind: "a11y", lastRun: "2026-06-05", ageDays: 0, band: "green" },
+	],
 };
 
 const emptyData: ReportData = {
@@ -389,7 +446,7 @@ describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
 	it("renders all thirteen empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(13);
+		expect(countMatches(html, /No data yet/gi)).toBe(24);
 	});
 
 	it("emits zero <svg> charts", () => {
@@ -430,7 +487,7 @@ describe("renderDashboard — partial mixes", () => {
 		// two charts present, eleven empty states (incl. absent system-score + the
 		// three owner sections + library-health + the two B6 consumer sections).
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(11);
+		expect(countMatches(html, /No data yet/gi)).toBe(22);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -445,7 +502,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(12);
+		expect(countMatches(html, /No data yet/gi)).toBe(23);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -455,7 +512,7 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(13);
+		expect(countMatches(html, /No data yet/gi)).toBe(24);
 	});
 
 	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
@@ -465,7 +522,7 @@ describe("renderDashboard — partial mixes", () => {
 			a11y: { level: "AA", modes: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(13);
+		expect(countMatches(html, /No data yet/gi)).toBe(24);
 	});
 
 	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
@@ -475,7 +532,7 @@ describe("renderDashboard — partial mixes", () => {
 			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(12);
+		expect(countMatches(html, /No data yet/gi)).toBe(23);
 	});
 
 	it("treats an empty adoptionTrend / leaderboard array as an empty state (B2)", () => {
@@ -486,7 +543,7 @@ describe("renderDashboard — partial mixes", () => {
 			leaderboard: [],
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(13);
+		expect(countMatches(html, /No data yet/gi)).toBe(24);
 	});
 
 	it("renders import coverage even when nothing is uncovered (B2)", () => {
@@ -502,7 +559,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// the donut gauge renders (a real chart), the other twelve sections stay empty.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(12);
+		expect(countMatches(html, /No data yet/gi)).toBe(23);
 		expect(html).toMatch(/<text[^>]*>100<\/text>/);
 	});
 });
@@ -577,6 +634,18 @@ const TITLE_FOR: Record<ArtifactId, RegExp> = {
 	"library-health": /<h2>Library health<\/h2>/,
 	"breaking-calendar": /<h2>Breaking calendar<\/h2>/,
 	"change-frequency": /<h2>Change frequency<\/h2>/,
+	// Persona-wave metric artifacts (C1–C13) — section titles from the M0.1 stubs.
+	targets: /<h2>Targets \/ SLAs<\/h2>/,
+	"parity-trend": /<h2>Parity trend<\/h2>/,
+	"component-health": /<h2>Component health<\/h2>/,
+	"library-health-trend": /<h2>Library health trend<\/h2>/,
+	"migration-checklist": /<h2>Migration checklist<\/h2>/,
+	"score-velocity": /<h2>Score velocity<\/h2>/,
+	"ownership-leaderboard": /<h2>Ownership leaderboard<\/h2>/,
+	"audience-changelog": /<h2>Changelog by audience<\/h2>/,
+	"frame-implementability": /<h2>Frame implementability<\/h2>/,
+	"release-readiness": /<h2>Release readiness<\/h2>/,
+	"data-freshness": /<h2>Data freshness<\/h2>/,
 };
 
 describe("renderDashboard — default-call equivalence", () => {

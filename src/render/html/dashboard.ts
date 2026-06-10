@@ -164,6 +164,17 @@ function panel(title: string, body: string): string {
 	].join("");
 }
 
+/**
+ * M0.1 placeholder body for a not-yet-rendered metric artifact (C1–C13): a
+ * non-empty marker when its ReportData section is present, the shared
+ * empty-state otherwise. Replaced by the real chart renderer in M4.
+ */
+function stubBody(section: unknown, command: string): string {
+	return section === undefined
+		? emptyState(command)
+		: '<div class="meta">preview</div>';
+}
+
 // The human label for each score component kind in the legend table.
 const COMPONENT_LABEL: Record<string, string> = {
 	drift: "drift",
@@ -659,6 +670,39 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"library-health": libraryHealthSection,
 	"breaking-calendar": breakingCalendarSection,
 	"change-frequency": changeFrequencySection,
+	// M0.1 stubs — empty-state when absent, a placeholder body when present.
+	// Real chart renderers land in M4; keys exist now so the composer/catalog
+	// completeness gate (24 artifacts) holds.
+	targets: (d) => panel("Targets / SLAs", stubBody(d.targets, "report")),
+	"parity-trend": (d) =>
+		panel("Parity trend", stubBody(d.parityTrend, "registry build")),
+	"component-health": (d) =>
+		panel("Component health", stubBody(d.componentHealth, "registry build")),
+	"library-health-trend": (d) =>
+		panel(
+			"Library health trend",
+			stubBody(d.libraryHealthTrend, "library-health"),
+		),
+	"migration-checklist": (d) =>
+		panel(
+			"Migration checklist",
+			stubBody(d.migrationChecklist, "impact --checklist"),
+		),
+	"score-velocity": (d) =>
+		panel("Score velocity", stubBody(d.scoreVelocity, "report")),
+	"ownership-leaderboard": (d) =>
+		panel("Ownership leaderboard", stubBody(d.ownershipLeaderboard, "lint")),
+	"audience-changelog": (d) =>
+		panel("Changelog by audience", stubBody(d.audienceChangelog, "changelog")),
+	"frame-implementability": (d) =>
+		panel(
+			"Frame implementability",
+			stubBody(d.frameImplementability, "frame-impl"),
+		),
+	"release-readiness": (d) =>
+		panel("Release readiness", stubBody(d.releaseReadiness, "report")),
+	"data-freshness": (d) =>
+		panel("Data freshness", stubBody(d.dataFreshness, "report")),
 };
 
 /** Optional rendering controls that do not affect which sections appear. */

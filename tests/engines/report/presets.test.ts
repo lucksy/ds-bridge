@@ -48,10 +48,10 @@ describe("PRESETS", () => {
 		]);
 	});
 
-	it("defines `everything` as all thirteen artifacts in catalog order (system-score leads)", () => {
+	it("defines `everything` as all twenty-four artifacts in catalog order (system-score leads)", () => {
 		expect(PRESETS.everything).toEqual([...ALL_ARTIFACT_IDS]);
 		expect(PRESETS.everything[0]).toBe("system-score");
-		expect(PRESETS.everything).toHaveLength(13);
+		expect(PRESETS.everything).toHaveLength(24);
 	});
 
 	it("exports PRESET_NAMES as the five view names", () => {

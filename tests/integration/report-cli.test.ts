@@ -465,8 +465,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// svg delta is +1, NOT +2 (the seed's stale>0 tokens-check + breaking>0
 		// impact populate the calendar list).
 		expect(countSvgs(html)).toBe(13);
-		// None of the thirteen sections falls back to the empty state.
-		expect(html).not.toContain("No data yet");
+		// None of the thirteen DATA sections falls back to the empty state; the 11
+		// metric artifacts (C1–C13) have no engine yet → 11 empty-state stubs.
+		expect(html.split("No data yet").length - 1).toBe(11);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {
@@ -644,8 +645,17 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 			join(dir, ".ds-bridge", "reports", "dashboard.html"),
 			"utf8",
 		);
+		const normalized = withSentinelTimestamp(html);
+		// Re-anchor escape hatch: `DS_BRIDGE_UPDATE_GOLDEN=1 vitest …` authors the
+		// golden fresh against the current render (single-sentinel rule), then
+		// returns. The product is unpublished, so the golden is gated only against
+		// itself, never a prior build.
+		if (process.env.DS_BRIDGE_UPDATE_GOLDEN) {
+			await writeFile(goldenPath, normalized, "utf8");
+			return;
+		}
 		const golden = await readFile(goldenPath, "utf8");
-		expect(withSentinelTimestamp(html)).toBe(golden);
+		expect(normalized).toBe(golden);
 	});
 
 	it("--view owner renders all seven owner artifacts (8 svgs) and names the view", async () => {
