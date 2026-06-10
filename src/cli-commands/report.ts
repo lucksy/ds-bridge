@@ -28,6 +28,7 @@ import {
 	type MetricTargets,
 	type OwnershipMap,
 	resolveConfig,
+	type ScoreWeightsByView,
 } from "../config.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
@@ -55,7 +56,7 @@ import {
 	extractReleaseSignals,
 } from "../engines/report/release-readiness.js";
 import {
-	DEFAULT_WEIGHTS,
+	resolveWeightProfile,
 	scoreFromHistory,
 	type Weights,
 } from "../engines/report/score.js";
@@ -1014,8 +1015,16 @@ interface ResolvedSelection {
 	artifacts: ArtifactId[];
 	/** Header label to name the active view; absent for the no-config default. */
 	viewLabel?: string;
+	/**
+	 * The active NAMED view (preset/persona name) when one is active (C2): the key
+	 * the by-view weight override is looked up under. Absent for a custom artifact
+	 * list or the no-config default (so no by-view profile can apply).
+	 */
+	viewName?: string;
 	/** Validated system-score weights from config; undefined → engine defaults. */
 	scoreWeights?: Weights;
+	/** Per-view weight overrides (C2), each merged onto defaults; undefined when absent. */
+	scoreWeightsByView?: ScoreWeightsByView;
 	/** Migration-checklist site cap (C7); the config default (200) when no file. */
 	migrationSitesCap: number;
 	/** Validated `metric_targets` map (C1); undefined when no targets configured. */
@@ -1059,6 +1068,7 @@ function resolveSelection(
 	let dashboardView: string | undefined;
 	let dashboardArtifacts: ArtifactId[] | undefined;
 	let scoreWeights: Weights | undefined;
+	let scoreWeightsByView: ScoreWeightsByView | undefined;
 	let metricTargets: MetricTargets | undefined;
 	let freshnessThresholds: FreshnessThresholds | undefined;
 	let componentAliases: ComponentAliases | undefined;
@@ -1090,6 +1100,7 @@ function resolveSelection(
 		dashboardView = resolved.config.dashboardView;
 		dashboardArtifacts = resolved.config.dashboardArtifacts;
 		scoreWeights = resolved.config.scoreWeights;
+		scoreWeightsByView = resolved.config.scoreWeightsByView;
 		migrationSitesCap = resolved.config.migrationSitesCap;
 		metricTargets = resolved.config.metricTargets;
 		scoreVelocityWindow = resolved.config.scoreVelocityWindow;
@@ -1153,12 +1164,19 @@ function resolveSelection(
 				outcome.source === "default"
 					? undefined
 					: (outcome.viewName ?? "custom");
+			// The NAMED view (C2 by-view weight lookup key): the preset/persona name,
+			// only when one is active (a custom list / the default carry no viewName,
+			// so no by-view weight profile can apply — golden-neutral).
+			const viewName =
+				outcome.source === "default" ? undefined : outcome.viewName;
 			return {
 				artifacts: outcome.artifacts,
 				migrationSitesCap,
 				scoreVelocityWindow,
 				...(viewLabel !== undefined ? { viewLabel } : {}),
+				...(viewName !== undefined ? { viewName } : {}),
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
+				...(scoreWeightsByView !== undefined ? { scoreWeightsByView } : {}),
 				...(metricTargets !== undefined ? { metricTargets } : {}),
 				...(freshnessThresholds !== undefined ? { freshnessThresholds } : {}),
 				...(componentAliases !== undefined ? { componentAliases } : {}),
@@ -1195,7 +1213,16 @@ function runMarkdownReport(
 	options: ReportOptions,
 	selection: ResolvedSelection,
 ): void {
-	const weights = selection.scoreWeights;
+	// Resolve the effective weights for THIS render via the SAME C2 precedence the
+	// html score + the badge use (active view's by-view override > global
+	// score_weights > defaults), so the scorecard score row shows the SAME number
+	// the dashboard does. Render-scoped — never written back. §1.5: BOTH scorecard
+	// sides score with this one table.
+	const weightProfile = resolveWeightProfile(
+		selection.viewName,
+		selection.scoreWeights,
+		selection.scoreWeightsByView,
+	);
 	const stateDir = join(targetDir, ".ds-bridge");
 	const currentText = readHistoryText(stateDir);
 
@@ -1224,7 +1251,7 @@ function runMarkdownReport(
 		}
 	}
 
-	const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
+	const effectiveWeights = weightProfile.weights;
 	const model = buildScorecard(currentText, baseText, effectiveWeights);
 	if (model.kind === "no-data") {
 		failReport(
@@ -1336,10 +1363,20 @@ function runReport(path: string, options: ReportOptions): void {
 	};
 	const aggregation = aggregateHistory(stateDir, warn);
 	const parity = readParity(stateDir, warn);
+	// Resolve the effective system-score weights for THIS render (C2): the active
+	// view's by-view override > the global score_weights > the engine defaults
+	// (render-scoped, never written back). The SAME table drives the html score,
+	// the scorecard score row, and the badge so all three show ONE number. The
+	// profile source captions a by-view weight set in the system-score section.
+	const weightProfile = resolveWeightProfile(
+		selection.viewName,
+		selection.scoreWeights,
+		selection.scoreWeightsByView,
+	);
 	// Replay the SAME history.jsonl into the weighted system score (S4b). The
-	// engine owns its parse (tolerance-mirrored); weights come from config, else
-	// the engine defaults. no-data → leave systemScore undefined (empty state).
-	const systemScore = computeSystemScore(stateDir, selection.scoreWeights);
+	// engine owns its parse (tolerance-mirrored); the resolved C2 weights drive
+	// it. no-data → leave systemScore undefined (empty state).
+	const systemScore = computeSystemScore(stateDir, weightProfile.weights);
 	// Replay the SAME history into the two consumer VIEWS (B6) via the shared
 	// `replayHistory` iterator — pure functions, no new parser. Always present
 	// (their empty shapes degrade to the renderer's empty state).
@@ -1470,7 +1507,19 @@ function runReport(path: string, options: ReportOptions): void {
 			...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
 		},
 		selection.artifacts,
-		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
+		{
+			...(selection.viewLabel !== undefined
+				? { viewLabel: selection.viewLabel }
+				: {}),
+			// Caption the system-score section ONLY for a `view`-source profile; the
+			// renderer renders nothing for project/default (golden-neutral).
+			weightProfile: {
+				source: weightProfile.source,
+				...(weightProfile.name !== undefined
+					? { name: weightProfile.name }
+					: {}),
+			},
+		},
 	);
 
 	const outPath =

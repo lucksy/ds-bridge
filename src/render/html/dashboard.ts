@@ -185,11 +185,32 @@ const COMPONENT_LABEL: Record<string, string> = {
 };
 
 /**
+ * The active weight profile (C2): which weights table drove the system score and
+ * where it came from. Only a `view`-source profile (a by-view override matched
+ * the active view) renders the caption; `project`/`default` stay silent so the
+ * no-config render is byte-identical. Mirrors score.ts's `WeightProfile` shape
+ * minus the weights table the renderer does not need.
+ */
+export interface WeightProfileMeta {
+	source: "view" | "project" | "default";
+	/** The active view name; present only when source is `view`. */
+	name?: string;
+}
+
+/**
  * System score → donut gauge (current 0–100) + line chart (trend) + a
  * components/weights legend table (kind · sub-score · applied weight). Empty
  * state reuses the shared `emptyState` helper verbatim with a run-a-check hint.
+ *
+ * When a `view`-source weight profile is active (C2), a small caption names it
+ * (`weights: <view> profile`) next to the legend; a `project`/`default` source
+ * (or an absent profile) renders NO caption, so the no-config render stays
+ * byte-identical to today.
  */
-function systemScoreSection(data: ReportData): string {
+function systemScoreSection(
+	data: ReportData,
+	weightProfile?: WeightProfileMeta,
+): string {
 	const score = data.systemScore;
 	if (score === undefined) {
 		return panel("System score", emptyState("report"));
@@ -219,12 +240,20 @@ function systemScoreSection(data: ReportData): string {
 		"</table>",
 	].join("");
 
+	// C2 caption: only a `view`-source profile names itself; project/default
+	// render nothing (golden-neutral — the no-config render is unchanged).
+	const caption =
+		weightProfile?.source === "view" && weightProfile.name !== undefined
+			? `<div class="meta">weights: ${escapeHtml(weightProfile.name)} profile</div>`
+			: "";
+
 	return panel(
 		"System score",
 		[
 			`<div class="chart" style="text-align:center">${donutGauge(score.current, { label: "System score" })}</div>`,
 			`<div class="chart">${lineChart(trendSeries)}</div>`,
 			legend,
+			caption,
 		].join(""),
 	);
 }
@@ -1147,6 +1176,13 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 export interface RenderDashboardOptions {
 	/** Active view name; rendered in the document header when supplied. */
 	viewLabel?: string;
+	/**
+	 * The active system-score weight profile (C2): drives the small caption near
+	 * the system-score legend. Only a `view`-source profile renders a caption;
+	 * `project`/`default` (or an absent profile) render none — so the no-config
+	 * render stays byte-identical.
+	 */
+	weightProfile?: WeightProfileMeta;
 }
 
 /**
@@ -1179,7 +1215,14 @@ export function renderDashboard(
 			? ""
 			: `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
 
-	const sections = selection.map((id) => SECTION_RENDERERS[id](data));
+	// The system-score section alone takes the C2 weight profile (a second arg);
+	// every other section is a plain `(data) => string`. Special-cased here rather
+	// than widening the whole SECTION_RENDERERS signature.
+	const sections = selection.map((id) =>
+		id === "system-score"
+			? systemScoreSection(data, options.weightProfile)
+			: SECTION_RENDERERS[id](data),
+	);
 
 	const body = [
 		'<div class="wrap">',

@@ -21,7 +21,11 @@ import {
 import { dirname, join, resolve } from "node:path";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
-import { scoreFromHistory, type Weights } from "../engines/report/score.js";
+import { resolveView } from "../engines/report/presets.js";
+import {
+	resolveWeightProfile,
+	scoreFromHistory,
+} from "../engines/report/score.js";
 import { renderBadge } from "../render/html/badge.js";
 
 interface BadgeOptions {
@@ -84,20 +88,43 @@ function runBadge(path: string, options: BadgeOptions): void {
 		return;
 	}
 
-	// score_weights from the project config (single source — the engine's
-	// validateWeights, via resolveConfig); engine defaults when absent.
+	// Weights from the project config, resolved with the SAME C2 precedence the
+	// dashboard uses (active view's by-view override > global score_weights >
+	// engine defaults) so a PR badge shows the SAME number as the dashboard. The
+	// badge has no --view flag, so the active view is the project's configured
+	// dashboard_view (resolveView over the project config alone); a custom
+	// artifact list or the default carries no viewName → no by-view profile.
+	// Render-scoped — never written back. Engine defaults when no config at all.
 	const projectFileText = readProjectConfigText(targetDir);
-	let scoreWeights: Weights | undefined;
+	let weightProfile = resolveWeightProfile(undefined, undefined, undefined);
 	if (projectFileText !== undefined) {
 		const resolved = resolveConfig({ projectFileText });
 		if (resolved.kind !== "ok") {
 			fail(resolved.message);
 			return;
 		}
-		scoreWeights = resolved.config.scoreWeights;
+		const cfg = resolved.config;
+		const view = resolveView(
+			{},
+			{
+				...(cfg.dashboardView !== undefined ? { view: cfg.dashboardView } : {}),
+				...(cfg.dashboardArtifacts !== undefined
+					? { artifacts: cfg.dashboardArtifacts }
+					: {}),
+			},
+		);
+		const viewName =
+			view.kind === "ok" && view.source !== "default"
+				? view.viewName
+				: undefined;
+		weightProfile = resolveWeightProfile(
+			viewName,
+			cfg.scoreWeights,
+			cfg.scoreWeightsByView,
+		);
 	}
 
-	const outcome = scoreFromHistory(historyText, scoreWeights);
+	const outcome = scoreFromHistory(historyText, weightProfile.weights);
 	if (outcome.kind === "no-data") {
 		fail(noDataMessage(historyPath));
 		return;

@@ -52,6 +52,54 @@ export type WeightsOutcome =
 	| { kind: "non-positive"; key: ComponentKind }
 	| { kind: "non-finite"; key: ComponentKind };
 
+/**
+ * Which layer of the C2 weight-precedence chain produced the effective table:
+ * - `view`    — a per-view override matched the active view name (a named profile)
+ * - `project` — the global `score_weights` (no matching by-view override)
+ * - `default` — neither configured; {@link DEFAULT_WEIGHTS} verbatim
+ */
+export type WeightProfileSource = "view" | "project" | "default";
+
+/**
+ * The resolved effective weights for a render PLUS the profile metadata the
+ * dashboard captions. `name` is set only when `source === "view"` (the active
+ * view name); `project`/`default` carry no name (the caption stays silent).
+ */
+export interface WeightProfile {
+	weights: Weights;
+	source: WeightProfileSource;
+	name?: string;
+}
+
+/**
+ * Resolve the effective system-score weights for a render (C2), render-scoped —
+ * NEVER written back to global config. Precedence (highest first):
+ *   1. `scoreWeightsByView[viewName]` when `viewName` is set AND that key exists
+ *      → source `view`, named with `viewName`
+ *   2. the global `scoreWeights` (already merged onto defaults) → source `project`
+ *   3. {@link DEFAULT_WEIGHTS} → source `default`
+ *
+ * Each by-view/global table has ALREADY been merged onto the defaults by config's
+ * `validateWeights`, so this is pure selection — no further merge. A custom
+ * artifact list (no `viewName`) can never resolve a by-view profile.
+ */
+export function resolveWeightProfile(
+	viewName: string | undefined,
+	scoreWeights: Weights | undefined,
+	scoreWeightsByView: Record<string, Weights> | undefined,
+): WeightProfile {
+	if (viewName !== undefined && scoreWeightsByView !== undefined) {
+		const byView = scoreWeightsByView[viewName];
+		if (byView !== undefined) {
+			return { weights: byView, source: "view", name: viewName };
+		}
+	}
+	if (scoreWeights !== undefined) {
+		return { weights: scoreWeights, source: "project" };
+	}
+	return { weights: { ...DEFAULT_WEIGHTS }, source: "default" };
+}
+
 /** One present component: its kind, its 0–100 sub-score, its configured weight. */
 export interface ScoreComponent {
 	kind: ComponentKind;

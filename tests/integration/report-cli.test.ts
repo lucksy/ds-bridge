@@ -1371,6 +1371,132 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 	});
 });
 
+// ---------- C2 (M4.3) — per-view System-Score re-weighting + caption ----------
+//
+// A `score_weights_by_view` profile for the ACTIVE view re-weights the composite
+// (render-scoped, never written back), and the system-score section captions the
+// active profile. The SAME resolved table drives the html score, the md scorecard
+// score row, and the badge (so a PR badge shows the SAME number as the dashboard).
+//
+// seedSixArtifacts → drift 75 · lint 74 · readiness 72 · a11y 85 · adoption 75.
+// Default 25/25/15/15/20 → composite 76. The `owner` by-view profile below pins
+// a11y's weight to 1000, lifting the composite to 84 (85·1000 dominates the mean).
+describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
+	const ownerByView = {
+		score_weights_by_view: { owner: { a11y: 1000 } },
+	};
+
+	it("a by-view profile for the ACTIVE view re-weights the html composite", async () => {
+		const dir = await freshTmp("ds-report-c2-view-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, ownerByView);
+
+		const result = await runCli(["report", dir, "--view", "owner"]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// owner's by-view a11y:1000 lifts the composite 76 → 84 (the donut numeral).
+		expect(html).toMatch(/<text[^>]*>84<\/text>/);
+		expect(html).not.toMatch(/<text[^>]*>76<\/text>/);
+		// The system-score section captions the active by-view profile by name.
+		expect(html).toContain("weights: owner profile");
+	});
+
+	it("the by-view profile does NOT apply when a DIFFERENT view is active", async () => {
+		const dir = await freshTmp("ds-report-c2-other-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, ownerByView);
+
+		// `engineering` has no by-view profile → falls back to the defaults (76),
+		// and renders NO weight-profile caption.
+		const result = await runCli(["report", dir, "--view", "engineering"]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toMatch(/<text[^>]*>76<\/text>/);
+		expect(html).not.toContain("weights:");
+		expect(html).not.toContain("profile");
+	});
+
+	it("no active view (custom artifact list) never applies a by-view profile + no caption", async () => {
+		const dir = await freshTmp("ds-report-c2-custom-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, ownerByView);
+
+		// A custom artifact list carries no viewName → default weights (76), no caption.
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"system-score,a11y",
+		]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toMatch(/<text[^>]*>76<\/text>/);
+		expect(html).not.toContain("weights:");
+	});
+
+	it("a global score_weights (no by-view) re-weights but renders NO caption", async () => {
+		const dir = await freshTmp("ds-report-c2-global-");
+		await seedSixArtifacts(dir);
+		// Global a11y:1000 lifts the composite to 84 for EVERY view, but the source
+		// is `project` → no caption.
+		await seedProjectConfig(dir, { score_weights: { a11y: 1000 } });
+
+		const result = await runCli(["report", dir, "--view", "owner"]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toMatch(/<text[^>]*>84<\/text>/);
+		expect(html).not.toContain("weights:");
+		expect(html).not.toContain("profile");
+	});
+
+	it("the md scorecard score row uses the SAME by-view weights as the html dashboard", async () => {
+		const dir = await freshTmp("ds-report-c2-md-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, ownerByView);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--view",
+			"owner",
+			"--format",
+			"md",
+		]);
+		expect(result.code).toBe(0);
+		// The score row shows 84 (the by-view-weighted composite), not the default 76.
+		expect(result.stdout).toContain("### Design-system scorecard");
+		expect(result.stdout).toContain("| System score | 84 |");
+	});
+
+	it("the badge uses the SAME by-view weights via the configured dashboard_view", async () => {
+		const dir = await freshTmp("ds-report-c2-badge-");
+		await seedSixArtifacts(dir);
+		// The badge has no --view flag → it reads the project's dashboard_view.
+		await seedProjectConfig(dir, {
+			dashboard_view: "owner",
+			score_weights_by_view: { owner: { a11y: 1000 } },
+		});
+
+		const result = await runCli(["badge", dir]);
+		expect(result.code).toBe(0);
+		const svg = await readFile(join(dir, ".ds-bridge", "badge.svg"), "utf8");
+		// 84/100 — the SAME number the owner dashboard shows (green band ≥ 70 amber? 84 → amber).
+		expect(svg).toContain("84/100");
+	});
+});
+
 // ---------- C4 — `report --format md` + `--delta` (markdown scorecard) ----------
 //
 // The md path emits a markdown scorecard to stdout (CI-pipeable), `--out`

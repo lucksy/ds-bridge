@@ -790,3 +790,62 @@ describe("renderDashboard — active view label in the header", () => {
 		expect(html).toContain("&lt;script&gt;");
 	});
 });
+
+// C2 (M4.3) — when an active view has a by-view weight profile, the system-score
+// section names it in a small caption near the legend. project/default sources
+// render NO caption (so the no-config render stays byte-identical).
+describe("renderDashboard — weight-profile caption (C2)", () => {
+	/** The system-score section slice (between its <h2> and the next </section>). */
+	function systemScoreSlice(html: string): string {
+		const start = html.indexOf("<h2>System score</h2>");
+		expect(start).toBeGreaterThan(-1);
+		const end = html.indexOf("</section>", start);
+		return html.slice(start, end);
+	}
+
+	it("renders a `weights: <view> profile` caption when source is `view`", () => {
+		const html = renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+			viewLabel: "owner",
+			weightProfile: { source: "view", name: "owner" },
+		});
+		const slice = systemScoreSlice(html);
+		expect(slice).toContain("weights: owner profile");
+		// The caption lives inside the system-score panel, near its legend.
+		expect(slice).toContain('class="weights"');
+	});
+
+	it("renders NO caption when source is `project`", () => {
+		const html = renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+			weightProfile: { source: "project" },
+		});
+		expect(html).not.toContain("weights:");
+		expect(html).not.toMatch(/profile/);
+	});
+
+	it("renders NO caption when source is `default`", () => {
+		const html = renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+			weightProfile: { source: "default" },
+		});
+		expect(html).not.toContain("weights:");
+	});
+
+	it("omitting weightProfile is byte-identical to omitting it entirely (golden-neutral)", () => {
+		expect(renderDashboard(fullData, ALL_ARTIFACT_IDS, {})).toBe(
+			renderDashboard(fullData),
+		);
+		// A `default`-source profile must ALSO be byte-identical to omitting it.
+		expect(
+			renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+				weightProfile: { source: "default" },
+			}),
+		).toBe(renderDashboard(fullData));
+	});
+
+	it("escapes a hostile profile name in the caption", () => {
+		const html = renderDashboard(fullData, ALL_ARTIFACT_IDS, {
+			weightProfile: { source: "view", name: "<script>alert(1)</script>" },
+		});
+		expect(html).not.toMatch(/<script\b/i);
+		expect(html).toContain("&lt;script&gt;");
+	});
+});

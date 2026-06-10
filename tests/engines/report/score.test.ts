@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	DEFAULT_WEIGHTS,
+	resolveWeightProfile,
 	scoreFromHistory,
 	validateWeights,
 } from "../../../src/engines/report/score.js";
@@ -842,5 +843,81 @@ describe("scoreFromHistory — full shape", () => {
 				expect(typeof c.weight).toBe("number");
 			}
 		}
+	});
+});
+
+// C2 — Per-view system-score re-weighting. The pure resolver picks the effective
+// weights by precedence (by-view override > project score_weights > defaults),
+// each merged onto the defaults, and reports the PROFILE source so the caller can
+// caption a `view` profile (and stay silent for `project`/`default`).
+describe("resolveWeightProfile — C2 by-view precedence", () => {
+	it("source `default` (no overrides at all) → DEFAULT_WEIGHTS verbatim, no name", () => {
+		const profile = resolveWeightProfile(undefined, undefined, undefined);
+		expect(profile.source).toBe("default");
+		expect(profile.name).toBeUndefined();
+		expect(profile.weights).toEqual(DEFAULT_WEIGHTS);
+	});
+
+	it("source `project` (global score_weights, no by-view) → merged global, no name", () => {
+		const global = validateWeights({ drift: 40 });
+		if (global.kind !== "ok") throw new Error("bad fixture");
+		const profile = resolveWeightProfile(undefined, global.weights, undefined);
+		expect(profile.source).toBe("project");
+		expect(profile.name).toBeUndefined();
+		// Global override merged onto defaults (only drift changed).
+		expect(profile.weights).toEqual({ ...DEFAULT_WEIGHTS, drift: 40 });
+	});
+
+	it("source `view` (a matching by-view key for the active view) → that profile, named", () => {
+		const owner = validateWeights({ adoption: 50 });
+		if (owner.kind !== "ok") throw new Error("bad fixture");
+		const profile = resolveWeightProfile("owner", undefined, {
+			owner: owner.weights,
+		});
+		expect(profile.source).toBe("view");
+		expect(profile.name).toBe("owner");
+		expect(profile.weights).toEqual({ ...DEFAULT_WEIGHTS, adoption: 50 });
+	});
+
+	it("by-view override WINS over a global score_weights when the active view matches", () => {
+		const global = validateWeights({ drift: 40 });
+		const owner = validateWeights({ adoption: 50 });
+		if (global.kind !== "ok" || owner.kind !== "ok") {
+			throw new Error("bad fixture");
+		}
+		const profile = resolveWeightProfile("owner", global.weights, {
+			owner: owner.weights,
+		});
+		expect(profile.source).toBe("view");
+		expect(profile.name).toBe("owner");
+		// The by-view table replaces the global one entirely (each already merged
+		// onto defaults by validateWeights), so drift stays the DEFAULT, not 40.
+		expect(profile.weights).toEqual({ ...DEFAULT_WEIGHTS, adoption: 50 });
+	});
+
+	it("active view with NO matching by-view key falls back to the global score_weights", () => {
+		const global = validateWeights({ drift: 40 });
+		const owner = validateWeights({ adoption: 50 });
+		if (global.kind !== "ok" || owner.kind !== "ok") {
+			throw new Error("bad fixture");
+		}
+		// Active view is `engineering`, but only `owner` has a by-view profile.
+		const profile = resolveWeightProfile("engineering", global.weights, {
+			owner: owner.weights,
+		});
+		expect(profile.source).toBe("project");
+		expect(profile.name).toBeUndefined();
+		expect(profile.weights).toEqual({ ...DEFAULT_WEIGHTS, drift: 40 });
+	});
+
+	it("no active view name (custom artifact list) never resolves a by-view profile", () => {
+		const owner = validateWeights({ adoption: 50 });
+		if (owner.kind !== "ok") throw new Error("bad fixture");
+		const profile = resolveWeightProfile(undefined, undefined, {
+			owner: owner.weights,
+		});
+		expect(profile.source).toBe("default");
+		expect(profile.name).toBeUndefined();
+		expect(profile.weights).toEqual(DEFAULT_WEIGHTS);
 	});
 });
