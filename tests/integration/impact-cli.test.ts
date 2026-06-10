@@ -371,6 +371,151 @@ describe("ds-bridge impact (built dist/cli.mjs)", () => {
 		expect(renamedRow).toContain("touches 1 call site");
 	}, 30_000); // ts-morph project load is slow under full-suite parallelism
 
+	it("C7/M2.2: a diff run with a registry writes per-call-site sites[] on the impact line", async () => {
+		const dir = await freshTmp("ds-impact-sites-");
+		// Registry maps the renamed figma name "Avatar" → a code component imported
+		// in one file, so the renamed row (Avatar → "Avatar / User") yields one site.
+		await mkdir(join(dir, ".ds-bridge"), { recursive: true });
+		await writeFile(
+			join(dir, ".ds-bridge", "registry.json"),
+			`${JSON.stringify({
+				schemaVersion: 1,
+				generatedAt: "2026-06-01T00:00:00.000Z",
+				matches: [
+					{
+						codeName: "Avatar",
+						importPath: "components/avatar.tsx",
+						figmaName: "Avatar",
+						nodeId: "9:1",
+						score: 0.97,
+					},
+				],
+				unmatchedCode: [],
+				unmatchedFigma: [],
+			})}\n`,
+			"utf8",
+		);
+		await mkdir(join(dir, "components"), { recursive: true });
+		await writeFile(
+			join(dir, "components", "avatar.tsx"),
+			"export function Avatar() {\n\treturn null;\n}\n",
+			"utf8",
+		);
+		await mkdir(join(dir, "app"), { recursive: true });
+		await writeFile(
+			join(dir, "app", "Profile.tsx"),
+			'import { Avatar } from "../components/avatar";\n\nexport function Profile() {\n\treturn Avatar();\n}\n',
+			"utf8",
+		);
+		await seedCursor(dir, {
+			fileKey: FILE_KEY,
+			versionId: "5009876543210987654",
+			capturedAt: "2026-06-01T00:00:00.000Z",
+			snapshot: beforeSnapshot(),
+		});
+
+		const result = await runCli(dir, ["impact", "--format=json"]);
+		expect(result.code).toBe(1);
+
+		const text = await readFile(
+			join(dir, ".ds-bridge", "history.jsonl"),
+			"utf8",
+		);
+		const record = JSON.parse(text.trim()) as {
+			kind: string;
+			touchedCallSites: number;
+			sites?: {
+				file: string;
+				line: number;
+				subject: string;
+				from: string;
+				to: string;
+			}[];
+			sitesTruncated?: boolean;
+		};
+		expect(record.kind).toBe("impact");
+		expect(record.sites).toBeDefined();
+		const sites = record.sites ?? [];
+		// The renamed Avatar component's single call site is mapped with old→new.
+		const avatarSite = sites.find((s) => s.file === "app/Profile.tsx");
+		expect(avatarSite).toBeDefined();
+		expect(avatarSite?.line).toBe(1);
+		expect(avatarSite?.subject).toBe("Avatar / User");
+		expect(avatarSite?.from).toBe("Avatar");
+		expect(avatarSite?.to).toBe("Avatar / User");
+		// Not truncated (well under the default 200 cap).
+		expect(record.sitesTruncated).toBeUndefined();
+	}, 30_000);
+
+	it("C7/M2.2: --checklist prints the per-call-site migration list (file:line · old→new)", async () => {
+		const dir = await freshTmp("ds-impact-checklist-");
+		await mkdir(join(dir, ".ds-bridge"), { recursive: true });
+		await writeFile(
+			join(dir, ".ds-bridge", "registry.json"),
+			`${JSON.stringify({
+				schemaVersion: 1,
+				generatedAt: "2026-06-01T00:00:00.000Z",
+				matches: [
+					{
+						codeName: "Avatar",
+						importPath: "components/avatar.tsx",
+						figmaName: "Avatar",
+						nodeId: "9:1",
+						score: 0.97,
+					},
+				],
+				unmatchedCode: [],
+				unmatchedFigma: [],
+			})}\n`,
+			"utf8",
+		);
+		await mkdir(join(dir, "components"), { recursive: true });
+		await writeFile(
+			join(dir, "components", "avatar.tsx"),
+			"export function Avatar() {\n\treturn null;\n}\n",
+			"utf8",
+		);
+		await mkdir(join(dir, "app"), { recursive: true });
+		await writeFile(
+			join(dir, "app", "Profile.tsx"),
+			'import { Avatar } from "../components/avatar";\n\nexport function Profile() {\n\treturn Avatar();\n}\n',
+			"utf8",
+		);
+		await seedCursor(dir, {
+			fileKey: FILE_KEY,
+			versionId: "5009876543210987654",
+			capturedAt: "2026-06-01T00:00:00.000Z",
+			snapshot: beforeSnapshot(),
+		});
+
+		const result = await runCli(dir, ["impact", "--checklist"]);
+		expect(result.code).toBe(1);
+		// The per-site checklist names the file:line and the old→new rename.
+		expect(result.stdout).toContain("app/Profile.tsx:1");
+		expect(result.stdout).toContain("Avatar");
+		expect(result.stdout).toContain("Avatar / User");
+	}, 30_000);
+
+	it("C7/M2.2: --checklist with no registry prints no call sites (graceful)", async () => {
+		const dir = await freshTmp("ds-impact-checklist-noreg-");
+		await seedCursor(dir, {
+			fileKey: FILE_KEY,
+			versionId: "5009876543210987654",
+			capturedAt: "2026-06-01T00:00:00.000Z",
+			snapshot: beforeSnapshot(),
+		});
+		const result = await runCli(dir, ["impact", "--checklist"]);
+		// Breaking changes still exit 1; no registry → no sites, but never a crash.
+		expect(result.code).toBe(1);
+		// The impact line carries no sites without a registry.
+		const text = await readFile(
+			join(dir, ".ds-bridge", "history.jsonl"),
+			"utf8",
+		);
+		const record = JSON.parse(text.trim()) as { sites?: unknown[] };
+		expect(record.sites ?? []).toHaveLength(0);
+	}, 30_000);
+
 	it("updates the cursor after a successful diff run", async () => {
 		const dir = await freshTmp("ds-impact-cursor-update-");
 		await seedCursor(dir, {

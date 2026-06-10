@@ -68,6 +68,8 @@ interface ImpactOptions {
 	since: string | undefined;
 	fileKey: string | undefined;
 	format: string;
+	/** C7 (M2.2): print the per-call-site migration checklist after the report. */
+	checklist: boolean;
 }
 
 /** The version cursor persisted between runs (a rebuildable cache). */
@@ -246,8 +248,25 @@ function hasBreaking(diff: ComponentDiff): boolean {
 }
 
 /**
+ * One per-call-site migration entry on the impact line (C7, M2.2): a changed
+ * component (the diff row's old→new) joined with one of its code call sites.
+ */
+interface MigrationSiteRecord {
+	file: string;
+	line: number;
+	/** The component's current name (what the migration is "about"). */
+	subject: string;
+	/** The pre-change name (empty for an added component). */
+	from: string;
+	/** The post-change name (empty for a removed component). */
+	to: string;
+}
+
+/**
  * One appended impact history record (read back by `report` for the
- * change-impact section — T7.22). Counts per classification + blast radius.
+ * change-impact section — T7.22). Counts per classification + blast radius, plus
+ * the OPTIONAL per-call-site `sites[]` (C7, M2.2) capped at `migration_sites_cap`
+ * with `sitesTruncated` when more existed. An older/baseline line omits `sites`.
  */
 interface ImpactHistoryRecord {
 	at: string;
@@ -256,6 +275,10 @@ interface ImpactHistoryRecord {
 	additive: number;
 	cosmetic: number;
 	touchedCallSites: number;
+	/** C7 (M2.2): per-call-site migration list; absent → count-only. */
+	sites?: MigrationSiteRecord[];
+	/** C7 (M2.2): true when more sites existed than the cap allowed. */
+	sitesTruncated?: boolean;
 }
 
 /** Tally every diff entry by its classification. */
@@ -278,24 +301,60 @@ function countByImpact(
 }
 
 /**
+ * Build the per-call-site migration sites (C7, M2.2) by joining the changed
+ * components (the diff rows, worst-impact-first) with their code call sites (the
+ * usage map, keyed by the lookup figma name). One site per (row × call site),
+ * carrying the row's old→new. Capped at `cap`; returns whether more existed.
+ */
+function buildMigrationSites(
+	diff: ComponentDiff,
+	usageByName: Map<string, ComponentUsage>,
+	cap: number,
+): { sites: MigrationSiteRecord[]; truncated: boolean } {
+	const all: MigrationSiteRecord[] = [];
+	for (const row of diffRows(diff)) {
+		const usage = usageByName.get(row.lookupName);
+		if (usage === undefined) continue;
+		for (const site of usage.usages) {
+			all.push({
+				file: site.file,
+				line: site.line,
+				subject: row.component,
+				from: row.fromName,
+				to: row.toName,
+			});
+		}
+	}
+	const limit = Number.isFinite(cap) && cap > 0 ? cap : all.length;
+	const truncated = all.length > limit;
+	return { sites: truncated ? all.slice(0, limit) : all, truncated };
+}
+
+/**
  * Append ONE impact history line to <targetDir>/.ds-bridge/history.jsonl.
- * Only diff runs append — a baseline capture has nothing to report yet.
+ * Only diff runs append — a baseline capture has nothing to report yet. The
+ * per-call-site `sites[]` (C7, M2.2) is included when ≥1 site was mapped; the
+ * `sitesTruncated` flag rides along only when the cap clipped the list.
  */
 function appendImpactHistory(
 	targetDir: string,
 	diff: ComponentDiff,
 	usageByName: Map<string, ComponentUsage>,
+	cap: number,
 ): void {
 	const stateDir = join(targetDir, ".ds-bridge");
 	let touchedCallSites = 0;
 	for (const usage of usageByName.values()) {
 		touchedCallSites += usage.usages.length;
 	}
+	const { sites, truncated } = buildMigrationSites(diff, usageByName, cap);
 	const record: ImpactHistoryRecord = {
 		at: new Date().toISOString(),
 		kind: "impact",
 		...countByImpact(diff),
 		touchedCallSites,
+		...(sites.length > 0 ? { sites } : {}),
+		...(truncated ? { sitesTruncated: true } : {}),
 	};
 	mkdirSync(stateDir, { recursive: true });
 	appendFileSync(
@@ -303,6 +362,31 @@ function appendImpactHistory(
 		`${JSON.stringify(record)}\n`,
 		"utf8",
 	);
+}
+
+/**
+ * Render the per-call-site migration checklist (C7, M2.2) for the `--checklist`
+ * terminal branch: one copy-pasteable line per site (`file:line · subject ·
+ * old→new`), worst-impact-first (the build order). Empty → a short note.
+ */
+function renderChecklist(
+	sites: MigrationSiteRecord[],
+	truncated: boolean,
+): string {
+	if (sites.length === 0) {
+		return "Migration checklist: no mapped call sites (no registry, or no changed component is imported in resolved .tsx files).";
+	}
+	const header = `Migration checklist — ${sites.length} call site${sites.length === 1 ? "" : "s"}${truncated ? " (truncated to the cap)" : ""}:`;
+	const lines = sites.map((s) => {
+		const move =
+			s.from !== "" && s.to !== ""
+				? `${s.from} → ${s.to}`
+				: s.to === ""
+					? `${s.from} → (removed)`
+					: `(new) → ${s.to}`;
+		return `  ${s.file}:${s.line} · ${s.subject} · ${move}`;
+	});
+	return [header, ...lines].join("\n");
 }
 
 interface DiffRow {
@@ -315,6 +399,10 @@ interface DiffRow {
 	category: string;
 	impact: string;
 	detail: string;
+	/** C7 (M2.2): the pre-change name (empty for an added component). */
+	fromName: string;
+	/** C7 (M2.2): the post-change name (empty for a removed component). */
+	toName: string;
 }
 
 /** Flatten the diff into display rows (one per change), worst-first by impact. */
@@ -327,6 +415,8 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 			category: "removed",
 			impact: r.impact,
 			detail: "component removed from the library",
+			fromName: r.name,
+			toName: "",
 		});
 	}
 	for (const r of diff.renamed) {
@@ -336,6 +426,8 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 			category: "renamed",
 			impact: r.impact,
 			detail: `renamed from "${r.fromName}"`,
+			fromName: r.fromName,
+			toName: r.toName,
 		});
 	}
 	for (const c of diff.changed) {
@@ -353,6 +445,8 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 			category: "changed",
 			impact: c.impact,
 			detail: parts.join(", "),
+			fromName: c.name,
+			toName: c.name,
 		});
 	}
 	for (const a of diff.added) {
@@ -362,6 +456,8 @@ function diffRows(diff: ComponentDiff): DiffRow[] {
 			category: "added",
 			impact: a.impact,
 			detail: "new component",
+			fromName: "",
+			toName: a.name,
 		});
 	}
 	const rank: Record<string, number> = {
@@ -576,6 +672,15 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 		for (const usage of usages) usageByName.set(usage.figmaName, usage);
 	}
 
+	// Per-call-site migration sites (C7, M2.2): join changed components ⋈ their
+	// call sites, capped at migration_sites_cap. Built once, shared by the history
+	// line AND the --checklist terminal branch so they never disagree.
+	const { sites, truncated } = buildMigrationSites(
+		diff,
+		usageByName,
+		config.migrationSitesCap,
+	);
+
 	if (format === "json") {
 		const usageList = [...usageByName.values()];
 		process.stdout.write(
@@ -589,6 +694,8 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 					diff,
 					usage: usageList,
 					registryPresent: registry !== undefined,
+					sites,
+					sitesTruncated: truncated,
 				},
 				null,
 				2,
@@ -601,10 +708,16 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 		);
 	}
 
+	// --checklist / --sites: print the per-call-site migration list (term-only;
+	// the JSON report already carries `sites`).
+	if (options.checklist && format === "term") {
+		process.stdout.write(`\n${renderChecklist(sites, truncated)}\n`);
+	}
+
 	// History line for the dashboard (diff runs only) — T7.22. Lands in the
 	// project's .ds-bridge (cwd), NOT the cursor cache location, so `report`
-	// finds it alongside the other history kinds.
-	appendImpactHistory(cwd(), diff, usageByName);
+	// finds it alongside the other history kinds. Carries the capped sites[].
+	appendImpactHistory(cwd(), diff, usageByName, config.migrationSitesCap);
 
 	// Advance the cursor after a successful run (write after reporting).
 	if (!writeCursor(path, nextCursor)) {
@@ -632,7 +745,21 @@ export function registerImpactCommand(program: Command): void {
 			"Figma file key OR a product_file_keys alias (overrides config)",
 		)
 		.option("--format <format>", "output format: term | json", "term")
-		.action((options: ImpactOptions) => {
-			void runImpact(options);
+		.option(
+			"--checklist",
+			"print the per-call-site migration checklist (file:line · old→new) after the report (term only)",
+			false,
+		)
+		.option(
+			"--sites",
+			"alias of --checklist: print the per-call-site migration checklist (term only)",
+			false,
+		)
+		.action((options: ImpactOptions & { sites?: boolean }) => {
+			// --sites is an alias of --checklist.
+			void runImpact({
+				...options,
+				checklist: options.checklist || options.sites === true,
+			});
 		});
 }

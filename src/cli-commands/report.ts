@@ -31,6 +31,7 @@ import {
 	buildChangeFrequency,
 } from "../engines/report/consumer.js";
 import { replayHistory } from "../engines/report/history-lines.js";
+import { buildMigrationChecklist } from "../engines/report/migration-checklist.js";
 import { buildParityTrend } from "../engines/report/parity-trend.js";
 import { resolveView } from "../engines/report/presets.js";
 import {
@@ -51,6 +52,7 @@ import type {
 	LeaderboardRow,
 	LibraryHealth,
 	LintSummary,
+	MigrationChecklist,
 	Parity,
 	ParityTrendPoint,
 	Readiness,
@@ -463,6 +465,26 @@ function computeParityTrend(stateDir: string): ParityTrendPoint[] {
 }
 
 /**
+ * Reconstruct the per-call-site migration checklist (C7, M2.2) from the LATEST
+ * `impact` history record's optional `sites[]`, capped at `cap`, via the pure
+ * `buildMigrationChecklist` engine. Last-wins over the impact lines. An impact
+ * line WITHOUT `sites` (older/baseline) → an empty checklist; the caller only
+ * spreads a NON-empty one into ReportData so an absent/sites-less impact history
+ * keeps the section's empty state (and the no-config render byte-identical).
+ */
+function computeMigrationChecklist(
+	stateDir: string,
+	cap: number,
+): MigrationChecklist {
+	const records = replayHistory(readHistoryText(stateDir));
+	let latestImpact: Record<string, unknown> | undefined;
+	for (const entry of records) {
+		if (entry.kind === "impact") latestImpact = entry.record;
+	}
+	return buildMigrationChecklist(latestImpact, cap);
+}
+
+/**
  * Read <stateDir>/registry.json and project it into the dashboard's Parity
  * section. Absent file → undefined (the renderer shows the empty state).
  * Unreadable / non-JSON registry → undefined with one stderr warning (a
@@ -566,6 +588,8 @@ interface ResolvedSelection {
 	viewLabel?: string;
 	/** Validated system-score weights from config; undefined → engine defaults. */
 	scoreWeights?: Weights;
+	/** Migration-checklist site cap (C7); the config default (200) when no file. */
+	migrationSitesCap: number;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -595,6 +619,10 @@ function resolveSelection(
 	let dashboardView: string | undefined;
 	let dashboardArtifacts: ArtifactId[] | undefined;
 	let scoreWeights: Weights | undefined;
+	// Default to the config's own default (200, C7) when there is no project file.
+	const defaults = resolveConfig({});
+	let migrationSitesCap =
+		defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
 
 	const configPath = join(targetDir, ".ds-bridge.json");
 	if (existsSync(configPath)) {
@@ -615,6 +643,7 @@ function resolveSelection(
 		dashboardView = resolved.config.dashboardView;
 		dashboardArtifacts = resolved.config.dashboardArtifacts;
 		scoreWeights = resolved.config.scoreWeights;
+		migrationSitesCap = resolved.config.migrationSitesCap;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -673,6 +702,7 @@ function resolveSelection(
 					: (outcome.viewName ?? "custom");
 			return {
 				artifacts: outcome.artifacts,
+				migrationSitesCap,
 				...(viewLabel !== undefined ? { viewLabel } : {}),
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
 			};
@@ -826,6 +856,13 @@ function runReport(path: string, options: ReportOptions): void {
 	// spread in when NON-empty so an absent parity history keeps the section's
 	// empty state (and the no-config golden byte-identical).
 	const parityTrend = computeParityTrend(stateDir);
+	// Migration checklist (C7, M2.2): the latest impact line's per-call-site
+	// sites[], capped. Only spread in when NON-empty so an impact line without
+	// sites (or no impact line) keeps the section's empty state (golden-neutral).
+	const migrationChecklist = computeMigrationChecklist(
+		stateDir,
+		selection.migrationSitesCap,
+	);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -862,6 +899,7 @@ function runReport(path: string, options: ReportOptions): void {
 			breakingCalendar: consumer.breakingCalendar,
 			changeFrequency: consumer.changeFrequency,
 			...(parityTrend.length > 0 ? { parityTrend } : {}),
+			...(migrationChecklist.sites.length > 0 ? { migrationChecklist } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},

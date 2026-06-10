@@ -494,6 +494,71 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("System score");
 	});
 
+	it("C7/M2.2: an impact line with sites[] populates the migration-checklist section", async () => {
+		const dir = await freshTmp("ds-report-migration-");
+		await seedHistory(dir, [
+			JSON.stringify({
+				at: "2026-06-06T10:00:00.000Z",
+				kind: "impact",
+				breaking: 1,
+				additive: 0,
+				cosmetic: 0,
+				touchedCallSites: 1,
+				sites: [
+					{
+						file: "app/Profile.tsx",
+						line: 3,
+						subject: "Avatar / User",
+						from: "Avatar",
+						to: "Avatar / User",
+					},
+				],
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"migration-checklist",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The migration-checklist section is present and NOT empty (the stub renders
+		// a "preview" marker once migrationChecklist is populated).
+		expect(html).toContain("Migration checklist");
+		expect(html).toContain("preview");
+	});
+
+	it("C7/M2.2: an impact line WITHOUT sites leaves the migration-checklist empty", async () => {
+		const dir = await freshTmp("ds-report-migration-empty-");
+		await seedHistory(dir, [
+			impactLine("2026-06-06T10:00:00.000Z", {
+				breaking: 2,
+				additive: 0,
+				cosmetic: 0,
+				touchedCallSites: 5,
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"migration-checklist",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Migration checklist");
+		// No sites → the checklist is count-only/empty (no "preview" marker), keeping
+		// the no-config golden byte-identical.
+		expect(html).not.toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
