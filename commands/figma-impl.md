@@ -29,7 +29,7 @@ instructions verbatim and **STOP** (do not proceed, do not guess):
 
 Score the frame's machine-readability first:
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs handoff $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs handoff $ARGUMENTS --format=json 2>&1 || true`
 
 The block above is the `ReadinessReport` for the frame. If it errored (bad URL,
 missing token), surface the one fix and stop. Otherwise read `score`. If it is
@@ -54,9 +54,28 @@ From this, build the list of **requirements**: every component-ish node (with it
 
 ### 3. Resolve against the system
 
-Ensure the registry is fresh, then resolve every component node:
+The registry maps Figma nodes to code components, and the `registry resolve`
+calls below read it. Source it **without rebuilding silently** — get approval
+through a native prompt first. Check whether `.ds-bridge/registry.json` exists
+(a quick `test -f` with the Bash tool), then call **AskUserQuestion** (available
+because this command runs **inline**):
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build`
+- **Registry missing** → it must be built to proceed. Ask: "No component registry
+  yet — it's required to resolve components. Build it now? (scans your components
+  + fetches the Figma library; needs network access)" with options **Build it
+  now** · **Cancel**. On **Cancel**, stop — resolution is impossible without it.
+- **Registry present** → ask whether to refresh: "A component registry already
+  exists. Rebuild it to pick up the latest Figma library and code, or use the
+  existing one?" with options **Rebuild** · **Use existing**.
+
+To build or rebuild (on **Build it now** / **Rebuild**), run this with the Bash
+tool (it inherits the configured Figma file key and PAT from the plugin
+environment):
+
+`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build`
+
+If it reports a missing Figma file key or PAT, surface that one fix
+(`/plugin configure` + restart) and stop. Then resolve every component node:
 
 - For each component node: `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry resolve <nodeId>`.
   - **match** (exit 0) → resolved: use `codeName` + `importPath`.
@@ -68,9 +87,6 @@ Ensure the registry is fresh, then resolve every component node:
   An exact value hit → resolved `token-exact` (prefer the semantic alias token).
   Within tolerance but not exact → gap `near-token-only` (sign-off required).
   Nothing → gap `no-token-match`.
-
-If `registry build` itself reports a missing Figma file key or PAT, surface that
-one fix and stop.
 
 ### 4. Write code — resolved only
 
@@ -105,5 +121,7 @@ token). Change nothing in Figma.
 
 - **Never invent UI.** Unresolved = gap, always reported, never approximated.
 - **Never pick** among ambiguous registry candidates — that is a human decision.
+- **Never rebuild the registry without explicit approval** — always ask via the
+  AskUserQuestion prompt in step 3 (Rebuild / Use existing), never silently.
 - **Never write to Figma.** This command reads design context and generates code.
 - Reference the **design-system-context** skill for the full contract.

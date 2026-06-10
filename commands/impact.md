@@ -5,7 +5,7 @@ argument-hint: "[--since <versionId>] [--file-key <key>]"
 
 ## Impact report
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs impact $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs impact $ARGUMENTS --format=json 2>&1 || true`
 
 ## Your task
 
@@ -54,9 +54,12 @@ Otherwise the block has `"baseline": false` and these fields:
 
 ### If the command errored
 
-The `impact` command exits `2` (and prints a stderr message instead of JSON)
-on an operational error: a missing Figma token, a missing file key, or an API
-failure. If the block shows such a message:
+On an operational error (a missing Figma token, a missing file key, or an API
+failure) the `impact` command prints a stderr message instead of a report; the
+`2>&1 || true` on the precondition folds that message into the block so it never
+aborts this command (it also keeps the exit-1 "breaking changes found" run from
+aborting — that case still carries a full JSON report). If the block is such an
+error message rather than a JSON report:
 
 1. Surface the message to the user.
 2. Explain the one action that resolves it — for a missing token, create a

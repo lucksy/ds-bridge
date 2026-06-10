@@ -5,7 +5,7 @@ argument-hint: "[component] [--out <dir>]"
 
 ## Generated docs
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs docs $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs docs $ARGUMENTS --format=json 2>&1 || true`
 
 ## Your task
 
@@ -28,17 +28,31 @@ The block above is the JSON output of `ds-bridge docs` for the user's arguments
 
 ### If the command errored
 
-The `docs` command exits `2` (and prints a stderr message instead of JSON) on an
-operational error. Handle these cases:
+On an operational error the `docs` command prints a stderr message instead of a
+DocsResult; the `2>&1 || true` above folds that message into the block so a
+missing registry never aborts this command (the build is a deliberate,
+user-confirmed step, below — never silent). When the block is NOT a DocsResult
+JSON object but a plain error line, handle these cases:
 
 1. **No registry.** If the block shows "No registry found … Run ds-bridge
-   registry build first": tell the user plainly that docs are generated from a
-   component registry that has not been built yet. **Offer to build it** with
-   `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build` — it scans the code
-   components and fetches the Figma library, then writes the registry. Note it
-   needs a configured Figma file key and a Dev/Full-seat PAT; if the build itself
-   reports a missing token or file key, surface that one fix and stop. After a
-   successful build, rerun this command and continue below.
+   registry build first", the component registry is a one-time setup step that
+   has not run yet. **Do not** write paragraphs and wait for a typed "yes" — get
+   approval through a native prompt. Immediately call **AskUserQuestion** (it is
+   available because this command runs **inline**) with one short question and two
+   options:
+   - question: "No component registry yet — docs are generated from it. Build it
+     now? (scans your components + fetches the Figma library; needs network
+     access to Figma)"
+   - **Build it now** · **Not now**
+
+   On **Build it now**, run this with the Bash tool (it inherits the configured
+   Figma file key and PAT from the plugin environment):
+
+   `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build`
+
+   If it reports a missing token or file key, surface that one fix (configure it
+   via `/plugin configure` and restart) and stop. On success, rerun this command
+   and continue below. On **Not now**, stop and report nothing further.
 2. **Component not found.** If the block shows "No component named … Candidates:
    …": tell the user the named component is not in the registry and list the
    candidate names from the message so they can retry with a valid one.

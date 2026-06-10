@@ -5,7 +5,7 @@ argument-hint: "[component]"
 
 ## Parity matrix
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs parity $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs parity $ARGUMENTS --format=json 2>&1 || true`
 
 ## Your task
 
@@ -22,18 +22,30 @@ arguments (`$ARGUMENTS`). It is a **ParityReport** with these fields:
 
 ### If the command errored
 
-The `parity` command exits `2` (and prints a stderr message instead of JSON)
-when there is **no registry** at `.ds-bridge/registry.json`. If the block shows
-that "No registry found … Run ds-bridge registry build first" message:
+On a missing registry the `parity` command prints a stderr message instead of a
+ParityReport; the `2>&1 || true` on the precondition folds that message into the
+block so it never aborts this command. If the block is that "No registry found …
+Run ds-bridge registry build first" message rather than a ParityReport JSON
+object:
 
-1. Tell the user plainly that the parity matrix is built from a component
-   registry that has not been generated yet.
-2. **Offer to build it for them.** The build command is
-   `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build` — it scans the code
-   components and fetches the Figma library, then writes the registry. Note that
-   it needs a configured Figma file key and a Dev/Full-seat PAT; if the build
-   itself reports a missing token or file key, surface that one fix and stop.
-3. After a successful build, rerun the parity command and continue below.
+The parity matrix is built from a component registry that has not been generated
+yet. **Do not** write paragraphs and wait for a typed "yes" — get approval
+through a native prompt. Immediately call **AskUserQuestion** (available because
+this command runs **inline**) with one short question and two options:
+
+- question: "No component registry yet — the parity matrix is built from it.
+  Build it now? (scans your components + fetches the Figma library; needs network
+  access to Figma)"
+- **Build it now** · **Not now**
+
+On **Build it now**, run this with the Bash tool (it inherits the configured
+Figma file key and PAT from the plugin environment):
+
+`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build`
+
+If it reports a missing token or file key, surface that one fix (configure it via
+`/plugin configure` and restart) and stop. On success, rerun the parity command
+and continue below. On **Not now**, stop and report nothing further.
 
 If the block shows any other error (bad path, invalid format), surface the
 message and stop.
