@@ -7084,9 +7084,9 @@ function byName(a, b) {
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
 function pairColorTokens(map) {
-  const colors3 = map.tokens.filter(isColor);
-  const foregrounds = colors3.filter((t) => isForegroundRole(t.name)).sort(byName);
-  const backgrounds = colors3.filter((t) => isBackgroundRole(t.name)).sort(byName);
+  const colors4 = map.tokens.filter(isColor);
+  const foregrounds = colors4.filter((t) => isForegroundRole(t.name)).sort(byName);
+  const backgrounds = colors4.filter((t) => isBackgroundRole(t.name)).sort(byName);
   const pairs = [];
   for (const foreground of foregrounds) {
     for (const background of backgrounds) {
@@ -7825,13 +7825,11 @@ async function discoverTokenSources(rootDir, options) {
 
 // src/render/terminal/bar-chart.ts
 var import_picocolors = __toESM(require_picocolors(), 1);
-var colors = import_picocolors.default.createColors(true);
+
+// src/render/terminal/blocks.ts
 var FULL_BLOCK = "\u2588";
 var PARTIAL_BLOCKS = ["", "\u258F", "\u258E", "\u258D", "\u258C", "\u258B", "\u258A", "\u2589"];
-function displayWidth(value2) {
-  return [...value2].length;
-}
-function buildBar(fraction, width) {
+function proportionalBar(fraction, width) {
   const eighths = Math.max(0, Math.round(fraction * width * 8));
   const fullCount = Math.min(Math.floor(eighths / 8), width);
   let bar = FULL_BLOCK.repeat(fullCount);
@@ -7841,6 +7839,12 @@ function buildBar(fraction, width) {
   }
   return bar;
 }
+
+// src/render/terminal/bar-chart.ts
+var colors = import_picocolors.default.createColors(true);
+function displayWidth(value2) {
+  return [...value2].length;
+}
 function renderBarChart(items, opts) {
   const labelWidth = Math.max(0, ...items.map((i) => displayWidth(i.label)));
   const valueStrings = items.map((i) => String(i.value));
@@ -7849,7 +7853,7 @@ function renderBarChart(items, opts) {
   return items.map((item, index) => {
     const clamped = Math.max(0, item.value);
     const fraction = max > 0 ? clamped / max : 0;
-    const bar = buildBar(fraction, opts.width);
+    const bar = proportionalBar(fraction, opts.width);
     const renderedBar = opts.color && bar.length > 0 ? colors.cyan(bar) : bar;
     const label = item.label + " ".repeat(labelWidth - displayWidth(item.label));
     const value2 = (valueStrings[index] ?? "").padStart(valueWidth);
@@ -7857,14 +7861,18 @@ function renderBarChart(items, opts) {
   }).join("\n");
 }
 
-// src/render/terminal/severity.ts
+// src/render/terminal/gauge.ts
 var import_picocolors2 = __toESM(require_picocolors(), 1);
 var colors2 = import_picocolors2.default.createColors(true);
+
+// src/render/terminal/severity.ts
+var import_picocolors3 = __toESM(require_picocolors(), 1);
+var colors3 = import_picocolors3.default.createColors(true);
 var PALETTE = {
-  error: (s) => colors2.red(s),
-  warn: (s) => colors2.yellow(s),
-  info: (s) => colors2.cyan(s),
-  ok: (s) => colors2.green(s)
+  error: (s) => colors3.red(s),
+  warn: (s) => colors3.yellow(s),
+  info: (s) => colors3.cyan(s),
+  ok: (s) => colors3.green(s)
 };
 function severityColor(level, text, opts) {
   if (!opts.color) return text;

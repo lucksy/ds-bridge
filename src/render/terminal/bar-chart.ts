@@ -1,11 +1,8 @@
 // T1.7 — proportional unicode block bar chart. PURE string building.
 import pc from "picocolors";
+import { proportionalBar } from "./blocks.js";
 
 const colors = pc.createColors(true);
-
-const FULL_BLOCK = "█";
-// Left-anchored partial blocks for 1..7 eighths of a cell.
-const PARTIAL_BLOCKS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"] as const;
 
 export interface BarChartItem {
 	label: string;
@@ -20,18 +17,6 @@ export interface BarChartOptions {
 
 function displayWidth(value: string): number {
 	return [...value].length;
-}
-
-/** Build a sub-character-precise bar for `fraction` (0..1) across `width` cells. */
-function buildBar(fraction: number, width: number): string {
-	const eighths = Math.max(0, Math.round(fraction * width * 8));
-	const fullCount = Math.min(Math.floor(eighths / 8), width);
-	let bar = FULL_BLOCK.repeat(fullCount);
-	const remainder = eighths % 8;
-	if (fullCount < width && remainder > 0) {
-		bar += PARTIAL_BLOCKS[remainder];
-	}
-	return bar;
 }
 
 /**
@@ -54,7 +39,7 @@ export function renderBarChart(
 		.map((item, index) => {
 			const clamped = Math.max(0, item.value);
 			const fraction = max > 0 ? clamped / max : 0;
-			const bar = buildBar(fraction, opts.width);
+			const bar = proportionalBar(fraction, opts.width);
 			const renderedBar = opts.color && bar.length > 0 ? colors.cyan(bar) : bar;
 			const label =
 				item.label + " ".repeat(labelWidth - displayWidth(item.label));
