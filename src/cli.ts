@@ -17,6 +17,7 @@ import { registerLibraryHealthCommand } from "./cli-commands/library-health.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
 import { registerParityCommand } from "./cli-commands/parity.js";
 import { registerRegistryCommand } from "./cli-commands/registry.js";
+import { registerReleaseCheckCommand } from "./cli-commands/release-check.js";
 import { registerReportCommand } from "./cli-commands/report.js";
 import { registerTokensCommand } from "./cli-commands/tokens.js";
 import { loadDotenvInto } from "./io/dotenv.js";
@@ -50,6 +51,7 @@ export function buildProgram(): Command {
 	registerDashboardCommand(program);
 	registerDigestCommand(program);
 	registerConfigCommand(program);
+	registerReleaseCheckCommand(program);
 
 	return program;
 }

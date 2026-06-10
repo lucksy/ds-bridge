@@ -818,6 +818,54 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).not.toContain("preview");
 	});
 
+	it("C13/M3.7: a release signal populates the release-readiness section", async () => {
+		const dir = await freshTmp("ds-report-release-");
+		await seedHistory(dir, [
+			impactLine("2026-06-06T10:00:00.000Z", {
+				breaking: 0,
+				additive: 1,
+				cosmetic: 0,
+				touchedCallSites: 0,
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"release-readiness",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The section populates (the stub renders "preview" once releaseReadiness has
+		// checks — here impact passes, drift/parity insufficient → no-go).
+		expect(html).toContain("Release readiness");
+		expect(html).toContain("preview");
+	});
+
+	it("C13/M3.7: no release signal → the release-readiness section stays empty", async () => {
+		const dir = await freshTmp("ds-report-no-release-");
+		// A lint line carries NO impact/tokens-check/parity signal → no release data.
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"release-readiness",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Release readiness");
+		// No release signal → empty-checks rollup → empty-state (no "preview"),
+		// keeping a signal-free project's section neutral.
+		expect(html).not.toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
@@ -860,12 +908,14 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// impact populate the calendar list).
 		expect(countSvgs(html)).toBe(13);
 		// None of the thirteen DATA sections falls back to the empty state; of the 11
-		// metric-artifact stubs (C1–C13), four now POPULATE from this seed — C6
+		// metric-artifact stubs (C1–C13), five now POPULATE from this seed — C6
 		// library-health-trend (a dated library-health line), C8 score-velocity
 		// (a multi-point system-score trend), C4 data-freshness (the dated lines give
-		// per-kind freshness rows), and C5 component-health (the seeded registry +
-		// readiness/a11y join into per-component rows) → 7 empty-state stubs remain.
-		expect(html.split("No data yet").length - 1).toBe(7);
+		// per-kind freshness rows), C5 component-health (the seeded registry +
+		// readiness/a11y join into per-component rows), and C13 release-readiness (the
+		// impact + tokens-check lines compose three gates — no-go, parity insufficient,
+		// but the section populates) → 6 empty-state stubs remain.
+		expect(html.split("No data yet").length - 1).toBe(6);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {

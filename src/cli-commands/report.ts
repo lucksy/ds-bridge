@@ -51,6 +51,10 @@ import {
 import { buildParityTrend } from "../engines/report/parity-trend.js";
 import { resolveView } from "../engines/report/presets.js";
 import {
+	evaluateReleaseReadiness,
+	extractReleaseSignals,
+} from "../engines/report/release-readiness.js";
+import {
 	DEFAULT_WEIGHTS,
 	scoreFromHistory,
 	type Weights,
@@ -82,6 +86,7 @@ import type {
 	Parity,
 	ParityTrendPoint,
 	Readiness,
+	ReleaseReadiness,
 	ScoreVelocity,
 	SystemScore,
 	SystemScoreTrendPoint,
@@ -665,6 +670,35 @@ function computeOwnershipLeaderboard(
 		});
 	}
 	return rollupByOwner(byDirectory, ownership);
+}
+
+/**
+ * Compose the pre-publish release-readiness rollup (C13, M3.7) from the latest
+ * persisted release signals via the pure `evaluateReleaseReadiness` engine — the
+ * impact (breaking) / drift (tokens-check stale+missing) / parity
+ * (missing-in-code/figma) gates. Reads the SAME `history.jsonl` replay; missing
+ * signals become insufficient-data gates (never a false "go"). When NO release
+ * signal was ever recorded (no impact / tokens-check / parity line) the section
+ * stays in its empty state — an all-insufficient "preview" on a project with zero
+ * relevant history would be misleading — so this returns an empty-checks rollup
+ * there. The standalone `release-check` command, by contrast, always evaluates
+ * (its CI gate must report no-go even on an empty history). The caller spreads
+ * this into ReportData only when it HAS checks (i.e. at least one signal present).
+ */
+function computeReleaseReadiness(stateDir: string): ReleaseReadiness {
+	const signals = extractReleaseSignals(
+		replayHistory(readHistoryText(stateDir)),
+	);
+	// No release signal at all → keep the section's empty state (golden-neutral on
+	// a project with no impact/drift/parity history).
+	if (
+		signals.impact === undefined &&
+		signals.drift === undefined &&
+		signals.parity === undefined
+	) {
+		return { go: false, checks: [] };
+	}
+	return evaluateReleaseReadiness(signals);
 }
 
 /**
@@ -1388,6 +1422,12 @@ function runReport(path: string, options: ReportOptions): void {
 		stateDir,
 		resolveOwnership(targetDir, selection.ownership, selection.ownershipFile),
 	);
+	// Release readiness (C13, M3.7): the impact/drift/parity gates composed into a
+	// go/no-go rollup over the latest persisted signals. Only spread in when it has
+	// checks (the engine returns three for any history; an empty/absent history
+	// still yields three insufficient-data checks → no-go), so any project with a
+	// history populates the section (flipping it out of its empty state).
+	const releaseReadiness = computeReleaseReadiness(stateDir);
 	const html = renderDashboard(
 		{
 			generatedAt,
@@ -1427,6 +1467,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(dataFreshness.length > 0 ? { dataFreshness } : {}),
 			...(componentHealth.length > 0 ? { componentHealth } : {}),
 			...(ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {}),
+			...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
