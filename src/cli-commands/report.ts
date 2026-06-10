@@ -22,7 +22,7 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { platform } from "node:process";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { type MetricTargets, resolveConfig } from "../config.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import { buildAudienceChangelog } from "../engines/report/audience-changelog.js";
@@ -43,6 +43,10 @@ import {
 } from "../engines/report/score.js";
 import { buildScorecard } from "../engines/report/scorecard.js";
 import { renderScorecardMarkdown } from "../engines/report/scorecard-md.js";
+import {
+	evaluateTargets,
+	type LatestScalars,
+} from "../engines/report/targets.js";
 import type {
 	A11ySummary,
 	AdoptionTrendPoint,
@@ -61,6 +65,7 @@ import type {
 	ParityTrendPoint,
 	Readiness,
 	SystemScore,
+	TargetVerdict,
 } from "../engines/report/types.js";
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
@@ -523,6 +528,132 @@ function computeFrameImplementability(stateDir: string): FrameImplementability {
 	return buildFrameImplementability(latestFrameImpl);
 }
 
+/** A non-null object record, or undefined. */
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+	return typeof value === "object" && value !== null
+		? (value as Record<string, unknown>)
+		: undefined;
+}
+
+/** Half-up percentage 100·part/whole, or undefined when the denominator is 0. */
+function safePct(part: number, whole: number): number | undefined {
+	if (whole <= 0) return undefined;
+	return Math.round((100 * part) / whole);
+}
+
+/**
+ * Extract the latest measured scalars the C1 targets engine compares against
+ * (C1, M3.1), one per eligible target metric, from the SAME `history.jsonl`
+ * replay the scorecard/score read. Last-wins per kind. Each scalar mirrors a
+ * scorecard row's source so a user's target is checked against the number they
+ * already see:
+ *   - `on-system` — 100·refs/(refs+literals) from the latest adoption-bearing lint line
+ *   - `drift`     — the latest tokens-check's total drift = stale + missing + orphan
+ *   - `parity`    — the latest `parity` line's pass-% (persisted `score`, else 100·ok/total)
+ *   - `contrast`  — 100·Σpassed/(Σpassed+Σfailed) over the latest a11y line's modes
+ *   - `readiness` — the latest handoff `score` verbatim
+ *   - `system-score` — the composite, threaded from `computeSystemScore` (so the
+ *     gate honors the same per-view-weighted composite the dashboard shows).
+ * A metric with no source line stays `undefined` → the engine bands it `unknown`,
+ * never a misleading red.
+ */
+function latestTargetScalars(
+	stateDir: string,
+	systemScore: number | undefined,
+): LatestScalars {
+	const records = replayHistory(readHistoryText(stateDir));
+	let adoptionLint: Record<string, unknown> | undefined;
+	let tokensCheck: Record<string, unknown> | undefined;
+	let parity: Record<string, unknown> | undefined;
+	let a11y: Record<string, unknown> | undefined;
+	let handoff: Record<string, unknown> | undefined;
+	for (const { kind, record } of records) {
+		switch (kind) {
+			case "lint":
+				// Parallel last-wins keyed on field presence: a plain lint line never
+				// clears a prior adoption-bearing one (score.ts:333 precedent).
+				if (asRecord(record.adoption) !== undefined) adoptionLint = record;
+				break;
+			case "tokens-check":
+				tokensCheck = record;
+				break;
+			case "parity":
+				parity = record;
+				break;
+			case "a11y":
+				a11y = record;
+				break;
+			case "handoff":
+				handoff = record;
+				break;
+			default:
+				break; // unknown kind — skip (forward compat)
+		}
+	}
+
+	const scalars: LatestScalars = {};
+
+	const adoption = adoptionLint && asRecord(adoptionLint.adoption);
+	if (adoption !== undefined) {
+		const refs = asNumber(adoption.refs);
+		const literals = asNumber(adoption.literals);
+		const pct = safePct(refs, refs + literals);
+		if (pct !== undefined) scalars["on-system"] = pct;
+	}
+
+	if (tokensCheck !== undefined) {
+		scalars.drift =
+			asNumber(tokensCheck.stale) +
+			asNumber(tokensCheck.missing) +
+			asNumber(tokensCheck.orphan);
+	}
+
+	if (parity !== undefined) {
+		const total = asNumber(parity.total);
+		if (typeof parity.score === "number" && Number.isFinite(parity.score)) {
+			scalars.parity = parity.score;
+		} else if (total > 0) {
+			scalars.parity = Math.round((100 * asNumber(parity.ok)) / total);
+		}
+	}
+
+	if (a11y !== undefined) {
+		const modes = Array.isArray(a11y.modes) ? a11y.modes : [];
+		let passed = 0;
+		let failed = 0;
+		for (const m of modes) {
+			const mm = asRecord(m);
+			if (mm === undefined) continue;
+			passed += asNumber(mm.passed);
+			failed += asNumber(mm.failed);
+		}
+		const pct = safePct(passed, passed + failed);
+		if (pct !== undefined) scalars.contrast = pct;
+	}
+
+	if (handoff !== undefined) scalars.readiness = asNumber(handoff.score);
+
+	if (systemScore !== undefined) scalars["system-score"] = systemScore;
+
+	return scalars;
+}
+
+/**
+ * Evaluate the configured metric targets (C1, M3.1) against the latest measured
+ * scalars. No targets configured → []; the caller spreads the result into
+ * ReportData only when NON-empty (so an unconfigured project keeps the targets
+ * section's empty state, and the no-config golden byte-identical). Pure derivation
+ * over history — writes nothing.
+ */
+function computeTargets(
+	stateDir: string,
+	targets: MetricTargets | undefined,
+	systemScore: number | undefined,
+): TargetVerdict[] {
+	if (targets === undefined) return [];
+	return evaluateTargets(latestTargetScalars(stateDir, systemScore), targets);
+}
+
 /**
  * Read <stateDir>/registry.json and project it into the dashboard's Parity
  * section. Absent file → undefined (the renderer shows the empty state).
@@ -613,6 +744,8 @@ interface ReportOptions {
 	format: string;
 	/** `--delta <ref>`: compare against the base ref's committed history (md only). */
 	delta: string | undefined;
+	/** `--gate`: a red metric-target verdict exits 1 (md only; html → exit 2). */
+	gate: boolean;
 }
 
 function failReport(message: string): void {
@@ -629,6 +762,8 @@ interface ResolvedSelection {
 	scoreWeights?: Weights;
 	/** Migration-checklist site cap (C7); the config default (200) when no file. */
 	migrationSitesCap: number;
+	/** Validated `metric_targets` map (C1); undefined when no targets configured. */
+	metricTargets?: MetricTargets;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -658,6 +793,7 @@ function resolveSelection(
 	let dashboardView: string | undefined;
 	let dashboardArtifacts: ArtifactId[] | undefined;
 	let scoreWeights: Weights | undefined;
+	let metricTargets: MetricTargets | undefined;
 	// Default to the config's own default (200, C7) when there is no project file.
 	const defaults = resolveConfig({});
 	let migrationSitesCap =
@@ -683,6 +819,7 @@ function resolveSelection(
 		dashboardArtifacts = resolved.config.dashboardArtifacts;
 		scoreWeights = resolved.config.scoreWeights;
 		migrationSitesCap = resolved.config.migrationSitesCap;
+		metricTargets = resolved.config.metricTargets;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -744,6 +881,7 @@ function resolveSelection(
 				migrationSitesCap,
 				...(viewLabel !== undefined ? { viewLabel } : {}),
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
+				...(metricTargets !== undefined ? { metricTargets } : {}),
 			};
 		}
 	}
@@ -773,8 +911,9 @@ function readHistoryText(stateDir: string): string {
 function runMarkdownReport(
 	targetDir: string,
 	options: ReportOptions,
-	weights: Weights | undefined,
+	selection: ResolvedSelection,
 ): void {
+	const weights = selection.scoreWeights;
 	const stateDir = join(targetDir, ".ds-bridge");
 	const currentText = readHistoryText(stateDir);
 
@@ -831,6 +970,23 @@ function runMarkdownReport(
 		process.stdout.write(markdown);
 	}
 
+	// CI gate (C1, M3.1): with --gate set, a RED metric-target verdict exits 1 —
+	// the scorecard still rendered above (the gate is an exit-code concern, not a
+	// mute). Without --gate, or with no red verdict, the md path stays exit 0. The
+	// targets are banded against the CURRENT-side scalars (and its composite score).
+	if (options.gate) {
+		const score = scoreFromHistory(currentText, effectiveWeights);
+		const verdicts = computeTargets(
+			stateDir,
+			selection.metricTargets,
+			score.kind === "ok" ? score.current : undefined,
+		);
+		if (verdicts.some((v) => v.band === "red")) {
+			process.exitCode = 1;
+			return;
+		}
+	}
+
 	process.exitCode = 0;
 }
 
@@ -855,6 +1011,14 @@ function runReport(path: string, options: ReportOptions): void {
 		);
 		return;
 	}
+	// --gate is a CI/text concern (C1): it acts on the md scorecard. With a non-md
+	// (html) output there is nothing to gate on → exit 2 rather than silently pass.
+	if (options.gate && options.format !== "md") {
+		failReport(
+			"--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard).",
+		);
+		return;
+	}
 
 	const targetDir = resolve(path);
 	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
@@ -873,7 +1037,7 @@ function runReport(path: string, options: ReportOptions): void {
 
 	// The md path emits a markdown scorecard and RETURNS before the html tail.
 	if (options.format === "md") {
-		runMarkdownReport(targetDir, options, selection.scoreWeights);
+		runMarkdownReport(targetDir, options, selection);
 		return;
 	}
 
@@ -911,6 +1075,15 @@ function runReport(path: string, options: ReportOptions): void {
 	// + gaps-by-reason. Only spread in when it measured requirements (total > 0) so
 	// an absent frame-impl line keeps the section's empty state (golden-neutral).
 	const frameImplementability = computeFrameImplementability(stateDir);
+	// Targets RAG (C1, M3.1): the configured metric_targets banded against the
+	// latest measured scalars (incl. the composite system score). Only spread in
+	// when NON-empty so an unconfigured project keeps the section's empty state
+	// (and the no-config golden byte-identical).
+	const targets = computeTargets(
+		stateDir,
+		selection.metricTargets,
+		systemScore?.current,
+	);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -950,6 +1123,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(migrationChecklist.sites.length > 0 ? { migrationChecklist } : {}),
 			...(audienceChangelog.slices.length > 0 ? { audienceChangelog } : {}),
 			...(frameImplementability.total > 0 ? { frameImplementability } : {}),
+			...(targets.length > 0 ? { targets } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
@@ -997,6 +1171,11 @@ export function registerReportCommand(program: Command): void {
 		.option(
 			"--delta <ref>",
 			"compare against the base ref's committed history (requires --format md)",
+		)
+		.option(
+			"--gate",
+			"exit 1 when a metric_targets verdict is red (requires --format md; CI gate, C1)",
+			false,
 		)
 		.option(
 			"--out <file>",

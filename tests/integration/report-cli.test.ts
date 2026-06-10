@@ -1413,3 +1413,100 @@ describe("ds-bridge report — markdown scorecard (C4)", () => {
 		expect(stderr.toLowerCase()).toContain("check");
 	});
 });
+
+// ---------- C1 / M3.1 — targets RAG engine + --gate CI exit ----------
+
+describe("ds-bridge report — targets RAG + --gate (C1)", () => {
+	it("a metric_targets config populates the targets section (preview flip)", async () => {
+		const dir = await freshTmp("ds-report-targets-");
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+		// on-system from the adoption block is 75% → a >=90 target is amber/red.
+		await seedProjectConfig(dir, {
+			metric_targets: { "on-system": { op: ">=", value: 90 } },
+		});
+
+		const result = await runCli(["report", dir, "--artifacts", "targets"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Targets");
+		// The targets section is populated (no longer the empty stub).
+		expect(html).toContain("preview");
+	});
+
+	it("no metric_targets config → the targets section stays in its empty state", async () => {
+		const dir = await freshTmp("ds-report-no-targets-");
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+
+		const result = await runCli(["report", dir, "--artifacts", "targets"]);
+		expect(result.code).toBe(0);
+
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Targets");
+		// No config → empty state (no preview marker), keeping the golden neutral.
+		expect(html).not.toContain("preview");
+	});
+
+	it("--gate exits 1 when a metric_targets verdict is red (md)", async () => {
+		const dir = await freshTmp("ds-report-gate-red-");
+		// drift total = stale 5 + missing 0 + orphan 0 = 5; target == 0 → red.
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 5, 0, 0),
+		]);
+		await seedProjectConfig(dir, {
+			metric_targets: { drift: { op: "==", value: 0 } },
+		});
+
+		const result = await runCli(["report", dir, "--format", "md", "--gate"]);
+		expect(result.code).toBe(1);
+		// The scorecard still renders to stdout (gate is an exit concern, not a mute).
+		expect(result.stdout).toContain("### Design-system scorecard");
+	});
+
+	it("--gate exits 0 when no verdict is red (md)", async () => {
+		const dir = await freshTmp("ds-report-gate-green-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 0, 0, 0),
+		]);
+		await seedProjectConfig(dir, {
+			metric_targets: { drift: { op: "==", value: 0 } },
+		});
+
+		const result = await runCli(["report", dir, "--format", "md", "--gate"]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("### Design-system scorecard");
+	});
+
+	it("without --gate a red verdict still exits 0 (render-only)", async () => {
+		const dir = await freshTmp("ds-report-nogate-red-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 5, 0, 0),
+		]);
+		await seedProjectConfig(dir, {
+			metric_targets: { drift: { op: "==", value: 0 } },
+		});
+
+		const result = await runCli(["report", dir, "--format", "md"]);
+		expect(result.code).toBe(0);
+	});
+
+	it("--gate with --format html → exit 2 (gate is a text/CI concern)", async () => {
+		const dir = await freshTmp("ds-report-gate-html-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 5, 0, 0),
+		]);
+		await seedProjectConfig(dir, {
+			metric_targets: { drift: { op: "==", value: 0 } },
+		});
+
+		const result = await runCli(["report", dir, "--format", "html", "--gate"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("gate");
+	});
+});
