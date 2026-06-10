@@ -103,6 +103,24 @@ export const DEFAULT_FRESHNESS_THRESHOLDS: Record<
 	"frame-impl": { aging: 14, stale: 30 },
 };
 
+/**
+ * Explicit join keys for one component (C5, SPEC-personas §5): the Figma frame
+ * name whose latest readiness applies to this component, and/or the a11y contrast
+ * mode whose latest tallies apply. Either present raises that signal from a
+ * name-match heuristic to an EXACT join; both optional.
+ */
+export interface ComponentAliasKeys {
+	frameName?: string;
+	contrastMode?: string;
+}
+
+/**
+ * The `component_aliases` map (C5): component/alias name → its optional explicit
+ * join keys. The OBJECT-value shape (SPEC-personas §5 C5) — the M0.3 placeholder
+ * was a flat alias→name string map, replaced here now the consuming engine exists.
+ */
+export type ComponentAliases = Record<string, ComponentAliasKeys>;
+
 /** Default migration-checklist site cap (C7). */
 const DEFAULT_MIGRATION_SITES_CAP = 200;
 /** Default score-velocity window in days (C8). */
@@ -240,8 +258,12 @@ export interface ResolvedConfig {
 	ownership: Record<string, string> | undefined;
 	/** Path to a CODEOWNERS-style ownership file (C9), or `undefined` when absent. */
 	ownershipFile: string | undefined;
-	/** Component alias map (alias → canonical name, C5), or `undefined` when absent. */
-	componentAliases: Record<string, string> | undefined;
+	/**
+	 * Component alias join-keys (C5): component/alias name → optional explicit
+	 * join keys `{ frameName?, contrastMode? }` that raise the readiness/a11y
+	 * heuristic to an EXACT join for that component. `undefined` when absent.
+	 */
+	componentAliases: ComponentAliases | undefined;
 	/** Migration-checklist site cap (C7). Defaults to 200 when absent. */
 	migrationSitesCap: number;
 	/** Score-velocity window in days (C8). Defaults to 30 when absent. */
@@ -289,7 +311,7 @@ interface ProjectFileValues {
 	freshnessThresholds?: FreshnessThresholds;
 	ownership?: Record<string, string>;
 	ownershipFile?: string;
-	componentAliases?: Record<string, string>;
+	componentAliases?: ComponentAliases;
 	migrationSitesCap?: number;
 	scoreVelocityWindow?: number;
 	hadFigmaToken: boolean;
@@ -684,24 +706,40 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 		values.ownershipFile = obj.ownership_file;
 	}
 
-	// component_aliases: { alias → canonical component name } (C5).
+	// component_aliases: { <component>: { frameName?, contrastMode? } } (C5,
+	// SPEC-personas §5). The OBJECT-value shape: each component/alias name maps to
+	// optional explicit join keys raising the readiness/a11y heuristic to an exact
+	// join. Each value must be a plain object; frameName/contrastMode, when present,
+	// non-empty strings. An empty `{}` value is valid (no explicit keys yet).
 	if (obj.component_aliases !== undefined) {
 		if (!isPlainObject(obj.component_aliases)) {
 			return {
 				kind: "invalid",
 				message:
-					"component_aliases must be an object of alias → component name",
+					"component_aliases must be an object of component → { frameName?, contrastMode? }",
 			};
 		}
-		const map: Record<string, string> = {};
-		for (const [alias, name] of Object.entries(obj.component_aliases)) {
-			if (typeof name !== "string" || name === "") {
+		const map: ComponentAliases = {};
+		for (const [alias, keys] of Object.entries(obj.component_aliases)) {
+			if (!isPlainObject(keys)) {
 				return {
 					kind: "invalid",
-					message: `component_aliases.${alias} must be a non-empty string (a component name)`,
+					message: `component_aliases.${alias} must be an object { frameName?, contrastMode? }`,
 				};
 			}
-			map[alias] = name;
+			const entry: ComponentAliasKeys = {};
+			for (const field of ["frameName", "contrastMode"] as const) {
+				const value = keys[field];
+				if (value === undefined) continue;
+				if (typeof value !== "string" || value === "") {
+					return {
+						kind: "invalid",
+						message: `component_aliases.${alias}.${field} must be a non-empty string`,
+					};
+				}
+				entry[field] = value;
+			}
+			map[alias] = entry;
 		}
 		values.componentAliases = map;
 	}

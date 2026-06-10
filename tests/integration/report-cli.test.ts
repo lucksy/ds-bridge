@@ -702,6 +702,51 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("preview");
 	});
 
+	it("C5/M3.3: a registry populates the component-health section", async () => {
+		const dir = await freshTmp("ds-report-component-health-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+		await seedRegistry(dir, sampleRegistry());
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"component-health",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The component-health section is present and NOT empty (the stub renders a
+		// "preview" marker once componentHealth is populated from the parity join).
+		expect(html).toContain("Component health");
+		expect(html).toContain("preview");
+	});
+
+	it("C5/M3.3: no registry → the component-health section stays empty", async () => {
+		const dir = await freshTmp("ds-report-no-component-health-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"component-health",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Component health");
+		// No registry + no handoff/a11y → no joinable signal → the stub stays
+		// empty-state (no "preview" marker), keeping the no-config golden neutral.
+		expect(html).not.toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
@@ -744,11 +789,12 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// impact populate the calendar list).
 		expect(countSvgs(html)).toBe(13);
 		// None of the thirteen DATA sections falls back to the empty state; of the 11
-		// metric-artifact stubs (C1–C13), three now POPULATE from this seed — C6
+		// metric-artifact stubs (C1–C13), four now POPULATE from this seed — C6
 		// library-health-trend (a dated library-health line), C8 score-velocity
-		// (a multi-point system-score trend), and C4 data-freshness (the dated lines
-		// give per-kind freshness rows) → 8 empty-state stubs remain.
-		expect(html.split("No data yet").length - 1).toBe(8);
+		// (a multi-point system-score trend), C4 data-freshness (the dated lines give
+		// per-kind freshness rows), and C5 component-health (the seeded registry +
+		// readiness/a11y join into per-component rows) → 7 empty-state stubs remain.
+		expect(html.split("No data yet").length - 1).toBe(7);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {

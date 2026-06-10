@@ -976,7 +976,7 @@ describe("resolveConfig — ownership / ownership_file (C9)", () => {
 	});
 });
 
-describe("resolveConfig — component_aliases (C5)", () => {
+describe("resolveConfig — component_aliases (C5, object-value join keys)", () => {
 	it("leaves componentAliases undefined when absent", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
@@ -987,19 +987,34 @@ describe("resolveConfig — component_aliases (C5)", () => {
 		expect(outcome.config.componentAliases).toBeUndefined();
 	});
 
-	it("reads a component_aliases map (alias → canonical name)", () => {
+	it("reads a component → { frameName?, contrastMode? } join-key map", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				component_aliases: { Btn: "Button", Cta: "Button / Primary" },
+				component_aliases: {
+					Button: { frameName: "Button / Primary", contrastMode: "light" },
+					Card: { frameName: "Card / Primary" },
+				},
 			}),
 		});
 
 		expect(outcome.kind).toBe("ok");
 		if (outcome.kind !== "ok") return;
 		expect(outcome.config.componentAliases).toEqual({
-			Btn: "Button",
-			Cta: "Button / Primary",
+			Button: { frameName: "Button / Primary", contrastMode: "light" },
+			Card: { frameName: "Card / Primary" },
 		});
+	});
+
+	it("accepts an empty {} value (component named, no explicit keys yet)", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				component_aliases: { Button: {} },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.componentAliases).toEqual({ Button: {} });
 	});
 
 	it("rejects a non-object component_aliases with a typed error", () => {
@@ -1012,14 +1027,27 @@ describe("resolveConfig — component_aliases (C5)", () => {
 		expect(outcome.message).toContain("component_aliases");
 	});
 
-	it("rejects a non-string component_aliases value with a typed error", () => {
+	it("rejects a non-object value (the old string form) with a typed error", () => {
 		const outcome = resolveConfig({
-			projectFileText: JSON.stringify({ component_aliases: { Btn: 5 } }),
+			projectFileText: JSON.stringify({ component_aliases: { Btn: "Button" } }),
 		});
 
 		expect(outcome.kind).toBe("invalid-project-file");
 		if (outcome.kind !== "invalid-project-file") return;
 		expect(outcome.message).toContain("component_aliases");
+	});
+
+	it("rejects a non-string frameName with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				component_aliases: { Button: { frameName: 5 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("component_aliases");
+		expect(outcome.message).toContain("frameName");
 	});
 });
 

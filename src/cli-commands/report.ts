@@ -23,6 +23,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { platform } from "node:process";
 import type { Command } from "commander";
 import {
+	type ComponentAliases,
 	type FreshnessThresholds,
 	type MetricTargets,
 	resolveConfig,
@@ -31,6 +32,7 @@ import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import { buildAudienceChangelog } from "../engines/report/audience-changelog.js";
 import type { ArtifactId } from "../engines/report/catalog.js";
+import { buildComponentHealth } from "../engines/report/component-health.js";
 import {
 	buildBreakingCalendar,
 	buildChangeFrequency,
@@ -59,6 +61,7 @@ import type {
 	AudienceChangelog,
 	BreakingCalendar,
 	ChangeFrequency,
+	ComponentHealthRow,
 	DriftTrendPoint,
 	FrameImplementability,
 	FreshnessRow,
@@ -623,6 +626,63 @@ function computeDataFreshness(
 	);
 }
 
+/**
+ * Read <stateDir>/registry.json and project it into the raw parity rows (C5,
+ * M3.3) — the per-component match/gap statuses the component-health join folds.
+ * Absent/unreadable/non-JSON registry → [] (the join simply has no parity signal).
+ * Mirrors `readParity`'s tolerant read but returns `buildParity().rows` rather than
+ * the heat-grid section.
+ */
+function readParityRows(
+	stateDir: string,
+): ReturnType<typeof buildParity>["rows"] {
+	const registryPath = join(stateDir, "registry.json");
+	let text: string;
+	try {
+		text = readFileSync(registryPath, "utf8");
+	} catch {
+		return [];
+	}
+	let registry: RegistryFile;
+	try {
+		registry = JSON.parse(text) as RegistryFile;
+	} catch {
+		return [];
+	}
+	return buildParity(registry).rows;
+}
+
+/**
+ * Build the component-health rollup (C5, M3.3) — a cross-engine JOIN over the
+ * already-aggregated signals via the pure `buildComponentHealth` engine: the
+ * registry parity rows ⋈ the latest readiness/a11y (name-heuristic, raised to an
+ * EXACT join by `component_aliases`). The latest library-health history line is
+ * counts-only (no per-component lists), so the override/deprecated/detached arm of
+ * the join degrades to empty here — the engine handles that gracefully. Returns []
+ * when there are no joinable signals; the caller spreads it only when NON-empty so
+ * an unconfigured project keeps the section's empty state (golden-neutral).
+ */
+function computeComponentHealth(
+	stateDir: string,
+	readiness: Readiness | undefined,
+	a11y: A11ySummary | undefined,
+	aliases: ComponentAliases | undefined,
+): ComponentHealthRow[] {
+	return buildComponentHealth({
+		parityRows: readParityRows(stateDir),
+		...(readiness !== undefined
+			? {
+					readiness: {
+						frameName: readiness.frameName,
+						score: readiness.score,
+					},
+				}
+			: {}),
+		...(a11y !== undefined ? { a11y: { modes: a11y.modes } } : {}),
+		...(aliases !== undefined ? { aliases } : {}),
+	});
+}
+
 /** A non-null object record, or undefined. */
 function asRecord(value: unknown): Record<string, unknown> | undefined {
 	return typeof value === "object" && value !== null
@@ -865,6 +925,8 @@ interface ResolvedSelection {
 	scoreVelocityWindow: number;
 	/** Per-kind `freshness_thresholds` map (C4); undefined → engine defaults. */
 	freshnessThresholds?: FreshnessThresholds;
+	/** Component-health join keys (`component_aliases`, C5); undefined when absent. */
+	componentAliases?: ComponentAliases;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -896,6 +958,7 @@ function resolveSelection(
 	let scoreWeights: Weights | undefined;
 	let metricTargets: MetricTargets | undefined;
 	let freshnessThresholds: FreshnessThresholds | undefined;
+	let componentAliases: ComponentAliases | undefined;
 	// Default to the config's own defaults (200, C7 / 30, C8) when there is no file.
 	const defaults = resolveConfig({});
 	let migrationSitesCap =
@@ -926,6 +989,7 @@ function resolveSelection(
 		metricTargets = resolved.config.metricTargets;
 		scoreVelocityWindow = resolved.config.scoreVelocityWindow;
 		freshnessThresholds = resolved.config.freshnessThresholds;
+		componentAliases = resolved.config.componentAliases;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -990,6 +1054,7 @@ function resolveSelection(
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
 				...(metricTargets !== undefined ? { metricTargets } : {}),
 				...(freshnessThresholds !== undefined ? { freshnessThresholds } : {}),
+				...(componentAliases !== undefined ? { componentAliases } : {}),
 			};
 		}
 	}
@@ -1229,6 +1294,16 @@ function runReport(path: string, options: ReportOptions): void {
 		generatedAt,
 		selection.freshnessThresholds,
 	);
+	// Component health (C5, M3.3): the cross-engine join of registry parity ⋈
+	// latest readiness/a11y (name-heuristic, exact via component_aliases). Only
+	// spread in when NON-empty so a project with no joinable signals keeps the
+	// section's empty state (and the no-config golden byte-identical).
+	const componentHealth = computeComponentHealth(
+		stateDir,
+		aggregation.readiness,
+		aggregation.a11y,
+		selection.componentAliases,
+	);
 	const html = renderDashboard(
 		{
 			generatedAt,
@@ -1266,6 +1341,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {}),
 			...(scoreVelocity !== undefined ? { scoreVelocity } : {}),
 			...(dataFreshness.length > 0 ? { dataFreshness } : {}),
+			...(componentHealth.length > 0 ? { componentHealth } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
