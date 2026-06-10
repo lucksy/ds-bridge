@@ -31,6 +31,7 @@ import {
 	buildChangeFrequency,
 } from "../engines/report/consumer.js";
 import { replayHistory } from "../engines/report/history-lines.js";
+import { buildParityTrend } from "../engines/report/parity-trend.js";
 import { resolveView } from "../engines/report/presets.js";
 import {
 	DEFAULT_WEIGHTS,
@@ -51,6 +52,7 @@ import type {
 	LibraryHealth,
 	LintSummary,
 	Parity,
+	ParityTrendPoint,
 	Readiness,
 	SystemScore,
 } from "../engines/report/types.js";
@@ -449,6 +451,18 @@ function computeConsumerArtifacts(stateDir: string): {
 }
 
 /**
+ * Replay <stateDir>/history.jsonl into the parity-trend series (C3, M2.1) via the
+ * shared `replayHistory` iterator + the pure `buildParityTrend` engine — the
+ * dated `parity` lines `registry build` appends. Empty when no parity line exists
+ * (which keeps the no-config render byte-identical: the caller only spreads a
+ * NON-empty series into ReportData, so an absent parity history leaves the section
+ * in its empty state rather than the populated stub).
+ */
+function computeParityTrend(stateDir: string): ParityTrendPoint[] {
+	return buildParityTrend(replayHistory(readHistoryText(stateDir)));
+}
+
+/**
  * Read <stateDir>/registry.json and project it into the dashboard's Parity
  * section. Absent file → undefined (the renderer shows the empty state).
  * Unreadable / non-JSON registry → undefined with one stderr warning (a
@@ -808,6 +822,10 @@ function runReport(path: string, options: ReportOptions): void {
 	// `replayHistory` iterator — pure functions, no new parser. Always present
 	// (their empty shapes degrade to the renderer's empty state).
 	const consumer = computeConsumerArtifacts(stateDir);
+	// Parity-trend (C3, M2.1): the dated `parity` lines as a pass-% series. Only
+	// spread in when NON-empty so an absent parity history keeps the section's
+	// empty state (and the no-config golden byte-identical).
+	const parityTrend = computeParityTrend(stateDir);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -843,6 +861,7 @@ function runReport(path: string, options: ReportOptions): void {
 				: {}),
 			breakingCalendar: consumer.breakingCalendar,
 			changeFrequency: consumer.changeFrequency,
+			...(parityTrend.length > 0 ? { parityTrend } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},

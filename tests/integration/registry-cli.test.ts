@@ -178,6 +178,53 @@ describe("ds-bridge registry (built dist/cli.mjs)", () => {
 		]);
 	}, 60_000);
 
+	it("C3/M2.1: build appends a parity history line and prints a parity score summary", async () => {
+		const dir = await freshProject();
+		const result = await runCli(["registry", "build", dir]);
+		expect(result.code).toBe(0);
+		// The term summary names the parity score (pct + ok/total). The five sample
+		// components are all unmatched + both figma entries unmatched → ok 0 of 7.
+		expect(result.stdout).toContain("parity score: 0 (0/7)");
+
+		const text = await readFile(
+			join(dir, ".ds-bridge", "history.jsonl"),
+			"utf8",
+		);
+		const lines = text.trim().split("\n");
+		expect(lines).toHaveLength(1);
+		const record = JSON.parse(lines[0] ?? "") as {
+			at: string;
+			kind: string;
+			ok: number;
+			total: number;
+			score: number;
+			missingInCode: number;
+			missingInFigma: number;
+			propMismatch: number;
+		};
+		expect(record.kind).toBe("parity");
+		expect(record.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(record.ok).toBe(0);
+		expect(record.total).toBe(7);
+		expect(record.score).toBe(0);
+		expect(record.missingInCode).toBe(2);
+		expect(record.missingInFigma).toBe(5);
+		expect(record.propMismatch).toBe(0);
+	}, 60_000);
+
+	it("C3/M2.1: build --format=json also appends the parity history line", async () => {
+		const dir = await freshProject();
+		const result = await runCli(["registry", "build", dir, "--format=json"]);
+		expect(result.code).toBe(0);
+		const text = await readFile(
+			join(dir, ".ds-bridge", "history.jsonl"),
+			"utf8",
+		);
+		const record = JSON.parse(text.trim()) as { kind: string; total: number };
+		expect(record.kind).toBe("parity");
+		expect(record.total).toBe(7);
+	}, 60_000);
+
 	it("build is deterministic — identical content modulo generatedAt", async () => {
 		const dir = await freshProject();
 		await runCli(["registry", "build", dir]);

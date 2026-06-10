@@ -181,6 +181,8 @@ const COMPONENT_LABEL: Record<string, string> = {
 	lint: "lint",
 	readiness: "readiness",
 	a11y: "a11y",
+	adoption: "adoption",
+	parity: "parity",
 };
 
 /**

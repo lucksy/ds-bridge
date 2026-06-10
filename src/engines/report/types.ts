@@ -91,13 +91,14 @@ export interface ImpactSummary {
 	touchedCallSites: number;
 }
 
-/** The five weightable system-score components (mirrors score.ts ComponentKind). */
+/** The weightable system-score components (mirrors score.ts ComponentKind). */
 export type SystemScoreComponentKind =
 	| "drift"
 	| "lint"
 	| "readiness"
 	| "a11y"
-	| "adoption";
+	| "adoption"
+	| "parity";
 
 /** One present score component: its kind, 0–100 sub-score, configured weight. */
 export interface SystemScoreComponent {

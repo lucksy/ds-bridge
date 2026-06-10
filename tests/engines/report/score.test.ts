@@ -18,13 +18,14 @@ function line(record: Record<string, unknown>): string {
 }
 
 describe("DEFAULT_WEIGHTS", () => {
-	it("is the documented rebalance {drift:25, lint:25, readiness:15, a11y:15, adoption:20}", () => {
+	it("is the documented rebalance {drift:25, lint:25, readiness:15, a11y:15, adoption:20, parity:20}", () => {
 		expect(DEFAULT_WEIGHTS).toEqual({
 			drift: 25,
 			lint: 25,
 			readiness: 15,
 			a11y: 15,
 			adoption: 20,
+			parity: 20,
 		});
 	});
 });
@@ -41,21 +42,36 @@ describe("validateWeights", () => {
 		const merged = validateWeights({ drift: 50 });
 		expect(merged).toEqual({
 			kind: "ok",
-			weights: { drift: 50, lint: 25, readiness: 15, a11y: 15, adoption: 20 },
+			weights: {
+				drift: 50,
+				lint: 25,
+				readiness: 15,
+				a11y: 15,
+				adoption: 20,
+				parity: 20,
+			},
 		});
 	});
 
-	it("accepts a full override of all five keys (including adoption)", () => {
+	it("accepts a full override of all six keys (including adoption + parity)", () => {
 		const merged = validateWeights({
 			drift: 1,
 			lint: 2,
 			readiness: 3,
 			a11y: 4,
 			adoption: 5,
+			parity: 6,
 		});
 		expect(merged).toEqual({
 			kind: "ok",
-			weights: { drift: 1, lint: 2, readiness: 3, a11y: 4, adoption: 5 },
+			weights: {
+				drift: 1,
+				lint: 2,
+				readiness: 3,
+				a11y: 4,
+				adoption: 5,
+				parity: 6,
+			},
 		});
 	});
 
@@ -63,15 +79,22 @@ describe("validateWeights", () => {
 		const merged = validateWeights({ adoption: 40 });
 		expect(merged).toEqual({
 			kind: "ok",
-			weights: { drift: 25, lint: 25, readiness: 15, a11y: 15, adoption: 40 },
+			weights: {
+				drift: 25,
+				lint: 25,
+				readiness: 15,
+				a11y: 15,
+				adoption: 40,
+				parity: 20,
+			},
 		});
 	});
 
 	it("rejects an unknown key with a typed error naming it", () => {
-		const outcome = validateWeights({ parity: 10 } as Record<string, unknown>);
+		const outcome = validateWeights({ mystery: 10 } as Record<string, unknown>);
 		expect(outcome.kind).toBe("unknown-key");
 		if (outcome.kind === "unknown-key") {
-			expect(outcome.key).toBe("parity");
+			expect(outcome.key).toBe("mystery");
 		}
 	});
 
@@ -123,7 +146,7 @@ describe("scoreFromHistory — empty / no-data", () => {
 		// Only unknown kinds present → no components → no-data.
 		const text = [
 			line({ at: "2026-06-01", kind: "mystery", x: 1 }),
-			line({ at: "2026-06-02", kind: "parity", columns: [] }),
+			line({ at: "2026-06-02", kind: "enigma", columns: [] }),
 		].join("\n");
 		expect(scoreFromHistory(text)).toEqual({ kind: "no-data" });
 	});
@@ -296,6 +319,117 @@ describe("scoreFromHistory — sub-score formulas", () => {
 		if (outcome.kind === "ok") {
 			expect(outcome.components.some((c) => c.kind === "adoption")).toBe(false);
 		}
+	});
+});
+
+describe("scoreFromHistory — parity sub-score (C3, M2.1)", () => {
+	it("parity: the recorded pass pct verbatim (clamped to 0–100)", () => {
+		// A parity line carries the persisted pct as `score`; the sub-score reads it.
+		const text = line({
+			at: "2026-06-01",
+			kind: "parity",
+			ok: 6,
+			total: 8,
+			score: 75,
+		});
+		const outcome = scoreFromHistory(text);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind === "ok") {
+			expect(outcome.components.find((c) => c.kind === "parity")?.score).toBe(
+				75,
+			);
+			// Single present component → renormalized → current equals it.
+			expect(outcome.current).toBe(75);
+		}
+	});
+
+	it("parity: derives 100·ok/total when `score` is absent", () => {
+		const text = line({ at: "2026-06-01", kind: "parity", ok: 3, total: 4 });
+		const outcome = scoreFromHistory(text);
+		if (outcome.kind === "ok") {
+			expect(outcome.components.find((c) => c.kind === "parity")?.score).toBe(
+				75,
+			);
+		}
+	});
+
+	it("parity: absent component when total is 0 (absent-not-zero)", () => {
+		// A parity line with no matchable components → undefined, never a misleading 0.
+		const text = line({ at: "2026-06-01", kind: "parity", ok: 0, total: 0 });
+		const outcome = scoreFromHistory(text);
+		expect(outcome).toEqual({ kind: "no-data" });
+	});
+
+	it("parity: a parity line with no counts at all contributes no component", () => {
+		// Mirrors the legacy `{kind:'parity', columns:[]}` shape: no ok/total/score
+		// → the parity component is absent (not a 0). Only-parity → no-data.
+		const text = line({ at: "2026-06-01", kind: "parity", columns: [] });
+		const outcome = scoreFromHistory(text);
+		expect(outcome).toEqual({ kind: "no-data" });
+	});
+
+	it("parity: joins the composite, renormalized over present components", () => {
+		// drift=60 (w25) + parity=80 (w20): (60·25 + 80·20)/45 = (1500+1600)/45 = 68.9 → 69.
+		const text = [
+			line({
+				at: "2026-06-01",
+				kind: "tokens-check",
+				stale: 1,
+				missing: 1,
+				orphan: 1,
+			}), // 60
+			line({ at: "2026-06-01", kind: "parity", ok: 8, total: 10, score: 80 }),
+		].join("\n");
+		const outcome = scoreFromHistory(text);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind === "ok") {
+			expect(outcome.current).toBe(69);
+			expect(outcome.components.map((c) => c.kind).sort()).toEqual([
+				"drift",
+				"parity",
+			]);
+		}
+	});
+
+	it("parity: the last parity line wins for the current score", () => {
+		const text = [
+			line({ at: "2026-06-01", kind: "parity", ok: 2, total: 10, score: 20 }),
+			line({ at: "2026-06-02", kind: "parity", ok: 9, total: 10, score: 90 }),
+		].join("\n");
+		const outcome = scoreFromHistory(text);
+		if (outcome.kind === "ok") {
+			expect(outcome.components.find((c) => c.kind === "parity")?.score).toBe(
+				90,
+			);
+		}
+	});
+});
+
+describe("DEFAULT_WEIGHTS — parity (C3, M2.1)", () => {
+	it("adds parity WITHOUT changing the existing five raw weights (golden-neutral)", () => {
+		expect(DEFAULT_WEIGHTS).toEqual({
+			drift: 25,
+			lint: 25,
+			readiness: 15,
+			a11y: 15,
+			adoption: 20,
+			parity: 20,
+		});
+	});
+
+	it("accepts a parity weight override (no longer an unknown key)", () => {
+		const merged = validateWeights({ parity: 40 });
+		expect(merged).toEqual({
+			kind: "ok",
+			weights: {
+				drift: 25,
+				lint: 25,
+				readiness: 15,
+				a11y: 15,
+				adoption: 20,
+				parity: 40,
+			},
+		});
 	});
 });
 
@@ -496,6 +630,7 @@ describe("scoreFromHistory — weighted combine + renormalization", () => {
 			readiness: 10,
 			a11y: 20,
 			adoption: 20,
+			parity: 20,
 		});
 		if (outcome.kind === "ok") {
 			expect(outcome.current).toBe(62);
@@ -525,6 +660,7 @@ describe("scoreFromHistory — weighted combine + renormalization", () => {
 			readiness: 1,
 			a11y: 1,
 			adoption: 1,
+			parity: 1,
 		});
 		// (50 + 75) / 2 = 62.5 → 63 half-up
 		if (outcome.kind === "ok") {

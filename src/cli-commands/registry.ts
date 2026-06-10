@@ -16,6 +16,7 @@
 //   resolve — 0 confident match · 1 candidates OR not-found · 2 operational
 //             error (missing registry → "run registry build first", bad path).
 import {
+	appendFileSync,
 	existsSync,
 	mkdirSync,
 	readFileSync,
@@ -27,6 +28,7 @@ import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import { matchComponents } from "../engines/registry/match.js";
+import { buildParity } from "../engines/registry/parity.js";
 import {
 	type RegistryFile,
 	resolveEntry,
@@ -203,14 +205,84 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 		return;
 	}
 
+	// Parity history line (C3, M2.1): the directory-scoped figma↔code match scored
+	// into a dated `parity` line, reusing the io-edge `generatedAt` clock read.
+	// Both formats append it; the term summary also names the score.
+	const parityRecord = parityRecordFrom(registry, generatedAt);
+	appendParityHistory(stateDir, parityRecord);
+
 	if (format === "json") {
 		process.stdout.write(`${JSON.stringify(registry, null, 2)}\n`);
 	} else {
-		process.stdout.write(`${renderBuildSummary(registry, registryPath)}\n`);
+		process.stdout.write(
+			`${renderBuildSummary(registry, registryPath, parityRecord)}\n`,
+		);
 	}
 
 	// Unmatched entries are informational — the build itself succeeded.
 	process.exitCode = 0;
+}
+
+/**
+ * One appended `parity` history line (C3, M2.1). Carries the four parity counts
+ * verbatim from `buildParity().summary` plus the persisted pass `pct` (`score` =
+ * 100·ok/total, 0 when total=0) so the scorecard/dashboard read it without
+ * re-deriving. Read back by `report` for the parity sub-score + parity-trend.
+ */
+interface ParityHistoryRecord {
+	at: string;
+	kind: "parity";
+	total: number;
+	ok: number;
+	missingInCode: number;
+	missingInFigma: number;
+	propMismatch: number;
+	/** Pass percentage, 0–100, half-up rounded (0 when total=0). */
+	score: number;
+}
+
+/** Project a registry into the parity counts + persisted pass pct (C3). */
+function parityRecordFrom(
+	registry: RegistryFile,
+	generatedAt: string,
+): ParityHistoryRecord {
+	const { ok, missingInCode, missingInFigma, propMismatch } =
+		buildParity(registry).summary;
+	const total = ok + missingInCode + missingInFigma + propMismatch;
+	const score = total > 0 ? Math.round((100 * ok) / total) : 0;
+	return {
+		at: generatedAt,
+		kind: "parity",
+		total,
+		ok,
+		missingInCode,
+		missingInFigma,
+		propMismatch,
+		score,
+	};
+}
+
+/**
+ * Append ONE parity history line to <stateDir>/history.jsonl (C3, M2.1). The
+ * directory-scoped registry is the figma↔code match, so `registry build` is the
+ * impure edge that owns the parity append (the `at` clock read happens at the
+ * caller's io edge; this stays a plain write). Fail-quiet on a write error — a
+ * built registry must not be undone by a history-append hiccup.
+ */
+function appendParityHistory(
+	stateDir: string,
+	record: ParityHistoryRecord,
+): void {
+	try {
+		mkdirSync(stateDir, { recursive: true });
+		appendFileSync(
+			join(stateDir, "history.jsonl"),
+			`${JSON.stringify(record)}\n`,
+			"utf8",
+		);
+	} catch {
+		// Non-fatal: the registry itself was already written successfully.
+	}
 }
 
 /** The worst ambiguities: unmatched entries whose top candidate scored highest. */
@@ -238,12 +310,14 @@ function worstAmbiguities(registry: RegistryFile): string[] {
 function renderBuildSummary(
 	registry: RegistryFile,
 	registryPath: string,
+	parity: ParityHistoryRecord,
 ): string {
 	const lines = [
 		`Registry written to ${registryPath}`,
 		`  matched:        ${registry.matches.length}`,
 		`  unmatched code: ${registry.unmatchedCode.length}`,
 		`  unmatched figma:${registry.unmatchedFigma.length}`,
+		`  parity score: ${parity.score} (${parity.ok}/${parity.total})`,
 	];
 	const ambiguities = worstAmbiguities(registry);
 	if (ambiguities.length > 0) {

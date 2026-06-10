@@ -293,17 +293,18 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 
 		expect(outcome.kind).toBe("ok");
 		if (outcome.kind !== "ok") return;
-		// drift overridden, the other four keep their rebalanced defaults (A4).
+		// drift overridden, the other five keep their rebalanced defaults (A4 + C3 parity).
 		expect(outcome.config.scoreWeights).toEqual({
 			drift: 50,
 			lint: 25,
 			readiness: 15,
 			a11y: 15,
 			adoption: 20,
+			parity: 20,
 		});
 	});
 
-	it("accepts a full five-key score_weights object (including adoption)", () => {
+	it("accepts a full six-key score_weights object (including adoption + parity)", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
 				score_weights: {
@@ -312,6 +313,7 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 					readiness: 3,
 					a11y: 4,
 					adoption: 5,
+					parity: 6,
 				},
 			}),
 		});
@@ -324,20 +326,21 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 			readiness: 3,
 			a11y: 4,
 			adoption: 5,
+			parity: 6,
 		});
 	});
 
 	it("rejects an unknown score_weights subkey with a typed error", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				score_weights: { parity: 10 },
+				score_weights: { mystery: 10 },
 			}),
 		});
 
 		expect(outcome.kind).toBe("invalid-project-file");
 		if (outcome.kind !== "invalid-project-file") return;
 		expect(outcome.message).toContain("score_weights");
-		expect(outcome.message).toContain("parity");
+		expect(outcome.message).toContain("mystery");
 	});
 
 	it("rejects a non-positive score_weights value with a typed error", () => {
@@ -400,6 +403,7 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 			readiness: 15,
 			a11y: 15,
 			adoption: 20,
+			parity: 20,
 		});
 	});
 
@@ -701,6 +705,7 @@ describe("resolveConfig — score_weights_by_view (C2)", () => {
 				readiness: 40,
 				a11y: 30,
 				adoption: 20,
+				parity: 20,
 			},
 			"product-engineer": {
 				drift: 25,
@@ -708,6 +713,7 @@ describe("resolveConfig — score_weights_by_view (C2)", () => {
 				readiness: 15,
 				a11y: 15,
 				adoption: 35,
+				parity: 20,
 			},
 		});
 	});
@@ -725,14 +731,14 @@ describe("resolveConfig — score_weights_by_view (C2)", () => {
 	it("rejects an unknown weight subkey inside a view, naming the view", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				score_weights_by_view: { "ds-designer": { parity: 10 } },
+				score_weights_by_view: { "ds-designer": { mystery: 10 } },
 			}),
 		});
 
 		expect(outcome.kind).toBe("invalid-project-file");
 		if (outcome.kind !== "invalid-project-file") return;
 		expect(outcome.message).toContain("ds-designer");
-		expect(outcome.message).toContain("parity");
+		expect(outcome.message).toContain("mystery");
 	});
 
 	it("rejects a non-positive weight inside a view, naming the view", () => {

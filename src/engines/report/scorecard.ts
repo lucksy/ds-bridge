@@ -41,7 +41,7 @@ export type ScorecardRowId =
 
 /** One present system-score component (mirrors score.ts ScoreComponent shape). */
 export interface ScorecardScoreComponent {
-	kind: "drift" | "lint" | "readiness" | "a11y" | "adoption";
+	kind: "drift" | "lint" | "readiness" | "a11y" | "adoption" | "parity";
 	score: number;
 	weight: number;
 }

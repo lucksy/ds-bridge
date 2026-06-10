@@ -9,13 +9,14 @@
 // `aggregateHistory` because its output is lossy (fields renamed into drift
 // buckets, timestamps dropped) and reverse-mapping would be fragile.
 
-/** The five weightable sub-score components (adoption joined in A4). */
+/** The weightable sub-score components (adoption joined in A4; parity in C3). */
 export type ComponentKind =
 	| "drift"
 	| "lint"
 	| "readiness"
 	| "a11y"
-	| "adoption";
+	| "adoption"
+	| "parity";
 
 /** The composite's weights table — one positive finite number per component. */
 export interface Weights {
@@ -24,12 +25,16 @@ export interface Weights {
 	readiness: number;
 	a11y: number;
 	adoption: number;
+	parity: number;
 }
 
 /**
- * The documented default weights (SPEC-adoption §3 rebalance). adoption joins
- * as a true-ratio component; drift/lint drop 30→25 and readiness/a11y 20→15 to
- * make room. Critic-verified: the seeded composite stays 76 under this set.
+ * The documented default weights (SPEC-adoption §3 rebalance + C3 parity). The
+ * existing five raw weights are UNCHANGED — parity joins additively (C3, M2.1).
+ * Because the composite renormalizes over PRESENT components only, a history with
+ * no `parity` line scores byte-identically to before parity existed (the golden-
+ * neutrality constraint): the parity weight only participates when a parity line
+ * is present. Tunable via the existing `score_weights`.
  */
 export const DEFAULT_WEIGHTS: Weights = {
 	drift: 25,
@@ -37,6 +42,7 @@ export const DEFAULT_WEIGHTS: Weights = {
 	readiness: 15,
 	a11y: 15,
 	adoption: 20,
+	parity: 20,
 };
 
 /** Validated weights, or a typed configuration error (no throws on bad input). */
@@ -69,13 +75,14 @@ export type ScoreOutcome =
 	  }
 	| { kind: "no-data" };
 
-/** The five component kinds, in canonical (catalog) order. */
+/** The component kinds, in canonical (catalog) order. */
 const COMPONENT_ORDER: readonly ComponentKind[] = [
 	"drift",
 	"lint",
 	"readiness",
 	"a11y",
 	"adoption",
+	"parity",
 ];
 
 /**
@@ -196,6 +203,23 @@ function adoptionScore(record: Record<string, unknown>): number | undefined {
 }
 
 /**
+ * parity sub-score (C3): the recorded pass percentage from a `parity` history
+ * line (the persisted `score` = 100·ok/total, written at the registry-build io
+ * edge). When `score` is absent it is derived from `ok`/`total`. A `total` of 0
+ * (no matchable components) → the component is absent (`undefined`), never a
+ * misleading 0 — mirroring a11y/adoption (SPEC-personas §5 C3, absent-not-zero).
+ */
+function parityScore(record: Record<string, unknown>): number | undefined {
+	const total = asNumber(record.total);
+	if (total <= 0) return undefined;
+	if (typeof record.score === "number" && Number.isFinite(record.score)) {
+		return clamp01(record.score);
+	}
+	const ok = asNumber(record.ok);
+	return clamp01((100 * ok) / total);
+}
+
+/**
  * The latest-of-each-kind raw records, as accumulated during a replay. The
  * `adoption` slot is a PARALLEL last-wins keyed on field presence (the last
  * lint line that CARRIES an `adoption` block), tracked independently of the
@@ -207,6 +231,7 @@ interface LatestRecords {
 	readiness?: Record<string, unknown>;
 	a11y?: Record<string, unknown>;
 	adoption?: Record<string, unknown>;
+	parity?: Record<string, unknown>;
 }
 
 /** Map a history `kind` to a component kind, or undefined if not score-relevant. */
@@ -220,6 +245,8 @@ function componentKindFor(historyKind: unknown): ComponentKind | undefined {
 			return "readiness";
 		case "a11y":
 			return "a11y";
+		case "parity":
+			return "parity";
 		default:
 			return undefined;
 	}
@@ -241,6 +268,8 @@ function subScore(
 			return a11yScore(record);
 		case "adoption":
 			return adoptionScore(record);
+		case "parity":
+			return parityScore(record);
 	}
 }
 

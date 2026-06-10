@@ -150,6 +150,25 @@ function adoptionLine(
 	return JSON.stringify({ at, kind: "adoption", imported, total, uncovered });
 }
 
+/** A well-formed `parity` history record (the C3 / M2.1 append shape). */
+function parityLine(
+	at: string,
+	ok: number,
+	total: number,
+	score: number,
+): string {
+	return JSON.stringify({
+		at,
+		kind: "parity",
+		ok,
+		total,
+		score,
+		missingInCode: 0,
+		missingInFigma: total - ok,
+		propMismatch: 0,
+	});
+}
+
 /** A well-formed `library-health` history record (the L5 append shape, counts only). */
 function libraryHealthLine(
 	at: string,
@@ -422,6 +441,57 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("Button");
 		expect(html).toContain("Spinner");
 		expect(html).toContain("Chip");
+	});
+
+	it("C3/M2.1: a parity history line populates the parity-trend section and feeds the score", async () => {
+		const dir = await freshTmp("ds-report-parity-trend-");
+		await seedHistory(dir, [
+			parityLine("2026-06-01T10:00:00.000Z", 6, 10, 60),
+			parityLine("2026-06-02T10:00:00.000Z", 9, 10, 90),
+		]);
+
+		// The default `everything` view includes parity-trend; render it.
+		const result = await runCli(["report", dir, "--artifacts", "parity-trend"]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The parity-trend section is present (titled) and NOT in its empty state
+		// (the stub renders a "preview" marker once parityTrend is populated).
+		expect(html).toContain("Parity trend");
+		expect(html).toContain("preview");
+	});
+
+	it("C3/M2.1: no parity line → parity-trend section stays in its empty state", async () => {
+		const dir = await freshTmp("ds-report-no-parity-trend-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli(["report", dir, "--artifacts", "parity-trend"]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Parity trend");
+		// No parity line → the stub stays empty-state (no "preview" marker), which is
+		// what keeps the no-config golden byte-identical.
+		expect(html).not.toContain("preview");
+	});
+
+	it("C3/M2.1: a parity line contributes a parity component to the system score", async () => {
+		const dir = await freshTmp("ds-report-parity-score-");
+		await seedHistory(dir, [parityLine("2026-06-01T10:00:00.000Z", 8, 10, 80)]);
+
+		const result = await runCli(["report", dir, "--artifacts", "system-score"]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The score legend lists the parity component (a single present component →
+		// the composite equals its sub-score, 80).
+		expect(html).toContain("parity");
+		expect(html).toContain("System score");
 	});
 
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
