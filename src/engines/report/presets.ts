@@ -47,6 +47,29 @@ export const PRESETS = {
 /** Every preset name (the view-resolution lookup surface). */
 export const PRESET_NAMES = Object.keys(PRESETS) as readonly PresetName[];
 
+/**
+ * One-line lens per preset (SPEC-personas §1 / §2), the single source of truth
+ * for the persona wizard's data-driven options (M7): `dashboard list
+ * --format=json` projects these so `commands/dashboard.md`'s `AskUserQuestion`
+ * never hand-authors prose that could drift from the shipped presets.
+ */
+export const PRESET_DESCRIPTIONS = {
+	"ds-designer":
+		"Authors the Figma library; needs it clean, handoff-ready, accessible, and in parity with code.",
+	"ds-manager":
+		"DesignOps governance: health, adoption, targets, ownership, and release comms across teams.",
+	"ds-engineer":
+		"Owns tokens↔code and Figma↔code parity; source of breaking changes; pre-publish gatekeeper.",
+	"product-designer":
+		"Designs product screens by consuming the library; tracks what is safe to build on and when it breaks.",
+	"product-manager":
+		"Delivery/risk owner; tracks adoption and upstream breakage against targets.",
+	"product-engineer":
+		"Builds product UI from the DS-code package; works a migration queue of breaking changes.",
+	everything:
+		"The full 24-artifact catalog — the no-setup escape for an unconfigured repo.",
+} satisfies Record<PresetName, string>;
+
 /** Which layer of the precedence chain produced a successful selection. */
 export type ResolveSource = "flags" | "project" | "default";
 

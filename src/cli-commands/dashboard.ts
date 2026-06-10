@@ -22,7 +22,12 @@ import {
 	CATALOG,
 	lookupArtifact,
 } from "../engines/report/catalog.js";
-import { resolveView } from "../engines/report/presets.js";
+import {
+	PRESET_DESCRIPTIONS,
+	PRESET_NAMES,
+	PRESETS,
+	resolveView,
+} from "../engines/report/presets.js";
 import { renderTable } from "../render/terminal/index.js";
 import { runSetupWizard } from "./dashboard-wizard.js";
 
@@ -139,9 +144,26 @@ interface ListArtifact {
 	enabled: boolean;
 }
 
+/** One preset summary for the persona wizard (M7.1): name + lens + members. */
+interface ListPreset {
+	name: string;
+	description: string;
+	artifacts: string[];
+}
+
 interface ListJson {
 	artifacts: ListArtifact[];
+	presets: ListPreset[];
 	view: { source: string; viewName?: string };
+}
+
+/** The seven presets with descriptions + member ids, in PRESET_NAMES order. */
+function listPresets(): ListPreset[] {
+	return PRESET_NAMES.map((name) => ({
+		name,
+		description: PRESET_DESCRIPTIONS[name],
+		artifacts: [...PRESETS[name]],
+	}));
 }
 
 /** Project the catalog + resolved selection into the stable JSON shape. */
@@ -154,7 +176,7 @@ function toListJson(selection: ResolvedSelection): ListJson {
 	}));
 	const view: ListJson["view"] = { source: selection.source };
 	if (selection.viewName !== undefined) view.viewName = selection.viewName;
-	return { artifacts, view };
+	return { artifacts, presets: listPresets(), view };
 }
 
 /** Render the catalog as an aligned term table (id, title, personas, on). */

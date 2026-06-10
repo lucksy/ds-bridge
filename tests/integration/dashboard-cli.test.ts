@@ -158,6 +158,36 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		expect(parsed.view.viewName).toBeUndefined();
 	});
 
+	it("emits the seven presets with descriptions + artifact lists (M7.1)", async () => {
+		const result = await run(["dashboard", "list", "--format=json", dir]);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as JsonList & {
+			presets: { name: string; description: string; artifacts: string[] }[];
+		};
+		// The full preset-name list, in PRESET_NAMES order, for the persona wizard.
+		expect(parsed.presets.map((p) => p.name)).toEqual([
+			"ds-designer",
+			"ds-manager",
+			"ds-engineer",
+			"product-designer",
+			"product-manager",
+			"product-engineer",
+			"everything",
+		]);
+		// Each carries a non-empty description + its full artifact id list.
+		for (const preset of parsed.presets) {
+			expect(preset.description.length).toBeGreaterThan(0);
+			expect(preset.artifacts.length).toBeGreaterThan(0);
+			expect(preset.artifacts[0]).toBe("system-score");
+		}
+		// `everything` is the 24-artifact catch-all.
+		const everything = parsed.presets.find((p) => p.name === "everything");
+		expect(everything?.artifacts).toHaveLength(24);
+		// ds-designer names its real §3.2 set, not hand-prose.
+		const dsDesigner = parsed.presets.find((p) => p.name === "ds-designer");
+		expect(dsDesigner?.artifacts).toContain("component-health");
+	});
+
 	it("term format prints a table with the catalog ids and an enabled marker", async () => {
 		const result = await run(["dashboard", "list", dir]);
 		expect(result.code).toBe(0);

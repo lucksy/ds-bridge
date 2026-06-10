@@ -9441,6 +9441,15 @@ var PRESETS = {
   everything: [...ALL_ARTIFACT_IDS]
 };
 var PRESET_NAMES = Object.keys(PRESETS);
+var PRESET_DESCRIPTIONS = {
+  "ds-designer": "Authors the Figma library; needs it clean, handoff-ready, accessible, and in parity with code.",
+  "ds-manager": "DesignOps governance: health, adoption, targets, ownership, and release comms across teams.",
+  "ds-engineer": "Owns tokens\u2194code and Figma\u2194code parity; source of breaking changes; pre-publish gatekeeper.",
+  "product-designer": "Designs product screens by consuming the library; tracks what is safe to build on and when it breaks.",
+  "product-manager": "Delivery/risk owner; tracks adoption and upstream breakage against targets.",
+  "product-engineer": "Builds product UI from the DS-code package; works a migration queue of breaking changes.",
+  everything: "The full 24-artifact catalog \u2014 the no-setup escape for an unconfigured repo."
+};
 function editDistance3(a, b) {
   const rows = a.length + 1;
   const cols = b.length + 1;
@@ -10695,6 +10704,13 @@ function readSelection(targetDir) {
     }
   };
 }
+function listPresets() {
+  return PRESET_NAMES.map((name) => ({
+    name,
+    description: PRESET_DESCRIPTIONS[name],
+    artifacts: [...PRESETS[name]]
+  }));
+}
 function toListJson(selection) {
   const artifacts = CATALOG.map((meta) => ({
     id: meta.id,
@@ -10704,7 +10720,7 @@ function toListJson(selection) {
   }));
   const view = { source: selection.source };
   if (selection.viewName !== void 0) view.viewName = selection.viewName;
-  return { artifacts, view };
+  return { artifacts, presets: listPresets(), view };
 }
 function renderTerm4(data) {
   const rows = data.artifacts.map((a) => [
