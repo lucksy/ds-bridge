@@ -248,6 +248,13 @@ export interface ResolvedConfig {
 	 */
 	dashboardDefault: string | undefined;
 	/**
+	 * The explicit static-site publish set (`publish`, SPEC-personas §7, M11.1):
+	 * the saved-dashboard names to render with `report --format site`. Validated
+	 * as a non-empty array of non-empty strings; `undefined` when absent (the site
+	 * then defaults to the active view). Names are resolved at the io edge.
+	 */
+	publish: string[] | undefined;
+	/**
 	 * The merged, validated system-score weights from `.ds-bridge.json`'s
 	 * `score_weights` key (a partial override merged onto the engine defaults),
 	 * or `undefined` when the key is absent. Validation is delegated to the
@@ -328,6 +335,7 @@ interface ProjectFileValues {
 	dashboardView?: string;
 	dashboardArtifacts?: ArtifactId[];
 	dashboardDefault?: string;
+	publish?: string[];
 	scoreWeights?: Weights;
 	productFileKeys?: Record<string, string>;
 	metricTargets?: MetricTargets;
@@ -447,6 +455,28 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 			};
 		}
 		values.dashboardDefault = obj.dashboard_default;
+	}
+
+	// publish (M11.1): the static-site publish set — a non-empty array of
+	// non-empty saved-dashboard names. Names are resolved at the io edge.
+	if (obj.publish !== undefined) {
+		if (!Array.isArray(obj.publish) || obj.publish.length === 0) {
+			return {
+				kind: "invalid",
+				message: "publish must be a non-empty array of saved-dashboard names",
+			};
+		}
+		const names: string[] = [];
+		for (const entry of obj.publish) {
+			if (typeof entry !== "string" || entry === "") {
+				return {
+					kind: "invalid",
+					message: `publish must contain only non-empty strings, got ${JSON.stringify(entry)}`,
+				};
+			}
+			names.push(entry);
+		}
+		values.publish = names;
 	}
 
 	// System-score weights (SPEC-score §2). Validation is delegated entirely to
@@ -901,6 +931,7 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 		dashboardView: project.dashboardView,
 		dashboardArtifacts: project.dashboardArtifacts,
 		dashboardDefault: project.dashboardDefault,
+		publish: project.publish,
 		// The merged/validated weights, or undefined when score_weights is absent
 		// (callers fall back to the engine defaults in that case).
 		scoreWeights: project.scoreWeights,

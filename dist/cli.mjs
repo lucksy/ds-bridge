@@ -9064,6 +9064,25 @@ function parseProjectFile(text) {
     }
     values.dashboardDefault = obj.dashboard_default;
   }
+  if (obj.publish !== void 0) {
+    if (!Array.isArray(obj.publish) || obj.publish.length === 0) {
+      return {
+        kind: "invalid",
+        message: "publish must be a non-empty array of saved-dashboard names"
+      };
+    }
+    const names = [];
+    for (const entry of obj.publish) {
+      if (typeof entry !== "string" || entry === "") {
+        return {
+          kind: "invalid",
+          message: `publish must contain only non-empty strings, got ${JSON.stringify(entry)}`
+        };
+      }
+      names.push(entry);
+    }
+    values.publish = names;
+  }
   if (obj.score_weights !== void 0) {
     if (typeof obj.score_weights !== "object" || obj.score_weights === null || Array.isArray(obj.score_weights)) {
       return {
@@ -9427,6 +9446,7 @@ function resolveConfig(inputs) {
     dashboardView: project.dashboardView,
     dashboardArtifacts: project.dashboardArtifacts,
     dashboardDefault: project.dashboardDefault,
+    publish: project.publish,
     // The merged/validated weights, or undefined when score_weights is absent
     // (callers fall back to the engine defaults in that case).
     scoreWeights: project.scoreWeights,
@@ -19043,6 +19063,49 @@ function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   ].join("\n");
 }
 
+// src/render/html/index.ts
+function renderIndex(entries) {
+  const cards = entries.length > 0 ? entries.map(
+    (entry) => [
+      '<section class="panel">',
+      `<h2><a href="${escapeHtml(entry.href)}">${escapeHtml(entry.name)}</a></h2>`,
+      "</section>"
+    ].join("")
+  ).join("") : [
+    '<section class="panel">',
+    '<div class="empty">',
+    '<span class="empty-title">No dashboards published</span>',
+    "<span>Configure <code>publish</code> or pass <code>--dashboards</code>.</span>",
+    "</div>",
+    "</section>"
+  ].join("");
+  const body = [
+    '<div class="wrap">',
+    '<header class="dash">',
+    "<h1>ds-bridge dashboards</h1>",
+    "</header>",
+    '<div class="grid">',
+    cards,
+    "</div>",
+    "</div>"
+  ].join("");
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    "<title>ds-bridge dashboards</title>",
+    `<style>${STYLE}</style>`,
+    "</head>",
+    "<body>",
+    body,
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
 // src/render/terminal/dashboard.ts
 function emptyState3(command) {
   return `No data yet \u2014 run \`ds-bridge ${command}\` to populate this section.`;
@@ -20348,10 +20411,92 @@ function runMarkdownReport(targetDir, options, selection) {
   }
   process.exitCode = 0;
 }
+function readPublishConfig(targetDir) {
+  const configPath = join22(targetDir, ".ds-bridge.json");
+  if (!existsSync17(configPath)) return void 0;
+  try {
+    const projectFileText = readFileSync19(configPath, "utf8");
+    const resolved = resolveConfig({ projectFileText });
+    return resolved.kind === "ok" ? resolved.config.publish : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function resolvePublishNames(targetDir, options) {
+  if (options.dashboards !== void 0) {
+    return options.dashboards.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+  }
+  if (options.allDashboards === true) {
+    return listDashboards(targetDir).filter((e4) => e4.hasShared).map((e4) => e4.name);
+  }
+  return readPublishConfig(targetDir) ?? [];
+}
+function runSiteReport(targetDir, options, selection, data, weightProfile) {
+  const stateDir = join22(targetDir, ".ds-bridge");
+  const outDir = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, "reports");
+  const names = resolvePublishNames(targetDir, options);
+  const entries = [];
+  const writePage = (name, html) => {
+    const written = writeDashboard(join22(outDir, `${name}.html`), html);
+    if (written.kind === "error") {
+      failReport(written.message);
+      return false;
+    }
+    entries.push({ name, href: `./${name}.html` });
+    return true;
+  };
+  if (names.length === 0) {
+    const name = selection.viewLabel ?? "dashboard";
+    const html = renderDashboard(data, selection.artifacts, {
+      viewLabel: name,
+      weightProfile: {
+        source: weightProfile.source,
+        ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
+      }
+    });
+    if (!writePage(name, html)) return;
+  } else {
+    for (const name of names) {
+      const read = readDashboardFile(targetDir, name);
+      if (read.kind === "not-found") {
+        failReport(`Unknown dashboard "${name}" in the publish set.`);
+        return;
+      }
+      if (read.kind === "invalid") {
+        failReport(`Dashboard "${name}" is invalid: ${read.message}`);
+        return;
+      }
+      const sel = read.dashboard.selection;
+      const outcome = resolveView(
+        sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
+        {}
+      );
+      if (outcome.kind !== "ok") {
+        failReport(`Dashboard "${name}" has an unresolvable selection.`);
+        return;
+      }
+      const html = renderDashboard(data, outcome.artifacts, {
+        viewLabel: name
+      });
+      if (!writePage(name, html)) return;
+    }
+  }
+  const indexWritten = writeDashboard(
+    join22(outDir, "index.html"),
+    renderIndex(entries)
+  );
+  if (indexWritten.kind === "error") {
+    failReport(indexWritten.message);
+    return;
+  }
+  process.stdout.write(`${outDir}
+`);
+  process.exitCode = 0;
+}
 function runReport(path, options) {
-  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal") {
+  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal" && options.format !== "site") {
     failReport(
-      `Unknown --format "${options.format}". Expected "html", "md", or "terminal".`
+      `Unknown --format "${options.format}". Expected "html", "md", "terminal", or "site".`
     );
     return;
   }
@@ -20371,9 +20516,9 @@ function runReport(path, options) {
     return;
   }
   const format = options.format ?? selection.reportType ?? "html";
-  if (format !== "html" && format !== "md" && format !== "terminal") {
+  if (format !== "html" && format !== "md" && format !== "terminal" && format !== "site") {
     failReport(
-      `report_type "${format}" is not a supported render target yet \u2014 pass --format html|md|terminal.`
+      `report_type "${format}" is not a supported render target \u2014 pass --format html|md|terminal|site.`
     );
     return;
   }
@@ -20471,6 +20616,10 @@ function runReport(path, options) {
     ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
     ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}
   };
+  if (format === "site") {
+    runSiteReport(targetDir, options, selection, data, weightProfile);
+    return;
+  }
   if (format === "terminal") {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
     const text = renderTerminalDashboard(data, selection.artifacts, {
@@ -20539,6 +20688,13 @@ function registerReportCommand(program2) {
   ).option(
     "--dashboard <name>",
     "render a saved dashboard from dashboards/<name>.json (mutually exclusive with --view/--artifacts)"
+  ).option(
+    "--dashboards <names>",
+    "with --format site: the comma-separated publish set (saved dashboard names)"
+  ).option(
+    "--all-dashboards",
+    "with --format site: publish every committed (non-.local) saved dashboard",
+    false
   ).option(
     "--out <file>",
     "output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)"

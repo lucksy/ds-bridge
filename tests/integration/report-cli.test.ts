@@ -2289,7 +2289,13 @@ describe("ds-bridge report — terminal format (M10.3)", () => {
 	it("--format terminal --open → exit 2 (no file to open)", async () => {
 		const dir = await freshTmp("ds-report-term-open-");
 		await seedSixArtifacts(dir);
-		const result = await runCli(["report", dir, "--format", "terminal", "--open"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"terminal",
+			"--open",
+		]);
 		expect(result.code).toBe(2);
 		expect(result.stderr).toContain("--open");
 	});
@@ -2363,5 +2369,103 @@ describe("ds-bridge report — terminal format (M10.3)", () => {
 		}
 		const golden = await readFile(terminalGoldenPath, "utf8");
 		expect(normalized).toBe(golden);
+	});
+});
+
+// ---------- M11.1 — `report --format site` (static site + index) ----------
+
+describe("ds-bridge report — static site (M11.1)", () => {
+	it("default publish set = the active view → one page + an index", async () => {
+		const dir = await freshTmp("ds-report-site-default-");
+		await seedSixArtifacts(dir);
+		await seedProjectConfig(dir, { dashboard_view: "ds-manager" });
+
+		const result = await runCli(["report", dir, "--format", "site"]);
+		expect(result.code).toBe(0);
+		const reportsDir = join(dir, ".ds-bridge", "reports");
+		const page = await readFile(join(reportsDir, "ds-manager.html"), "utf8");
+		expect(page).toContain("Parity matrix");
+		const index = await readFile(join(reportsDir, "index.html"), "utf8");
+		expect(index).toContain("ds-bridge dashboards");
+		expect(index).toContain('href="./ds-manager.html"');
+	});
+
+	it("--dashboards a,b publishes each saved dashboard + indexes them", async () => {
+		const dir = await freshTmp("ds-report-site-set-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "exec", { name: "exec", view: "ds-manager" });
+		await seedDashboardFile(dir, "eng", {
+			name: "eng",
+			artifacts: ["system-score", "lint-summary"],
+		});
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"site",
+			"--dashboards",
+			"exec,eng",
+		]);
+		expect(result.code).toBe(0);
+		const reportsDir = join(dir, ".ds-bridge", "reports");
+		await expect(
+			readFile(join(reportsDir, "exec.html"), "utf8"),
+		).resolves.toContain("Parity matrix");
+		await expect(
+			readFile(join(reportsDir, "eng.html"), "utf8"),
+		).resolves.toContain("Lint violations");
+		const index = await readFile(join(reportsDir, "index.html"), "utf8");
+		expect(index).toContain('href="./exec.html"');
+		expect(index).toContain('href="./eng.html"');
+	});
+
+	it("config publish:[...] drives the publish set with no flags", async () => {
+		const dir = await freshTmp("ds-report-site-cfg-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "exec", { name: "exec", view: "ds-manager" });
+		await seedProjectConfig(dir, { publish: ["exec"] });
+
+		const result = await runCli(["report", dir, "--format", "site"]);
+		expect(result.code).toBe(0);
+		const index = await readFile(
+			join(dir, ".ds-bridge", "reports", "index.html"),
+			"utf8",
+		);
+		expect(index).toContain('href="./exec.html"');
+	});
+
+	it("--out redirects the site to a directory", async () => {
+		const dir = await freshTmp("ds-report-site-out-");
+		await seedSixArtifacts(dir);
+		const siteDir = join(dir, "site");
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"site",
+			"--out",
+			siteDir,
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout.trim()).toBe(siteDir);
+		await expect(readFile(join(siteDir, "index.html"), "utf8")).resolves.toContain(
+			"ds-bridge dashboards",
+		);
+	});
+
+	it("an unknown dashboard in the publish set exits 2", async () => {
+		const dir = await freshTmp("ds-report-site-unknown-");
+		await seedSixArtifacts(dir);
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"site",
+			"--dashboards",
+			"nope",
+		]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("nope");
 	});
 });

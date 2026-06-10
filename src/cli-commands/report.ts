@@ -105,6 +105,7 @@ import {
 } from "../io/dashboards.js";
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
+import { type IndexEntry, renderIndex } from "../render/html/index.js";
 import { renderTerminalDashboard } from "../render/terminal/dashboard.js";
 import { shouldColor } from "../render/terminal/index.js";
 
@@ -1029,6 +1030,10 @@ interface ReportOptions {
 	velocityWindow: string | undefined;
 	/** `--dashboard <name>`: render a saved dashboard (flags layer; SPEC §7, M8.3). */
 	dashboard: string | undefined;
+	/** `--dashboards <a,b>`: the explicit static-site publish set (--format site, M11.1). */
+	dashboards: string | undefined;
+	/** `--all-dashboards`: publish every committed (non-`.local`) saved dashboard. */
+	allDashboards: boolean | undefined;
 }
 
 function failReport(message: string): void {
@@ -1562,6 +1567,127 @@ function runMarkdownReport(
 	process.exitCode = 0;
 }
 
+/** Read the project config's `publish` set (M11.1), or undefined when absent. */
+function readPublishConfig(targetDir: string): string[] | undefined {
+	const configPath = join(targetDir, ".ds-bridge.json");
+	if (!existsSync(configPath)) return undefined;
+	try {
+		const projectFileText = readFileSync(configPath, "utf8");
+		const resolved = resolveConfig({ projectFileText });
+		return resolved.kind === "ok" ? resolved.config.publish : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Resolve the static-site publish set (M11.1), never including `.local`
+ * dashboards: `--dashboards a,b` (explicit) > `--all-dashboards` (every committed
+ * saved dashboard) > the `publish` config array > [] (the caller then publishes
+ * just the active view as one page).
+ */
+function resolvePublishNames(
+	targetDir: string,
+	options: ReportOptions,
+): string[] {
+	if (options.dashboards !== undefined) {
+		return options.dashboards
+			.split(",")
+			.map((s) => s.trim())
+			.filter((s) => s.length > 0);
+	}
+	if (options.allDashboards === true) {
+		return listDashboards(targetDir)
+			.filter((e) => e.hasShared)
+			.map((e) => e.name);
+	}
+	return readPublishConfig(targetDir) ?? [];
+}
+
+/**
+ * Render the static site (M11.1, SPEC §7): each published dashboard to
+ * `<out>/<name>.html` via the SAME pure renderDashboard, plus a generated
+ * `<out>/index.html` from renderIndex. The publish set comes from
+ * resolvePublishNames; an empty set publishes just the active view as one page.
+ * `--out` is the OUTPUT DIRECTORY (default `<stateDir>/reports`).
+ */
+function runSiteReport(
+	targetDir: string,
+	options: ReportOptions,
+	selection: ResolvedSelection,
+	data: Parameters<typeof renderDashboard>[0],
+	weightProfile: ReturnType<typeof resolveWeightProfile>,
+): void {
+	const stateDir = join(targetDir, ".ds-bridge");
+	const outDir =
+		options.out !== undefined
+			? resolve(options.out)
+			: join(stateDir, "reports");
+	const names = resolvePublishNames(targetDir, options);
+	const entries: IndexEntry[] = [];
+
+	const writePage = (name: string, html: string): boolean => {
+		const written = writeDashboard(join(outDir, `${name}.html`), html);
+		if (written.kind === "error") {
+			failReport(written.message);
+			return false;
+		}
+		entries.push({ name, href: `./${name}.html` });
+		return true;
+	};
+
+	if (names.length === 0) {
+		// Default publish set = the active view, as one page named by its label.
+		const name = selection.viewLabel ?? "dashboard";
+		const html = renderDashboard(data, selection.artifacts, {
+			viewLabel: name,
+			weightProfile: {
+				source: weightProfile.source,
+				...(weightProfile.name !== undefined
+					? { name: weightProfile.name }
+					: {}),
+			},
+		});
+		if (!writePage(name, html)) return;
+	} else {
+		for (const name of names) {
+			const read = readDashboardFile(targetDir, name);
+			if (read.kind === "not-found") {
+				failReport(`Unknown dashboard "${name}" in the publish set.`);
+				return;
+			}
+			if (read.kind === "invalid") {
+				failReport(`Dashboard "${name}" is invalid: ${read.message}`);
+				return;
+			}
+			const sel = read.dashboard.selection;
+			const outcome = resolveView(
+				sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
+				{},
+			);
+			if (outcome.kind !== "ok") {
+				failReport(`Dashboard "${name}" has an unresolvable selection.`);
+				return;
+			}
+			const html = renderDashboard(data, outcome.artifacts, {
+				viewLabel: name,
+			});
+			if (!writePage(name, html)) return;
+		}
+	}
+
+	const indexWritten = writeDashboard(
+		join(outDir, "index.html"),
+		renderIndex(entries),
+	);
+	if (indexWritten.kind === "error") {
+		failReport(indexWritten.message);
+		return;
+	}
+	process.stdout.write(`${outDir}\n`);
+	process.exitCode = 0;
+}
+
 /** Execute the `report` command. Exit codes: 0 success · 2 operational error. */
 function runReport(path: string, options: ReportOptions): void {
 	// An EXPLICIT --format is two-valued (html | md) — reject a bad value before any
@@ -1571,10 +1697,11 @@ function runReport(path: string, options: ReportOptions): void {
 		options.format !== undefined &&
 		options.format !== "html" &&
 		options.format !== "md" &&
-		options.format !== "terminal"
+		options.format !== "terminal" &&
+		options.format !== "site"
 	) {
 		failReport(
-			`Unknown --format "${options.format}". Expected "html", "md", or "terminal".`,
+			`Unknown --format "${options.format}". Expected "html", "md", "terminal", or "site".`,
 		);
 		return;
 	}
@@ -1605,9 +1732,14 @@ function runReport(path: string, options: ReportOptions): void {
 	// dashboard's report_type; else html. `site` lands in M11 — until then an
 	// unsupported resolved target is a typed error.
 	const format = options.format ?? selection.reportType ?? "html";
-	if (format !== "html" && format !== "md" && format !== "terminal") {
+	if (
+		format !== "html" &&
+		format !== "md" &&
+		format !== "terminal" &&
+		format !== "site"
+	) {
 		failReport(
-			`report_type "${format}" is not a supported render target yet — pass --format html|md|terminal.`,
+			`report_type "${format}" is not a supported render target — pass --format html|md|terminal|site.`,
 		);
 		return;
 	}
@@ -1783,6 +1915,14 @@ function runReport(path: string, options: ReportOptions): void {
 		...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
 	};
 
+	// Static site (M11.1): render the explicit publish set — each dashboard to
+	// reports/<name>.html + a generated reports/index.html. Returns before the
+	// single-page html/terminal tails.
+	if (format === "site") {
+		runSiteReport(targetDir, options, selection, data, weightProfile);
+		return;
+	}
+
 	// Terminal (M10.3): render the SAME ReportData to stdout (CI-pipeable like md);
 	// color is decided once at the edge via shouldColor; `--out` optionally
 	// redirects; `--open` was already rejected for a non-html target above.
@@ -1877,6 +2017,15 @@ export function registerReportCommand(program: Command): void {
 		.option(
 			"--dashboard <name>",
 			"render a saved dashboard from dashboards/<name>.json (mutually exclusive with --view/--artifacts)",
+		)
+		.option(
+			"--dashboards <names>",
+			"with --format site: the comma-separated publish set (saved dashboard names)",
+		)
+		.option(
+			"--all-dashboards",
+			"with --format site: publish every committed (non-.local) saved dashboard",
+			false,
 		)
 		.option(
 			"--out <file>",

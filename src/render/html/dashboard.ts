@@ -26,7 +26,7 @@ import {
 } from "./charts.js";
 
 /** Escape the five XML-significant characters for safe HTML text/attributes. */
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
 	return value
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
@@ -37,7 +37,7 @@ function escapeHtml(value: string): string {
 
 // Palette + tokens inspired by docs/ds-bridge.html (mood only). System font
 // stacks keep the document fully offline — no web-font requests.
-const STYLE = `
+export const STYLE = `
 :root {
 	--bg: #f7f8fa;
 	--surface: #ffffff;

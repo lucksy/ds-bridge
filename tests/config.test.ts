@@ -1501,3 +1501,39 @@ describe("atomicWriteJson", () => {
 		expect(readdirSync(tmp)).toEqual(["out.json"]);
 	});
 });
+
+// ─── M11.1 — `publish` static-site set ──────────────────────────────────────
+describe("publish config key", () => {
+	it("accepts a non-empty array of names", () => {
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({ publish: ["exec", "team"] }),
+		});
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok") expect(out.config.publish).toEqual(["exec", "team"]);
+	});
+
+	it("rejects a non-array publish", () => {
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({ publish: "exec" }),
+		});
+		expect(out.kind).toBe("invalid-project-file");
+	});
+
+	it("rejects an empty publish array", () => {
+		const out = resolveConfig({ projectFileText: JSON.stringify({ publish: [] }) });
+		expect(out.kind).toBe("invalid-project-file");
+	});
+
+	it("rejects a non-string publish entry", () => {
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({ publish: ["exec", 3] }),
+		});
+		expect(out.kind).toBe("invalid-project-file");
+	});
+
+	it("is undefined when absent", () => {
+		const out = resolveConfig({ projectFileText: JSON.stringify({}) });
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok") expect(out.config.publish).toBeUndefined();
+	});
+});
