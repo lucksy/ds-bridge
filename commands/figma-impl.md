@@ -111,6 +111,12 @@ at the top of the generated file, so the gaps travel with the code. Example:
 
 Never approximate a gap visually. A gap is the correct, honest output.
 
+To **persist** this as a dashboard artifact, run
+`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs frame-impl $ARGUMENTS` — it re-runs the
+same `findGaps` pass over the frame, prints the on-system % + gaps, and writes a
+`frame-impl` history line so the report's frame-implementability section tracks it
+over time.
+
 ### 6. Next steps
 
 Summarize: what was implemented, and for each gap the concrete action

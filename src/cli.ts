@@ -10,6 +10,7 @@ import { registerConfigCommand } from "./cli-commands/config.js";
 import { registerDashboardCommand } from "./cli-commands/dashboard.js";
 import { registerDigestCommand } from "./cli-commands/digest.js";
 import { registerDocsCommand } from "./cli-commands/docs.js";
+import { registerFrameImplCommand } from "./cli-commands/frame-impl.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
 import { registerImpactCommand } from "./cli-commands/impact.js";
 import { registerLibraryHealthCommand } from "./cli-commands/library-health.js";
@@ -37,6 +38,7 @@ export function buildProgram(): Command {
 	registerReportCommand(program);
 	registerBadgeCommand(program);
 	registerHandoffCommand(program);
+	registerFrameImplCommand(program);
 	registerRegistryCommand(program);
 	registerParityCommand(program);
 	registerA11yCommand(program);

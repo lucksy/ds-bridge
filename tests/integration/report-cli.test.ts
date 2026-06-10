@@ -626,6 +626,59 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).not.toContain("preview");
 	});
 
+	it("C11/M2.4: a frame-impl line populates the frame-implementability section", async () => {
+		const dir = await freshTmp("ds-report-frame-impl-");
+		await seedHistory(dir, [
+			JSON.stringify({
+				at: "2026-06-07T10:00:00.000Z",
+				kind: "frame-impl",
+				frameName: "Card / Primary",
+				fileKey: "ABcdEFghIJklMNopQRstUV",
+				resolvedCount: 6,
+				gapCount: 4,
+				pct: 60,
+				byReason: { "no-registry-match": 2, "no-token-match": 2 },
+			}),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"frame-implementability",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The frame-implementability section is present and NOT empty (the stub
+		// renders a "preview" marker once frameImplementability is populated).
+		expect(html).toContain("Frame implementability");
+		expect(html).toContain("preview");
+	});
+
+	it("C11/M2.4: no frame-impl line → the frame-implementability section stays empty", async () => {
+		const dir = await freshTmp("ds-report-no-frame-impl-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"frame-implementability",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Frame implementability");
+		// No frame-impl line → the stub stays empty-state (no "preview" marker),
+		// keeping the no-config golden byte-identical.
+		expect(html).not.toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [

@@ -31,6 +31,7 @@ import {
 	buildBreakingCalendar,
 	buildChangeFrequency,
 } from "../engines/report/consumer.js";
+import { buildFrameImplementability } from "../engines/report/frame-implementability.js";
 import { replayHistory } from "../engines/report/history-lines.js";
 import { buildMigrationChecklist } from "../engines/report/migration-checklist.js";
 import { buildParityTrend } from "../engines/report/parity-trend.js";
@@ -49,6 +50,7 @@ import type {
 	BreakingCalendar,
 	ChangeFrequency,
 	DriftTrendPoint,
+	FrameImplementability,
 	ImpactSummary,
 	ImportCoverage,
 	LeaderboardRow,
@@ -505,6 +507,23 @@ function computeAudienceChangelog(stateDir: string): AudienceChangelog {
 }
 
 /**
+ * Reconstruct the frame-implementability rollup (C11, M2.4) from the LATEST
+ * `frame-impl` history record via the shared `replayHistory` iterator + the pure
+ * `buildFrameImplementability` engine. Last-wins over the frame-impl lines. An
+ * absent frame-impl history → the empty rollup (total 0); the caller only spreads
+ * a rollup with measured requirements into ReportData so an absent frame-impl
+ * history keeps the section's empty state (and the no-config render byte-identical).
+ */
+function computeFrameImplementability(stateDir: string): FrameImplementability {
+	const records = replayHistory(readHistoryText(stateDir));
+	let latestFrameImpl: Record<string, unknown> | undefined;
+	for (const entry of records) {
+		if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
+	}
+	return buildFrameImplementability(latestFrameImpl);
+}
+
+/**
  * Read <stateDir>/registry.json and project it into the dashboard's Parity
  * section. Absent file → undefined (the renderer shows the empty state).
  * Unreadable / non-JSON registry → undefined with one stderr warning (a
@@ -888,6 +907,10 @@ function runReport(path: string, options: ReportOptions): void {
 	// without sliceable entries (or no changelog line) keeps the section's empty
 	// state (golden-neutral).
 	const audienceChangelog = computeAudienceChangelog(stateDir);
+	// Frame implementability (C11, M2.4): the latest frame-impl line's on-system %
+	// + gaps-by-reason. Only spread in when it measured requirements (total > 0) so
+	// an absent frame-impl line keeps the section's empty state (golden-neutral).
+	const frameImplementability = computeFrameImplementability(stateDir);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -926,6 +949,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(parityTrend.length > 0 ? { parityTrend } : {}),
 			...(migrationChecklist.sites.length > 0 ? { migrationChecklist } : {}),
 			...(audienceChangelog.slices.length > 0 ? { audienceChangelog } : {}),
+			...(frameImplementability.total > 0 ? { frameImplementability } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},
