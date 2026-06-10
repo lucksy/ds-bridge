@@ -19502,6 +19502,7 @@ function resolveDashboardSelection(targetDir, name, ctx) {
     migrationSitesCap: ctx.migrationSitesCap,
     scoreVelocityWindow: ctx.scoreVelocityWindow,
     viewLabel: read.dashboard.name,
+    ...read.dashboard.reportType !== void 0 ? { reportType: read.dashboard.reportType } : {},
     ...viewName !== void 0 ? { viewName } : {},
     ...effectiveWeights !== void 0 ? { scoreWeights: effectiveWeights } : {},
     ...effectiveByView !== void 0 ? { scoreWeightsByView: effectiveByView } : {},
@@ -19770,25 +19771,9 @@ function runMarkdownReport(targetDir, options, selection) {
   process.exitCode = 0;
 }
 function runReport(path, options) {
-  if (options.format !== "html" && options.format !== "md") {
+  if (options.format !== void 0 && options.format !== "html" && options.format !== "md") {
     failReport(
       `Unknown --format "${options.format}". Expected "html" or "md".`
-    );
-    return;
-  }
-  if (options.delta !== void 0 && options.format !== "md") {
-    failReport("--delta requires --format md.");
-    return;
-  }
-  if (options.open && options.format === "md") {
-    failReport(
-      "--open is not valid with --format md (there is no file to open)."
-    );
-    return;
-  }
-  if (options.gate && options.format !== "md") {
-    failReport(
-      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
     );
     return;
   }
@@ -19807,7 +19792,30 @@ function runReport(path, options) {
     failReport(selection.message);
     return;
   }
-  if (options.format === "md") {
+  const format = options.format ?? selection.reportType ?? "html";
+  if (format !== "html" && format !== "md") {
+    failReport(
+      `report_type "${format}" is not a supported render target yet \u2014 pass --format html|md.`
+    );
+    return;
+  }
+  if (options.delta !== void 0 && format !== "md") {
+    failReport("--delta requires --format md.");
+    return;
+  }
+  if (options.open && format === "md") {
+    failReport(
+      "--open is not valid with --format md (there is no file to open)."
+    );
+    return;
+  }
+  if (options.gate && format !== "md") {
+    failReport(
+      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
+    );
+    return;
+  }
+  if (format === "md") {
     runMarkdownReport(targetDir, options, selection);
     return;
   }
@@ -19919,8 +19927,7 @@ function registerReportCommand(program2) {
     "render a custom comma-separated artifact list (mutually exclusive with --view)"
   ).option(
     "--format <format>",
-    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY)",
-    "html"
+    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY). A saved --dashboard's report_type defaults it."
   ).option(
     "--delta <ref>",
     "compare against the base ref's committed history (requires --format md)"

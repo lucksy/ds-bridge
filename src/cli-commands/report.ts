@@ -98,7 +98,11 @@ import type {
 	TargetVerdict,
 } from "../engines/report/types.js";
 import { computeVelocity } from "../engines/report/velocity.js";
-import { listDashboards, readDashboardFile } from "../io/dashboards.js";
+import {
+	type DashboardReportType,
+	listDashboards,
+	readDashboardFile,
+} from "../io/dashboards.js";
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 
@@ -1013,8 +1017,8 @@ interface ReportOptions {
 	out: string | undefined;
 	view: string | undefined;
 	artifacts: string | undefined;
-	/** Output format: "html" (default) | "md". Unknown → exit 2 listing both. */
-	format: string;
+	/** Output format flag: "html" | "md", or undefined (defaults via dashboard report_type → html). */
+	format: string | undefined;
 	/** `--delta <ref>`: compare against the base ref's committed history (md only). */
 	delta: string | undefined;
 	/** `--gate`: a red metric-target verdict exits 1 (md only; html → exit 2). */
@@ -1059,6 +1063,12 @@ interface ResolvedSelection {
 	ownership?: OwnershipMap;
 	/** Path to a CODEOWNERS file (`ownership_file`, C9); undefined when absent. */
 	ownershipFile?: string;
+	/**
+	 * A saved dashboard's DEFAULT render target (`report_type`, §7, M9.3); only set
+	 * when a `--dashboard`/`dashboard_default` selection is active. The `--format`
+	 * flag always wins over it.
+	 */
+	reportType?: DashboardReportType;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -1172,6 +1182,9 @@ function resolveDashboardSelection(
 		migrationSitesCap: ctx.migrationSitesCap,
 		scoreVelocityWindow: ctx.scoreVelocityWindow,
 		viewLabel: read.dashboard.name,
+		...(read.dashboard.reportType !== undefined
+			? { reportType: read.dashboard.reportType }
+			: {}),
 		...(viewName !== undefined ? { viewName } : {}),
 		...(effectiveWeights !== undefined
 			? { scoreWeights: effectiveWeights }
@@ -1549,30 +1562,16 @@ function runMarkdownReport(
 
 /** Execute the `report` command. Exit codes: 0 success · 2 operational error. */
 function runReport(path: string, options: ReportOptions): void {
-	// Validate flag combos first (a usage error should exit 2 before any I/O):
-	// --format is two-valued (html | md); --delta requires md; --open is invalid
-	// with md (no file to open). Per the C4 branch-order paragraph.
-	if (options.format !== "html" && options.format !== "md") {
+	// An EXPLICIT --format is two-valued (html | md) — reject a bad value before any
+	// I/O. When the flag is omitted, the effective format is resolved AFTER the
+	// selection (a saved dashboard's report_type defaults it, M9.3).
+	if (
+		options.format !== undefined &&
+		options.format !== "html" &&
+		options.format !== "md"
+	) {
 		failReport(
 			`Unknown --format "${options.format}". Expected "html" or "md".`,
-		);
-		return;
-	}
-	if (options.delta !== undefined && options.format !== "md") {
-		failReport("--delta requires --format md.");
-		return;
-	}
-	if (options.open && options.format === "md") {
-		failReport(
-			"--open is not valid with --format md (there is no file to open).",
-		);
-		return;
-	}
-	// --gate is a CI/text concern (C1): it acts on the md scorecard. With a non-md
-	// (html) output there is nothing to gate on → exit 2 rather than silently pass.
-	if (options.gate && options.format !== "md") {
-		failReport(
-			"--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard).",
 		);
 		return;
 	}
@@ -1592,15 +1591,44 @@ function runReport(path: string, options: ReportOptions): void {
 
 	// Resolve which artifacts to render (flags > .ds-bridge.json > everything)
 	// before any history/registry work — a usage/config error should exit 2 fast.
-	// (Also resolves the CURRENT-side score weights, applied to BOTH md sides.)
+	// (Also resolves the CURRENT-side score weights + a saved dashboard's report_type.)
 	const selection = resolveSelection(targetDir, options);
 	if ("kind" in selection) {
 		failReport(selection.message);
 		return;
 	}
 
+	// Effective format (M9.3): the explicit --format flag wins; else a saved
+	// dashboard's report_type; else html. terminal/site land in later waves — until
+	// then an unsupported resolved target is a typed error.
+	const format = options.format ?? selection.reportType ?? "html";
+	if (format !== "html" && format !== "md") {
+		failReport(
+			`report_type "${format}" is not a supported render target yet — pass --format html|md.`,
+		);
+		return;
+	}
+	// Combo validations against the EFFECTIVE format: --delta/--gate require md,
+	// --open is invalid with md (no file to open).
+	if (options.delta !== undefined && format !== "md") {
+		failReport("--delta requires --format md.");
+		return;
+	}
+	if (options.open && format === "md") {
+		failReport(
+			"--open is not valid with --format md (there is no file to open).",
+		);
+		return;
+	}
+	if (options.gate && format !== "md") {
+		failReport(
+			"--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard).",
+		);
+		return;
+	}
+
 	// The md path emits a markdown scorecard and RETURNS before the html tail.
-	if (options.format === "md") {
+	if (format === "md") {
 		runMarkdownReport(targetDir, options, selection);
 		return;
 	}
@@ -1806,8 +1834,7 @@ export function registerReportCommand(program: Command): void {
 		)
 		.option(
 			"--format <format>",
-			"output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY)",
-			"html",
+			"output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY). A saved --dashboard's report_type defaults it.",
 		)
 		.option(
 			"--delta <ref>",

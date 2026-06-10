@@ -2203,3 +2203,53 @@ describe("ds-bridge report — saved dashboards (M8.3)", () => {
 		expect(result.stderr).toContain("parity");
 	});
 });
+
+// ---------- M9.3 — saved-dashboard report_type defaults the format ----------
+//
+// A saved dashboard's report_type is its DEFAULT render target; the --format flag
+// always wins. digest/badge stay selection-agnostic (no --dashboard).
+
+describe("ds-bridge report — dashboard report_type default (M9.3)", () => {
+	it("report_type:md renders the markdown scorecard with no --format flag", async () => {
+		const dir = await freshTmp("ds-report-rt-md-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "execmd", {
+			name: "execmd",
+			artifacts: ["system-score", "parity"],
+			report_type: "md",
+		});
+
+		const result = await runCli(["report", dir, "--dashboard", "execmd"]);
+		expect(result.code).toBe(0);
+		// The md path emits the scorecard to stdout, not an HTML file.
+		expect(result.stdout).toContain("### Design-system scorecard");
+		expect(result.stdout).not.toContain(".html");
+	});
+
+	it("an explicit --format html overrides the dashboard's report_type:md", async () => {
+		const dir = await freshTmp("ds-report-rt-override-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "execmd", {
+			name: "execmd",
+			artifacts: ["system-score", "parity"],
+			report_type: "md",
+		});
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--dashboard",
+			"execmd",
+			"--format",
+			"html",
+		]);
+		expect(result.code).toBe(0);
+		// HTML path: a dashboard.html is written (no markdown scorecard on stdout).
+		expect(result.stdout).not.toContain("### Design-system scorecard");
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Parity matrix");
+	});
+});
