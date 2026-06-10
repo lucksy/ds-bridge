@@ -1094,7 +1094,7 @@ var require_suggestSimilar = __commonJS({
   "node_modules/commander/lib/suggestSimilar.js"(exports) {
     "use strict";
     var maxDistance = 3;
-    function editDistance3(a, b) {
+    function editDistance5(a, b) {
       if (Math.abs(a.length - b.length) > maxDistance)
         return Math.max(a.length, b.length);
       const d = [];
@@ -1140,7 +1140,7 @@ var require_suggestSimilar = __commonJS({
       const minSimilarity = 0.4;
       candidates.forEach((candidate) => {
         if (candidate.length <= 1) return;
-        const distance = editDistance3(word, candidate);
+        const distance = editDistance5(word, candidate);
         const length = Math.max(word.length, candidate.length);
         const similarity = (length - distance) / length;
         if (similarity > minSimilarity) {
@@ -3515,6 +3515,7 @@ var require_picocolors = __commonJS({
 
 // src/cli.ts
 import { createRequire } from "module";
+import { join as join22 } from "path";
 
 // node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
@@ -7521,7 +7522,7 @@ function parseTokensStudio(source) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve11 = (name, seen) => {
+  const resolve13 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -7547,7 +7548,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve11(target, new Set(seen).add(target));
+    const downstream = resolve13(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -7555,7 +7556,7 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve11(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve13(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
     const token = {
       name,
@@ -8126,13 +8127,13 @@ function renderTerm(report, color) {
 function modeTallies(report) {
   const byMode = /* @__PURE__ */ new Map();
   for (const finding of report.findings) {
-    let tally = byMode.get(finding.mode);
-    if (tally === void 0) {
-      tally = { mode: finding.mode, passed: 0, failed: 0 };
-      byMode.set(finding.mode, tally);
+    let tally2 = byMode.get(finding.mode);
+    if (tally2 === void 0) {
+      tally2 = { mode: finding.mode, passed: 0, failed: 0 };
+      byMode.set(finding.mode, tally2);
     }
-    if (finding.status === "pass") tally.passed += 1;
-    else if (finding.status === "fail") tally.failed += 1;
+    if (finding.status === "pass") tally2.passed += 1;
+    else if (finding.status === "fail") tally2.failed += 1;
   }
   return [...byMode.values()];
 }
@@ -8311,11 +8312,11 @@ function appendAdoptionHistory(targetDir, coverage) {
 }
 function renderTerm2(coverage, color) {
   const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct4 = total > 0 ? Math.round(imported / total * 100) : 0;
+  const pct5 = total > 0 ? Math.round(imported / total * 100) : 0;
   const clean = uncoveredTotal === 0;
   const summary = severityColor(
     clean ? "ok" : "warn",
-    `Import coverage: ${imported}/${total} registry components imported (${pct4}%).`,
+    `Import coverage: ${imported}/${total} registry components imported (${pct5}%).`,
     { color }
   );
   const lines = [summary];
@@ -8398,84 +8399,169 @@ import { existsSync as existsSync3, readFileSync as readFileSync3, renameSync, w
 import { join as join4 } from "path";
 
 // src/engines/report/catalog.ts
+var ALL_PERSONAS = [
+  "ds-designer",
+  "ds-manager",
+  "ds-engineer",
+  "product-designer",
+  "product-manager",
+  "product-engineer"
+];
 var CATALOG = [
   {
     id: "system-score",
     title: "System score",
-    personas: ["owner", "engineering", "design", "consumer"],
+    personas: ALL_PERSONAS,
     reportDataKey: "systemScore"
   },
   {
     id: "drift-trend",
     title: "Token drift",
-    personas: ["owner", "engineering"],
+    personas: ["ds-manager", "ds-engineer"],
     reportDataKey: "driftTrend"
   },
   {
     id: "lint-summary",
     title: "Lint violations",
-    personas: ["engineering"],
+    personas: ["ds-engineer", "product-engineer"],
     reportDataKey: "lintSummary"
   },
   {
     id: "readiness",
     title: "Handoff readiness",
-    personas: ["design"],
+    personas: ["ds-designer", "product-designer", "product-manager"],
     reportDataKey: "readiness"
   },
   {
     id: "parity",
     title: "Component parity",
-    personas: ["owner", "design", "consumer"],
+    personas: ALL_PERSONAS,
     reportDataKey: "parity"
   },
   {
     id: "a11y",
     title: "Contrast (a11y)",
-    personas: ["design", "owner"],
+    personas: ["ds-designer", "ds-manager", "ds-engineer", "product-designer"],
     reportDataKey: "a11y"
   },
   {
     id: "impact",
     title: "Change impact",
-    personas: ["engineering", "consumer"],
+    personas: ["ds-engineer", "product-engineer"],
     reportDataKey: "impact"
   },
   {
     id: "adoption-trend",
     title: "Adoption trend",
-    personas: ["owner", "engineering"],
+    personas: ["ds-manager", "product-manager", "product-engineer"],
     reportDataKey: "adoptionTrend"
   },
   {
     id: "import-coverage",
     title: "Import coverage",
-    personas: ["owner", "consumer"],
+    personas: ["ds-manager", "product-manager", "product-engineer"],
     reportDataKey: "importCoverage"
   },
   {
     id: "leaderboard",
     title: "Adoption leaderboard",
-    personas: ["owner"],
+    personas: ["ds-manager", "product-engineer"],
     reportDataKey: "leaderboard"
   },
   {
     id: "library-health",
     title: "Library health",
-    personas: ["design", "owner"],
+    personas: ["ds-designer", "ds-manager", "ds-engineer", "product-designer"],
     reportDataKey: "libraryHealth"
   },
   {
     id: "breaking-calendar",
     title: "Breaking calendar",
-    personas: ["consumer", "owner"],
+    personas: [
+      "ds-manager",
+      "product-designer",
+      "product-manager",
+      "product-engineer"
+    ],
     reportDataKey: "breakingCalendar"
   },
   {
     id: "change-frequency",
     title: "Change frequency",
-    personas: ["consumer", "engineering"],
+    personas: ["product-designer", "product-manager"],
     reportDataKey: "changeFrequency"
+  },
+  // ─── Persona-wave metric artifacts (C1–C13) ─────────────────────────────
+  {
+    id: "targets",
+    title: "Targets / SLAs",
+    personas: [
+      "ds-manager",
+      "ds-engineer",
+      "product-manager",
+      "product-engineer"
+    ],
+    reportDataKey: "targets"
+  },
+  {
+    id: "parity-trend",
+    title: "Parity trend",
+    personas: ALL_PERSONAS,
+    reportDataKey: "parityTrend"
+  },
+  {
+    id: "component-health",
+    title: "Component health",
+    personas: ["ds-designer", "ds-engineer", "product-designer"],
+    reportDataKey: "componentHealth"
+  },
+  {
+    id: "library-health-trend",
+    title: "Library health trend",
+    personas: ["ds-designer", "ds-manager"],
+    reportDataKey: "libraryHealthTrend"
+  },
+  {
+    id: "migration-checklist",
+    title: "Migration checklist",
+    personas: ["ds-engineer", "product-engineer"],
+    reportDataKey: "migrationChecklist"
+  },
+  {
+    id: "score-velocity",
+    title: "Score velocity",
+    personas: ["ds-manager", "product-manager"],
+    reportDataKey: "scoreVelocity"
+  },
+  {
+    id: "ownership-leaderboard",
+    title: "Ownership leaderboard",
+    personas: ["ds-manager"],
+    reportDataKey: "ownershipLeaderboard"
+  },
+  {
+    id: "audience-changelog",
+    title: "Changelog by audience",
+    personas: ["product-designer", "product-manager", "product-engineer"],
+    reportDataKey: "audienceChangelog"
+  },
+  {
+    id: "frame-implementability",
+    title: "Frame implementability",
+    personas: ["product-designer", "product-engineer"],
+    reportDataKey: "frameImplementability"
+  },
+  {
+    id: "release-readiness",
+    title: "Release readiness",
+    personas: ["ds-engineer"],
+    reportDataKey: "releaseReadiness"
+  },
+  {
+    id: "data-freshness",
+    title: "Data freshness",
+    personas: ALL_PERSONAS,
+    reportDataKey: "dataFreshness"
   }
 ];
 var ALL_ARTIFACT_IDS = CATALOG.map((a) => a.id);
@@ -8527,14 +8613,28 @@ var DEFAULT_WEIGHTS = {
   lint: 25,
   readiness: 15,
   a11y: 15,
-  adoption: 20
+  adoption: 20,
+  parity: 20
 };
+function resolveWeightProfile(viewName, scoreWeights, scoreWeightsByView) {
+  if (viewName !== void 0 && scoreWeightsByView !== void 0) {
+    const byView = scoreWeightsByView[viewName];
+    if (byView !== void 0) {
+      return { weights: byView, source: "view", name: viewName };
+    }
+  }
+  if (scoreWeights !== void 0) {
+    return { weights: scoreWeights, source: "project" };
+  }
+  return { weights: { ...DEFAULT_WEIGHTS }, source: "default" };
+}
 var COMPONENT_ORDER = [
   "drift",
   "lint",
   "readiness",
   "a11y",
-  "adoption"
+  "adoption",
+  "parity"
 ];
 function asNumber(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
@@ -8606,6 +8706,15 @@ function adoptionScore(record) {
   if (total <= 0) return void 0;
   return 100 * refs / total;
 }
+function parityScore(record) {
+  const total = asNumber(record.total);
+  if (total <= 0) return void 0;
+  if (typeof record.score === "number" && Number.isFinite(record.score)) {
+    return clamp01(record.score);
+  }
+  const ok = asNumber(record.ok);
+  return clamp01(100 * ok / total);
+}
 function componentKindFor(historyKind) {
   switch (historyKind) {
     case "tokens-check":
@@ -8616,6 +8725,8 @@ function componentKindFor(historyKind) {
       return "readiness";
     case "a11y":
       return "a11y";
+    case "parity":
+      return "parity";
     default:
       return void 0;
   }
@@ -8632,6 +8743,8 @@ function subScore(kind, record) {
       return a11yScore(record);
     case "adoption":
       return adoptionScore(record);
+    case "parity":
+      return parityScore(record);
   }
 }
 function combine(latest, weights) {
@@ -8650,7 +8763,11 @@ function combine(latest, weights) {
     0
   );
   const current = roundHalfUp(weightedSum / totalWeight);
-  return { current, components };
+  const display = components.map((c2) => ({
+    ...c2,
+    score: roundHalfUp(c2.score)
+  }));
+  return { current, components: display };
 }
 function combineScore(latest, weights) {
   const combined = combine(latest, weights);
@@ -8712,6 +8829,90 @@ function scoreFromHistory(text, weights) {
 }
 
 // src/config.ts
+var TARGET_METRICS = [
+  "on-system",
+  "drift",
+  "parity",
+  "contrast",
+  "readiness",
+  "system-score"
+];
+var FRESHNESS_KINDS = [
+  "drift",
+  "lint",
+  "readiness",
+  "a11y",
+  "impact",
+  "adoption",
+  "parity",
+  "library-health",
+  "changelog",
+  "frame-impl"
+];
+var DEFAULT_FRESHNESS_THRESHOLDS = {
+  drift: { aging: 14, stale: 30 },
+  lint: { aging: 14, stale: 30 },
+  readiness: { aging: 30, stale: 60 },
+  a11y: { aging: 30, stale: 60 },
+  impact: { aging: 14, stale: 30 },
+  adoption: { aging: 14, stale: 30 },
+  parity: { aging: 30, stale: 60 },
+  "library-health": { aging: 30, stale: 60 },
+  changelog: { aging: 30, stale: 60 },
+  "frame-impl": { aging: 14, stale: 30 }
+};
+var DEFAULT_MIGRATION_SITES_CAP = 200;
+var DEFAULT_SCORE_VELOCITY_WINDOW = 30;
+var TARGET_OPS = [">=", "<=", "=="];
+function editDistance2(a, b) {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dist = Array.from({ length: rows * cols }, () => 0);
+  for (let i = 0; i < rows; i++) {
+    dist[i * cols] = i;
+  }
+  for (let j = 0; j < cols; j++) {
+    dist[j] = j;
+  }
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
+      dist[i * cols + j] = Math.min(
+        (dist[(i - 1) * cols + j] ?? 0) + 1,
+        (dist[i * cols + j - 1] ?? 0) + 1,
+        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
+      );
+    }
+  }
+  return dist[rows * cols - 1] ?? 0;
+}
+function suggestTargetMetrics(input, limit = 3) {
+  const needle = input.toLowerCase();
+  const MAX_DISTANCE = 4;
+  return TARGET_METRICS.map((metric, index) => ({
+    metric,
+    index,
+    prefix: metric.startsWith(needle),
+    distance: editDistance2(needle, metric)
+  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
+  ).slice(0, limit).map((c2) => c2.metric);
+}
+function suggestFreshnessKinds(input, limit = 3) {
+  const needle = input.toLowerCase();
+  const MAX_DISTANCE = 4;
+  return FRESHNESS_KINDS.map((kind, index) => ({
+    kind,
+    index,
+    prefix: kind.startsWith(needle),
+    distance: editDistance2(needle, kind)
+  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
+  ).slice(0, limit).map((c2) => c2.kind);
+}
+function isPlainObject4(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
+}
 var REPORT_STYLES = ["html", "terminal", "both"];
 var DEFAULTS = {
   reportStyle: "both",
@@ -8767,10 +8968,11 @@ function parseProjectFile(text) {
     }
     values.readinessThreshold = n;
   }
-  if (obj.dashboard_view !== void 0 && obj.dashboard_artifacts !== void 0) {
+  const dashboardKeysPresent = ["dashboard_view", "dashboard_artifacts", "dashboard_default"].filter((k4) => obj[k4] !== void 0);
+  if (dashboardKeysPresent.length > 1) {
     return {
       kind: "invalid",
-      message: "dashboard_view and dashboard_artifacts are mutually exclusive \u2014 set one, not both"
+      message: `${dashboardKeysPresent.join(", ")} are mutually exclusive \u2014 set exactly one, not ${dashboardKeysPresent.length}`
     };
   }
   if (obj.dashboard_view !== void 0) {
@@ -8806,6 +9008,15 @@ function parseProjectFile(text) {
     }
     values.dashboardArtifacts = artifacts;
   }
+  if (obj.dashboard_default !== void 0) {
+    if (typeof obj.dashboard_default !== "string" || obj.dashboard_default === "") {
+      return {
+        kind: "invalid",
+        message: "dashboard_default must be a non-empty string (a saved-dashboard name)"
+      };
+    }
+    values.dashboardDefault = obj.dashboard_default;
+  }
   if (obj.score_weights !== void 0) {
     if (typeof obj.score_weights !== "object" || obj.score_weights === null || Array.isArray(obj.score_weights)) {
       return {
@@ -8834,6 +9045,273 @@ function parseProjectFile(text) {
         values.scoreWeights = weights.weights;
         break;
     }
+  }
+  if (obj.product_file_keys !== void 0) {
+    if (!isPlainObject4(obj.product_file_keys)) {
+      return {
+        kind: "invalid",
+        message: "product_file_keys must be an object of alias \u2192 Figma file key"
+      };
+    }
+    const map = {};
+    for (const [alias, key] of Object.entries(obj.product_file_keys)) {
+      if (alias === "") {
+        return {
+          kind: "invalid",
+          message: "product_file_keys has an empty alias \u2014 every alias must be a non-empty string"
+        };
+      }
+      if (typeof key !== "string" || key === "") {
+        return {
+          kind: "invalid",
+          message: `product_file_keys.${alias} must be a non-empty string (a Figma file key)`
+        };
+      }
+      map[alias] = key;
+    }
+    values.productFileKeys = map;
+  }
+  if (obj.metric_targets !== void 0) {
+    if (!isPlainObject4(obj.metric_targets)) {
+      return {
+        kind: "invalid",
+        message: "metric_targets must be an object of metric \u2192 { op, value, warn? }"
+      };
+    }
+    const targets = {};
+    for (const [metric, target] of Object.entries(obj.metric_targets)) {
+      if (!TARGET_METRICS.includes(metric)) {
+        const suggestions = suggestTargetMetrics(metric);
+        const hint = suggestions.length > 0 ? ` \u2014 did you mean ${suggestions.join(", ")}?` : "";
+        return {
+          kind: "invalid",
+          message: `metric_targets has an unknown metric ${JSON.stringify(metric)}${hint}`
+        };
+      }
+      if (!isPlainObject4(target)) {
+        return {
+          kind: "invalid",
+          message: `metric_targets.${metric} must be an object { op, value, warn? }`
+        };
+      }
+      if (!TARGET_OPS.includes(target.op)) {
+        return {
+          kind: "invalid",
+          message: `metric_targets.${metric}.op must be one of ${TARGET_OPS.join(" | ")}, got ${JSON.stringify(target.op)}`
+        };
+      }
+      if (typeof target.value !== "number" || !Number.isFinite(target.value)) {
+        return {
+          kind: "invalid",
+          message: `metric_targets.${metric}.value must be a finite number`
+        };
+      }
+      const parsed = {
+        op: target.op,
+        value: target.value
+      };
+      if (target.warn !== void 0) {
+        if (typeof target.warn !== "number" || !Number.isFinite(target.warn)) {
+          return {
+            kind: "invalid",
+            message: `metric_targets.${metric}.warn must be a finite number`
+          };
+        }
+        parsed.warn = target.warn;
+      }
+      targets[metric] = parsed;
+    }
+    values.metricTargets = targets;
+  }
+  if (obj.score_weights_by_view !== void 0) {
+    if (!isPlainObject4(obj.score_weights_by_view)) {
+      return {
+        kind: "invalid",
+        message: "score_weights_by_view must be an object of view \u2192 weight overrides"
+      };
+    }
+    const byView = {};
+    for (const [view, override] of Object.entries(obj.score_weights_by_view)) {
+      if (!isPlainObject4(override)) {
+        return {
+          kind: "invalid",
+          message: `score_weights_by_view.${view} must be an object of component \u2192 weight`
+        };
+      }
+      const weights = validateWeights(override);
+      switch (weights.kind) {
+        case "unknown-key":
+          return {
+            kind: "invalid",
+            message: `score_weights_by_view.${view} has an unknown key ${JSON.stringify(weights.key)} \u2014 expected drift, lint, readiness, a11y or adoption`
+          };
+        case "non-positive":
+          return {
+            kind: "invalid",
+            message: `score_weights_by_view.${view}.${weights.key} must be a positive number`
+          };
+        case "non-finite":
+          return {
+            kind: "invalid",
+            message: `score_weights_by_view.${view}.${weights.key} must be a finite number`
+          };
+        case "ok":
+          byView[view] = weights.weights;
+          break;
+      }
+    }
+    values.scoreWeightsByView = byView;
+  }
+  if (obj.freshness_thresholds !== void 0) {
+    if (!isPlainObject4(obj.freshness_thresholds)) {
+      return {
+        kind: "invalid",
+        message: "freshness_thresholds must be an object of check-kind \u2192 { aging, stale }"
+      };
+    }
+    const thresholds = {};
+    for (const [kind, band] of Object.entries(obj.freshness_thresholds)) {
+      if (!FRESHNESS_KINDS.includes(kind)) {
+        const suggestions = suggestFreshnessKinds(kind);
+        const hint = suggestions.length > 0 ? ` \u2014 did you mean ${suggestions.join(", ")}?` : "";
+        return {
+          kind: "invalid",
+          message: `freshness_thresholds has an unknown check-kind ${JSON.stringify(kind)}${hint}`
+        };
+      }
+      if (!isPlainObject4(band)) {
+        return {
+          kind: "invalid",
+          message: `freshness_thresholds.${kind} must be an object { aging, stale }`
+        };
+      }
+      const { aging, stale } = band;
+      for (const [name, value2] of [
+        ["aging", aging],
+        ["stale", stale]
+      ]) {
+        if (typeof value2 !== "number" || !Number.isFinite(value2) || value2 <= 0) {
+          return {
+            kind: "invalid",
+            message: `freshness_thresholds.${kind}.${name} must be a positive finite number`
+          };
+        }
+      }
+      if (aging > stale) {
+        return {
+          kind: "invalid",
+          message: `freshness_thresholds.${kind}.aging must be \u2264 stale`
+        };
+      }
+      thresholds[kind] = {
+        aging,
+        stale
+      };
+    }
+    values.freshnessThresholds = thresholds;
+  }
+  if (obj.ownership !== void 0) {
+    if (!Array.isArray(obj.ownership)) {
+      return {
+        kind: "invalid",
+        message: "ownership must be an array of { owner, paths } rules"
+      };
+    }
+    const rules = [];
+    for (let i = 0; i < obj.ownership.length; i += 1) {
+      const entry = obj.ownership[i];
+      if (!isPlainObject4(entry)) {
+        return {
+          kind: "invalid",
+          message: `ownership[${i}] must be an object { owner, paths }`
+        };
+      }
+      if (typeof entry.owner !== "string" || entry.owner === "") {
+        return {
+          kind: "invalid",
+          message: `ownership[${i}].owner must be a non-empty string`
+        };
+      }
+      if (!Array.isArray(entry.paths) || entry.paths.length === 0) {
+        return {
+          kind: "invalid",
+          message: `ownership[${i}].paths must be a non-empty array of path globs`
+        };
+      }
+      const paths = [];
+      for (let j = 0; j < entry.paths.length; j += 1) {
+        const path = entry.paths[j];
+        if (typeof path !== "string" || path === "") {
+          return {
+            kind: "invalid",
+            message: `ownership[${i}].paths[${j}] must be a non-empty string (a path glob)`
+          };
+        }
+        paths.push(path);
+      }
+      rules.push({ owner: entry.owner, paths });
+    }
+    values.ownership = rules;
+  }
+  if (obj.ownership_file !== void 0) {
+    if (typeof obj.ownership_file !== "string" || obj.ownership_file === "") {
+      return {
+        kind: "invalid",
+        message: "ownership_file must be a non-empty string (a path)"
+      };
+    }
+    values.ownershipFile = obj.ownership_file;
+  }
+  if (obj.component_aliases !== void 0) {
+    if (!isPlainObject4(obj.component_aliases)) {
+      return {
+        kind: "invalid",
+        message: "component_aliases must be an object of component \u2192 { frameName?, contrastMode? }"
+      };
+    }
+    const map = {};
+    for (const [alias, keys] of Object.entries(obj.component_aliases)) {
+      if (!isPlainObject4(keys)) {
+        return {
+          kind: "invalid",
+          message: `component_aliases.${alias} must be an object { frameName?, contrastMode? }`
+        };
+      }
+      const entry = {};
+      for (const field of ["frameName", "contrastMode"]) {
+        const value2 = keys[field];
+        if (value2 === void 0) continue;
+        if (typeof value2 !== "string" || value2 === "") {
+          return {
+            kind: "invalid",
+            message: `component_aliases.${alias}.${field} must be a non-empty string`
+          };
+        }
+        entry[field] = value2;
+      }
+      map[alias] = entry;
+    }
+    values.componentAliases = map;
+  }
+  if (obj.migration_sites_cap !== void 0) {
+    const n = obj.migration_sites_cap;
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return {
+        kind: "invalid",
+        message: `migration_sites_cap must be a positive integer, got ${JSON.stringify(n)}`
+      };
+    }
+    values.migrationSitesCap = n;
+  }
+  if (obj.score_velocity_window !== void 0) {
+    const n = obj.score_velocity_window;
+    if (typeof n !== "number" || !Number.isInteger(n) || n <= 0) {
+      return {
+        kind: "invalid",
+        message: `score_velocity_window must be a positive integer number of days, got ${JSON.stringify(n)}`
+      };
+    }
+    values.scoreVelocityWindow = n;
   }
   return { kind: "ok", values };
 }
@@ -8877,20 +9355,48 @@ function resolveConfig(inputs) {
     }
   }
   const tokenValue = flags.figmaToken ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN;
+  const productFileKeys = {
+    ...project.productFileKeys ?? {}
+  };
+  const PRODUCT_FILE_ENV_PREFIX = "FIGMA_PRODUCT_FILE_";
+  for (const envKey of Object.keys(env)) {
+    if (!envKey.startsWith(PRODUCT_FILE_ENV_PREFIX)) continue;
+    const value2 = env[envKey];
+    if (value2 === void 0 || value2 === "") continue;
+    const alias = envKey.slice(PRODUCT_FILE_ENV_PREFIX.length).toLowerCase();
+    if (alias === "") continue;
+    productFileKeys[alias] = value2;
+  }
   const config = {
-    figmaFileKey: flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? project.figmaFileKey,
+    figmaFileKey: flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? project.figmaFileKey,
     figmaToken: tokenValue !== void 0 && tokenValue !== "" ? { kind: "present", value: tokenValue } : { kind: "missing" },
     tokenSource: flags.tokenSource ?? env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ?? project.tokenSource,
     reportStyle: flags.reportStyle ?? envReportStyle ?? project.reportStyle ?? DEFAULTS.reportStyle,
     readinessThreshold: flags.readinessThreshold ?? envThreshold ?? project.readinessThreshold ?? DEFAULTS.readinessThreshold,
     // Dashboard selection comes only from the project file (SPEC-measure §3:
     // no env vars, no userConfig). The flags > config > `everything` default
-    // is applied downstream by resolveView (M0.2), not here.
+    // is applied downstream by resolveView (M0.2), not here. The three keys
+    // are mutually exclusive at parse time, so at most one is set.
     dashboardView: project.dashboardView,
     dashboardArtifacts: project.dashboardArtifacts,
+    dashboardDefault: project.dashboardDefault,
     // The merged/validated weights, or undefined when score_weights is absent
     // (callers fall back to the engine defaults in that case).
-    scoreWeights: project.scoreWeights
+    scoreWeights: project.scoreWeights,
+    // Project-file map merged with the FIGMA_PRODUCT_FILE_<NAME> env family
+    // (env wins). Always an object — defaults to {} when no source provides one.
+    productFileKeys,
+    // Persona-wave project-file-only keys (SPEC-personas §6.5). Each is
+    // undefined when absent (the caller falls back to its own defaults), except
+    // the capped/windowed numbers which carry hard defaults.
+    metricTargets: project.metricTargets,
+    scoreWeightsByView: project.scoreWeightsByView,
+    freshnessThresholds: project.freshnessThresholds,
+    ownership: project.ownership,
+    ownershipFile: project.ownershipFile,
+    componentAliases: project.componentAliases,
+    migrationSitesCap: project.migrationSitesCap ?? DEFAULT_MIGRATION_SITES_CAP,
+    scoreVelocityWindow: project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW
   };
   return { kind: "ok", config, warnings };
 }
@@ -8917,6 +9423,134 @@ function writeProjectConfig(dir, patch) {
   const tempPath = join4(dir, `${PROJECT_FILE_NAME}.${process.pid}.tmp`);
   writeFileSync(tempPath, text, "utf8");
   renameSync(tempPath, filePath);
+}
+
+// src/engines/report/presets.ts
+var PRESETS = {
+  owner: [
+    "system-score",
+    "adoption-trend",
+    "import-coverage",
+    "leaderboard",
+    "drift-trend",
+    "parity",
+    "a11y"
+  ],
+  engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
+  design: ["system-score", "readiness", "a11y", "parity", "library-health"],
+  consumer: [
+    "system-score",
+    "parity",
+    "impact",
+    "breaking-calendar",
+    "change-frequency"
+  ],
+  everything: [...ALL_ARTIFACT_IDS]
+};
+var PRESET_NAMES = Object.keys(PRESETS);
+function editDistance3(a, b) {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dist = Array.from({ length: rows * cols }, () => 0);
+  for (let i = 0; i < rows; i++) {
+    dist[i * cols] = i;
+  }
+  for (let j = 0; j < cols; j++) {
+    dist[j] = j;
+  }
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
+      dist[i * cols + j] = Math.min(
+        (dist[(i - 1) * cols + j] ?? 0) + 1,
+        (dist[i * cols + j - 1] ?? 0) + 1,
+        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
+      );
+    }
+  }
+  return dist[rows * cols - 1] ?? 0;
+}
+function suggestViewNames(input, limit = 3) {
+  const needle = input.toLowerCase();
+  const MAX_DISTANCE = 4;
+  return PRESET_NAMES.map((name, index) => ({
+    name,
+    index,
+    prefix: name.startsWith(needle),
+    distance: editDistance3(needle, name)
+  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
+  ).slice(0, limit).map((c2) => c2.name);
+}
+function isPresetName(value2) {
+  return Object.hasOwn(PRESETS, value2);
+}
+function resolveSource(selection, source) {
+  const view = selection.view;
+  const requested = selection.artifacts !== void 0 && selection.artifacts.length > 0 ? selection.artifacts : void 0;
+  if (view !== void 0 && requested !== void 0) {
+    return { kind: "conflicting-selection", source };
+  }
+  if (view !== void 0) {
+    if (!isPresetName(view)) {
+      return {
+        kind: "unknown-view",
+        view,
+        suggestions: suggestViewNames(view)
+      };
+    }
+    return {
+      kind: "ok",
+      artifacts: [...PRESETS[view]],
+      source,
+      viewName: view,
+      notices: []
+    };
+  }
+  if (requested !== void 0) {
+    const seen = /* @__PURE__ */ new Set();
+    const ordered = [];
+    let duplicates = 0;
+    for (const id of requested) {
+      const outcome = lookupArtifact(id);
+      if (outcome.kind === "unknown") {
+        return {
+          kind: "unknown-artifact",
+          id: outcome.id,
+          suggestions: outcome.suggestions
+        };
+      }
+      const resolved = outcome.artifact.id;
+      if (seen.has(resolved)) {
+        duplicates += 1;
+        continue;
+      }
+      seen.add(resolved);
+      ordered.push(resolved);
+    }
+    const notices = duplicates > 0 ? [
+      `Removed ${duplicates} duplicate artifact id${duplicates === 1 ? "" : "s"} from the selection.`
+    ] : [];
+    return { kind: "ok", artifacts: ordered, source, notices };
+  }
+  return void 0;
+}
+function resolveView(flags, projectConfig) {
+  const fromFlags = resolveSource(flags, "flags");
+  if (fromFlags !== void 0) {
+    return fromFlags;
+  }
+  const fromProject = resolveSource(projectConfig, "project");
+  if (fromProject !== void 0) {
+    return fromProject;
+  }
+  return {
+    kind: "ok",
+    artifacts: [...PRESETS.everything],
+    source: "default",
+    viewName: "everything",
+    notices: []
+  };
 }
 
 // src/render/html/badge.ts
@@ -9018,16 +9652,29 @@ function runBadge(path, options) {
     return;
   }
   const projectFileText = readProjectConfigText(targetDir);
-  let scoreWeights;
+  let weightProfile = resolveWeightProfile(void 0, void 0, void 0);
   if (projectFileText !== void 0) {
     const resolved = resolveConfig({ projectFileText });
     if (resolved.kind !== "ok") {
       fail3(resolved.message);
       return;
     }
-    scoreWeights = resolved.config.scoreWeights;
+    const cfg = resolved.config;
+    const view = resolveView(
+      {},
+      {
+        ...cfg.dashboardView !== void 0 ? { view: cfg.dashboardView } : {},
+        ...cfg.dashboardArtifacts !== void 0 ? { artifacts: cfg.dashboardArtifacts } : {}
+      }
+    );
+    const viewName = view.kind === "ok" && view.source !== "default" ? view.viewName : void 0;
+    weightProfile = resolveWeightProfile(
+      viewName,
+      cfg.scoreWeights,
+      cfg.scoreWeightsByView
+    );
   }
-  const outcome = scoreFromHistory(historyText, scoreWeights);
+  const outcome = scoreFromHistory(historyText, weightProfile.weights);
   if (outcome.kind === "no-data") {
     fail3(noDataMessage(historyPath));
     return;
@@ -9055,6 +9702,8 @@ function registerBadgeCommand(program2) {
 }
 
 // src/cli-commands/changelog.ts
+import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync4 } from "fs";
+import { join as join6 } from "path";
 import { cwd as processCwd } from "process";
 
 // src/engines/changelog/aggregate.ts
@@ -9286,7 +9935,7 @@ var DEFAULT_BASE_URL = "https://api.figma.com";
 var MAX_RETRIES = 3;
 var DEFAULT_RETRY_AFTER_SECONDS = 1;
 function defaultSleep(ms) {
-  return new Promise((resolve11) => setTimeout(resolve11, ms));
+  return new Promise((resolve13) => setTimeout(resolve13, ms));
 }
 function joinIds(ids) {
   return encodeURIComponent(ids.join(","));
@@ -9454,22 +10103,22 @@ function classifyGitFailure(run) {
   return { kind: "git-error", message: stderr.trim() };
 }
 function readFileAtRef(input) {
-  const { ref, path, cwd: cwd4, exec } = input;
-  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd4);
+  const { ref, path, cwd: cwd5, exec } = input;
+  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd5);
   if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
     const { kind, message } = classifyGitFailure(prefixRun);
     return kind === "missing" ? { kind: "missing" } : { kind, message };
   }
   const prefix = prefixRun.stdout.trim();
-  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd4);
+  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd5);
   if (showRun.error !== void 0 || showRun.status !== 0) {
     const { kind, message } = classifyGitFailure(showRun);
     return kind === "missing" ? { kind: "missing" } : { kind, message };
   }
   return { kind: "ok", text: showRun.stdout };
 }
-function spawnGitExec(args, cwd4) {
-  const run = spawnSync("git", args, { cwd: cwd4, encoding: "utf8" });
+function spawnGitExec(args, cwd5) {
+  const run = spawnSync("git", args, { cwd: cwd5, encoding: "utf8" });
   if (run.error !== void 0) {
     return { status: -1, stdout: "", stderr: "", error: run.error.message };
   }
@@ -9487,6 +10136,7 @@ function defaultSince(now) {
   return new Date(ms).toISOString().slice(0, 10);
 }
 var EMPTY_TOKEN_DIFF = { entries: [], unchanged: 0 };
+var HISTORY_RECENT_LIMIT = 12;
 function defaultDeps() {
   return {
     exec: spawnGitExec,
@@ -9570,6 +10220,57 @@ async function fetchVersions(deps) {
   }
   return { versions: result.data.versions };
 }
+function breakingRank(severity) {
+  return severity === "breaking" ? 0 : 1;
+}
+function tally(counts, severity) {
+  counts[severity] += 1;
+}
+function buildChangelogHistoryRecord(entries, since, at) {
+  const designer = {
+    breaking: 0,
+    notable: 0,
+    minor: 0
+  };
+  const developer = {
+    breaking: 0,
+    notable: 0,
+    minor: 0
+  };
+  const both = { breaking: 0, notable: 0, minor: 0 };
+  for (const entry of entries) {
+    if (entry.audience === "designer") tally(designer, entry.severity);
+    else if (entry.audience === "developer") tally(developer, entry.severity);
+    else tally(both, entry.severity);
+  }
+  const recent = entries.map((entry, order) => ({ entry, order })).sort(
+    (a, b) => breakingRank(a.entry.severity) - breakingRank(b.entry.severity) || a.order - b.order
+  ).slice(0, HISTORY_RECENT_LIMIT).map(({ entry }) => ({
+    audience: entry.audience,
+    severity: entry.severity,
+    source: entry.source,
+    title: entry.title
+  }));
+  return {
+    at,
+    kind: "changelog",
+    since,
+    designer,
+    developer,
+    both,
+    recent
+  };
+}
+function appendChangelogHistory(deps, record) {
+  const stateDir = join6(deps.cwd, ".ds-bridge");
+  mkdirSync4(stateDir, { recursive: true });
+  appendFileSync3(
+    join6(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
 async function runChangelog(options, deps) {
   const format = options.format;
   if (format !== "term" && format !== "json" && format !== "md") {
@@ -9617,6 +10318,12 @@ async function runChangelog(options, deps) {
     since
   });
   const entries = all.filter((entry) => audienceMatches(entry, audience.value));
+  if (options.history) {
+    appendChangelogHistory(
+      deps,
+      buildChangelogHistoryRecord(all, since, deps.now().toISOString())
+    );
+  }
   if (format === "json") {
     deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}
 `);
@@ -9635,142 +10342,140 @@ function registerChangelogCommand(program2) {
   ).option(
     "--since <date>",
     "include changes since this date (default: 90 days ago)"
-  ).option("--audience <who>", "designers | developers | both", "both").option("--format <format>", "output format: term | json | md", "term").action((options) => {
+  ).option("--audience <who>", "designers | developers | both", "both").option("--format <format>", "output format: term | json | md", "term").option(
+    "--no-history",
+    "do not append a changelog record to .ds-bridge/history.jsonl in the current directory"
+  ).action((options) => {
     void runChangelog(options, defaultDeps());
   });
 }
 
-// src/cli-commands/dashboard.ts
-import { existsSync as existsSync5, readFileSync as readFileSync5 } from "fs";
-import { join as join6, resolve as resolvePath } from "path";
+// src/cli-commands/config.ts
+import {
+  chmodSync,
+  existsSync as existsSync5,
+  readFileSync as readFileSync6,
+  renameSync as renameSync2,
+  unlinkSync,
+  writeFileSync as writeFileSync3
+} from "fs";
+import { join as join7, resolve as resolvePath } from "path";
 
-// src/engines/report/presets.ts
-var PRESETS = {
-  owner: [
-    "system-score",
-    "adoption-trend",
-    "import-coverage",
-    "leaderboard",
-    "drift-trend",
-    "parity",
-    "a11y"
-  ],
-  engineering: ["system-score", "lint-summary", "impact", "drift-trend"],
-  design: ["system-score", "readiness", "a11y", "parity", "library-health"],
-  consumer: [
-    "system-score",
-    "parity",
-    "impact",
-    "breaking-calendar",
-    "change-frequency"
-  ],
-  everything: [...ALL_ARTIFACT_IDS]
-};
-var PRESET_NAMES = Object.keys(PRESETS);
-function editDistance2(a, b) {
-  const rows = a.length + 1;
-  const cols = b.length + 1;
-  const dist = Array.from({ length: rows * cols }, () => 0);
-  for (let i = 0; i < rows; i++) {
-    dist[i * cols] = i;
+// src/io/dotenv.ts
+import { readFileSync as readFileSync5 } from "fs";
+function parseDotenv(text) {
+  const out = {};
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (line === "" || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    if (key === "") continue;
+    out[key] = stripOneQuoteLayer(line.slice(eq + 1).trim());
   }
-  for (let j = 0; j < cols; j++) {
-    dist[j] = j;
+  return out;
+}
+function stripOneQuoteLayer(value2) {
+  if (value2.length < 2) return value2;
+  const first = value2[0];
+  const last = value2[value2.length - 1];
+  if ((first === '"' || first === "'") && first === last) {
+    return value2.slice(1, -1);
   }
-  for (let i = 1; i < rows; i++) {
-    for (let j = 1; j < cols; j++) {
-      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
-      dist[i * cols + j] = Math.min(
-        (dist[(i - 1) * cols + j] ?? 0) + 1,
-        (dist[i * cols + j - 1] ?? 0) + 1,
-        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
-      );
+  return value2;
+}
+function loadDotenvInto(filePath, env) {
+  let text;
+  try {
+    text = readFileSync5(filePath, "utf8");
+  } catch {
+    return;
+  }
+  for (const [key, value2] of Object.entries(parseDotenv(text))) {
+    const current = env[key];
+    if (current === void 0 || current === "") {
+      env[key] = value2;
     }
   }
-  return dist[rows * cols - 1] ?? 0;
 }
-function suggestViewNames(input, limit = 3) {
-  const needle = input.toLowerCase();
-  const MAX_DISTANCE = 4;
-  return PRESET_NAMES.map((name, index) => ({
-    name,
-    index,
-    prefix: name.startsWith(needle),
-    distance: editDistance2(needle, name)
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
-    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.name);
+
+// src/cli-commands/config.ts
+var ENV_FILE_NAME = ".ds-bridge.env";
+function fail4(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
 }
-function isPresetName(value2) {
-  return Object.hasOwn(PRESETS, value2);
+function maskToken(token) {
+  if (token.length <= 8) return "*".repeat(token.length);
+  const head = token.slice(0, 5);
+  const tail = token.slice(-4);
+  return `${head}\u2026${tail}`;
 }
-function resolveSource(selection, source) {
-  const view = selection.view;
-  const requested = selection.artifacts !== void 0 && selection.artifacts.length > 0 ? selection.artifacts : void 0;
-  if (view !== void 0 && requested !== void 0) {
-    return { kind: "conflicting-selection", source };
-  }
-  if (view !== void 0) {
-    if (!isPresetName(view)) {
-      return {
-        kind: "unknown-view",
-        view,
-        suggestions: suggestViewNames(view)
-      };
+function serializeDotenv(map) {
+  return `${Object.entries(map).map(([key, value2]) => `${key}=${value2}`).join("\n")}
+`;
+}
+function writeEnvFileMerged(dir, updates) {
+  const filePath = join7(dir, ENV_FILE_NAME);
+  const existing = existsSync5(filePath) ? parseDotenv(readFileSync6(filePath, "utf8")) : {};
+  const merged = { ...existing, ...updates };
+  const text = serializeDotenv(merged);
+  const tempPath = join7(dir, `${ENV_FILE_NAME}.${process.pid}.tmp`);
+  try {
+    writeFileSync3(tempPath, text, { encoding: "utf8", mode: 384 });
+    renameSync2(tempPath, filePath);
+  } catch (error) {
+    try {
+      if (existsSync5(tempPath)) unlinkSync(tempPath);
+    } catch {
     }
-    return {
-      kind: "ok",
-      artifacts: [...PRESETS[view]],
-      source,
-      viewName: view,
-      notices: []
-    };
+    throw error;
   }
-  if (requested !== void 0) {
-    const seen = /* @__PURE__ */ new Set();
-    const ordered = [];
-    let duplicates = 0;
-    for (const id of requested) {
-      const outcome = lookupArtifact(id);
-      if (outcome.kind === "unknown") {
-        return {
-          kind: "unknown-artifact",
-          id: outcome.id,
-          suggestions: outcome.suggestions
-        };
-      }
-      const resolved = outcome.artifact.id;
-      if (seen.has(resolved)) {
-        duplicates += 1;
-        continue;
-      }
-      seen.add(resolved);
-      ordered.push(resolved);
-    }
-    const notices = duplicates > 0 ? [
-      `Removed ${duplicates} duplicate artifact id${duplicates === 1 ? "" : "s"} from the selection.`
-    ] : [];
-    return { kind: "ok", artifacts: ordered, source, notices };
-  }
-  return void 0;
+  chmodSync(filePath, 384);
 }
-function resolveView(flags, projectConfig) {
-  const fromFlags = resolveSource(flags, "flags");
-  if (fromFlags !== void 0) {
-    return fromFlags;
+function runPersistToken(path) {
+  const env = process.env;
+  const token = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN ?? void 0;
+  if (token === void 0 || token === "") {
+    fail4(
+      "No Figma token in this session's environment. Configure it in the plugin dialog (`/plugin configure`) first, then run this in the SAME session."
+    );
+    return;
   }
-  const fromProject = resolveSource(projectConfig, "project");
-  if (fromProject !== void 0) {
-    return fromProject;
+  const fileKey = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? void 0;
+  const targetDir = resolvePath(path);
+  const updates = { FIGMA_TOKEN: token };
+  if (fileKey !== void 0 && fileKey !== "") {
+    updates.FIGMA_DESIGN_SYSTEM_FILE = fileKey;
   }
-  return {
-    kind: "ok",
-    artifacts: [...PRESETS.everything],
-    source: "default",
-    viewName: "everything",
-    notices: []
-  };
+  try {
+    writeEnvFileMerged(targetDir, updates);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail4(`Could not write ${join7(targetDir, ENV_FILE_NAME)}: ${detail}`);
+    return;
+  }
+  const savedKey = updates.FIGMA_DESIGN_SYSTEM_FILE !== void 0 ? " and the design-system file key" : "";
+  process.stdout.write(
+    `Saved Figma token (${maskToken(token)})${savedKey} to ${join7(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
+`
+  );
+  process.exitCode = 0;
 }
+function registerConfigCommand(program2) {
+  const config = program2.command("config").description("Manage ds-bridge project configuration");
+  config.command("persist-token").description(
+    "Save this session's Figma token to .ds-bridge.env (gitignored, 0600) so it survives a restart (opt-in fix for Claude Code #62442)"
+  ).argument("[path]", "project directory to write .ds-bridge.env into", ".").action((path) => {
+    runPersistToken(path);
+  });
+}
+
+// src/cli-commands/dashboard.ts
+import { existsSync as existsSync6, readFileSync as readFileSync7 } from "fs";
+import { join as join8, resolve as resolvePath2 } from "path";
 
 // src/cli-commands/dashboard-wizard.ts
 import { createInterface } from "readline/promises";
@@ -9781,9 +10486,9 @@ var LineReader = class {
   constructor(rl) {
     rl.on("line", (line) => {
       if (this.waiting !== void 0) {
-        const { resolve: resolve11 } = this.waiting;
+        const { resolve: resolve13 } = this.waiting;
         this.waiting = void 0;
-        resolve11(line);
+        resolve13(line);
       } else {
         this.queue.push(line);
       }
@@ -9802,8 +10507,8 @@ var LineReader = class {
     const buffered = this.queue.shift();
     if (buffered !== void 0) return Promise.resolve(buffered);
     if (this.closed) return Promise.reject(new EofError());
-    return new Promise((resolve11, reject) => {
-      this.waiting = { resolve: resolve11, reject };
+    return new Promise((resolve13, reject) => {
+      this.waiting = { resolve: resolve13, reject };
     });
   }
 };
@@ -9879,7 +10584,7 @@ async function customizeLoop(reader, output, start) {
   }
 }
 async function runSetupWizard(deps) {
-  const { input, output, cwd: cwd4, isTTY } = deps;
+  const { input, output, cwd: cwd5, isTTY } = deps;
   if (!isTTY) {
     output.write(
       "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead.\n"
@@ -9909,12 +10614,12 @@ async function runSetupWizard(deps) {
       return { exitCode: 0 };
     }
     if (chosen.kind === "view") {
-      writeProjectConfig(cwd4, {
+      writeProjectConfig(cwd5, {
         dashboard_view: chosen.view,
         dashboard_artifacts: void 0
       });
     } else {
-      writeProjectConfig(cwd4, {
+      writeProjectConfig(cwd5, {
         dashboard_artifacts: chosen.artifacts,
         dashboard_view: void 0
       });
@@ -9935,18 +10640,18 @@ async function runSetupWizard(deps) {
 }
 
 // src/cli-commands/dashboard.ts
-function fail4(message) {
+function fail5(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
 var PROJECT_FILE_NAME2 = ".ds-bridge.json";
 function readSelection(targetDir) {
-  const configPath = join6(targetDir, PROJECT_FILE_NAME2);
+  const configPath = join8(targetDir, PROJECT_FILE_NAME2);
   let projectFileText;
-  if (existsSync5(configPath)) {
+  if (existsSync6(configPath)) {
     try {
-      projectFileText = readFileSync5(configPath, "utf8");
+      projectFileText = readFileSync7(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -10024,13 +10729,13 @@ function renderTerm4(data) {
 function runList(path, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail4(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    fail5(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return;
   }
-  const targetDir = resolvePath(path);
+  const targetDir = resolvePath2(path);
   const selection = readSelection(targetDir);
   if (selection.kind === "error") {
-    fail4(selection.message);
+    fail5(selection.message);
     return;
   }
   const data = toListJson(selection.selection);
@@ -10073,22 +10778,22 @@ function runSet(path, options) {
   const hasView = options.view !== void 0;
   const hasArtifacts = options.artifacts !== void 0;
   if (hasView && hasArtifacts) {
-    fail4("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
+    fail5("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
     return;
   }
   if (!hasView && !hasArtifacts) {
-    fail4(
+    fail5(
       "Specify a view or an artifact list: --view <preset> | --artifacts <a,b,\u2026>."
     );
     return;
   }
-  const targetDir = resolvePath(path);
+  const targetDir = resolvePath2(path);
   if (hasView) {
     const view = options.view;
     const resolved = resolveView({ view }, {});
     if (resolved.kind === "unknown-view") {
       const hint = resolved.suggestions.length > 0 ? ` \u2014 did you mean ${resolved.suggestions.join(", ")}?` : "";
-      fail4(`Unknown view "${view}"${hint}`);
+      fail5(`Unknown view "${view}"${hint}`);
       return;
     }
     writeProjectConfig(targetDir, {
@@ -10102,7 +10807,7 @@ function runSet(path, options) {
   }
   const parsed = parseArtifacts(options.artifacts);
   if (parsed.kind === "error") {
-    fail4(parsed.message);
+    fail5(parsed.message);
     return;
   }
   writeProjectConfig(targetDir, {
@@ -10118,14 +10823,14 @@ function runEdit(path, rawId, mode) {
   const outcome = lookupArtifact(rawId);
   if (outcome.kind === "unknown") {
     const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
-    fail4(`Unknown artifact id "${rawId}"${hint}`);
+    fail5(`Unknown artifact id "${rawId}"${hint}`);
     return;
   }
   const id = outcome.artifact.id;
-  const targetDir = resolvePath(path);
+  const targetDir = resolvePath2(path);
   const current = readSelection(targetDir);
   if (current.kind === "error") {
-    fail4(current.message);
+    fail5(current.message);
     return;
   }
   const wasExplicitList = current.selection.source === "project" && current.selection.viewName === void 0;
@@ -10160,12 +10865,12 @@ function runEdit(path, rawId, mode) {
 async function runSetup(path) {
   const isTTY = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
   if (!isTTY) {
-    fail4(
+    fail5(
       "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead."
     );
     return;
   }
-  const targetDir = resolvePath(path);
+  const targetDir = resolvePath2(path);
   const outcome = await runSetupWizard({
     input: process.stdin,
     output: process.stdout,
@@ -10205,13 +10910,13 @@ function registerDashboardCommand(program2) {
 
 // src/cli-commands/digest.ts
 import {
-  existsSync as existsSync6,
-  mkdirSync as mkdirSync4,
-  readFileSync as readFileSync6,
+  existsSync as existsSync7,
+  mkdirSync as mkdirSync5,
+  readFileSync as readFileSync8,
   statSync as statSync4,
-  writeFileSync as writeFileSync3
+  writeFileSync as writeFileSync4
 } from "fs";
-import { dirname as dirname3, join as join7, resolve as resolve7 } from "path";
+import { dirname as dirname3, join as join9, resolve as resolve7 } from "path";
 import { cwd as processCwd2 } from "process";
 
 // src/engines/report/history-lines.ts
@@ -10560,17 +11265,17 @@ function parseAudience2(flag) {
 }
 function readHistoryText(stateDir) {
   try {
-    return readFileSync6(join7(stateDir, "history.jsonl"), "utf8");
+    return readFileSync8(join9(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
 function resolveReadinessThreshold(targetDir) {
-  const configPath = join7(targetDir, ".ds-bridge.json");
+  const configPath = join9(targetDir, ".ds-bridge.json");
   let projectFileText;
-  if (existsSync6(configPath)) {
+  if (existsSync7(configPath)) {
     try {
-      projectFileText = readFileSync6(configPath, "utf8");
+      projectFileText = readFileSync8(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -10606,7 +11311,7 @@ function runDigest(path, options, deps) {
     return;
   }
   const targetDir = resolve7(deps.cwd, path);
-  if (!existsSync6(targetDir) || !statSync4(targetDir).isDirectory()) {
+  if (!existsSync7(targetDir) || !statSync4(targetDir).isDirectory()) {
     deps.stderr(`Path "${targetDir}" is not a directory.
 `);
     process.exitCode = 2;
@@ -10619,7 +11324,7 @@ function runDigest(path, options, deps) {
     process.exitCode = 2;
     return;
   }
-  const stateDir = join7(targetDir, ".ds-bridge");
+  const stateDir = join9(targetDir, ".ds-bridge");
   const text = readHistoryText(stateDir);
   const model = buildDigest(
     text,
@@ -10631,8 +11336,8 @@ function runDigest(path, options, deps) {
   if (options.out !== void 0) {
     const outPath = resolve7(deps.cwd, options.out);
     try {
-      mkdirSync4(dirname3(outPath), { recursive: true });
-      writeFileSync3(outPath, markdown, "utf8");
+      mkdirSync5(dirname3(outPath), { recursive: true });
+      writeFileSync4(outPath, markdown, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       deps.stderr(`Could not write digest to "${outPath}": ${detail}
@@ -10663,13 +11368,13 @@ function registerDigestCommand(program2) {
 
 // src/cli-commands/docs.ts
 import {
-  existsSync as existsSync7,
-  mkdirSync as mkdirSync5,
-  readFileSync as readFileSync7,
+  existsSync as existsSync8,
+  mkdirSync as mkdirSync6,
+  readFileSync as readFileSync9,
   statSync as statSync5,
-  writeFileSync as writeFileSync4
+  writeFileSync as writeFileSync5
 } from "fs";
-import { dirname as dirname4, join as join8, resolve as resolvePath2 } from "path";
+import { dirname as dirname4, join as join10, resolve as resolvePath3 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/engines/docs/merge.ts
@@ -10906,7 +11611,7 @@ var PARSERS2 = {
   "tokens-studio": parseTokensStudio,
   "style-dictionary": parseStyleDictionary
 };
-function fail5(message) {
+function fail6(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
@@ -10925,26 +11630,26 @@ async function scanCode(targetDir) {
   return scanCodeComponents(targetDir);
 }
 function loadRegistry2(targetDir) {
-  const registryPath = join8(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync7(registryPath)) {
-    fail5(
+  const registryPath = join10(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync8(registryPath)) {
+    fail6(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
   }
   let raw;
   try {
-    raw = readFileSync7(registryPath, "utf8");
+    raw = readFileSync9(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not read registry "${registryPath}": ${detail}`);
+    fail6(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail6(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
@@ -10957,7 +11662,7 @@ async function discoverTokens(targetDir) {
   if (source === void 0) return EMPTY_TOKENS;
   let raw;
   try {
-    raw = readFileSync7(source.path, "utf8");
+    raw = readFileSync9(source.path, "utf8");
   } catch {
     return EMPTY_TOKENS;
   }
@@ -10977,8 +11682,8 @@ function mdxFileName(component) {
   return `${safe.length > 0 ? safe : "component"}.mdx`;
 }
 function hasRegistry(candidate) {
-  return existsSync7(
-    join8(resolvePath2(candidate), ".ds-bridge", "registry.json")
+  return existsSync8(
+    join10(resolvePath3(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate(component, path) {
@@ -11001,13 +11706,13 @@ function renderTerm5(result) {
 async function runDocs(rawComponent, rawPath, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail5(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail6(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
   const { component, path } = disambiguate(rawComponent, rawPath);
-  const targetDir = resolvePath2(path);
-  if (!existsSync7(targetDir) || !statSync5(targetDir).isDirectory()) {
-    fail5(`Path "${targetDir}" is not a directory.`);
+  const targetDir = resolvePath3(path);
+  if (!existsSync8(targetDir) || !statSync5(targetDir).isDirectory()) {
+    fail6(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const registry = loadRegistry2(targetDir);
@@ -11021,39 +11726,39 @@ async function runDocs(rawComponent, rawPath, options) {
     docs = allDocs.filter((doc) => normalizeName(doc.name) === needle);
     if (docs.length === 0) {
       const candidates = allDocs.map((doc) => doc.name).join(", ");
-      fail5(
+      fail6(
         `No component named "${component}" in the registry. Candidates: ${candidates.length > 0 ? candidates : "(none)"}.`
       );
       return;
     }
   }
-  const outDir = options.out !== void 0 ? resolvePath2(options.out) : join8(targetDir, ".ds-bridge", "docs");
+  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join10(targetDir, ".ds-bridge", "docs");
   try {
-    mkdirSync5(outDir, { recursive: true });
+    mkdirSync6(outDir, { recursive: true });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not create output directory "${outDir}": ${detail}`);
+    fail6(`Could not create output directory "${outDir}": ${detail}`);
     return;
   }
   const pages = [];
   for (const doc of docs) {
     const fileName = mdxFileName(doc.name);
-    const pagePath = join8(outDir, fileName);
+    const pagePath = join10(outDir, fileName);
     try {
-      writeFileSync4(pagePath, renderComponentMdx(doc), "utf8");
+      writeFileSync5(pagePath, renderComponentMdx(doc), "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      fail5(`Could not write "${pagePath}": ${detail}`);
+      fail6(`Could not write "${pagePath}": ${detail}`);
       return;
     }
     pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
   }
-  const llmsPath = join8(outDir, "llms.txt");
+  const llmsPath = join10(outDir, "llms.txt");
   try {
-    writeFileSync4(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+    writeFileSync5(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not write "${llmsPath}": ${detail}`);
+    fail6(`Could not write "${llmsPath}": ${detail}`);
     return;
   }
   const result = { outDir, llmsPath, pages };
@@ -11080,9 +11785,15 @@ function registerDocsCommand(program2) {
   );
 }
 
-// src/cli-commands/handoff.ts
-import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync6 } from "fs";
-import { join as join9 } from "path";
+// src/cli-commands/frame-impl.ts
+import {
+  appendFileSync as appendFileSync4,
+  existsSync as existsSync9,
+  mkdirSync as mkdirSync7,
+  readdirSync,
+  readFileSync as readFileSync10
+} from "fs";
+import { isAbsolute as isAbsolute2, join as join11, resolve as resolve8, sep as sep2 } from "path";
 import { cwd } from "process";
 
 // src/engines/handoff/parse-url.ts
@@ -11119,11 +11830,11 @@ function parseFigmaUrl(url) {
   if (!isFigmaHost(parsed.hostname)) {
     return INVALID(`Not a figma.com URL: "${url}".`);
   }
-  const segments = parsed.pathname.split("/").filter((s) => s.length > 0);
-  if (segments.length === 0) {
+  const segments2 = parsed.pathname.split("/").filter((s) => s.length > 0);
+  if (segments2.length === 0) {
     return INVALID("Figma URL is missing a file key.");
   }
-  const [pathType, ...rest] = segments;
+  const [pathType, ...rest] = segments2;
   if (pathType === void 0 || !KEY_PATH_TYPES.has(pathType)) {
     return INVALID(`Unsupported Figma URL path "/${pathType ?? ""}".`);
   }
@@ -11140,6 +11851,808 @@ function parseFigmaUrl(url) {
   const nodeId = nodeIdRaw === null ? void 0 : normalizeNodeId(nodeIdRaw);
   return nodeId === void 0 ? { kind: "ok", fileKey } : { kind: "ok", fileKey, nodeId };
 }
+
+// src/engines/tokens/normalize.ts
+function normalizeColor(raw) {
+  if (raw === "") return void 0;
+  const parsed = parse_default(raw);
+  if (parsed === void 0) return void 0;
+  const alpha = parsed.alpha ?? 1;
+  return alpha < 1 ? formatHex8(parsed) : formatHex(parsed);
+}
+var PX_RE = /^(-?\d+(?:\.\d+)?)px$/;
+var REM_RE = /^(-?\d+(?:\.\d+)?)rem$/;
+var UNITLESS_RE = /^(-?\d+(?:\.\d+)?)$/;
+function normalizeDimension(raw, options) {
+  const remBase = options?.remBase ?? 16;
+  if (typeof raw === "number") {
+    return Number.isFinite(raw) ? { px: raw } : void 0;
+  }
+  const trimmed = raw.trim();
+  const px = PX_RE.exec(trimmed);
+  if (px?.[1] !== void 0) return { px: Number(px[1]) };
+  const rem = REM_RE.exec(trimmed);
+  if (rem?.[1] !== void 0) return { px: Number(rem[1]) * remBase };
+  const unitless = UNITLESS_RE.exec(trimmed);
+  if (unitless?.[1] !== void 0) return { px: Number(unitless[1]) };
+  return void 0;
+}
+
+// src/engines/tokens/token-index.ts
+function canonicalValueKey(token) {
+  const { value: value2 } = token;
+  if (typeof value2 === "number") {
+    const dim2 = normalizeDimension(value2);
+    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
+  }
+  if (typeof value2 !== "string") return void 0;
+  const color = normalizeColor(value2);
+  if (color !== void 0) return color;
+  const dim = normalizeDimension(value2);
+  if (dim !== void 0) return `${dim.px}px`;
+  return value2;
+}
+var deltaE2000 = differenceCiede2000();
+function buildTokenIndex(tokens) {
+  const byName2 = /* @__PURE__ */ new Map();
+  const byValue = /* @__PURE__ */ new Map();
+  const colorTokens = [];
+  for (const token of tokens) {
+    byName2.set(token.name, token);
+    const key = canonicalValueKey(token);
+    if (key !== void 0) {
+      const bucket = byValue.get(key);
+      if (bucket === void 0) {
+        byValue.set(key, [token]);
+      } else {
+        bucket.push(token);
+      }
+    }
+    if (token.type === "color" && typeof token.value === "string") {
+      const parsed = parse_default(token.value);
+      if (parsed !== void 0) colorTokens.push({ token, parsed });
+    }
+  }
+  return {
+    byName: byName2,
+    byValue,
+    nearest(rawColor, options) {
+      const query = parse_default(rawColor);
+      if (query === void 0) return [];
+      return colorTokens.map(({ token, parsed }) => ({
+        token,
+        deltaE: deltaE2000(query, parsed)
+      })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
+    }
+  };
+}
+
+// src/engines/registry/persist.ts
+function round3(value2) {
+  if (!Number.isFinite(value2)) return 0;
+  return Math.round(value2 * 1e3) / 1e3;
+}
+function normalizeName2(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function byNameAsc3(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function toRegistryFile(result, generatedAt) {
+  const matches = result.matches.map((m) => ({
+    codeName: m.code.name,
+    importPath: m.code.importPath,
+    figmaName: m.figma.name,
+    nodeId: m.figma.nodeId,
+    score: round3(m.score)
+  })).sort((a, b) => byNameAsc3(a.codeName, b.codeName));
+  const unmatchedCode = result.unmatchedCode.map((u) => ({
+    name: u.code.name,
+    importPath: u.code.importPath,
+    candidates: u.candidates.map((c2) => ({
+      figmaName: c2.figma.name,
+      nodeId: c2.figma.nodeId,
+      score: round3(c2.score)
+    }))
+  })).sort((a, b) => byNameAsc3(a.name, b.name));
+  const unmatchedFigma = result.unmatchedFigma.map((u) => ({
+    name: u.figma.name,
+    nodeId: u.figma.nodeId,
+    candidates: u.candidates.map((c2) => ({
+      codeName: c2.code.name,
+      score: round3(c2.score)
+    }))
+  })).sort((a, b) => byNameAsc3(a.name, b.name));
+  return {
+    schemaVersion: 1,
+    generatedAt,
+    matches,
+    unmatchedCode,
+    unmatchedFigma
+  };
+}
+function resolveEntry(registry, nodeNameOrId) {
+  const query = nodeNameOrId;
+  const normalizedQuery = normalizeName2(query);
+  for (const entry of registry.matches) {
+    if (entry.nodeId === query) return { kind: "match", entry };
+  }
+  for (const entry of registry.matches) {
+    if (entry.figmaName === query) return { kind: "match", entry };
+  }
+  if (normalizedQuery.length > 0) {
+    for (const entry of registry.matches) {
+      if (normalizeName2(entry.figmaName) === normalizedQuery) {
+        return { kind: "match", entry };
+      }
+    }
+  }
+  for (const entry of registry.unmatchedFigma) {
+    if (entry.nodeId === query) {
+      return { kind: "candidates", entries: entry.candidates };
+    }
+  }
+  for (const entry of registry.unmatchedFigma) {
+    if (entry.name === query) {
+      return { kind: "candidates", entries: entry.candidates };
+    }
+  }
+  if (normalizedQuery.length > 0) {
+    for (const entry of registry.unmatchedFigma) {
+      if (normalizeName2(entry.name) === normalizedQuery) {
+        return { kind: "candidates", entries: entry.candidates };
+      }
+    }
+  }
+  return { kind: "not-found" };
+}
+
+// src/engines/registry/gaps.ts
+var COLOR_NEAR_DELTA_E = 2.5;
+var DIMENSION_NEAR_PX = 1;
+var NEAR_LIMIT = 3;
+function pickPreferred(tokens) {
+  if (tokens.length === 0) return void 0;
+  const names = new Set(tokens.map((t) => t.name));
+  const semantic = tokens.find(
+    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
+  );
+  return semantic ?? tokens[0];
+}
+function resolveComponent(requirement, registry) {
+  const byId = resolveEntry(registry, requirement.nodeId);
+  const outcome = byId.kind === "not-found" ? resolveEntry(registry, requirement.name) : byId;
+  if (outcome.kind === "match") {
+    return {
+      requirement,
+      resolution: {
+        kind: "registry-match",
+        codeName: outcome.entry.codeName,
+        importPath: outcome.entry.importPath
+      }
+    };
+  }
+  if (outcome.kind === "candidates") {
+    const candidates = outcome.entries.map((c2) => c2.codeName);
+    const list = candidates.length > 0 ? ` (${candidates.join(", ")})` : "";
+    return {
+      requirement,
+      reason: "ambiguous-registry-match",
+      candidates,
+      suggestion: `Multiple code components could match "${requirement.name}"${list} \u2014 pick one with a designer/engineer, don't guess.`
+    };
+  }
+  return {
+    requirement,
+    reason: "no-registry-match",
+    candidates: [],
+    suggestion: `No code component matches "${requirement.name}" \u2014 build it or publish the Figma component, then rebuild the registry. Do not invent UI.`
+  };
+}
+function resolveColor(requirement, index) {
+  const canonical2 = normalizeColor(requirement.rawValue);
+  if (canonical2 === void 0) return noTokenMatch(requirement);
+  const exact = index.byValue.get(canonical2);
+  const preferred = pickPreferred(exact ?? []);
+  if (preferred !== void 0) {
+    return tokenExact(requirement, preferred.name);
+  }
+  const near = index.nearest(canonical2, {
+    maxDeltaE: COLOR_NEAR_DELTA_E,
+    limit: NEAR_LIMIT
+  });
+  if (near.length > 0) {
+    return nearTokenOnly(
+      requirement,
+      near.map((m) => m.token.name)
+    );
+  }
+  return noTokenMatch(requirement);
+}
+function resolveDimension(requirement, index) {
+  const dim = normalizeDimension(requirement.rawValue);
+  if (dim === void 0) return noTokenMatch(requirement);
+  const bucket = index.byValue.get(`${dim.px}px`);
+  const exact = bucket?.find((t) => t.type === "dimension");
+  if (exact !== void 0) return tokenExact(requirement, exact.name);
+  const near = [];
+  for (const token of index.byName.values()) {
+    if (token.type !== "dimension") continue;
+    const tokenDim = normalizeDimension(
+      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
+    );
+    if (tokenDim === void 0) continue;
+    const distance = Math.abs(dim.px - tokenDim.px);
+    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
+    near.push({ name: token.name, distance });
+  }
+  if (near.length === 0) return noTokenMatch(requirement);
+  near.sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+  );
+  return nearTokenOnly(
+    requirement,
+    near.slice(0, NEAR_LIMIT).map((n) => n.name)
+  );
+}
+function tokenExact(requirement, tokenName) {
+  return { requirement, resolution: { kind: "token-exact", tokenName } };
+}
+function nearTokenOnly(requirement, candidates) {
+  const nearest = candidates[0] ?? "";
+  return {
+    requirement,
+    reason: "near-token-only",
+    candidates,
+    suggestion: `No exact token for "${requirement.rawValue}" \u2014 nearest is ${nearest}; use it only with designer sign-off, otherwise add a token.`
+  };
+}
+function noTokenMatch(requirement) {
+  return {
+    requirement,
+    reason: "no-token-match",
+    candidates: [],
+    suggestion: `No token matches "${requirement.rawValue}" \u2014 add a token for it; never approximate with a raw value.`
+  };
+}
+function isResolved(outcome) {
+  return "resolution" in outcome;
+}
+function findGaps(input) {
+  const index = buildTokenIndex(input.tokens);
+  const resolved = [];
+  const gaps = [];
+  for (const requirement of input.requirements) {
+    const outcome = requirement.kind === "component" ? resolveComponent(requirement, input.registry) : requirement.valueKind === "color" ? resolveColor(requirement, index) : resolveDimension(requirement, index);
+    if (isResolved(outcome)) {
+      resolved.push(outcome);
+    } else {
+      gaps.push(outcome);
+    }
+  }
+  return { resolved, gaps };
+}
+
+// src/io/figma/file-key.ts
+function editDistance4(a, b) {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dist = Array.from({ length: rows * cols }, () => 0);
+  for (let i = 0; i < rows; i++) {
+    dist[i * cols] = i;
+  }
+  for (let j = 0; j < cols; j++) {
+    dist[j] = j;
+  }
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
+      dist[i * cols + j] = Math.min(
+        (dist[(i - 1) * cols + j] ?? 0) + 1,
+        (dist[i * cols + j - 1] ?? 0) + 1,
+        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
+      );
+    }
+  }
+  return dist[rows * cols - 1] ?? 0;
+}
+function suggestAliases(input, aliases, limit = 3) {
+  const needle = input.toLowerCase();
+  const MAX_DISTANCE = 4;
+  return aliases.map((alias, index) => ({
+    alias,
+    index,
+    prefix: alias.toLowerCase().startsWith(needle),
+    distance: editDistance4(needle, alias.toLowerCase())
+  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
+  ).slice(0, limit).map((c2) => c2.alias);
+}
+var FIGMA_KEY_MIN_LENGTH = 22;
+function looksLikeFigmaKey(value2) {
+  return value2.length >= FIGMA_KEY_MIN_LENGTH && /^[A-Za-z0-9]+$/.test(value2);
+}
+function resolveFileKey(input) {
+  const { flagValue, productFileKeys, defaultKey } = input;
+  if (flagValue === void 0 || flagValue === "") {
+    if (defaultKey !== void 0 && defaultKey !== "") {
+      return { kind: "ok", key: defaultKey };
+    }
+    return { kind: "missing" };
+  }
+  const mapped = Object.hasOwn(productFileKeys, flagValue) ? productFileKeys[flagValue] : void 0;
+  if (mapped !== void 0) {
+    return { kind: "ok", key: mapped };
+  }
+  const aliases = Object.keys(productFileKeys);
+  if (aliases.length === 0 || looksLikeFigmaKey(flagValue)) {
+    return { kind: "ok", key: flagValue };
+  }
+  return {
+    kind: "unknown-alias",
+    alias: flagValue,
+    suggestions: suggestAliases(flagValue, aliases)
+  };
+}
+
+// src/cli-commands/frame-impl.ts
+var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
+var TOP_GAPS_LIMIT = 5;
+var PARSERS3 = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set(["node_modules", ".git", "dist", "build"]);
+function fail7(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage() {
+  return [
+    "No Figma personal access token configured.",
+    "",
+    "Set one via the plugin config dialog (stored in the system keychain) or,",
+    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
+    "",
+    "  export FIGMA_TOKEN=figd_your_token_here",
+    "",
+    "The token needs the file_content:read scope, and must come from a Dev or",
+    "Full seat \u2014 a View seat is rate-limited and cannot be used here."
+  ].join("\n");
+}
+function unknownAliasMessage(outcome, productFileKeys) {
+  const aliases = Object.keys(productFileKeys);
+  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+  if (outcome.suggestions.length > 0) {
+    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+  }
+  lines.push(
+    "",
+    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
+    "Or pass --file-key <raw-figma-file-key> directly."
+  );
+  return lines.join("\n");
+}
+function missingRegistryMessage(registryPath) {
+  return [
+    `No component registry found at ${registryPath}.`,
+    "",
+    'Run "ds-bridge registry build" first \u2014 it maps the Figma library to your',
+    "code components, which frame-impl needs to resolve component requirements."
+  ].join("\n");
+}
+function clientErrorMessage(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
+    case "not-found":
+      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+function readProjectConfigText2() {
+  const configPath = join11(cwd(), ".ds-bridge.json");
+  if (!existsSync9(configPath)) return void 0;
+  try {
+    return readFileSync10(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function loadRegistry3(registryPath) {
+  if (!existsSync9(registryPath)) {
+    return { kind: "error", message: missingRegistryMessage(registryPath) };
+  }
+  try {
+    const registry = JSON.parse(
+      readFileSync10(registryPath, "utf8")
+    );
+    return { kind: "ok", registry };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read the registry at ${registryPath}: ${detail}. Re-run "ds-bridge registry build".`
+    };
+  }
+}
+function isConventionalTokenFile2(name) {
+  if (!name.endsWith(".json")) return false;
+  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
+}
+function isTokenDir2(name) {
+  return name === "tokens" || name === "design-tokens";
+}
+function detectFileFormat2(absPath) {
+  let raw;
+  try {
+    raw = readFileSync10(absPath, "utf8");
+  } catch {
+    return void 0;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return void 0;
+  }
+  const format = detectFormat(parsed);
+  return format === "unknown" ? void 0 : format;
+}
+function depthOf2(path) {
+  return path.split(sep2).filter((s) => s.length > 0).length;
+}
+function collectTokenCandidates(dir, insideTokenDir, acc) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join11(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      collectTokenCandidates(
+        full,
+        insideTokenDir || isTokenDir2(entry.name),
+        acc
+      );
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
+  }
+}
+function discoverFirstTokenSource(root) {
+  const candidates = [];
+  collectTokenCandidates(root, false, candidates);
+  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
+    const depth = depthOf2(a) - depthOf2(b);
+    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
+  });
+  return verified[0];
+}
+function loadTokens(targetDir) {
+  let tokenPath;
+  const configPath = join11(targetDir, ".ds-bridge.json");
+  if (existsSync9(configPath)) {
+    try {
+      const resolved = resolveConfig({
+        projectFileText: readFileSync10(configPath, "utf8")
+      });
+      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
+        const src = resolved.config.tokenSource;
+        tokenPath = isAbsolute2(src) ? src : resolve8(targetDir, src);
+      }
+    } catch {
+      tokenPath = void 0;
+    }
+  }
+  if (tokenPath === void 0) {
+    tokenPath = discoverFirstTokenSource(targetDir);
+  }
+  if (tokenPath === void 0 || !existsSync9(tokenPath)) {
+    return {
+      kind: "error",
+      message: `No design-token source found for "${targetDir}".
+Set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
+    };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync10(tokenPath, "utf8"));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
+    };
+  }
+  const format = detectFormat(parsed);
+  if (format === "unknown") {
+    return {
+      kind: "error",
+      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
+    };
+  }
+  const outcome = PARSERS3[format](parsed);
+  if (outcome.kind === "error") {
+    return {
+      kind: "error",
+      message: `Failed to parse token source "${tokenPath}" as ${format}.`
+    };
+  }
+  return { kind: "ok", tokens: outcome.map.tokens };
+}
+function collectNodes(root) {
+  const nodes = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    nodes.push(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+  return nodes;
+}
+function hasBoundFill(node) {
+  const fills = node.boundVariables?.fills;
+  return Array.isArray(fills) && fills.length > 0;
+}
+function firstSolidFillColor(node) {
+  if (!Array.isArray(node.fills)) return void 0;
+  for (const paint of node.fills) {
+    if (paint.type !== "SOLID" || paint.color === void 0) continue;
+    const { r: r2, g, b, a } = paint.color;
+    const to255 = (v) => Math.round(v * 255);
+    return a >= 1 ? `rgb(${to255(r2)}, ${to255(g)}, ${to255(b)})` : `rgba(${to255(r2)}, ${to255(g)}, ${to255(b)}, ${a})`;
+  }
+  return void 0;
+}
+function deriveRequirements(root) {
+  const requirements = [];
+  for (const node of collectNodes(root)) {
+    if (node.type === "INSTANCE") {
+      requirements.push({
+        kind: "component",
+        nodeId: node.id,
+        name: node.name
+      });
+      continue;
+    }
+    if (!hasBoundFill(node)) {
+      const rawValue = firstSolidFillColor(node);
+      if (rawValue !== void 0) {
+        requirements.push({
+          kind: "token",
+          property: "fill",
+          rawValue,
+          valueKind: "color"
+        });
+      }
+    }
+  }
+  return requirements;
+}
+function nodeFromFileNodes(nodes, nodeId) {
+  const direct = nodes[nodeId];
+  if (direct !== void 0) return direct.document;
+  const entries = Object.values(nodes).filter(
+    (v) => v !== void 0
+  );
+  return entries[0]?.document;
+}
+async function fetchRoot(client, fileKey, nodeId) {
+  if (nodeId !== void 0) {
+    const result2 = await client.getFileNodes(fileKey, [nodeId]);
+    if (result2.kind !== "ok") {
+      return { kind: "error", message: clientErrorMessage(result2) };
+    }
+    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
+    if (root === void 0) {
+      return {
+        kind: "error",
+        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
+      };
+    }
+    return { kind: "ok", root };
+  }
+  const result = await client.getFile(fileKey);
+  if (result.kind !== "ok") {
+    return { kind: "error", message: clientErrorMessage(result) };
+  }
+  return { kind: "ok", root: result.data.document };
+}
+function requirementLabel(requirement) {
+  return requirement.kind === "component" ? requirement.name : `${requirement.property}: ${requirement.rawValue}`;
+}
+function rollUp(report, frameName) {
+  const resolvedCount = report.resolved.length;
+  const gapCount = report.gaps.length;
+  const total = resolvedCount + gapCount;
+  const pct5 = total === 0 ? 0 : Math.round(100 * resolvedCount / total);
+  const byReason = {};
+  for (const gap of report.gaps) {
+    byReason[gap.reason] = (byReason[gap.reason] ?? 0) + 1;
+  }
+  const topGaps = report.gaps.slice(0, TOP_GAPS_LIMIT).map((gap) => ({
+    reason: gap.reason,
+    requirement: requirementLabel(gap.requirement)
+  }));
+  return { frameName, resolvedCount, gapCount, pct: pct5, byReason, topGaps };
+}
+function renderTerm6(impl, color) {
+  const severity = impl.pct >= 80 ? "ok" : impl.pct >= 50 ? "warn" : "error";
+  const headline = severityColor(
+    severity,
+    `Frame "${impl.frameName}" is ${impl.pct}% implementable (${impl.resolvedCount} resolved / ${impl.resolvedCount + impl.gapCount} requirements).`,
+    { color }
+  );
+  const lines = [headline];
+  if (impl.gapCount === 0) {
+    lines.push("", "No gaps \u2014 every requirement resolves to the system.");
+    return lines.join("\n");
+  }
+  const rows = Object.entries(impl.byReason).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([reason, count]) => [reason, String(count)]);
+  lines.push(
+    "",
+    `${impl.gapCount} gap(s) by reason:`,
+    renderTable(["reason", "count"], rows, { color })
+  );
+  return lines.join("\n");
+}
+function appendFrameImplHistory(record) {
+  const stateDir = join11(cwd(), ".ds-bridge");
+  mkdirSync7(stateDir, { recursive: true });
+  appendFileSync4(
+    join11(stateDir, "history.jsonl"),
+    `${JSON.stringify(record)}
+`,
+    "utf8"
+  );
+}
+async function runFrameImpl(url, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail7(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const parsed = parseFigmaUrl(url);
+  if (parsed.kind !== "ok") {
+    fail7(
+      `${parsed.message}
+Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
+    );
+    return;
+  }
+  const projectFileText = readProjectConfigText2();
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind !== "ok") {
+    fail7(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail7(missingTokenMessage());
+    return;
+  }
+  const fileKeyOutcome = resolveFileKey({
+    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
+    productFileKeys: config.productFileKeys,
+    defaultKey: parsed.fileKey
+  });
+  if (fileKeyOutcome.kind === "unknown-alias") {
+    fail7(unknownAliasMessage(fileKeyOutcome, config.productFileKeys));
+    return;
+  }
+  if (fileKeyOutcome.kind === "missing") {
+    fail7("No Figma file key resolved from the URL or --file-key.");
+    return;
+  }
+  const fileKey = fileKeyOutcome.key;
+  const targetDir = cwd();
+  const registryPath = join11(targetDir, ".ds-bridge", "registry.json");
+  const registryOutcome = loadRegistry3(registryPath);
+  if (registryOutcome.kind === "error") {
+    fail7(registryOutcome.message);
+    return;
+  }
+  const tokensOutcome = loadTokens(targetDir);
+  if (tokensOutcome.kind === "error") {
+    fail7(tokensOutcome.message);
+    return;
+  }
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE2;
+  const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
+  const fetched = await fetchRoot(client, fileKey, parsed.nodeId);
+  if (fetched.kind !== "ok") {
+    fail7(fetched.message);
+    return;
+  }
+  const requirements = deriveRequirements(fetched.root);
+  const gapsReport = findGaps({
+    requirements,
+    registry: registryOutcome.registry,
+    tokens: tokensOutcome.tokens
+  });
+  const impl = rollUp(gapsReport, fetched.root.name);
+  if (options.history) {
+    appendFrameImplHistory({
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      kind: "frame-impl",
+      frameName: impl.frameName,
+      fileKey,
+      ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {},
+      resolvedCount: impl.resolvedCount,
+      gapCount: impl.gapCount,
+      pct: impl.pct,
+      byReason: impl.byReason,
+      topGaps: impl.topGaps
+    });
+  }
+  if (format === "json") {
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          frameName: impl.frameName,
+          fileKey,
+          ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {},
+          pct: impl.pct,
+          resolvedCount: impl.resolvedCount,
+          gapCount: impl.gapCount,
+          byReason: impl.byReason,
+          topGaps: impl.topGaps
+        },
+        null,
+        2
+      )}
+`
+    );
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm6(impl, color)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerFrameImplCommand(program2) {
+  program2.command("frame-impl").description(
+    "Resolve a Figma frame against the system and report its implementability (% on-system)"
+  ).argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
+    "--file-key <keyOrAlias>",
+    "target a product file by raw key or product_file_keys alias (default: the URL's key)"
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--no-history",
+    "do not append a frame-impl record to .ds-bridge/history.jsonl in the current directory"
+  ).action((url, options) => {
+    void runFrameImpl(url, options);
+  });
+}
+
+// src/cli-commands/handoff.ts
+import { appendFileSync as appendFileSync5, mkdirSync as mkdirSync8 } from "fs";
+import { join as join12 } from "path";
+import { cwd as cwd2 } from "process";
 
 // src/engines/handoff/score.ts
 var WEIGHT_BINDING = 40;
@@ -11318,7 +12831,7 @@ function scoreReadiness(root) {
 
 // src/cli-commands/handoff.ts
 var DEDUCTION_LIMIT = 10;
-var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
+var DEFAULT_FIGMA_API_BASE3 = "https://api.figma.com";
 var RULE_LABEL = {
   "var-binding": "Variable binding",
   "auto-layout": "Auto layout",
@@ -11327,7 +12840,7 @@ var RULE_LABEL = {
 };
 var HISTORY_DEDUCTION_LIMIT = 3;
 function appendHandoffHistory(report, frameName) {
-  const stateDir = join9(cwd(), ".ds-bridge");
+  const stateDir = join12(cwd2(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "handoff",
@@ -11335,20 +12848,20 @@ function appendHandoffHistory(report, frameName) {
     frameName,
     deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
   };
-  mkdirSync6(stateDir, { recursive: true });
-  appendFileSync3(
-    join9(stateDir, "history.jsonl"),
+  mkdirSync8(stateDir, { recursive: true });
+  appendFileSync5(
+    join12(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
-function fail6(message) {
+function fail8(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function missingTokenMessage() {
+function missingTokenMessage2() {
   return [
     "No Figma personal access token configured.",
     "",
@@ -11366,7 +12879,7 @@ function missingTokenMessage() {
     "limited to roughly a handful of requests per month and cannot be used here."
   ].join("\n");
 }
-function clientErrorMessage(result) {
+function clientErrorMessage2(result) {
   switch (result.kind) {
     case "auth-error":
       return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
@@ -11386,7 +12899,7 @@ function formatPoints(points) {
 function ruleSeverity() {
   return "error";
 }
-function renderTerm6(report, threshold, color) {
+function renderTerm7(report, threshold, color) {
   const passed = report.score >= threshold;
   const scoreSeverity = passed ? "ok" : "error";
   const verdict = passed ? "PASS" : "BELOW THRESHOLD";
@@ -11451,7 +12964,7 @@ function resolveThreshold(flag, configDefault) {
   }
   return { kind: "ok", value: n };
 }
-function nodeFromFileNodes(nodes, nodeId) {
+function nodeFromFileNodes2(nodes, nodeId) {
   const direct = nodes[nodeId];
   if (direct !== void 0) return direct.document;
   const entries = Object.values(nodes).filter(
@@ -11459,13 +12972,13 @@ function nodeFromFileNodes(nodes, nodeId) {
   );
   return entries[0]?.document;
 }
-async function fetchRoot(client, fileKey, nodeId) {
+async function fetchRoot2(client, fileKey, nodeId) {
   if (nodeId !== void 0) {
     const result2 = await client.getFileNodes(fileKey, [nodeId]);
     if (result2.kind !== "ok") {
-      return { kind: "error", message: clientErrorMessage(result2) };
+      return { kind: "error", message: clientErrorMessage2(result2) };
     }
-    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
+    const root = nodeFromFileNodes2(result2.data.nodes, nodeId);
     if (root === void 0) {
       return {
         kind: "error",
@@ -11476,19 +12989,19 @@ async function fetchRoot(client, fileKey, nodeId) {
   }
   const result = await client.getFile(fileKey);
   if (result.kind !== "ok") {
-    return { kind: "error", message: clientErrorMessage(result) };
+    return { kind: "error", message: clientErrorMessage2(result) };
   }
   return { kind: "ok", root: result.data.document };
 }
 async function runHandoff(url, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail6(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail8(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
   const parsed = parseFigmaUrl(url);
   if (parsed.kind !== "ok") {
-    fail6(
+    fail8(
       `${parsed.message}
 Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
     );
@@ -11496,7 +13009,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
   }
   const resolved = resolveConfig({ env: process.env });
   if (resolved.kind !== "ok") {
-    fail6(resolved.message);
+    fail8(resolved.message);
     return;
   }
   for (const warning of resolved.warnings) {
@@ -11505,7 +13018,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
   }
   const { config } = resolved;
   if (config.figmaToken.kind === "missing") {
-    fail6(missingTokenMessage());
+    fail8(missingTokenMessage2());
     return;
   }
   const threshold = resolveThreshold(
@@ -11513,17 +13026,17 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     config.readinessThreshold
   );
   if (threshold.kind === "error") {
-    fail6(threshold.message);
+    fail8(threshold.message);
     return;
   }
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE2;
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE3;
   const client = createFigmaClient({
     token: config.figmaToken.value,
     baseUrl
   });
-  const fetched = await fetchRoot(client, parsed.fileKey, parsed.nodeId);
+  const fetched = await fetchRoot2(client, parsed.fileKey, parsed.nodeId);
   if (fetched.kind !== "ok") {
-    fail6(fetched.message);
+    fail8(fetched.message);
     return;
   }
   const report = scoreReadiness(fetched.root);
@@ -11535,7 +13048,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm6(report, threshold.value, color)}
+    process.stdout.write(`${renderTerm7(report, threshold.value, color)}
 `);
   }
   if (options.comment) {
@@ -11552,7 +13065,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
       );
       if (posted.kind !== "ok") {
         process.stderr.write(
-          `warning: could not post the Figma comment: ${clientErrorMessage(posted)}
+          `warning: could not post the Figma comment: ${clientErrorMessage2(posted)}
 `
         );
       } else {
@@ -11585,14 +13098,14 @@ function registerHandoffCommand(program2) {
 
 // src/cli-commands/impact.ts
 import {
-  appendFileSync as appendFileSync4,
-  existsSync as existsSync8,
-  mkdirSync as mkdirSync7,
-  readFileSync as readFileSync8,
-  writeFileSync as writeFileSync5
+  appendFileSync as appendFileSync6,
+  existsSync as existsSync10,
+  mkdirSync as mkdirSync9,
+  readFileSync as readFileSync11,
+  writeFileSync as writeFileSync6
 } from "fs";
-import { dirname as dirname5, join as join10 } from "path";
-import { cwd as cwd2, env as processEnv } from "process";
+import { dirname as dirname5, join as join13 } from "path";
+import { cwd as cwd3, env as processEnv } from "process";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/engines/impact/component-diff.ts
@@ -11616,7 +13129,7 @@ function nameSimilarity(a, b) {
   }
   return 2 * intersection / (setA.size + setB.size);
 }
-function byNameAsc3(a, b) {
+function byNameAsc4(a, b) {
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
 var IMPACT_RANK = {
@@ -11787,12 +13300,12 @@ function diffComponents(before, after) {
     if (model === void 0) continue;
     added.push({ name: model.name, nodeId: model.nodeId, impact: "additive" });
   }
-  added.sort(byNameAsc3);
-  removed.sort(byNameAsc3);
+  added.sort(byNameAsc4);
+  removed.sort(byNameAsc4);
   renamed.sort(
     (x, y) => x.toName < y.toName ? -1 : x.toName > y.toName ? 1 : 0
   );
-  changed.sort(byNameAsc3);
+  changed.sort(byNameAsc4);
   return { added, removed, renamed, changed };
 }
 
@@ -11947,13 +13460,13 @@ function buildFigmaComponentModel(input) {
 }
 
 // src/cli-commands/impact.ts
-var DEFAULT_FIGMA_API_BASE3 = "https://api.figma.com";
-function fail7(message) {
+var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
+function fail9(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function missingTokenMessage2() {
+function missingTokenMessage3() {
   return [
     "No Figma personal access token configured.",
     "",
@@ -11978,7 +13491,20 @@ function missingFileKeyMessage() {
     "The key is the segment after /file/ or /design/ in the library file URL."
   ].join("\n");
 }
-function clientErrorMessage2(result) {
+function unknownAliasMessage2(outcome, productFileKeys) {
+  const aliases = Object.keys(productFileKeys);
+  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+  if (outcome.suggestions.length > 0) {
+    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+  }
+  lines.push(
+    "",
+    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
+    "Or pass --file-key <raw-figma-file-key> directly."
+  );
+  return lines.join("\n");
+}
+function clientErrorMessage3(result) {
   switch (result.kind) {
     case "auth-error":
       return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
@@ -11992,17 +13518,26 @@ function clientErrorMessage2(result) {
       return `Could not reach the Figma API: ${result.message}.`;
   }
 }
+function readProjectConfigText3() {
+  const configPath = join13(cwd3(), ".ds-bridge.json");
+  if (!existsSync10(configPath)) return void 0;
+  try {
+    return readFileSync11(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
 function cursorPath() {
   const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join10(dataDir, "impact-cursor.json");
+    return join13(dataDir, "impact-cursor.json");
   }
-  return join10(cwd2(), ".ds-bridge", "cache", "impact-cursor.json");
+  return join13(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
 }
 function readCursor(path) {
-  if (!existsSync8(path)) return void 0;
+  if (!existsSync10(path)) return void 0;
   try {
-    const parsed = JSON.parse(readFileSync8(path, "utf8"));
+    const parsed = JSON.parse(readFileSync11(path, "utf8"));
     if (!Array.isArray(parsed.snapshot)) return void 0;
     return parsed;
   } catch {
@@ -12011,19 +13546,19 @@ function readCursor(path) {
 }
 function writeCursor(path, cursor) {
   try {
-    mkdirSync7(dirname5(path), { recursive: true });
-    writeFileSync5(path, `${JSON.stringify(cursor, null, 2)}
+    mkdirSync9(dirname5(path), { recursive: true });
+    writeFileSync6(path, `${JSON.stringify(cursor, null, 2)}
 `, "utf8");
     return true;
   } catch {
     return false;
   }
 }
-function loadRegistry3() {
-  const registryPath = join10(cwd2(), ".ds-bridge", "registry.json");
-  if (!existsSync8(registryPath)) return void 0;
+function loadRegistry4() {
+  const registryPath = join13(cwd3(), ".ds-bridge", "registry.json");
+  if (!existsSync10(registryPath)) return void 0;
   try {
-    return JSON.parse(readFileSync8(registryPath, "utf8"));
+    return JSON.parse(readFileSync11(registryPath, "utf8"));
   } catch {
     return void 0;
   }
@@ -12036,7 +13571,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
     globals.__dirname = dirname5(filename);
   }
   const { mapUsage } = await import("./usage-OFLQCL5F.mjs");
-  return mapUsage({ registry, changedFigmaNames, projectDir: cwd2() });
+  return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
   const names = [];
@@ -12066,25 +13601,58 @@ function countByImpact(diff) {
   }
   return counts;
 }
-function appendImpactHistory(targetDir, diff, usageByName) {
-  const stateDir = join10(targetDir, ".ds-bridge");
+function buildMigrationSites(diff, usageByName, cap) {
+  const all = [];
+  for (const row of diffRows(diff)) {
+    const usage = usageByName.get(row.lookupName);
+    if (usage === void 0) continue;
+    for (const site of usage.usages) {
+      all.push({
+        file: site.file,
+        line: site.line,
+        subject: row.component,
+        from: row.fromName,
+        to: row.toName
+      });
+    }
+  }
+  const limit = Number.isFinite(cap) && cap > 0 ? cap : all.length;
+  const truncated = all.length > limit;
+  return { sites: truncated ? all.slice(0, limit) : all, truncated };
+}
+function appendImpactHistory(targetDir, diff, usageByName, cap) {
+  const stateDir = join13(targetDir, ".ds-bridge");
   let touchedCallSites = 0;
   for (const usage of usageByName.values()) {
     touchedCallSites += usage.usages.length;
   }
+  const { sites, truncated } = buildMigrationSites(diff, usageByName, cap);
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "impact",
     ...countByImpact(diff),
-    touchedCallSites
+    touchedCallSites,
+    ...sites.length > 0 ? { sites } : {},
+    ...truncated ? { sitesTruncated: true } : {}
   };
-  mkdirSync7(stateDir, { recursive: true });
-  appendFileSync4(
-    join10(stateDir, "history.jsonl"),
+  mkdirSync9(stateDir, { recursive: true });
+  appendFileSync6(
+    join13(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
+}
+function renderChecklist(sites, truncated) {
+  if (sites.length === 0) {
+    return "Migration checklist: no mapped call sites (no registry, or no changed component is imported in resolved .tsx files).";
+  }
+  const header = `Migration checklist \u2014 ${sites.length} call site${sites.length === 1 ? "" : "s"}${truncated ? " (truncated to the cap)" : ""}:`;
+  const lines = sites.map((s) => {
+    const move = s.from !== "" && s.to !== "" ? `${s.from} \u2192 ${s.to}` : s.to === "" ? `${s.from} \u2192 (removed)` : `(new) \u2192 ${s.to}`;
+    return `  ${s.file}:${s.line} \xB7 ${s.subject} \xB7 ${move}`;
+  });
+  return [header, ...lines].join("\n");
 }
 function diffRows(diff) {
   const rows = [];
@@ -12094,7 +13662,9 @@ function diffRows(diff) {
       lookupName: r2.name,
       category: "removed",
       impact: r2.impact,
-      detail: "component removed from the library"
+      detail: "component removed from the library",
+      fromName: r2.name,
+      toName: ""
     });
   }
   for (const r2 of diff.renamed) {
@@ -12103,7 +13673,9 @@ function diffRows(diff) {
       lookupName: r2.fromName,
       category: "renamed",
       impact: r2.impact,
-      detail: `renamed from "${r2.fromName}"`
+      detail: `renamed from "${r2.fromName}"`,
+      fromName: r2.fromName,
+      toName: r2.toName
     });
   }
   for (const c2 of diff.changed) {
@@ -12120,7 +13692,9 @@ function diffRows(diff) {
       lookupName: c2.name,
       category: "changed",
       impact: c2.impact,
-      detail: parts.join(", ")
+      detail: parts.join(", "),
+      fromName: c2.name,
+      toName: c2.name
     });
   }
   for (const a of diff.added) {
@@ -12129,7 +13703,9 @@ function diffRows(diff) {
       lookupName: a.name,
       category: "added",
       impact: a.impact,
-      detail: "new component"
+      detail: "new component",
+      fromName: "",
+      toName: a.name
     });
   }
   const rank = {
@@ -12143,7 +13719,7 @@ function diffRows(diff) {
   });
   return rows;
 }
-function renderTerm7(diff, usageByName, registryPresent, color) {
+function renderTerm8(diff, usageByName, registryPresent, color) {
   const rows = diffRows(diff);
   if (rows.length === 0) {
     return severityColor(
@@ -12190,12 +13766,16 @@ function renderTerm7(diff, usageByName, registryPresent, color) {
 async function runImpact(options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail7(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail9(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
-  const resolved = resolveConfig({ env: process.env });
+  const projectFileText = readProjectConfigText3();
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
   if (resolved.kind !== "ok") {
-    fail7(resolved.message);
+    fail9(resolved.message);
     return;
   }
   for (const warning of resolved.warnings) {
@@ -12204,24 +13784,33 @@ async function runImpact(options) {
   }
   const { config } = resolved;
   if (config.figmaToken.kind === "missing") {
-    fail7(missingTokenMessage2());
+    fail9(missingTokenMessage3());
     return;
   }
-  const fileKey = options.fileKey ?? config.figmaFileKey;
-  if (fileKey === void 0 || fileKey === "") {
-    fail7(missingFileKeyMessage());
+  const fileKeyOutcome = resolveFileKey({
+    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
+    productFileKeys: config.productFileKeys,
+    ...config.figmaFileKey !== void 0 ? { defaultKey: config.figmaFileKey } : {}
+  });
+  if (fileKeyOutcome.kind === "unknown-alias") {
+    fail9(unknownAliasMessage2(fileKeyOutcome, config.productFileKeys));
     return;
   }
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE3;
+  if (fileKeyOutcome.kind === "missing") {
+    fail9(missingFileKeyMessage());
+    return;
+  }
+  const fileKey = fileKeyOutcome.key;
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
   const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
   const componentsResult = await client.getComponents(fileKey);
   if (componentsResult.kind !== "ok") {
-    fail7(clientErrorMessage2(componentsResult));
+    fail9(clientErrorMessage3(componentsResult));
     return;
   }
   const versionsResult = await client.getVersions(fileKey);
   if (versionsResult.kind !== "ok") {
-    fail7(clientErrorMessage2(versionsResult));
+    fail9(clientErrorMessage3(versionsResult));
     return;
   }
   const freshSnapshot = buildFigmaComponentModel({
@@ -12240,7 +13829,7 @@ async function runImpact(options) {
   };
   if (!haveBaseline) {
     if (!writeCursor(path, nextCursor)) {
-      fail7(`Could not write the impact cursor to "${path}".`);
+      fail9(`Could not write the impact cursor to "${path}".`);
       return;
     }
     const sinceNote = options.since !== void 0 ? ` (--since ${options.since} noted; v2 diffs against the cached snapshot)` : "";
@@ -12271,12 +13860,17 @@ Run "ds-bridge impact" again after library changes to see the diff.
   }
   const diff = diffComponents(cursor.snapshot, freshSnapshot);
   const breaking = hasBreaking(diff);
-  const registry = loadRegistry3();
+  const registry = loadRegistry4();
   const usageByName = /* @__PURE__ */ new Map();
   if (registry !== void 0) {
     const usages = await mapChangedUsage(registry, changedNames(diff));
     for (const usage of usages) usageByName.set(usage.figmaName, usage);
   }
+  const { sites, truncated } = buildMigrationSites(
+    diff,
+    usageByName,
+    config.migrationSitesCap
+  );
   if (format === "json") {
     const usageList = [...usageByName.values()];
     process.stdout.write(
@@ -12289,7 +13883,9 @@ Run "ds-bridge impact" again after library changes to see the diff.
           toVersionId: newestVersionId,
           diff,
           usage: usageList,
-          registryPresent: registry !== void 0
+          registryPresent: registry !== void 0,
+          sites,
+          sitesTruncated: truncated
         },
         null,
         2
@@ -12299,11 +13895,16 @@ Run "ds-bridge impact" again after library changes to see the diff.
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
     process.stdout.write(
-      `${renderTerm7(diff, usageByName, registry !== void 0, color)}
+      `${renderTerm8(diff, usageByName, registry !== void 0, color)}
 `
     );
   }
-  appendImpactHistory(cwd2(), diff, usageByName);
+  if (options.checklist && format === "term") {
+    process.stdout.write(`
+${renderChecklist(sites, truncated)}
+`);
+  }
+  appendImpactHistory(cwd3(), diff, usageByName, config.migrationSitesCap);
   if (!writeCursor(path, nextCursor)) {
     process.stderr.write(
       `warning: could not update the impact cursor at "${path}".
@@ -12318,21 +13919,35 @@ function registerImpactCommand(program2) {
   ).option(
     "--since <versionId>",
     "note a baseline version id (v2 diffs against the cached snapshot)"
-  ).option("--file-key <key>", "Figma library file key (overrides config)").option("--format <format>", "output format: term | json", "term").action((options) => {
-    void runImpact(options);
+  ).option(
+    "--file-key <keyOrAlias>",
+    "Figma file key OR a product_file_keys alias (overrides config)"
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--checklist",
+    "print the per-call-site migration checklist (file:line \xB7 old\u2192new) after the report (term only)",
+    false
+  ).option(
+    "--sites",
+    "alias of --checklist: print the per-call-site migration checklist (term only)",
+    false
+  ).action((options) => {
+    void runImpact({
+      ...options,
+      checklist: options.checklist || options.sites === true
+    });
   });
 }
 
 // src/cli-commands/library-health.ts
 import {
-  appendFileSync as appendFileSync5,
-  existsSync as existsSync9,
-  mkdirSync as mkdirSync8,
-  readFileSync as readFileSync9,
-  writeFileSync as writeFileSync6
+  appendFileSync as appendFileSync7,
+  existsSync as existsSync11,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync12,
+  writeFileSync as writeFileSync7
 } from "fs";
-import { join as join12 } from "path";
-import { cwd as cwd3, env as processEnv2 } from "process";
+import { join as join15 } from "path";
+import { cwd as cwd4, env as processEnv2 } from "process";
 
 // src/engines/figma/library-health.ts
 var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
@@ -12425,14 +14040,14 @@ function assessLibraryHealth(file, opts) {
 }
 
 // src/io/figma/cache.ts
-import { dirname as dirname6, join as join11 } from "path";
+import { dirname as dirname6, join as join14 } from "path";
 function cachePath(args) {
   const fileName = `library-${args.key}.json`;
   const dataDir = args.env.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join11(dataDir, "figma", fileName);
+    return join14(dataDir, "figma", fileName);
   }
-  return join11(args.cwd, ".ds-bridge", "cache", fileName);
+  return join14(args.cwd, ".ds-bridge", "cache", fileName);
 }
 function isEnvelope(value2) {
   return typeof value2 === "object" && value2 !== null && typeof value2.stampedAtMs === "number";
@@ -12464,14 +14079,14 @@ function writeCache(args) {
 }
 
 // src/cli-commands/library-health.ts
-var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
+var DEFAULT_FIGMA_API_BASE5 = "https://api.figma.com";
 var CACHE_TTL_MS = 60 * 60 * 1e3;
-function fail8(message) {
+function fail10(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function missingTokenMessage3() {
+function missingTokenMessage4() {
   return [
     "No Figma personal access token configured.",
     "",
@@ -12495,7 +14110,29 @@ function missingFileKeyMessage2() {
     "The key is the segment after /file/ or /design/ in the library file URL."
   ].join("\n");
 }
-function clientErrorMessage3(result) {
+function readProjectConfigText4() {
+  const configPath = join15(cwd4(), ".ds-bridge.json");
+  if (!existsSync11(configPath)) return void 0;
+  try {
+    return readFileSync12(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function unknownAliasMessage3(outcome, productFileKeys) {
+  const aliases = Object.keys(productFileKeys);
+  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+  if (outcome.suggestions.length > 0) {
+    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+  }
+  lines.push(
+    "",
+    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
+    "Or pass --file-key <raw-figma-file-key> directly."
+  );
+  return lines.join("\n");
+}
+function clientErrorMessage4(result) {
   switch (result.kind) {
     case "auth-error":
       return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
@@ -12510,17 +14147,17 @@ function clientErrorMessage3(result) {
   }
 }
 var fsAdapter = {
-  exists: (path) => existsSync9(path),
-  read: (path) => readFileSync9(path, "utf8"),
+  exists: (path) => existsSync11(path),
+  read: (path) => readFileSync12(path, "utf8"),
   mkdir: (path) => {
-    mkdirSync8(path, { recursive: true });
+    mkdirSync10(path, { recursive: true });
   },
   write: (path, content) => {
-    writeFileSync6(path, content, "utf8");
+    writeFileSync7(path, content, "utf8");
   }
 };
 function appendLibraryHealthHistory(totals) {
-  const stateDir = join12(cwd3(), ".ds-bridge");
+  const stateDir = join15(cwd4(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "library-health",
@@ -12528,15 +14165,15 @@ function appendLibraryHealthHistory(totals) {
     deprecatedUsage: totals.deprecatedUsage,
     detachedCandidates: totals.detachedCandidates
   };
-  mkdirSync8(stateDir, { recursive: true });
-  appendFileSync5(
-    join12(stateDir, "history.jsonl"),
+  mkdirSync10(stateDir, { recursive: true });
+  appendFileSync7(
+    join15(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
-function renderTerm8(report, color) {
+function renderTerm9(report, color) {
   const { totals } = report;
   const clean = totals.overrideHotspots === 0 && totals.deprecatedUsage === 0 && totals.detachedCandidates === 0;
   const header = severityColor(
@@ -12570,12 +14207,16 @@ function renderTerm8(report, color) {
 async function runLibraryHealth(options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail8(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail10(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
-  const resolved = resolveConfig({ env: process.env });
+  const projectFileText = readProjectConfigText4();
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
   if (resolved.kind !== "ok") {
-    fail8(resolved.message);
+    fail10(resolved.message);
     return;
   }
   for (const warning of resolved.warnings) {
@@ -12584,19 +14225,28 @@ async function runLibraryHealth(options) {
   }
   const { config } = resolved;
   if (config.figmaToken.kind === "missing") {
-    fail8(missingTokenMessage3());
+    fail10(missingTokenMessage4());
     return;
   }
-  const fileKey = options.fileKey ?? config.figmaFileKey;
-  if (fileKey === void 0 || fileKey === "") {
-    fail8(missingFileKeyMessage2());
+  const fileKeyOutcome = resolveFileKey({
+    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
+    productFileKeys: config.productFileKeys,
+    ...config.figmaFileKey !== void 0 ? { defaultKey: config.figmaFileKey } : {}
+  });
+  if (fileKeyOutcome.kind === "unknown-alias") {
+    fail10(unknownAliasMessage3(fileKeyOutcome, config.productFileKeys));
     return;
   }
+  if (fileKeyOutcome.kind === "missing") {
+    fail10(missingFileKeyMessage2());
+    return;
+  }
+  const fileKey = fileKeyOutcome.key;
   const cacheEnv = processEnv2.CLAUDE_PLUGIN_DATA !== void 0 ? { CLAUDE_PLUGIN_DATA: processEnv2.CLAUDE_PLUGIN_DATA } : {};
   const cacheArgs = {
     key: fileKey,
     env: cacheEnv,
-    cwd: cwd3()
+    cwd: cwd4()
   };
   let file;
   if (!options.refresh) {
@@ -12611,7 +14261,7 @@ async function runLibraryHealth(options) {
     }
   }
   if (file === void 0) {
-    const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
+    const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE5;
     const client = createFigmaClient({
       token: config.figmaToken.value,
       baseUrl
@@ -12626,9 +14276,9 @@ async function runLibraryHealth(options) {
         data: result.data
       });
     } else if (result.kind === "rate-limited") {
-      process.stderr.write(`warning: ${clientErrorMessage3(result)}
+      process.stderr.write(`warning: ${clientErrorMessage4(result)}
 `);
-      const fallback = existsSync9(cachePath(cacheArgs)) ? readCache({
+      const fallback = existsSync11(cachePath(cacheArgs)) ? readCache({
         ...cacheArgs,
         fs: fsAdapter,
         now: Date.now(),
@@ -12642,7 +14292,7 @@ async function runLibraryHealth(options) {
         return;
       }
     } else {
-      fail8(clientErrorMessage3(result));
+      fail10(clientErrorMessage4(result));
       return;
     }
   }
@@ -12653,7 +14303,7 @@ async function runLibraryHealth(options) {
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm8(report, color)}
+    process.stdout.write(`${renderTerm9(report, color)}
 `);
   }
   process.exitCode = 0;
@@ -12661,7 +14311,10 @@ async function runLibraryHealth(options) {
 function registerLibraryHealthCommand(program2) {
   program2.command("library-health").description(
     "Crawl a Figma file for design-system hygiene signals (override hotspots, deprecated usage, detached-instance candidates)"
-  ).option("--file-key <key>", "Figma library file key (overrides config)").option("--format <format>", "output format: term | json", "term").option("--refresh", "bypass the response cache and re-crawl", false).action((options) => {
+  ).option(
+    "--file-key <keyOrAlias>",
+    "Figma file key OR a product_file_keys alias (overrides config)"
+  ).option("--format <format>", "output format: term | json", "term").option("--refresh", "bypass the response cache and re-crawl", false).action((options) => {
     void runLibraryHealth(options);
   });
 }
@@ -12669,15 +14322,15 @@ function registerLibraryHealthCommand(program2) {
 // src/cli-commands/lint.ts
 import { spawnSync as spawnSync2 } from "child_process";
 import {
-  appendFileSync as appendFileSync6,
-  existsSync as existsSync10,
-  mkdirSync as mkdirSync9,
-  readdirSync,
-  readFileSync as readFileSync10,
+  appendFileSync as appendFileSync8,
+  existsSync as existsSync12,
+  mkdirSync as mkdirSync11,
+  readdirSync as readdirSync2,
+  readFileSync as readFileSync13,
   statSync as statSync6,
-  writeFileSync as writeFileSync7
+  writeFileSync as writeFileSync8
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join13, relative, resolve as resolve8, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute3, join as join16, relative, resolve as resolve9, sep as sep3 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -13043,37 +14696,11 @@ function applyEdits(content, edits) {
   return lines.join("\n");
 }
 
-// src/engines/tokens/normalize.ts
-function normalizeColor(raw) {
-  if (raw === "") return void 0;
-  const parsed = parse_default(raw);
-  if (parsed === void 0) return void 0;
-  const alpha = parsed.alpha ?? 1;
-  return alpha < 1 ? formatHex8(parsed) : formatHex(parsed);
-}
-var PX_RE = /^(-?\d+(?:\.\d+)?)px$/;
-var REM_RE = /^(-?\d+(?:\.\d+)?)rem$/;
-var UNITLESS_RE = /^(-?\d+(?:\.\d+)?)$/;
-function normalizeDimension(raw, options) {
-  const remBase = options?.remBase ?? 16;
-  if (typeof raw === "number") {
-    return Number.isFinite(raw) ? { px: raw } : void 0;
-  }
-  const trimmed = raw.trim();
-  const px = PX_RE.exec(trimmed);
-  if (px?.[1] !== void 0) return { px: Number(px[1]) };
-  const rem = REM_RE.exec(trimmed);
-  if (rem?.[1] !== void 0) return { px: Number(rem[1]) * remBase };
-  const unitless = UNITLESS_RE.exec(trimmed);
-  if (unitless?.[1] !== void 0) return { px: Number(unitless[1]) };
-  return void 0;
-}
-
 // src/engines/lint/match.ts
-var COLOR_NEAR_DELTA_E = 2.5;
-var DIMENSION_NEAR_PX = 1;
-var NEAR_LIMIT = 3;
-function pickPreferred(tokens) {
+var COLOR_NEAR_DELTA_E2 = 2.5;
+var DIMENSION_NEAR_PX2 = 1;
+var NEAR_LIMIT2 = 3;
+function pickPreferred2(tokens) {
   if (tokens.length === 0) return void 0;
   const names = new Set(tokens.map((t) => t.name));
   const semantic = tokens.find(
@@ -13097,22 +14724,22 @@ function matchColor(literal, index, options) {
   if (canonical2 === void 0) return { kind: "off-system" };
   const exact = index.byValue.get(canonical2);
   if (exact !== void 0 && exact.length > 0) {
-    const token = pickPreferred(exact);
+    const token = pickPreferred2(exact);
     if (token !== void 0) return { kind: "exact", token };
   }
   const composite = options?.compositeColors?.get(canonical2);
   if (composite !== void 0 && composite.length > 0) {
-    const token = pickPreferred(composite);
+    const token = pickPreferred2(composite);
     if (token !== void 0) return { kind: "exact", token };
   }
   const near = index.nearest(canonical2, {
-    maxDeltaE: COLOR_NEAR_DELTA_E,
-    limit: NEAR_LIMIT
+    maxDeltaE: COLOR_NEAR_DELTA_E2,
+    limit: NEAR_LIMIT2
   });
   if (near.length === 0) return { kind: "off-system" };
   const candidates = near.map((m) => ({ token: m.token, distance: m.deltaE })).sort(
     (a, b) => a.distance !== b.distance ? a.distance - b.distance : aliasRank(a.token) - aliasRank(b.token)
-  ).slice(0, NEAR_LIMIT);
+  ).slice(0, NEAR_LIMIT2);
   return { kind: "near", candidates };
 }
 function matchDimension(literal, index) {
@@ -13131,14 +14758,14 @@ function matchDimension(literal, index) {
     );
     if (tokenDim === void 0) continue;
     const distance = Math.abs(dim.px - tokenDim.px);
-    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
+    if (distance === 0 || distance > DIMENSION_NEAR_PX2) continue;
     candidates.push({ token, distance });
   }
   if (candidates.length === 0) return { kind: "off-system" };
   candidates.sort(
     (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
   );
-  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT) };
+  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT2) };
 }
 function matchLiteral(literal, index, options) {
   return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
@@ -13162,62 +14789,13 @@ function buildCompositeColorLookup(tokens) {
   return lookup;
 }
 
-// src/engines/tokens/token-index.ts
-function canonicalValueKey(token) {
-  const { value: value2 } = token;
-  if (typeof value2 === "number") {
-    const dim2 = normalizeDimension(value2);
-    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
-  }
-  if (typeof value2 !== "string") return void 0;
-  const color = normalizeColor(value2);
-  if (color !== void 0) return color;
-  const dim = normalizeDimension(value2);
-  if (dim !== void 0) return `${dim.px}px`;
-  return value2;
-}
-var deltaE2000 = differenceCiede2000();
-function buildTokenIndex(tokens) {
-  const byName2 = /* @__PURE__ */ new Map();
-  const byValue = /* @__PURE__ */ new Map();
-  const colorTokens = [];
-  for (const token of tokens) {
-    byName2.set(token.name, token);
-    const key = canonicalValueKey(token);
-    if (key !== void 0) {
-      const bucket = byValue.get(key);
-      if (bucket === void 0) {
-        byValue.set(key, [token]);
-      } else {
-        bucket.push(token);
-      }
-    }
-    if (token.type === "color" && typeof token.value === "string") {
-      const parsed = parse_default(token.value);
-      if (parsed !== void 0) colorTokens.push({ token, parsed });
-    }
-  }
-  return {
-    byName: byName2,
-    byValue,
-    nearest(rawColor, options) {
-      const query = parse_default(rawColor);
-      if (query === void 0) return [];
-      return colorTokens.map(({ token, parsed }) => ({
-        token,
-        deltaE: deltaE2000(query, parsed)
-      })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
-    }
-  };
-}
-
 // src/cli-commands/lint.ts
-var PARSERS3 = {
+var PARSERS4 = {
   w3c: parseW3c,
   "tokens-studio": parseTokensStudio,
   "style-dictionary": parseStyleDictionary
 };
-var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set([
+var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
@@ -13251,7 +14829,7 @@ function computeAdoption(files, findings) {
   const perFile = cssFiles.map((file) => {
     let refs = 0;
     try {
-      refs = countTokenRefs(readFileSync10(file.abs, "utf8"));
+      refs = countTokenRefs(readFileSync13(file.abs, "utf8"));
     } catch {
       refs = 0;
     }
@@ -13261,11 +14839,11 @@ function computeAdoption(files, findings) {
       literals: literalsByFile.get(file.rel) ?? 0
     };
   });
-  const tally = tallyAdoption(perFile);
+  const tally2 = tallyAdoption(perFile);
   return {
-    refs: tally.totals.refs,
-    literals: tally.totals.literals,
-    byDirectory: tally.byDirectory
+    refs: tally2.totals.refs,
+    literals: tally2.totals.literals,
+    byDirectory: tally2.byDirectory
   };
 }
 function isCssLike(path) {
@@ -13273,16 +14851,16 @@ function isCssLike(path) {
   return lower.endsWith(".css") || lower.endsWith(".scss");
 }
 function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join13(targetDir, ".ds-bridge");
+  const stateDir = join16(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
     byKind: countByKind(findings),
     adoption: computeAdoption(files, findings)
   };
-  mkdirSync9(stateDir, { recursive: true });
-  appendFileSync6(
-    join13(stateDir, "history.jsonl"),
+  mkdirSync11(stateDir, { recursive: true });
+  appendFileSync8(
+    join16(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -13295,14 +14873,14 @@ function hasExtension(name) {
 function walkLintableFiles(dir, acc) {
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = readdirSync2(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join13(dir, entry.name);
+    const full = join16(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkLintableFiles(full, acc);
       continue;
     }
@@ -13311,8 +14889,8 @@ function walkLintableFiles(dir, acc) {
 }
 function resolveTokenSource(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve8(process.cwd(), flagTokens);
-    if (!existsSync10(abs2)) {
+    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve9(process.cwd(), flagTokens);
+    if (!existsSync12(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -13320,11 +14898,11 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join13(targetDir, ".ds-bridge.json");
-  if (existsSync10(configPath)) {
+  const configPath = join16(targetDir, ".ds-bridge.json");
+  if (existsSync12(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync10(configPath, "utf8");
+      projectFileText = readFileSync13(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -13332,8 +14910,8 @@ function resolveTokenSource(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute2(src) ? src : resolve8(targetDir, src);
-        if (existsSync10(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute3(src) ? src : resolve9(targetDir, src);
+        if (existsSync12(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -13341,7 +14919,7 @@ function resolveTokenSource(targetDir, flagTokens) {
       }
     }
   }
-  const discovered = discoverFirstTokenSource(targetDir);
+  const discovered = discoverFirstTokenSource2(targetDir);
   if (discovered !== void 0) return { kind: "ok", path: discovered };
   return {
     kind: "error",
@@ -13349,51 +14927,51 @@ function resolveTokenSource(targetDir, flagTokens) {
 Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
   };
 }
-function discoverFirstTokenSource(root) {
+function discoverFirstTokenSource2(root) {
   const candidates = [];
-  collectTokenCandidates(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
-    const depth = depthOf2(a) - depthOf2(b);
+  collectTokenCandidates2(root, false, candidates);
+  const verified = candidates.filter((path) => detectFileFormat3(path) !== void 0).sort((a, b) => {
+    const depth = depthOf3(a) - depthOf3(b);
     return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
   });
   return verified[0];
 }
-function depthOf2(path) {
-  return path.split(sep2).filter((s) => s.length > 0).length;
+function depthOf3(path) {
+  return path.split(sep3).filter((s) => s.length > 0).length;
 }
-function isConventionalTokenFile2(name) {
+function isConventionalTokenFile3(name) {
   if (!name.endsWith(".json")) return false;
   return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
 }
-function isTokenDir2(name) {
+function isTokenDir3(name) {
   return name === "tokens" || name === "design-tokens";
 }
-function collectTokenCandidates(dir, insideTokenDir, acc) {
+function collectTokenCandidates2(dir, insideTokenDir, acc) {
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = readdirSync2(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join13(dir, entry.name);
+    const full = join16(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
-      collectTokenCandidates(
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
+      collectTokenCandidates2(
         full,
-        insideTokenDir || isTokenDir2(entry.name),
+        insideTokenDir || isTokenDir3(entry.name),
         acc
       );
       continue;
     }
     if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
+    if (insideTokenDir || isConventionalTokenFile3(entry.name)) acc.push(full);
   }
 }
-function detectFileFormat2(absPath) {
+function detectFileFormat3(absPath) {
   let raw;
   try {
-    raw = readFileSync10(absPath, "utf8");
+    raw = readFileSync13(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -13409,7 +14987,7 @@ function detectFileFormat2(absPath) {
 function loadTokenMap(tokenPath) {
   let raw;
   try {
-    raw = readFileSync10(tokenPath, "utf8");
+    raw = readFileSync13(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -13434,7 +15012,7 @@ function loadTokenMap(tokenPath) {
       message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
     };
   }
-  const outcome = PARSERS3[format](parsed);
+  const outcome = PARSERS4[format](parsed);
   if (outcome.kind === "error") {
     const lines = outcome.errors.map((e4) => {
       const where = e4.path !== void 0 ? ` (${e4.path})` : "";
@@ -13451,7 +15029,7 @@ ${lines.join("\n")}`
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync10(absPath, "utf8");
+    content = readFileSync13(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -13500,7 +15078,7 @@ function suggestionFor(match) {
       return "no matching token (off-system)";
   }
 }
-function renderTerm9(findings, color) {
+function renderTerm10(findings, color) {
   const blocks = [];
   const byFile = /* @__PURE__ */ new Map();
   for (const finding of findings) {
@@ -13548,7 +15126,7 @@ function changedFiles(targetDir) {
     };
   }
   const files = new Set(
-    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve8(targetDir, rel2))
+    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve9(targetDir, rel2))
   );
   return { kind: "ok", files };
 }
@@ -13557,7 +15135,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync10(absPath, "utf8");
+      content = readFileSync13(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -13568,7 +15146,7 @@ function applyFixes(editsByFile) {
     const next = applyEdits(content, edits);
     if (next === content) continue;
     try {
-      writeFileSync7(absPath, next, "utf8");
+      writeFileSync8(absPath, next, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -13589,7 +15167,7 @@ function lintAll(files, tokens) {
   }
   return { kind: "ok", findings: all };
 }
-function fail9(message) {
+function fail11(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
@@ -13598,20 +15176,20 @@ function registerLintCommand(program2) {
   program2.command("lint").description("Find raw values that should be design tokens").argument("[path]", "file or directory to lint", ".").option("--fix", "rewrite fixable exact matches to var() in place", false).option("--format <format>", "output format: term | json", "term").option("--tokens <file>", "explicit token source file").option("--changed", "limit to files changed vs git HEAD", false).action((path, options) => {
     const format = options.format;
     if (format !== "json" && format !== "term") {
-      fail9(
+      fail11(
         `Unknown --format "${options.format}". Expected "json" or "term".`
       );
       return;
     }
-    const targetPath = resolve8(path);
-    if (!existsSync10(targetPath)) {
-      fail9(`Path "${targetPath}" does not exist.`);
+    const targetPath = resolve9(path);
+    if (!existsSync12(targetPath)) {
+      fail11(`Path "${targetPath}" does not exist.`);
       return;
     }
     const stat2 = statSync6(targetPath);
     const isFile = stat2.isFile();
     if (isFile && !hasExtension(targetPath)) {
-      fail9(
+      fail11(
         `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
       );
       return;
@@ -13619,12 +15197,12 @@ function registerLintCommand(program2) {
     const targetDir = isFile ? process.cwd() : targetPath;
     const tokenSource = resolveTokenSource(targetDir, options.tokens);
     if (tokenSource.kind === "error") {
-      fail9(tokenSource.message);
+      fail11(tokenSource.message);
       return;
     }
     const loaded = loadTokenMap(tokenSource.path);
     if (loaded.kind === "error") {
-      fail9(loaded.message);
+      fail11(loaded.message);
       return;
     }
     const tokens = {
@@ -13639,7 +15217,7 @@ function registerLintCommand(program2) {
     if (options.changed) {
       const changed = changedFiles(targetDir);
       if (changed.kind === "error") {
-        fail9(changed.message);
+        fail11(changed.message);
         return;
       }
       inScope = walked.filter((abs2) => changed.files.has(abs2));
@@ -13647,7 +15225,7 @@ function registerLintCommand(program2) {
     const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
     const linted = lintAll(files, tokens);
     if (linted.kind === "error") {
-      fail9(linted.message);
+      fail11(linted.message);
       return;
     }
     if (options.fix) {
@@ -13665,13 +15243,13 @@ function registerLintCommand(program2) {
 }
 function toRelative(targetDir, abs2) {
   const rel2 = relative(targetDir, abs2);
-  return rel2.split(sep2).join("/");
+  return rel2.split(sep3).join("/");
 }
 function emitAdoptionSummary(adoption) {
   const total = adoption.refs + adoption.literals;
-  const pct4 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
+  const pct5 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
   process.stdout.write(
-    `on-system: ${pct4}% (${adoption.refs} token refs / ${total} css/scss values)
+    `on-system: ${pct5}% (${adoption.refs} token refs / ${total} css/scss values)
 `
   );
 }
@@ -13683,7 +15261,7 @@ function emitReport(findings, format) {
     return;
   }
   const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-  process.stdout.write(`${renderTerm9(findings, color)}
+  process.stdout.write(`${renderTerm10(findings, color)}
 `);
 }
 function runFix(files, tokens, findings, historyDir) {
@@ -13703,7 +15281,7 @@ function runFix(files, tokens, findings, historyDir) {
   }
   const applied = applyFixes(editsByFile);
   if (applied.kind === "error") {
-    fail9(applied.message);
+    fail11(applied.message);
     return;
   }
   process.stdout.write(
@@ -13712,7 +15290,7 @@ function runFix(files, tokens, findings, historyDir) {
   );
   const relinted = lintAll(files, tokens);
   if (relinted.kind === "error") {
-    fail9(relinted.message);
+    fail11(relinted.message);
     return;
   }
   const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
@@ -13727,8 +15305,8 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync11, readFileSync as readFileSync11, statSync as statSync7 } from "fs";
-import { join as join14, resolve as resolvePath3 } from "path";
+import { existsSync as existsSync13, readFileSync as readFileSync14, statSync as statSync7 } from "fs";
+import { join as join17, resolve as resolvePath4 } from "path";
 
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
@@ -13738,7 +15316,7 @@ var SEVERITY_ORDER2 = {
   "prop-mismatch": 2,
   ok: 3
 };
-function byNameAsc4(a, b) {
+function byNameAsc5(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 function show(score) {
@@ -13786,7 +15364,7 @@ function buildParity(registry) {
   }
   rows.sort((a, b) => {
     const bySeverity = SEVERITY_ORDER2[a.status] - SEVERITY_ORDER2[b.status];
-    return bySeverity !== 0 ? bySeverity : byNameAsc4(a.component, b.component);
+    return bySeverity !== 0 ? bySeverity : byNameAsc5(a.component, b.component);
   });
   const summary = {
     ok: 0,
@@ -13823,12 +15401,12 @@ function toParitySection(report) {
 }
 
 // src/cli-commands/parity.ts
-function fail10(message) {
+function fail12(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function normalizeName2(name) {
+function normalizeName3(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 function statusSeverity2(status) {
@@ -13842,35 +15420,35 @@ function statusSeverity2(status) {
       return "error";
   }
 }
-function loadRegistry4(targetDir) {
-  const registryPath = join14(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync11(registryPath)) {
-    fail10(
+function loadRegistry5(targetDir) {
+  const registryPath = join17(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync13(registryPath)) {
+    fail12(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
   }
   let raw;
   try {
-    raw = readFileSync11(registryPath, "utf8");
+    raw = readFileSync14(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail10(`Could not read registry "${registryPath}": ${detail}`);
+    fail12(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail10(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail12(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
 function filterRows(rows, component) {
   if (component === void 0 || component === "") return rows;
-  const needle = normalizeName2(component);
+  const needle = normalizeName3(component);
   if (needle === "") return rows;
-  return rows.filter((row) => normalizeName2(row.component).includes(needle));
+  return rows.filter((row) => normalizeName3(row.component).includes(needle));
 }
 function summarize(rows) {
   const summary = {
@@ -13897,7 +15475,7 @@ function summarize(rows) {
   }
   return summary;
 }
-function renderTerm10(report, color) {
+function renderTerm11(report, color) {
   if (report.rows.length === 0) {
     return "No components in the registry \u2014 nothing to compare.";
   }
@@ -13951,8 +15529,8 @@ function renderMarkdown(report) {
   return [header, separator, ...rows, "", summaryLine2].join("\n");
 }
 function hasRegistry2(candidate) {
-  return existsSync11(
-    join14(resolvePath3(candidate), ".ds-bridge", "registry.json")
+  return existsSync13(
+    join17(resolvePath4(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate2(component, path) {
@@ -13964,16 +15542,16 @@ function disambiguate2(component, path) {
 function runParity(rawComponent, rawPath, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail10(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail12(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
   const { component, path } = disambiguate2(rawComponent, rawPath);
-  const targetDir = resolvePath3(path);
-  if (!existsSync11(targetDir) || !statSync7(targetDir).isDirectory()) {
-    fail10(`Path "${targetDir}" is not a directory.`);
+  const targetDir = resolvePath4(path);
+  if (!existsSync13(targetDir) || !statSync7(targetDir).isDirectory()) {
+    fail12(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const registry = loadRegistry4(targetDir);
+  const registry = loadRegistry5(targetDir);
   if (registry === void 0) return;
   const full = buildParity(registry);
   const rows = filterRows(full.rows, component);
@@ -13986,7 +15564,7 @@ function runParity(rawComponent, rawPath, options) {
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm10(report, color)}
+    process.stdout.write(`${renderTerm11(report, color)}
 `);
   }
   const allOk = report.rows.every((row) => row.status === "ok");
@@ -14012,13 +15590,14 @@ function registerParityCommand(program2) {
 
 // src/cli-commands/registry.ts
 import {
-  existsSync as existsSync12,
-  mkdirSync as mkdirSync10,
-  readFileSync as readFileSync12,
+  appendFileSync as appendFileSync9,
+  existsSync as existsSync14,
+  mkdirSync as mkdirSync12,
+  readFileSync as readFileSync15,
   statSync as statSync8,
-  writeFileSync as writeFileSync8
+  writeFileSync as writeFileSync9
 } from "fs";
-import { dirname as dirname7, join as join15, resolve as resolvePath4 } from "path";
+import { dirname as dirname7, join as join18, resolve as resolvePath5 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 
 // src/engines/registry/match.ts
@@ -14028,7 +15607,7 @@ var TOKEN_SCORE_FLOOR = 0.3;
 var NAME_WEIGHT = 0.7;
 var SHAPE_WEIGHT = 0.3;
 var MAX_CANDIDATES = 3;
-function normalizeName3(name) {
+function normalizeName4(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 function tokenize3(name) {
@@ -14051,7 +15630,7 @@ function tokenSetScore(a, b) {
   return 2 * intersection / (setA.size + setB.size);
 }
 function nameScore(codeName, figmaName) {
-  if (normalizeName3(codeName) === normalizeName3(figmaName)) return 1;
+  if (normalizeName4(codeName) === normalizeName4(figmaName)) return 1;
   const score = tokenSetScore(codeName, figmaName);
   return score < TOKEN_SCORE_FLOOR ? 0 : score;
 }
@@ -14070,7 +15649,7 @@ function normalizedKeyIndex(variants) {
   const index = /* @__PURE__ */ new Map();
   for (const key of Object.keys(variants)) {
     const values = variants[key] ?? [];
-    const norm = normalizeName3(key);
+    const norm = normalizeName4(key);
     const existing = index.get(norm);
     if (existing === void 0) {
       index.set(norm, [...values]);
@@ -14103,7 +15682,7 @@ function scorePair(codeComponent, figmaModel) {
     score: NAME_WEIGHT * name + SHAPE_WEIGHT * shape
   };
 }
-function byNameAsc5(a, b) {
+function byNameAsc6(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 function rankFigmaCandidates(codeComponent, figma) {
@@ -14111,7 +15690,7 @@ function rankFigmaCandidates(codeComponent, figma) {
     figma: figmaModel,
     score: scorePair(codeComponent, figmaModel).score
   })).sort(
-    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc5(a.figma.name, b.figma.name)
+    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc6(a.figma.name, b.figma.name)
   ).slice(0, MAX_CANDIDATES);
 }
 function rankCodeCandidates(figmaModel, code) {
@@ -14119,7 +15698,7 @@ function rankCodeCandidates(figmaModel, code) {
     code: codeComponent,
     score: scorePair(codeComponent, figmaModel).score
   })).sort(
-    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc5(a.code.name, b.code.name)
+    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc6(a.code.name, b.code.name)
   ).slice(0, MAX_CANDIDATES);
 }
 function matchComponents(code, figma) {
@@ -14140,11 +15719,11 @@ function matchComponents(code, figma) {
     if (a.parts.score !== b.parts.score) return b.parts.score - a.parts.score;
     const codeA = code[a.codeIndex]?.name ?? "";
     const codeB = code[b.codeIndex]?.name ?? "";
-    const byCode = byNameAsc5(codeA, codeB);
+    const byCode = byNameAsc6(codeA, codeB);
     if (byCode !== 0) return byCode;
     const figmaA = figma[a.figmaIndex]?.name ?? "";
     const figmaB = figma[b.figmaIndex]?.name ?? "";
-    return byNameAsc5(figmaA, figmaB);
+    return byNameAsc6(figmaA, figmaB);
   });
   const matchedCode = /* @__PURE__ */ new Set();
   const matchedFigma = /* @__PURE__ */ new Set();
@@ -14184,7 +15763,7 @@ function matchComponents(code, figma) {
       shapeScore: edge.parts.shapeScore
     });
   }
-  matches.sort((a, b) => byNameAsc5(a.code.name, b.code.name));
+  matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
   const unmatchedCode = [];
   for (let c2 = 0; c2 < code.length; c2 += 1) {
     if (matchedCode.has(c2)) continue;
@@ -14195,7 +15774,7 @@ function matchComponents(code, figma) {
       candidates: rankFigmaCandidates(codeComponent, figma)
     });
   }
-  unmatchedCode.sort((a, b) => byNameAsc5(a.code.name, b.code.name));
+  unmatchedCode.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
   const unmatchedFigma = [];
   for (let f3 = 0; f3 < figma.length; f3 += 1) {
     if (matchedFigma.has(f3)) continue;
@@ -14206,88 +15785,8 @@ function matchComponents(code, figma) {
       candidates: rankCodeCandidates(figmaModel, code)
     });
   }
-  unmatchedFigma.sort((a, b) => byNameAsc5(a.figma.name, b.figma.name));
+  unmatchedFigma.sort((a, b) => byNameAsc6(a.figma.name, b.figma.name));
   return { matches, unmatchedCode, unmatchedFigma };
-}
-
-// src/engines/registry/persist.ts
-function round3(value2) {
-  if (!Number.isFinite(value2)) return 0;
-  return Math.round(value2 * 1e3) / 1e3;
-}
-function normalizeName4(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-function byNameAsc6(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function toRegistryFile(result, generatedAt) {
-  const matches = result.matches.map((m) => ({
-    codeName: m.code.name,
-    importPath: m.code.importPath,
-    figmaName: m.figma.name,
-    nodeId: m.figma.nodeId,
-    score: round3(m.score)
-  })).sort((a, b) => byNameAsc6(a.codeName, b.codeName));
-  const unmatchedCode = result.unmatchedCode.map((u) => ({
-    name: u.code.name,
-    importPath: u.code.importPath,
-    candidates: u.candidates.map((c2) => ({
-      figmaName: c2.figma.name,
-      nodeId: c2.figma.nodeId,
-      score: round3(c2.score)
-    }))
-  })).sort((a, b) => byNameAsc6(a.name, b.name));
-  const unmatchedFigma = result.unmatchedFigma.map((u) => ({
-    name: u.figma.name,
-    nodeId: u.figma.nodeId,
-    candidates: u.candidates.map((c2) => ({
-      codeName: c2.code.name,
-      score: round3(c2.score)
-    }))
-  })).sort((a, b) => byNameAsc6(a.name, b.name));
-  return {
-    schemaVersion: 1,
-    generatedAt,
-    matches,
-    unmatchedCode,
-    unmatchedFigma
-  };
-}
-function resolveEntry(registry, nodeNameOrId) {
-  const query = nodeNameOrId;
-  const normalizedQuery = normalizeName4(query);
-  for (const entry of registry.matches) {
-    if (entry.nodeId === query) return { kind: "match", entry };
-  }
-  for (const entry of registry.matches) {
-    if (entry.figmaName === query) return { kind: "match", entry };
-  }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.matches) {
-      if (normalizeName4(entry.figmaName) === normalizedQuery) {
-        return { kind: "match", entry };
-      }
-    }
-  }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.nodeId === query) {
-      return { kind: "candidates", entries: entry.candidates };
-    }
-  }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.name === query) {
-      return { kind: "candidates", entries: entry.candidates };
-    }
-  }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.unmatchedFigma) {
-      if (normalizeName4(entry.name) === normalizedQuery) {
-        return { kind: "candidates", entries: entry.candidates };
-      }
-    }
-  }
-  return { kind: "not-found" };
 }
 
 // src/cli-commands/registry.ts
@@ -14301,13 +15800,13 @@ async function scanCode2(targetDir) {
   const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
   return scanCodeComponents(targetDir);
 }
-var DEFAULT_FIGMA_API_BASE5 = "https://api.figma.com";
-function fail11(message) {
+var DEFAULT_FIGMA_API_BASE6 = "https://api.figma.com";
+function fail13(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function missingTokenMessage4() {
+function missingTokenMessage5() {
   return [
     "No Figma personal access token configured.",
     "",
@@ -14332,7 +15831,7 @@ function missingFileKeyMessage3() {
     "The key is the segment after /file/ or /design/ in the library file URL."
   ].join("\n");
 }
-function clientErrorMessage4(result) {
+function clientErrorMessage5(result) {
   switch (result.kind) {
     case "auth-error":
       return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
@@ -14349,17 +15848,17 @@ function clientErrorMessage4(result) {
 async function runBuild(path, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
-    fail11(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    fail13(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
-  const targetDir = resolvePath4(path);
-  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
-    fail11(`Path "${targetDir}" is not a directory.`);
+  const targetDir = resolvePath5(path);
+  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
+    fail13(`Path "${targetDir}" is not a directory.`);
     return;
   }
   const resolved = resolveConfig({ env: process.env });
   if (resolved.kind !== "ok") {
-    fail11(resolved.message);
+    fail13(resolved.message);
     return;
   }
   for (const warning of resolved.warnings) {
@@ -14368,27 +15867,27 @@ async function runBuild(path, options) {
   }
   const { config } = resolved;
   if (config.figmaToken.kind === "missing") {
-    fail11(missingTokenMessage4());
+    fail13(missingTokenMessage5());
     return;
   }
   if (config.figmaFileKey === void 0 || config.figmaFileKey === "") {
-    fail11(missingFileKeyMessage3());
+    fail13(missingFileKeyMessage3());
     return;
   }
   const code = await scanCode2(targetDir);
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE5;
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE6;
   const client = createFigmaClient({
     token: config.figmaToken.value,
     baseUrl
   });
   const componentsResult = await client.getComponents(config.figmaFileKey);
   if (componentsResult.kind !== "ok") {
-    fail11(clientErrorMessage4(componentsResult));
+    fail13(clientErrorMessage5(componentsResult));
     return;
   }
   const fileResult = await client.getFile(config.figmaFileKey);
   if (fileResult.kind !== "ok") {
-    fail11(clientErrorMessage4(fileResult));
+    fail13(clientErrorMessage5(fileResult));
     return;
   }
   const figma = buildFigmaComponentModel({
@@ -14398,11 +15897,11 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join15(targetDir, ".ds-bridge");
-  const registryPath = join15(stateDir, "registry.json");
+  const stateDir = join18(targetDir, ".ds-bridge");
+  const registryPath = join18(stateDir, "registry.json");
   try {
-    mkdirSync10(stateDir, { recursive: true });
-    writeFileSync8(
+    mkdirSync12(stateDir, { recursive: true });
+    writeFileSync9(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
 `,
@@ -14410,17 +15909,48 @@ async function runBuild(path, options) {
     );
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail11(`Could not write registry to "${registryPath}": ${detail}`);
+    fail13(`Could not write registry to "${registryPath}": ${detail}`);
     return;
   }
+  const parityRecord = parityRecordFrom(registry, generatedAt);
+  appendParityHistory(stateDir, parityRecord);
   if (format === "json") {
     process.stdout.write(`${JSON.stringify(registry, null, 2)}
 `);
   } else {
-    process.stdout.write(`${renderBuildSummary(registry, registryPath)}
-`);
+    process.stdout.write(
+      `${renderBuildSummary(registry, registryPath, parityRecord)}
+`
+    );
   }
   process.exitCode = 0;
+}
+function parityRecordFrom(registry, generatedAt) {
+  const { ok, missingInCode, missingInFigma, propMismatch } = buildParity(registry).summary;
+  const total = ok + missingInCode + missingInFigma + propMismatch;
+  const score = total > 0 ? Math.round(100 * ok / total) : 0;
+  return {
+    at: generatedAt,
+    kind: "parity",
+    total,
+    ok,
+    missingInCode,
+    missingInFigma,
+    propMismatch,
+    score
+  };
+}
+function appendParityHistory(stateDir, record) {
+  try {
+    mkdirSync12(stateDir, { recursive: true });
+    appendFileSync9(
+      join18(stateDir, "history.jsonl"),
+      `${JSON.stringify(record)}
+`,
+      "utf8"
+    );
+  } catch {
+  }
 }
 function worstAmbiguities(registry) {
   const lines = [];
@@ -14437,12 +15967,13 @@ function worstAmbiguities(registry) {
   }
   return lines;
 }
-function renderBuildSummary(registry, registryPath) {
+function renderBuildSummary(registry, registryPath, parity) {
   const lines = [
     `Registry written to ${registryPath}`,
     `  matched:        ${registry.matches.length}`,
     `  unmatched code: ${registry.unmatchedCode.length}`,
-    `  unmatched figma:${registry.unmatchedFigma.length}`
+    `  unmatched figma:${registry.unmatchedFigma.length}`,
+    `  parity score: ${parity.score} (${parity.ok}/${parity.total})`
   ];
   const ambiguities = worstAmbiguities(registry);
   if (ambiguities.length > 0) {
@@ -14450,37 +15981,37 @@ function renderBuildSummary(registry, registryPath) {
   }
   return lines.join("\n");
 }
-function loadRegistry5(targetDir) {
-  const registryPath = join15(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync12(registryPath)) {
-    fail11(
+function loadRegistry6(targetDir) {
+  const registryPath = join18(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync14(registryPath)) {
+    fail13(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
     return void 0;
   }
   let raw;
   try {
-    raw = readFileSync12(registryPath, "utf8");
+    raw = readFileSync15(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail11(`Could not read registry "${registryPath}": ${detail}`);
+    fail13(`Could not read registry "${registryPath}": ${detail}`);
     return void 0;
   }
   try {
     return JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail11(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    fail13(`Registry "${registryPath}" is not valid JSON: ${detail}`);
     return void 0;
   }
 }
 function runResolve(nodeNameOrId, path) {
-  const targetDir = resolvePath4(path);
-  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
-    fail11(`Path "${targetDir}" is not a directory.`);
+  const targetDir = resolvePath5(path);
+  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
+    fail13(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const registry = loadRegistry5(targetDir);
+  const registry = loadRegistry6(targetDir);
   if (registry === void 0) return;
   const outcome = resolveEntry(registry, nodeNameOrId);
   switch (outcome.kind) {
@@ -14529,17 +16060,362 @@ function registerRegistryCommand(program2) {
   });
 }
 
+// src/cli-commands/release-check.ts
+import { existsSync as existsSync15, readFileSync as readFileSync16, statSync as statSync9 } from "fs";
+import { join as join19, resolve as resolve10 } from "path";
+
+// src/engines/report/release-readiness.ts
+function asNumber3(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function extractReleaseSignals(records) {
+  const signals = {};
+  for (const { kind, record } of records) {
+    switch (kind) {
+      case "impact":
+        signals.impact = { breaking: asNumber3(record.breaking) };
+        break;
+      case "tokens-check":
+        signals.drift = {
+          stale: asNumber3(record.stale),
+          missing: asNumber3(record.missing)
+        };
+        break;
+      case "parity":
+        signals.parity = {
+          missingInCode: asNumber3(record.missingInCode),
+          missingInFigma: asNumber3(record.missingInFigma),
+          total: asNumber3(record.total)
+        };
+        break;
+      default:
+        break;
+    }
+  }
+  return signals;
+}
+function impactCheck(signal) {
+  if (signal === void 0) {
+    return { name: "impact", pass: false, detail: "no impact data" };
+  }
+  const breaking = asNumber3(signal.breaking);
+  if (breaking === 0) {
+    return { name: "impact", pass: true, detail: "no breaking changes" };
+  }
+  return {
+    name: "impact",
+    pass: false,
+    detail: `${breaking} breaking change${breaking === 1 ? "" : "s"}`
+  };
+}
+function driftCheck(signal) {
+  if (signal === void 0) {
+    return { name: "drift", pass: false, detail: "no drift data" };
+  }
+  const stale = asNumber3(signal.stale);
+  const missing = asNumber3(signal.missing);
+  if (stale === 0 && missing === 0) {
+    return { name: "drift", pass: true, detail: "tokens in sync" };
+  }
+  return {
+    name: "drift",
+    pass: false,
+    detail: `${stale} stale, ${missing} missing`
+  };
+}
+function parityCheck(signal) {
+  if (signal === void 0 || asNumber3(signal.total) === 0) {
+    return { name: "parity", pass: false, detail: "no parity data" };
+  }
+  const missingInCode = asNumber3(signal.missingInCode);
+  const missingInFigma = asNumber3(signal.missingInFigma);
+  if (missingInCode === 0 && missingInFigma === 0) {
+    return { name: "parity", pass: true, detail: "full parity" };
+  }
+  return {
+    name: "parity",
+    pass: false,
+    detail: `${missingInCode} missing in code, ${missingInFigma} missing in figma`
+  };
+}
+function evaluateReleaseReadiness(signals) {
+  const checks = [
+    impactCheck(signals.impact),
+    driftCheck(signals.drift),
+    parityCheck(signals.parity)
+  ];
+  return { go: checks.every((c2) => c2.pass), checks };
+}
+
+// src/cli-commands/release-check.ts
+function fail14(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function readHistoryText2(stateDir) {
+  try {
+    return readFileSync16(join19(stateDir, "history.jsonl"), "utf8");
+  } catch {
+    return "";
+  }
+}
+function renderTerm12(readiness) {
+  const headline = `RELEASE: ${readiness.go ? "GO" : "NO-GO"}`;
+  const rows = readiness.checks.map((check) => [
+    check.name,
+    check.pass ? "pass" : "fail",
+    check.detail ?? ""
+  ]);
+  const table = renderTable(["gate", "status", "detail"], rows, {
+    color: false
+  });
+  return `${headline}
+${table}`;
+}
+function runReleaseCheck(path, options) {
+  const format = options.format;
+  if (format !== "term" && format !== "json") {
+    fail14(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    return;
+  }
+  const targetDir = resolve10(path);
+  if (!existsSync15(targetDir) || !statSync9(targetDir).isDirectory()) {
+    fail14(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const stateDir = join19(targetDir, ".ds-bridge");
+  const signals = extractReleaseSignals(
+    replayHistory(readHistoryText2(stateDir))
+  );
+  const readiness = evaluateReleaseReadiness(signals);
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(readiness, null, 2)}
+`);
+  } else {
+    process.stdout.write(`${renderTerm12(readiness)}
+`);
+  }
+  process.exitCode = readiness.go ? 0 : 1;
+}
+function registerReleaseCheckCommand(program2) {
+  program2.command("release-check").description(
+    "Pre-publish go/no-go gate over the project history (exit 0 go / 1 no-go / 2 error)"
+  ).argument(
+    "[path]",
+    "project directory holding .ds-bridge/history.jsonl",
+    "."
+  ).option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runReleaseCheck(path, options);
+  });
+}
+
 // src/cli-commands/report.ts
 import { spawn } from "child_process";
 import {
-  existsSync as existsSync13,
-  mkdirSync as mkdirSync11,
-  readFileSync as readFileSync13,
-  statSync as statSync9,
-  writeFileSync as writeFileSync9
+  existsSync as existsSync16,
+  mkdirSync as mkdirSync13,
+  readFileSync as readFileSync17,
+  statSync as statSync10,
+  writeFileSync as writeFileSync10
 } from "fs";
-import { basename, dirname as dirname8, join as join16, resolve as resolve9 } from "path";
+import { basename, dirname as dirname8, join as join20, resolve as resolve11 } from "path";
 import { platform } from "process";
+
+// src/engines/report/audience-changelog.ts
+var RECENT_CAP = 12;
+function breakingRank2(severity) {
+  return severity === "breaking" ? 0 : 1;
+}
+var SEVERITY_FIELD = {
+  breaking: "breaking",
+  notable: "additive",
+  minor: "cosmetic"
+};
+function asObject2(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function asAudience(value2) {
+  return value2 === "designer" || value2 === "developer" || value2 === "both" ? value2 : void 0;
+}
+function asSeverity(value2) {
+  return value2 === "breaking" || value2 === "notable" || value2 === "minor" ? value2 : void 0;
+}
+function toEntry(raw, order) {
+  const obj = asObject2(raw);
+  if (obj === void 0) return void 0;
+  const audience = asAudience(obj.audience);
+  const severity = asSeverity(obj.severity);
+  if (audience === void 0 || severity === void 0) return void 0;
+  const title = typeof obj.title === "string" ? obj.title : "";
+  return { audience, severity, title, order };
+}
+function inAudience2(entry, audience) {
+  return entry.audience === audience || entry.audience === "both";
+}
+function buildSlice(label, audience, entries) {
+  const scoped = entries.filter((e4) => inAudience2(e4, audience));
+  if (scoped.length === 0) return void 0;
+  const counts = { breaking: 0, additive: 0, cosmetic: 0 };
+  for (const entry of scoped) {
+    counts[SEVERITY_FIELD[entry.severity]] += 1;
+  }
+  const recent = scoped.slice().sort(
+    (a, b) => breakingRank2(a.severity) - breakingRank2(b.severity) || a.order - b.order
+  ).slice(0, RECENT_CAP).map((e4) => e4.title);
+  return { audience: label, ...counts, recent };
+}
+function buildAudienceChangelog(latest) {
+  if (latest === void 0) return { slices: [] };
+  const rawRecent = Array.isArray(latest.recent) ? latest.recent : [];
+  const entries = [];
+  for (let i = 0; i < rawRecent.length; i += 1) {
+    const entry = toEntry(rawRecent[i], i);
+    if (entry !== void 0) entries.push(entry);
+  }
+  const slices = [];
+  const designers = buildSlice("designers", "designer", entries);
+  if (designers !== void 0) slices.push(designers);
+  const developers = buildSlice("developers", "developer", entries);
+  if (developers !== void 0) slices.push(developers);
+  return { slices };
+}
+
+// src/engines/report/component-health.ts
+var PARITY_DEDUCTION = {
+  ok: 0,
+  "prop-mismatch": 15,
+  "missing-in-code": 30,
+  "missing-in-figma": 30
+};
+var OVERRIDE_PER_HOTSPOT = 10;
+var OVERRIDE_CAP = 20;
+var DEPRECATED_DEDUCTION = 20;
+var DETACHED_DEDUCTION = 10;
+var READINESS_WEIGHT = 0.3;
+var CONTRAST_PER_FAIL = 5;
+var CONTRAST_CAP = 20;
+function normalizeName5(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function isFiniteNumber(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2);
+}
+function clampScore(value2) {
+  return Math.min(100, Math.max(0, Math.round(value2)));
+}
+function buildComponentHealth(input) {
+  const byComponent = /* @__PURE__ */ new Map();
+  const get = (component) => {
+    let acc = byComponent.get(component);
+    if (acc === void 0) {
+      acc = { component, deduction: 0, issues: [] };
+      byComponent.set(component, acc);
+    }
+    return acc;
+  };
+  for (const parityRow of input.parityRows ?? []) {
+    if (parityRow === null || typeof parityRow !== "object") continue;
+    const component = parityRow.component;
+    if (typeof component !== "string" || component === "") continue;
+    const status = parityRow.status;
+    const deduction = PARITY_DEDUCTION[status];
+    if (deduction === void 0) continue;
+    const acc = get(component);
+    if (deduction > 0) {
+      acc.deduction += deduction;
+      acc.issues.push(`parity: ${status}`);
+    }
+  }
+  const lh = input.libraryHealth;
+  if (lh !== void 0) {
+    const overrideCounts = /* @__PURE__ */ new Map();
+    for (const hotspot of lh.overrideHotspots ?? []) {
+      if (hotspot === null || typeof hotspot !== "object") continue;
+      const name = hotspot.componentName;
+      if (typeof name !== "string" || name === "") continue;
+      overrideCounts.set(name, (overrideCounts.get(name) ?? 0) + 1);
+    }
+    for (const [name, count] of overrideCounts) {
+      const acc = get(name);
+      const deduction = Math.min(OVERRIDE_CAP, count * OVERRIDE_PER_HOTSPOT);
+      acc.deduction += deduction;
+      acc.issues.push(`${count} override hotspot${count === 1 ? "" : "s"}`);
+    }
+    for (const group of lh.deprecatedUsage ?? []) {
+      if (group === null || typeof group !== "object") continue;
+      const name = group.componentName;
+      if (typeof name !== "string" || name === "") continue;
+      const acc = get(name);
+      acc.deduction += DEPRECATED_DEDUCTION;
+      const count = isFiniteNumber(group.count) ? group.count : 0;
+      acc.issues.push(`deprecated usage${count > 0 ? ` (${count})` : ""}`);
+    }
+    for (const candidate of lh.detachedCandidates ?? []) {
+      if (candidate === null || typeof candidate !== "object") continue;
+      const name = candidate.name;
+      if (typeof name !== "string" || name === "") continue;
+      const acc = get(name);
+      acc.deduction += DETACHED_DEDUCTION;
+      acc.issues.push("detached candidate (heuristic)");
+    }
+  }
+  const readiness = input.readiness;
+  if (readiness !== void 0 && typeof readiness.frameName === "string" && isFiniteNumber(readiness.score)) {
+    const target = matchByKeyOrName(
+      [...byComponent.keys()],
+      input.aliases,
+      "frameName",
+      readiness.frameName
+    );
+    if (target !== void 0 && readiness.score < 100) {
+      const acc = get(target);
+      acc.deduction += Math.round((100 - readiness.score) * READINESS_WEIGHT);
+      acc.issues.push(`readiness ${readiness.score}`);
+    }
+  }
+  const a11y = input.a11y;
+  if (a11y !== void 0 && Array.isArray(a11y.modes)) {
+    for (const mode of a11y.modes) {
+      if (mode === null || typeof mode !== "object") continue;
+      if (typeof mode.mode !== "string") continue;
+      const failed = isFiniteNumber(mode.failed) ? mode.failed : 0;
+      if (failed <= 0) continue;
+      const target = matchByKeyOrName(
+        [...byComponent.keys()],
+        input.aliases,
+        "contrastMode",
+        mode.mode
+      );
+      if (target === void 0) continue;
+      const acc = get(target);
+      acc.deduction += Math.min(CONTRAST_CAP, failed * CONTRAST_PER_FAIL);
+      acc.issues.push(`contrast: ${failed} failing`);
+    }
+  }
+  return [...byComponent.values()].map(
+    (acc) => ({
+      component: acc.component,
+      healthScore: clampScore(100 - acc.deduction),
+      issues: acc.issues
+    })
+  ).sort(
+    (a, b) => a.healthScore - b.healthScore || (a.component < b.component ? -1 : a.component > b.component ? 1 : 0)
+  );
+}
+function matchByKeyOrName(components, aliases, key, signalValue) {
+  if (aliases !== void 0) {
+    for (const component of components) {
+      if (aliases[component]?.[key] === signalValue) return component;
+    }
+  }
+  const needle = normalizeName5(signalValue);
+  if (needle === "") return void 0;
+  for (const component of components) {
+    if (normalizeName5(component) === needle) return component;
+  }
+  return void 0;
+}
 
 // src/engines/report/consumer.ts
 var SOURCE_RANK = { tokens: 0, figma: 1 };
@@ -14624,6 +16500,313 @@ function buildChangeFrequency(records) {
   return result;
 }
 
+// src/engines/report/frame-implementability.ts
+var TOP_GAPS_CAP = 5;
+var EMPTY2 = {
+  pct: 0,
+  resolved: 0,
+  total: 0,
+  gaps: []
+};
+function asObject3(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function asNumber4(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp012(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function bucketsFromByReason(byReason) {
+  if (byReason === void 0) return [];
+  const buckets = [];
+  for (const [reason, raw] of Object.entries(byReason)) {
+    const count = asNumber4(raw);
+    if (count > 0) buckets.push({ reason, count });
+  }
+  return buckets.sort(
+    (a, b) => b.count - a.count || (a.reason < b.reason ? -1 : a.reason > b.reason ? 1 : 0)
+  );
+}
+function buildFrameImplementability(latest) {
+  if (latest === void 0) return EMPTY2;
+  const byReason = asObject3(latest.byReason);
+  const buckets = bucketsFromByReason(byReason);
+  const gaps = buckets.slice(0, TOP_GAPS_CAP);
+  const resolved = asNumber4(latest.resolvedCount);
+  const byReasonSum = buckets.reduce((sum, g) => sum + g.count, 0);
+  const gapCount = byReasonSum > 0 ? byReasonSum : asNumber4(latest.gapCount);
+  const total = resolved + gapCount;
+  const recordedPct = typeof latest.pct === "number" && Number.isFinite(latest.pct) ? clamp012(latest.pct) : void 0;
+  const pct5 = recordedPct ?? (total <= 0 ? 0 : clamp012(Math.round(100 * resolved / total)));
+  return { pct: pct5, resolved, total, gaps };
+}
+
+// src/engines/report/freshness.ts
+var MS_PER_DAY2 = 24 * 60 * 60 * 1e3;
+var FRESHNESS_TRACKED_KINDS = [
+  "drift",
+  "lint",
+  "readiness",
+  "a11y",
+  "impact",
+  "adoption",
+  "parity",
+  "library-health",
+  "changelog",
+  "frame-impl"
+];
+function logicalKindFor(rawKind) {
+  switch (rawKind) {
+    case "tokens-check":
+      return "drift";
+    case "handoff":
+      return "readiness";
+    case "lint":
+    case "a11y":
+    case "impact":
+    case "adoption":
+    case "parity":
+    case "library-health":
+    case "changelog":
+    case "frame-impl":
+      return rawKind;
+    default:
+      return void 0;
+  }
+}
+function bandFor(kind, thresholds) {
+  return thresholds?.[kind] ?? DEFAULT_FRESHNESS_THRESHOLDS[kind];
+}
+function classify(ageDays, band) {
+  if (ageDays >= band.stale) return "red";
+  if (ageDays >= band.aging) return "amber";
+  return "green";
+}
+function ageInDays(lastRunDay, nowIso) {
+  const last = Date.parse(`${lastRunDay}T00:00:00.000Z`);
+  const now = Date.parse(nowIso);
+  if (Number.isNaN(last) || Number.isNaN(now)) return void 0;
+  return Math.max(0, Math.floor((now - last) / MS_PER_DAY2));
+}
+function buildFreshness(records, nowIso, thresholds) {
+  const latestDay = /* @__PURE__ */ new Map();
+  const present = /* @__PURE__ */ new Set();
+  for (const entry of records) {
+    const kind = logicalKindFor(entry.kind);
+    if (kind === void 0) continue;
+    present.add(kind);
+    if (entry.at === void 0) continue;
+    const day = entry.at.slice(0, 10);
+    const prior = latestDay.get(kind);
+    if (prior === void 0 || day > prior) latestDay.set(kind, day);
+  }
+  return FRESHNESS_TRACKED_KINDS.map((kind) => {
+    const day = latestDay.get(kind);
+    if (day === void 0) {
+      return { kind, band: "unknown" };
+    }
+    const ageDays = ageInDays(day, nowIso);
+    if (ageDays === void 0) {
+      return { kind, lastRun: day, band: "unknown" };
+    }
+    return {
+      kind,
+      lastRun: day,
+      ageDays,
+      band: classify(ageDays, bandFor(kind, thresholds))
+    };
+  });
+}
+
+// src/engines/report/library-health-trend.ts
+function asNumber5(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function buildLibraryHealthTrend(records) {
+  const byDate = /* @__PURE__ */ new Map();
+  for (const entry of records) {
+    if (entry.kind !== "library-health") continue;
+    if (entry.at === void 0) continue;
+    const date = entry.at.slice(0, 10);
+    byDate.set(date, {
+      date,
+      overrides: asNumber5(entry.record.overrideHotspots),
+      deprecated: asNumber5(entry.record.deprecatedUsage),
+      detached: asNumber5(entry.record.detachedCandidates)
+    });
+  }
+  return [...byDate.values()].sort(
+    (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0
+  );
+}
+
+// src/engines/report/migration-checklist.ts
+function asObject4(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function asNumber6(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function asString2(value2) {
+  return typeof value2 === "string" ? value2 : "";
+}
+function toSite(raw) {
+  return {
+    file: asString2(raw.file),
+    line: asNumber6(raw.line),
+    subject: asString2(raw.subject),
+    from: asString2(raw.from),
+    to: asString2(raw.to)
+  };
+}
+function buildMigrationChecklist(latestImpact, cap) {
+  if (latestImpact === void 0) {
+    return { sites: [], truncated: false };
+  }
+  const rawSites = Array.isArray(latestImpact.sites) ? latestImpact.sites : [];
+  const recordedTruncated = latestImpact.sitesTruncated === true;
+  const sites = [];
+  for (const entry of rawSites) {
+    const obj = asObject4(entry);
+    if (obj === void 0) continue;
+    sites.push(toSite(obj));
+  }
+  const limit = Number.isFinite(cap) && cap > 0 ? cap : sites.length;
+  const overCap = sites.length > limit;
+  const capped = overCap ? sites.slice(0, limit) : sites;
+  return {
+    sites: capped,
+    truncated: overCap || recordedTruncated
+  };
+}
+
+// src/engines/report/ownership.ts
+var UNOWNED = "unowned";
+function asNumber7(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function segments(path) {
+  return path.split("/").filter((s) => s.length > 0);
+}
+function matchesGlob(dir, pattern) {
+  const dirSegs = segments(dir);
+  const patSegs = segments(pattern);
+  const hasGlob = pattern.includes("*");
+  let di = 0;
+  let pi = 0;
+  while (pi < patSegs.length) {
+    const seg = patSegs[pi];
+    if (seg === "**") {
+      if (pi === patSegs.length - 1) return true;
+      const rest = patSegs.slice(pi + 1);
+      for (let start = di; start <= dirSegs.length; start += 1) {
+        if (matchSuffix(dirSegs.slice(start), rest)) return true;
+      }
+      return false;
+    }
+    if (di >= dirSegs.length) return false;
+    if (seg !== "*" && seg !== dirSegs[di]) return false;
+    di += 1;
+    pi += 1;
+  }
+  if (di === dirSegs.length) return true;
+  return !hasGlob;
+}
+function matchSuffix(dirSegs, patSegs) {
+  let di = 0;
+  let pi = 0;
+  while (pi < patSegs.length) {
+    const seg = patSegs[pi];
+    if (seg === "**") {
+      if (pi === patSegs.length - 1) return true;
+      const rest = patSegs.slice(pi + 1);
+      for (let start = di; start <= dirSegs.length; start += 1) {
+        if (matchSuffix(dirSegs.slice(start), rest)) return true;
+      }
+      return false;
+    }
+    if (di >= dirSegs.length) return false;
+    if (seg !== "*" && seg !== dirSegs[di]) return false;
+    di += 1;
+    pi += 1;
+  }
+  return di === dirSegs.length;
+}
+function matchOwner(dir, ownership) {
+  let owner;
+  for (const rule of ownership) {
+    if (rule.paths.some((pattern) => matchesGlob(dir, pattern))) {
+      owner = rule.owner;
+    }
+  }
+  return owner;
+}
+function pct3(refs, literals) {
+  const total = refs + literals;
+  return total === 0 ? 0 : Math.round(refs / total * 100);
+}
+function rollupByOwner(byDirectory, ownership) {
+  if (byDirectory.length === 0 || ownership.length === 0) return [];
+  const byOwner = /* @__PURE__ */ new Map();
+  for (const bucket of byDirectory) {
+    const owner = matchOwner(bucket.dir, ownership) ?? UNOWNED;
+    const acc = byOwner.get(owner) ?? { refs: 0, literals: 0 };
+    acc.refs += asNumber7(bucket.refs);
+    acc.literals += asNumber7(bucket.literals);
+    byOwner.set(owner, acc);
+  }
+  return [...byOwner.entries()].map(([owner, { refs, literals }]) => ({
+    owner,
+    refs,
+    literals,
+    pct: pct3(refs, literals)
+  })).sort(
+    (a, b) => a.pct - b.pct || (a.owner < b.owner ? -1 : a.owner > b.owner ? 1 : 0)
+  );
+}
+function parseCodeowners(text) {
+  const rules = [];
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (line === "" || line.startsWith("#")) continue;
+    const tokens = line.split(/\s+/).filter((t) => t.length > 0);
+    const path = tokens[0];
+    const owners = tokens.slice(1);
+    if (path === void 0 || path === "" || owners.length === 0) continue;
+    for (const owner of owners) {
+      rules.push({ owner, paths: [path] });
+    }
+  }
+  return rules;
+}
+
+// src/engines/report/parity-trend.ts
+function asNumber8(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp013(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function recordPct(record) {
+  if (typeof record.score === "number" && Number.isFinite(record.score)) {
+    return clamp013(record.score);
+  }
+  const total = asNumber8(record.total);
+  if (total <= 0) return 0;
+  return clamp013(100 * asNumber8(record.ok) / total);
+}
+function buildParityTrend(records) {
+  const byDate = /* @__PURE__ */ new Map();
+  for (const entry of records) {
+    if (entry.kind !== "parity") continue;
+    if (entry.at === void 0) continue;
+    const date = entry.at.slice(0, 10);
+    byDate.set(date, Math.round(recordPct(entry.record)));
+  }
+  return [...byDate.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([date, pct5]) => ({ date, pct: pct5 }));
+}
+
 // src/engines/report/scorecard.ts
 var ROW_ORDER = [
   "score",
@@ -14634,10 +16817,10 @@ var ROW_ORDER = [
   "contrast",
   "readiness"
 ];
-function asNumber3(value2) {
+function asNumber9(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function pct3(part, whole) {
+function pct4(part, whole) {
   if (whole <= 0) return void 0;
   return Math.round(100 * part / whole);
 }
@@ -14688,26 +16871,26 @@ function scoreFor(text, weights) {
 function onSystemPct(record) {
   const adoption = record === void 0 ? void 0 : asRecord2(record.adoption);
   if (adoption === void 0) return void 0;
-  const refs = asNumber3(adoption.refs);
-  const literals = asNumber3(adoption.literals);
-  return pct3(refs, refs + literals);
+  const refs = asNumber9(adoption.refs);
+  const literals = asNumber9(adoption.literals);
+  return pct4(refs, refs + literals);
 }
 function violations(record) {
   if (record === void 0) return void 0;
   const byKind = asRecord2(record.byKind) ?? {};
-  return asNumber3(byKind.exact) + asNumber3(byKind.near) + asNumber3(byKind.offSystem);
+  return asNumber9(byKind.exact) + asNumber9(byKind.near) + asNumber9(byKind.offSystem);
 }
 function driftCounts(record) {
   if (record === void 0) return void 0;
   return {
-    stale: asNumber3(record.stale),
-    missing: asNumber3(record.missing),
-    orphan: asNumber3(record.orphan)
+    stale: asNumber9(record.stale),
+    missing: asNumber9(record.missing),
+    orphan: asNumber9(record.orphan)
   };
 }
 function coverageCounts(record) {
   if (record === void 0) return void 0;
-  return { imported: asNumber3(record.imported), total: asNumber3(record.total) };
+  return { imported: asNumber9(record.imported), total: asNumber9(record.total) };
 }
 function contrastPct(record) {
   if (record === void 0) return void 0;
@@ -14717,15 +16900,15 @@ function contrastPct(record) {
   for (const m of modes2) {
     const mm = asRecord2(m);
     if (mm === void 0) continue;
-    passed += asNumber3(mm.passed);
-    failed += asNumber3(mm.failed);
+    passed += asNumber9(mm.passed);
+    failed += asNumber9(mm.failed);
   }
-  return pct3(passed, passed + failed);
+  return pct4(passed, passed + failed);
 }
 function readinessValue(record) {
   if (record === void 0) return void 0;
   return {
-    score: asNumber3(record.score),
+    score: asNumber9(record.score),
     frame: typeof record.frameName === "string" ? record.frameName : ""
   };
 }
@@ -14807,6 +16990,13 @@ function buildScorecard(currentText, baseText, weights) {
 }
 
 // src/engines/report/scorecard-md.ts
+var BAND_GLYPH = {
+  green: "\u{1F7E2}",
+  amber: "\u{1F7E1}",
+  red: "\u{1F534}",
+  unknown: "\u26AA"
+};
+var TARGET_PERCENT = /* @__PURE__ */ new Set(["on-system", "contrast"]);
 var TITLE2 = "### Design-system scorecard";
 var ROW_LABEL = {
   score: "System score",
@@ -14831,7 +17021,8 @@ var COMPONENT_LABEL = {
   lint: "Lint",
   readiness: "Readiness",
   a11y: "A11y",
-  adoption: "Adoption"
+  adoption: "Adoption",
+  parity: "Parity"
 };
 function arrow2(delta) {
   if (delta > 0) return "\u25B2";
@@ -15004,6 +17195,176 @@ function componentBlock(rows) {
   }
   return lines;
 }
+function scoreNow(model) {
+  const row = model.rows.find((r2) => r2.id === "score");
+  return row !== void 0 && row.id === "score" ? row.now : void 0;
+}
+function scoreDelta(model) {
+  const row = model.rows.find((r2) => r2.id === "score");
+  return row !== void 0 && row.id === "score" ? row.delta : void 0;
+}
+function targetMeasured(metric, measured) {
+  if (measured === void 0) return "\u2014";
+  return TARGET_PERCENT.has(metric) ? `${measured}%` : `${measured}`;
+}
+function targetsBlock(targets) {
+  if (targets.length === 0) return [];
+  const lines = [
+    "### Targets",
+    "",
+    "| Metric | Measured | Target | Status |",
+    "| --- | --- | --- | --- |"
+  ];
+  for (const t of targets) {
+    lines.push(
+      `| ${t.metric} | ${targetMeasured(t.metric, t.measured)} | ${t.op} ${t.target} | ${BAND_GLYPH[t.band]} |`
+    );
+  }
+  return lines;
+}
+function ageCell(row) {
+  return row.ageDays !== void 0 ? `${row.ageDays}d` : "\u2014";
+}
+function freshnessBlock(rows, base) {
+  if (rows.length === 0) return [];
+  const delta = base !== void 0;
+  const header = delta ? "| Kind | Last run | Age | \u0394 age | Band |" : "| Kind | Last run | Age | Band |";
+  const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
+  const lines = ["### Freshness", "", header, rule];
+  for (const row of rows) {
+    const last = row.lastRun ?? "never";
+    const age = ageCell(row);
+    const band = BAND_GLYPH[row.band];
+    if (!delta) {
+      lines.push(`| ${row.kind} | ${last} | ${age} | ${band} |`);
+      continue;
+    }
+    const baseRow = base?.find((b) => b.kind === row.kind);
+    const d = row.ageDays !== void 0 && baseRow?.ageDays !== void 0 ? `${signed(row.ageDays - baseRow.ageDays)} ${arrow2(row.ageDays - baseRow.ageDays)}` : "\u2014";
+    lines.push(`| ${row.kind} | ${last} | ${age} | ${d} | ${band} |`);
+  }
+  return lines;
+}
+function velocityBlock(velocity, now, gitRefDelta) {
+  const score = now !== void 0 ? `${now}` : "\u2014";
+  const window = `${signed(velocity.delta)} over ${velocity.windowDays}d`;
+  const streak = `${velocity.regressionStreak}-decline streak`;
+  const motion = gitRefDelta !== void 0 ? `window ${window} \xB7 git-ref ${signed(gitRefDelta)}` : window;
+  return [
+    "### Score velocity",
+    "",
+    `score ${score} \xB7 ${motion} \xB7 ${velocity.direction} \xB7 ${streak}`
+  ];
+}
+function migrationBlock(checklist) {
+  if (checklist.sites.length === 0) return [];
+  const n = checklist.sites.length;
+  const noun = n === 1 ? "call site" : "call sites";
+  const capped = checklist.truncated ? " (capped)" : "";
+  const lines = [
+    "### Migration checklist",
+    "",
+    `${n} ${noun} to migrate${capped}.`,
+    "",
+    "| Site | Subject | Change |",
+    "| --- | --- | --- |"
+  ];
+  for (const s of checklist.sites) {
+    lines.push(
+      `| \`${s.file}:${s.line}\` | ${s.subject} | \`${s.from}\` \u2192 \`${s.to}\` |`
+    );
+  }
+  return lines;
+}
+function ownershipBlock(rows, base) {
+  if (rows.length === 0) return [];
+  const delta = base !== void 0;
+  const header = delta ? "| Owner | On-system | Refs | Literals | \u0394 pct |" : "| Owner | On-system | Refs | Literals |";
+  const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
+  const lines = ["### Ownership", "", header, rule];
+  for (const row of rows) {
+    const cells = `${row.owner} | ${row.pct}% | ${row.refs} | ${row.literals}`;
+    if (!delta) {
+      lines.push(`| ${cells} |`);
+      continue;
+    }
+    const baseRow = base?.find((b) => b.owner === row.owner);
+    const d = baseRow !== void 0 ? `${signed(row.pct - baseRow.pct)} ${arrow2(row.pct - baseRow.pct)}` : "\u2014";
+    lines.push(`| ${cells} | ${d} |`);
+  }
+  return lines;
+}
+function libraryHealthBlock(rows, base, baseLabel, currentLabel) {
+  const now = rows[rows.length - 1];
+  const was = base?.[base.length - 1];
+  if (now === void 0 || was === void 0) return [];
+  const row = (label, b, n) => `| ${label} | ${b} | ${n} | ${signed(n - b)} ${arrow2(n - b)} |`;
+  return [
+    "### Library health",
+    "",
+    `| Signal | ${baseLabel} | ${currentLabel} | \u0394 |`,
+    "| --- | --- | --- | --- |",
+    row("Override hotspots", was.overrides, now.overrides),
+    row("Deprecated usage", was.deprecated, now.deprecated),
+    row("Detached candidates", was.detached, now.detached)
+  ];
+}
+function changelogBlock(changelog) {
+  if (changelog.slices.length === 0) return [];
+  const lines = ["### Changelog", ""];
+  changelog.slices.forEach((slice, index) => {
+    lines.push(
+      `**For ${slice.audience}** \u2014 ${slice.breaking} breaking \xB7 ${slice.additive} additive \xB7 ${slice.cosmetic} cosmetic`
+    );
+    for (const item of slice.recent) lines.push(`- ${item}`);
+    if (index < changelog.slices.length - 1) lines.push("");
+  });
+  return lines;
+}
+function appendixBlocks(model, options) {
+  const selected = options.artifacts;
+  if (selected === void 0) return [];
+  const blocks = options.blocks ?? {};
+  const base = options.baseBlocks;
+  const has = (id) => selected.includes(id);
+  const out = [];
+  const add = (lines) => {
+    if (lines.length > 0) out.push(...lines, "");
+  };
+  if (has("targets") && blocks.targets !== void 0) {
+    add(targetsBlock(blocks.targets));
+  }
+  if (has("data-freshness") && blocks.dataFreshness !== void 0) {
+    add(freshnessBlock(blocks.dataFreshness, base?.dataFreshness));
+  }
+  if (has("score-velocity") && blocks.scoreVelocity !== void 0) {
+    add(
+      velocityBlock(blocks.scoreVelocity, scoreNow(model), scoreDelta(model))
+    );
+  }
+  if (has("migration-checklist") && blocks.migrationChecklist !== void 0) {
+    add(migrationBlock(blocks.migrationChecklist));
+  }
+  if (has("ownership-leaderboard") && blocks.ownershipLeaderboard !== void 0) {
+    add(
+      ownershipBlock(blocks.ownershipLeaderboard, base?.ownershipLeaderboard)
+    );
+  }
+  if (has("library-health-trend") && blocks.libraryHealthTrend !== void 0) {
+    add(
+      libraryHealthBlock(
+        blocks.libraryHealthTrend,
+        base?.libraryHealthTrend,
+        options.baseLabel ?? "base",
+        options.currentLabel ?? "current"
+      )
+    );
+  }
+  if (has("audience-changelog") && blocks.audienceChangelog !== void 0) {
+    add(changelogBlock(blocks.audienceChangelog));
+  }
+  return out;
+}
 function renderScorecardMarkdown(model, options) {
   const lines = [TITLE2, ""];
   if (model.kind === "no-data") {
@@ -15038,7 +17399,85 @@ function renderScorecardMarkdown(model, options) {
     const baseLabel = options.baseLabel ?? "base";
     lines.push(`_no baseline at ${baseLabel}_`, "");
   }
+  lines.push(...appendixBlocks(model, options));
   return lines.join("\n");
+}
+
+// src/engines/report/targets.ts
+function isSatisfied(measured, op, value2) {
+  switch (op) {
+    case ">=":
+      return measured >= value2;
+    case "<=":
+      return measured <= value2;
+    case "==":
+      return measured === value2;
+  }
+}
+function defaultMargin(value2) {
+  return Math.abs(value2) * 0.1;
+}
+function bandFor2(measured, target) {
+  const { op, value: value2, warn } = target;
+  if (isSatisfied(measured, op, value2)) return "green";
+  const margin = defaultMargin(value2);
+  if (op === ">=") {
+    const floor = warn ?? value2 - margin;
+    return measured >= floor ? "amber" : "red";
+  }
+  if (op === "<=") {
+    const ceiling = warn ?? value2 + margin;
+    return measured <= ceiling ? "amber" : "red";
+  }
+  const halfWidth = warn ?? margin;
+  return Math.abs(measured - value2) <= halfWidth ? "amber" : "red";
+}
+function evaluateTargets(latest, targets) {
+  const verdicts = [];
+  for (const [metric, target] of Object.entries(targets)) {
+    const measured = latest[metric];
+    const band = measured === void 0 ? "unknown" : bandFor2(measured, target);
+    verdicts.push({
+      metric,
+      measured,
+      target: target.value,
+      op: target.op,
+      band
+    });
+  }
+  return verdicts;
+}
+
+// src/engines/report/velocity.ts
+var MS_PER_DAY3 = 24 * 60 * 60 * 1e3;
+function computeVelocity(trend, nowIso, windowDays) {
+  if (trend.length < 2) return void 0;
+  const latest = trend[trend.length - 1];
+  if (latest === void 0) return void 0;
+  const nowMs = Date.parse(nowIso);
+  let windowStartDate;
+  if (!Number.isNaN(nowMs)) {
+    windowStartDate = new Date(nowMs - windowDays * MS_PER_DAY3).toISOString().slice(0, 10);
+  }
+  let baseline;
+  if (windowStartDate !== void 0) {
+    for (const point of trend) {
+      if (point.date < windowStartDate) baseline = point;
+    }
+  }
+  if (baseline === void 0) baseline = trend[0];
+  if (baseline === void 0) return void 0;
+  const delta = latest.score - baseline.score;
+  const direction = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  let regressionStreak = 0;
+  for (let i = trend.length - 1; i > 0; i -= 1) {
+    const cur = trend[i];
+    const prev = trend[i - 1];
+    if (cur === void 0 || prev === void 0) break;
+    if (cur.score < prev.score) regressionStreak += 1;
+    else break;
+  }
+  return { delta, windowDays, direction, regressionStreak };
 }
 
 // src/render/html/charts.ts
@@ -15221,6 +17660,53 @@ function donutGauge(value2, opts = {}) {
     "</svg>"
   ].join("");
 }
+var STATUS_BAND_FILL = {
+  green: "#16a34a",
+  amber: "#d97706",
+  red: "#dc2626",
+  unknown: TRACK_COLOR
+};
+function statusGrid(rows, opts = {}) {
+  const width = opts.width ?? 480;
+  const rowH = 28;
+  const height = opts.height ?? Math.max(rowH, rows.length * rowH + 8);
+  if (rows.length === 0) {
+    return emptyState(width, height, "Status grid (no data)");
+  }
+  const pad2 = { top: 4, left: 8, right: 8 };
+  const pillW = 76;
+  const pillX = round2(width - pad2.right - pillW);
+  const measuredX = round2(width * 0.42);
+  const targetX = round2(width * 0.62);
+  const parts = [];
+  parts.push(svgOpen(width, height));
+  parts.push(
+    `<title>Status grid: ${escapeXml2(rows.map((r2) => r2.label).join(", "))}</title>`
+  );
+  rows.forEach((row, index) => {
+    const y = pad2.top + index * rowH;
+    const midY = round2(y + rowH / 2 + 3);
+    const fill = STATUS_BAND_FILL[row.band];
+    const pillTextColor = row.band === "unknown" ? TEXT_COLOR2 : "#ffffff";
+    parts.push(
+      `<text x="${pad2.left}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11" font-weight="600">${escapeXml2(row.label)}</text>`
+    );
+    parts.push(
+      `<text x="${measuredX}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11">${escapeXml2(row.measured)}</text>`
+    );
+    parts.push(
+      `<text x="${targetX}" y="${midY}" text-anchor="start" fill="${AXIS_COLOR}" font-family="sans-serif" font-size="11">${escapeXml2(row.target)}</text>`
+    );
+    parts.push(
+      `<rect class="pill" x="${pillX}" y="${round2(y + 5)}" width="${pillW}" height="${rowH - 10}" fill="${fill}" rx="9" />`
+    );
+    parts.push(
+      `<text x="${round2(pillX + pillW / 2)}" y="${midY}" text-anchor="middle" fill="${pillTextColor}" font-family="sans-serif" font-size="10" font-weight="600">${escapeXml2(row.band)}</text>`
+    );
+  });
+  parts.push("</svg>");
+  return parts.join("");
+}
 function heatGrid(rows, opts = {}) {
   const cellSize = 28;
   const labelW = 72;
@@ -15394,9 +17880,11 @@ var COMPONENT_LABEL2 = {
   drift: "drift",
   lint: "lint",
   readiness: "readiness",
-  a11y: "a11y"
+  a11y: "a11y",
+  adoption: "adoption",
+  parity: "parity"
 };
-function systemScoreSection(data) {
+function systemScoreSection(data, weightProfile) {
   const score = data.systemScore;
   if (score === void 0) {
     return panel("System score", emptyState2("report"));
@@ -15419,12 +17907,14 @@ function systemScoreSection(data) {
     `<tbody>${legendRows}</tbody>`,
     "</table>"
   ].join("");
+  const caption = weightProfile?.source === "view" && weightProfile.name !== void 0 ? `<div class="meta">weights: ${escapeHtml(weightProfile.name)} profile</div>` : "";
   return panel(
     "System score",
     [
       `<div class="chart" style="text-align:center">${donutGauge(score.current, { label: "System score" })}</div>`,
       `<div class="chart">${lineChart(trendSeries)}</div>`,
-      legend
+      legend,
+      caption
     ].join("")
   );
 }
@@ -15592,7 +18082,7 @@ function importCoverageSection(data) {
     return panel("Import coverage", emptyState2("adoption"));
   }
   const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct4 = total === 0 ? 0 : Math.round(imported / total * 100);
+  const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
   const list = uncovered.length > 0 ? [
     '<ul class="offenders">',
     ...uncovered.map(
@@ -15606,7 +18096,7 @@ function importCoverageSection(data) {
   return panel(
     "Import coverage",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(pct4, { label: "Import coverage" })}</div>`,
+      `<div class="chart" style="text-align:center">${donutGauge(pct5, { label: "Import coverage" })}</div>`,
       `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
       list,
       overflow
@@ -15712,6 +18202,279 @@ function changeFrequencySection(data) {
     [window, `<div class="chart">${barChart(bars)}</div>`].join("")
   );
 }
+function targetsSection(data) {
+  const targets = data.targets;
+  if (targets === void 0 || targets.length === 0) {
+    return panel("Targets / SLAs", emptyState2("report"));
+  }
+  const rows = targets.map((verdict) => ({
+    label: COMPONENT_LABEL2[verdict.metric] ?? verdict.metric,
+    measured: verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
+    target: `${verdict.op} ${verdict.target}`,
+    band: verdict.band
+  }));
+  const legendRows = ["green", "amber", "red", "unknown"].map(
+    (band) => `<tr><td>${escapeHtml(band)}</td><td>${escapeHtml(
+      band === "green" ? "meets target" : band === "amber" ? "near target" : band === "red" ? "misses target" : "not measured"
+    )}</td></tr>`
+  ).join("");
+  const legend = [
+    '<table class="weights">',
+    "<thead><tr><th>Band</th><th>Meaning</th></tr></thead>",
+    `<tbody>${legendRows}</tbody>`,
+    "</table>"
+  ].join("");
+  return panel(
+    "Targets / SLAs",
+    [`<div class="chart">${statusGrid(rows)}</div>`, legend].join("")
+  );
+}
+function parityTrendSection(data) {
+  const trend = data.parityTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel("Parity trend", emptyState2("registry build"));
+  }
+  const series = [
+    {
+      label: "parity %",
+      points: trend.map((point, index) => ({ x: index, y: point.pct }))
+    }
+  ];
+  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
+    trend[trend.length - 1]?.date ?? ""
+  )}`;
+  return panel(
+    "Parity trend",
+    [
+      `<div class="chart">${lineChart(series)}</div>`,
+      `<div class="meta">Component parity pass-% over ${dateRange}</div>`
+    ].join("")
+  );
+}
+function componentHealthSection(data) {
+  const rows = data.componentHealth;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Component health", emptyState2("registry build"));
+  }
+  const bars = rows.map((row) => ({
+    label: row.component,
+    value: row.healthScore
+  }));
+  const offenders = rows.slice(0, 5);
+  const list = [
+    '<ul class="offenders">',
+    ...offenders.map((row) => {
+      const issues = row.issues.length > 0 ? row.issues.join(", ") : "no issues";
+      return `<li><code>${escapeHtml(row.component)}</code><span class="count">${escapeHtml(String(row.healthScore))} \xB7 ${escapeHtml(issues)}</span></li>`;
+    }),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Component health",
+    [
+      '<div class="meta">Composite health per component, worst-first</div>',
+      `<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+      list
+    ].join("")
+  );
+}
+function libraryHealthTrendSection(data) {
+  const trend = data.libraryHealthTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel("Library health trend", emptyState2("library-health"));
+  }
+  const toSeries = (label, pick) => ({
+    label,
+    points: trend.map((point, index) => ({ x: index, y: pick(point) }))
+  });
+  const series = [
+    toSeries("overrides", (p4) => p4.overrides),
+    toSeries("deprecated", (p4) => p4.deprecated),
+    toSeries("detached", (p4) => p4.detached)
+  ];
+  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
+    trend[trend.length - 1]?.date ?? ""
+  )}`;
+  return panel(
+    "Library health trend",
+    [
+      `<div class="chart">${lineChart(series)}</div>`,
+      `<div class="cols"><b>Overrides</b> \xB7 <b>Deprecated</b> \xB7 <b>Detached</b> over ${dateRange}</div>`
+    ].join("")
+  );
+}
+function migrationChecklistSection(data) {
+  const checklist = data.migrationChecklist;
+  if (checklist === void 0 || checklist.sites.length === 0) {
+    return panel("Migration checklist", emptyState2("impact --checklist"));
+  }
+  const rows = checklist.sites.map((site) => {
+    const where = `${site.file}:${site.line}`;
+    const detail = `${escapeHtml(site.subject)} \xB7 ${escapeHtml(site.from)} \u2192 ${escapeHtml(site.to)}`;
+    return `<li><code>${escapeHtml(where)}</code><span class="detail">${detail}</span></li>`;
+  }).join("");
+  const overflow = checklist.truncated ? '<div class="meta">\u2026 and more sites beyond the cap</div>' : "";
+  return panel(
+    "Migration checklist",
+    [
+      `<div class="meta">${escapeHtml(String(checklist.sites.length))} call site${checklist.sites.length === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to</div>`,
+      `<ul class="calendar">${rows}</ul>`,
+      overflow
+    ].join("")
+  );
+}
+function scoreVelocitySection(data) {
+  const velocity = data.scoreVelocity;
+  if (velocity === void 0) {
+    return panel("Score velocity", emptyState2("report"));
+  }
+  const { delta, windowDays, direction, regressionStreak } = velocity;
+  const ARROW = {
+    up: "\u25B2",
+    down: "\u25BC",
+    flat: "\u25AC"
+  };
+  const arrow3 = ARROW[direction];
+  const signedDelta = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
+  const streakBadge = regressionStreak > 0 ? `<span class="badge">${escapeHtml(String(regressionStreak))} regression${regressionStreak === 1 ? "" : "s"}</span>` : "";
+  return panel(
+    "Score velocity",
+    [
+      `<div class="cols"><b>${escapeHtml(arrow3)} ${escapeHtml(signedDelta)}</b> over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</div>`,
+      `<div class="meta">${escapeHtml(direction)} \xB7 regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`
+    ].join("")
+  );
+}
+function ownershipLeaderboardSection(data) {
+  const rows = data.ownershipLeaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Ownership leaderboard", emptyState2("lint"));
+  }
+  const bars = rows.map((row) => ({
+    label: row.owner,
+    value: row.pct
+  }));
+  const labels = [
+    '<ul class="offenders">',
+    ...rows.map(
+      (row) => `<li><code>${escapeHtml(row.owner)}</code><span class="count">${escapeHtml(
+        String(row.pct)
+      )}% \xB7 ${escapeHtml(String(row.refs))} refs / ${escapeHtml(
+        String(row.literals)
+      )} literals</span></li>`
+    ),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Ownership leaderboard",
+    [
+      `<div class="meta">On-system % by owner, worst-first \xB7 css/scss values only</div>`,
+      `<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+      labels
+    ].join("")
+  );
+}
+function audienceChangelogSection(data) {
+  const changelog = data.audienceChangelog;
+  if (changelog === void 0 || changelog.slices.length === 0) {
+    return panel("Changelog by audience", emptyState2("ds-changelog"));
+  }
+  const columns = changelog.slices.map((slice) => {
+    const badges = [
+      `<span class="badge">breaking ${escapeHtml(String(slice.breaking))}</span>`,
+      `<span class="badge">additive ${escapeHtml(String(slice.additive))}</span>`,
+      `<span class="badge">cosmetic ${escapeHtml(String(slice.cosmetic))}</span>`
+    ].join("");
+    const recent = slice.recent.length > 0 ? [
+      '<ul class="offenders">',
+      ...slice.recent.map(
+        (entry) => `<li><code>${escapeHtml(entry)}</code></li>`
+      ),
+      "</ul>"
+    ].join("") : '<div class="meta">No recent entries</div>';
+    return [
+      '<div class="audience-col">',
+      `<div class="cols"><b>${escapeHtml(slice.audience)}</b></div>`,
+      `<div class="meta">${badges}</div>`,
+      recent,
+      "</div>"
+    ].join("");
+  }).join("");
+  return panel("Changelog by audience", `<div class="cols">${columns}</div>`);
+}
+function frameImplementabilitySection(data) {
+  const frame = data.frameImplementability;
+  if (frame === void 0) {
+    return panel("Frame implementability", emptyState2("frame-impl"));
+  }
+  const { pct: pct5, resolved, total, gaps } = frame;
+  const gapList = gaps.length > 0 ? [
+    '<ul class="offenders">',
+    ...gaps.map(
+      (gap) => `<li><code>${escapeHtml(gap.reason)}</code><span class="count">${escapeHtml(String(gap.count))}</span></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  return panel(
+    "Frame implementability",
+    [
+      `<div class="chart" style="text-align:center">${donutGauge(pct5, { label: "Frame implementability" })}</div>`,
+      `<div class="meta">${escapeHtml(String(resolved))}/${escapeHtml(String(total))} requirements resolve to the system</div>`,
+      gapList
+    ].join("")
+  );
+}
+function releaseReadinessSection(data) {
+  const readiness = data.releaseReadiness;
+  if (readiness === void 0 || readiness.checks.length === 0) {
+    return panel("Release readiness", emptyState2("release-check"));
+  }
+  const GO_FILL = "#16a34a";
+  const NO_GO_FILL = "#dc2626";
+  const headerFill = readiness.go ? GO_FILL : NO_GO_FILL;
+  const headerText = readiness.go ? "GO" : "NO-GO";
+  const header = `<div class="meta"><span class="badge" style="background:${headerFill};color:#ffffff">${escapeHtml(headerText)}</span></div>`;
+  const items = readiness.checks.map((check) => {
+    const mark = check.pass ? "\u2713" : "\u2717";
+    const markFill = check.pass ? GO_FILL : NO_GO_FILL;
+    const detail = check.detail !== void 0 && check.detail.length > 0 ? `<span class="detail">${escapeHtml(check.detail)}</span>` : "";
+    return `<li><span class="date" style="color:${markFill}">${mark}</span><span class="detail">${escapeHtml(check.name)}</span>${detail}</li>`;
+  }).join("");
+  return panel(
+    "Release readiness",
+    [header, `<ul class="calendar">${items}</ul>`].join("")
+  );
+}
+function dataFreshnessSection(data) {
+  const rows = data.dataFreshness;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Data freshness", emptyState2("report"));
+  }
+  const BAND_FILL = {
+    green: "#16a34a",
+    amber: "#d97706",
+    red: "#dc2626",
+    unknown: "#57606a"
+  };
+  const ageLabel = (row) => {
+    if (row.ageDays === void 0) return "never";
+    if (row.ageDays === 0) return "today";
+    return `${row.ageDays}d ago`;
+  };
+  const items = rows.map((row) => {
+    const fill = BAND_FILL[row.band];
+    const pill = `<span class="badge" style="background:${fill};color:#ffffff">${escapeHtml(row.band)}</span>`;
+    const age = escapeHtml(ageLabel(row));
+    return `<li><span class="date">${escapeHtml(row.kind)}</span><span class="detail">${pill} ${age}</span></li>`;
+  }).join("");
+  return panel(
+    "Data freshness",
+    [
+      '<div class="meta">Measurement age per check-kind \xB7 band signals trust</div>',
+      `<ul class="calendar">${items}</ul>`
+    ].join("")
+  );
+}
 var SECTION_RENDERERS = {
   "system-score": systemScoreSection,
   "drift-trend": driftSection,
@@ -15725,13 +18488,28 @@ var SECTION_RENDERERS = {
   leaderboard: leaderboardSection,
   "library-health": libraryHealthSection,
   "breaking-calendar": breakingCalendarSection,
-  "change-frequency": changeFrequencySection
+  "change-frequency": changeFrequencySection,
+  // Persona-wave metric sections (C1–C13). Real chart/list renderers (M4.1 +
+  // M4.2); the completeness gate (24 artifacts) holds via the Record type.
+  targets: targetsSection,
+  "parity-trend": parityTrendSection,
+  "component-health": componentHealthSection,
+  "library-health-trend": libraryHealthTrendSection,
+  "migration-checklist": migrationChecklistSection,
+  "score-velocity": scoreVelocitySection,
+  "ownership-leaderboard": ownershipLeaderboardSection,
+  "audience-changelog": audienceChangelogSection,
+  "frame-implementability": frameImplementabilitySection,
+  "release-readiness": releaseReadinessSection,
+  "data-freshness": dataFreshnessSection
 };
 function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   const project = escapeHtml(data.project);
   const generatedAt = escapeHtml(data.generatedAt);
   const viewLabel = options.viewLabel === void 0 ? "" : `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
-  const sections = selection.map((id) => SECTION_RENDERERS[id](data));
+  const sections = selection.map(
+    (id) => id === "system-score" ? systemScoreSection(data, options.weightProfile) : SECTION_RENDERERS[id](data)
+  );
   const body = [
     '<div class="wrap">',
     '<header class="dash">',
@@ -15768,7 +18546,7 @@ var RULE_REASON = {
   component: "Component usage",
   naming: "Naming"
 };
-function asNumber4(value2) {
+function asNumber10(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
 function onSystemPct3(refs, literals) {
@@ -15776,10 +18554,10 @@ function onSystemPct3(refs, literals) {
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join16(stateDir, "history.jsonl");
+  const historyPath = join20(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync13(historyPath, "utf8");
+    text = readFileSync17(historyPath, "utf8");
   } catch {
     return {
       driftTrend: [],
@@ -15820,9 +18598,9 @@ function aggregateHistory(stateDir, onWarning) {
       const date = typeof r2.at === "string" ? r2.at.slice(0, 10) : "";
       driftTrend.push({
         date,
-        breaking: asNumber4(r2.stale),
-        additive: asNumber4(r2.missing),
-        cosmetic: asNumber4(r2.orphan)
+        breaking: asNumber10(r2.stale),
+        additive: asNumber10(r2.missing),
+        cosmetic: asNumber10(r2.orphan)
       });
       continue;
     }
@@ -15831,16 +18609,16 @@ function aggregateHistory(stateDir, onWarning) {
       const byKind = r2.byKind ?? { exact: 0, near: 0, offSystem: 0 };
       lint = {
         byKind: {
-          exact: asNumber4(byKind.exact),
-          near: asNumber4(byKind.near),
-          offSystem: asNumber4(byKind.offSystem)
+          exact: asNumber10(byKind.exact),
+          near: asNumber10(byKind.near),
+          offSystem: asNumber10(byKind.offSystem)
         },
         topOffenders: []
       };
       const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
       if (adoption !== void 0) {
-        const refs = asNumber4(adoption.refs);
-        const literals = asNumber4(adoption.literals);
+        const refs = asNumber10(adoption.refs);
+        const literals = asNumber10(adoption.literals);
         if (typeof r2.at === "string") {
           adoptionTrend.push({
             date: r2.at.slice(0, 10),
@@ -15850,16 +18628,16 @@ function aggregateHistory(stateDir, onWarning) {
         const byDirectory = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
         leaderboard = byDirectory.map((d) => ({
           dir: typeof d.dir === "string" ? d.dir : "",
-          refs: asNumber4(d.refs),
-          literals: asNumber4(d.literals)
+          refs: asNumber10(d.refs),
+          literals: asNumber10(d.literals)
         }));
       }
       continue;
     }
     if (record.kind === "adoption") {
       const r2 = record;
-      const imported = asNumber4(r2.imported);
-      const total = asNumber4(r2.total);
+      const imported = asNumber10(r2.imported);
+      const total = asNumber10(r2.total);
       const uncovered = Array.isArray(r2.uncovered) ? r2.uncovered.filter((n) => typeof n === "string") : [];
       importCoverage = {
         imported,
@@ -15873,11 +18651,11 @@ function aggregateHistory(stateDir, onWarning) {
       const r2 = record;
       const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
       readiness = {
-        score: asNumber4(r2.score),
+        score: asNumber10(r2.score),
         frameName: typeof r2.frameName === "string" ? r2.frameName : "",
         deductions: deductions.map((d) => ({
           reason: RULE_REASON[d.rule] ?? d.rule,
-          points: asNumber4(d.points)
+          points: asNumber10(d.points)
         }))
       };
       continue;
@@ -15889,8 +18667,8 @@ function aggregateHistory(stateDir, onWarning) {
         level: r2.level === "AAA" ? "AAA" : "AA",
         modes: modes2.map((m) => ({
           mode: typeof m.mode === "string" ? m.mode : "",
-          passed: asNumber4(m.passed),
-          failed: asNumber4(m.failed)
+          passed: asNumber10(m.passed),
+          failed: asNumber10(m.failed)
         }))
       };
       continue;
@@ -15898,10 +18676,10 @@ function aggregateHistory(stateDir, onWarning) {
     if (record.kind === "impact") {
       const r2 = record;
       impact = {
-        breaking: asNumber4(r2.breaking),
-        additive: asNumber4(r2.additive),
-        cosmetic: asNumber4(r2.cosmetic),
-        touchedCallSites: asNumber4(r2.touchedCallSites)
+        breaking: asNumber10(r2.breaking),
+        additive: asNumber10(r2.additive),
+        cosmetic: asNumber10(r2.cosmetic),
+        touchedCallSites: asNumber10(r2.touchedCallSites)
       };
       continue;
     }
@@ -15912,9 +18690,9 @@ function aggregateHistory(stateDir, onWarning) {
         deprecatedUsage: [],
         detachedCandidates: [],
         totals: {
-          overrideHotspots: asNumber4(r2.overrideHotspots),
-          deprecatedUsage: asNumber4(r2.deprecatedUsage),
-          detachedCandidates: asNumber4(r2.detachedCandidates)
+          overrideHotspots: asNumber10(r2.overrideHotspots),
+          deprecatedUsage: asNumber10(r2.deprecatedUsage),
+          detachedCandidates: asNumber10(r2.detachedCandidates)
         }
       };
     }
@@ -15932,10 +18710,10 @@ function aggregateHistory(stateDir, onWarning) {
   };
 }
 function computeSystemScore(stateDir, weights) {
-  const historyPath = join16(stateDir, "history.jsonl");
+  const historyPath = join20(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync13(historyPath, "utf8");
+    text = readFileSync17(historyPath, "utf8");
   } catch {
     return void 0;
   }
@@ -15948,17 +18726,223 @@ function computeSystemScore(stateDir, weights) {
   };
 }
 function computeConsumerArtifacts(stateDir) {
-  const records = replayHistory(readHistoryText2(stateDir));
+  const records = replayHistory(readHistoryText3(stateDir));
   return {
     breakingCalendar: buildBreakingCalendar(records),
     changeFrequency: buildChangeFrequency(records)
   };
 }
-function readParity(stateDir, onWarning) {
-  const registryPath = join16(stateDir, "registry.json");
+function computeParityTrend(stateDir) {
+  return buildParityTrend(replayHistory(readHistoryText3(stateDir)));
+}
+function computeLibraryHealthTrend(stateDir) {
+  return buildLibraryHealthTrend(replayHistory(readHistoryText3(stateDir)));
+}
+var VELOCITY_WINDOW = /^(\d+)([dw])$/;
+function parseVelocityWindow(raw) {
+  if (raw === void 0) return { kind: "ok", days: void 0 };
+  const match = VELOCITY_WINDOW.exec(raw);
+  if (match === null) {
+    return {
+      kind: "error",
+      message: `Invalid --velocity-window "${raw}". Expected a relative window "<N>d" or "<N>w".`
+    };
+  }
+  const count = Number.parseInt(match[1] ?? "", 10);
+  if (count <= 0) {
+    return {
+      kind: "error",
+      message: `Invalid --velocity-window "${raw}". The count must be a positive integer.`
+    };
+  }
+  return { kind: "ok", days: match[2] === "w" ? count * 7 : count };
+}
+function computeScoreVelocity(trend, nowIso, windowDays) {
+  return computeVelocity(trend, nowIso, windowDays);
+}
+function computeMigrationChecklist(stateDir, cap) {
+  const records = replayHistory(readHistoryText3(stateDir));
+  let latestImpact;
+  for (const entry of records) {
+    if (entry.kind === "impact") latestImpact = entry.record;
+  }
+  return buildMigrationChecklist(latestImpact, cap);
+}
+function computeAudienceChangelog(stateDir) {
+  const records = replayHistory(readHistoryText3(stateDir));
+  let latestChangelog;
+  for (const entry of records) {
+    if (entry.kind === "changelog") latestChangelog = entry.record;
+  }
+  return buildAudienceChangelog(latestChangelog);
+}
+function computeFrameImplementability(stateDir) {
+  const records = replayHistory(readHistoryText3(stateDir));
+  let latestFrameImpl;
+  for (const entry of records) {
+    if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
+  }
+  return buildFrameImplementability(latestFrameImpl);
+}
+function resolveOwnership(targetDir, ownership, ownershipFile) {
+  if (ownership !== void 0) return ownership;
+  if (ownershipFile === void 0) return void 0;
   let text;
   try {
-    text = readFileSync13(registryPath, "utf8");
+    text = readFileSync17(resolve11(targetDir, ownershipFile), "utf8");
+  } catch {
+    return void 0;
+  }
+  return parseCodeowners(text);
+}
+function byDirectoryFromRecords(records) {
+  let byDirectory = [];
+  for (const { kind, record } of records) {
+    if (kind !== "lint") continue;
+    const adoption = asRecord3(record.adoption);
+    if (adoption === void 0) continue;
+    const raw = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
+    byDirectory = raw.map((entry) => {
+      const dirRec = asRecord3(entry) ?? {};
+      return {
+        dir: typeof dirRec.dir === "string" ? dirRec.dir : "",
+        refs: asNumber10(dirRec.refs),
+        literals: asNumber10(dirRec.literals)
+      };
+    });
+  }
+  return byDirectory;
+}
+function computeOwnershipLeaderboard(stateDir, ownership) {
+  if (ownership === void 0) return [];
+  const records = replayHistory(readHistoryText3(stateDir));
+  return rollupByOwner(byDirectoryFromRecords(records), ownership);
+}
+function computeReleaseReadiness(stateDir) {
+  const signals = extractReleaseSignals(
+    replayHistory(readHistoryText3(stateDir))
+  );
+  if (signals.impact === void 0 && signals.drift === void 0 && signals.parity === void 0) {
+    return { go: false, checks: [] };
+  }
+  return evaluateReleaseReadiness(signals);
+}
+function computeDataFreshness(stateDir, nowIso, thresholds) {
+  return buildFreshness(
+    replayHistory(readHistoryText3(stateDir)),
+    nowIso,
+    thresholds
+  );
+}
+function readParityRows(stateDir) {
+  const registryPath = join20(stateDir, "registry.json");
+  let text;
+  try {
+    text = readFileSync17(registryPath, "utf8");
+  } catch {
+    return [];
+  }
+  let registry;
+  try {
+    registry = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  return buildParity(registry).rows;
+}
+function computeComponentHealth(stateDir, readiness, a11y, aliases) {
+  return buildComponentHealth({
+    parityRows: readParityRows(stateDir),
+    ...readiness !== void 0 ? {
+      readiness: {
+        frameName: readiness.frameName,
+        score: readiness.score
+      }
+    } : {},
+    ...a11y !== void 0 ? { a11y: { modes: a11y.modes } } : {},
+    ...aliases !== void 0 ? { aliases } : {}
+  });
+}
+function asRecord3(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function safePct(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function latestTargetScalars(stateDir, systemScore) {
+  const records = replayHistory(readHistoryText3(stateDir));
+  let adoptionLint;
+  let tokensCheck;
+  let parity;
+  let a11y;
+  let handoff;
+  for (const { kind, record } of records) {
+    switch (kind) {
+      case "lint":
+        if (asRecord3(record.adoption) !== void 0) adoptionLint = record;
+        break;
+      case "tokens-check":
+        tokensCheck = record;
+        break;
+      case "parity":
+        parity = record;
+        break;
+      case "a11y":
+        a11y = record;
+        break;
+      case "handoff":
+        handoff = record;
+        break;
+      default:
+        break;
+    }
+  }
+  const scalars = {};
+  const adoption = adoptionLint && asRecord3(adoptionLint.adoption);
+  if (adoption !== void 0) {
+    const refs = asNumber10(adoption.refs);
+    const literals = asNumber10(adoption.literals);
+    const pct5 = safePct(refs, refs + literals);
+    if (pct5 !== void 0) scalars["on-system"] = pct5;
+  }
+  if (tokensCheck !== void 0) {
+    scalars.drift = asNumber10(tokensCheck.stale) + asNumber10(tokensCheck.missing) + asNumber10(tokensCheck.orphan);
+  }
+  if (parity !== void 0) {
+    const total = asNumber10(parity.total);
+    if (typeof parity.score === "number" && Number.isFinite(parity.score)) {
+      scalars.parity = parity.score;
+    } else if (total > 0) {
+      scalars.parity = Math.round(100 * asNumber10(parity.ok) / total);
+    }
+  }
+  if (a11y !== void 0) {
+    const modes2 = Array.isArray(a11y.modes) ? a11y.modes : [];
+    let passed = 0;
+    let failed = 0;
+    for (const m of modes2) {
+      const mm = asRecord3(m);
+      if (mm === void 0) continue;
+      passed += asNumber10(mm.passed);
+      failed += asNumber10(mm.failed);
+    }
+    const pct5 = safePct(passed, passed + failed);
+    if (pct5 !== void 0) scalars.contrast = pct5;
+  }
+  if (handoff !== void 0) scalars.readiness = asNumber10(handoff.score);
+  if (systemScore !== void 0) scalars["system-score"] = systemScore;
+  return scalars;
+}
+function computeTargets(stateDir, targets, systemScore) {
+  if (targets === void 0) return [];
+  return evaluateTargets(latestTargetScalars(stateDir, systemScore), targets);
+}
+function readParity(stateDir, onWarning) {
+  const registryPath = join20(stateDir, "registry.json");
+  let text;
+  try {
+    text = readFileSync17(registryPath, "utf8");
   } catch {
     return void 0;
   }
@@ -15975,8 +18959,8 @@ function readParity(stateDir, onWarning) {
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync11(dirname8(outPath), { recursive: true });
-    writeFileSync9(outPath, html, "utf8");
+    mkdirSync13(dirname8(outPath), { recursive: true });
+    writeFileSync10(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -16026,11 +19010,20 @@ function resolveSelection(targetDir, options) {
   let dashboardView;
   let dashboardArtifacts;
   let scoreWeights;
-  const configPath = join16(targetDir, ".ds-bridge.json");
-  if (existsSync13(configPath)) {
+  let scoreWeightsByView;
+  let metricTargets;
+  let freshnessThresholds;
+  let componentAliases;
+  let ownership;
+  let ownershipFile;
+  const defaults = resolveConfig({});
+  let migrationSitesCap = defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
+  let scoreVelocityWindow = defaults.kind === "ok" ? defaults.config.scoreVelocityWindow : 30;
+  const configPath = join20(targetDir, ".ds-bridge.json");
+  if (existsSync16(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync13(configPath, "utf8");
+      projectFileText = readFileSync17(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -16045,6 +19038,14 @@ function resolveSelection(targetDir, options) {
     dashboardView = resolved.config.dashboardView;
     dashboardArtifacts = resolved.config.dashboardArtifacts;
     scoreWeights = resolved.config.scoreWeights;
+    scoreWeightsByView = resolved.config.scoreWeightsByView;
+    migrationSitesCap = resolved.config.migrationSitesCap;
+    metricTargets = resolved.config.metricTargets;
+    scoreVelocityWindow = resolved.config.scoreVelocityWindow;
+    freshnessThresholds = resolved.config.freshnessThresholds;
+    componentAliases = resolved.config.componentAliases;
+    ownership = resolved.config.ownership;
+    ownershipFile = resolved.config.ownershipFile;
   }
   const flagArtifacts = parseArtifactsFlag(options.artifacts);
   const outcome = resolveView(
@@ -16083,31 +19084,46 @@ function resolveSelection(targetDir, options) {
 `);
       }
       const viewLabel = outcome.source === "default" ? void 0 : outcome.viewName ?? "custom";
+      const viewName = outcome.source === "default" ? void 0 : outcome.viewName;
       return {
         artifacts: outcome.artifacts,
+        migrationSitesCap,
+        scoreVelocityWindow,
         ...viewLabel !== void 0 ? { viewLabel } : {},
-        ...scoreWeights !== void 0 ? { scoreWeights } : {}
+        ...viewName !== void 0 ? { viewName } : {},
+        ...scoreWeights !== void 0 ? { scoreWeights } : {},
+        ...scoreWeightsByView !== void 0 ? { scoreWeightsByView } : {},
+        ...metricTargets !== void 0 ? { metricTargets } : {},
+        ...freshnessThresholds !== void 0 ? { freshnessThresholds } : {},
+        ...componentAliases !== void 0 ? { componentAliases } : {},
+        ...ownership !== void 0 ? { ownership } : {},
+        ...ownershipFile !== void 0 ? { ownershipFile } : {}
       };
     }
   }
 }
-function readHistoryText2(stateDir) {
+function readHistoryText3(stateDir) {
   try {
-    return readFileSync13(join16(stateDir, "history.jsonl"), "utf8");
+    return readFileSync17(join20(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
-function runMarkdownReport(targetDir, options, weights) {
-  const stateDir = join16(targetDir, ".ds-bridge");
-  const currentText = readHistoryText2(stateDir);
+function runMarkdownReport(targetDir, options, selection) {
+  const weightProfile = resolveWeightProfile(
+    selection.viewName,
+    selection.scoreWeights,
+    selection.scoreWeightsByView
+  );
+  const stateDir = join20(targetDir, ".ds-bridge");
+  const currentText = readHistoryText3(stateDir);
   let baseText;
   let noBaseline = false;
   const baseLabel = options.delta;
   if (options.delta !== void 0) {
     const outcome = readFileAtRef({
       ref: options.delta,
-      path: join16(".ds-bridge", "history.jsonl"),
+      path: join20(".ds-bridge", "history.jsonl"),
       cwd: targetDir,
       exec: spawnGitExec
     });
@@ -16121,7 +19137,7 @@ function runMarkdownReport(targetDir, options, weights) {
       baseText = outcome.text;
     }
   }
-  const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
+  const effectiveWeights = weightProfile.weights;
   const model = buildScorecard(currentText, baseText, effectiveWeights);
   if (model.kind === "no-data") {
     failReport(
@@ -16129,12 +19145,78 @@ function runMarkdownReport(targetDir, options, weights) {
     );
     return;
   }
+  const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const systemScore = computeSystemScore(stateDir, effectiveWeights);
+  const parsedWindow = parseVelocityWindow(options.velocityWindow);
+  const velocityWindowDays = (parsedWindow.kind === "ok" ? parsedWindow.days : void 0) ?? selection.scoreVelocityWindow;
+  const ownership = resolveOwnership(
+    targetDir,
+    selection.ownership,
+    selection.ownershipFile
+  );
+  const blocks = {};
+  const targets = computeTargets(
+    stateDir,
+    selection.metricTargets,
+    systemScore?.current
+  );
+  if (targets.length > 0) blocks.targets = targets;
+  const dataFreshness = computeDataFreshness(
+    stateDir,
+    generatedAt,
+    selection.freshnessThresholds
+  );
+  if (dataFreshness.length > 0) blocks.dataFreshness = dataFreshness;
+  const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
+  if (scoreVelocity !== void 0) blocks.scoreVelocity = scoreVelocity;
+  const ownershipLeaderboard = computeOwnershipLeaderboard(stateDir, ownership);
+  if (ownershipLeaderboard.length > 0) {
+    blocks.ownershipLeaderboard = ownershipLeaderboard;
+  }
+  const migrationChecklist = computeMigrationChecklist(
+    stateDir,
+    selection.migrationSitesCap
+  );
+  if (migrationChecklist.sites.length > 0) {
+    blocks.migrationChecklist = migrationChecklist;
+  }
+  const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+  if (libraryHealthTrend.length > 0)
+    blocks.libraryHealthTrend = libraryHealthTrend;
+  const audienceChangelog = computeAudienceChangelog(stateDir);
+  if (audienceChangelog.slices.length > 0) {
+    blocks.audienceChangelog = audienceChangelog;
+  }
+  let baseBlocks;
+  if (baseText !== void 0) {
+    const baseRecords = replayHistory(baseText);
+    const b = {};
+    const baseFreshness = buildFreshness(
+      baseRecords,
+      generatedAt,
+      selection.freshnessThresholds
+    );
+    if (baseFreshness.length > 0) b.dataFreshness = baseFreshness;
+    const baseLht = buildLibraryHealthTrend(baseRecords);
+    if (baseLht.length > 0) b.libraryHealthTrend = baseLht;
+    if (ownership !== void 0) {
+      const baseOwners = rollupByOwner(
+        byDirectoryFromRecords(baseRecords),
+        ownership
+      );
+      if (baseOwners.length > 0) b.ownershipLeaderboard = baseOwners;
+    }
+    baseBlocks = b;
+  }
   const markdown = renderScorecardMarkdown(model, {
     ...baseLabel !== void 0 ? { baseLabel } : {},
-    ...noBaseline ? { noBaseline: true } : {}
+    ...noBaseline ? { noBaseline: true } : {},
+    artifacts: selection.artifacts,
+    blocks,
+    ...baseBlocks !== void 0 ? { baseBlocks } : {}
   });
   if (options.out !== void 0) {
-    const outPath = resolve9(options.out);
+    const outPath = resolve11(options.out);
     const written = writeDashboard(outPath, markdown);
     if (written.kind === "error") {
       failReport(written.message);
@@ -16144,6 +19226,18 @@ function runMarkdownReport(targetDir, options, weights) {
 `);
   } else {
     process.stdout.write(markdown);
+  }
+  if (options.gate) {
+    const score = scoreFromHistory(currentText, effectiveWeights);
+    const verdicts = computeTargets(
+      stateDir,
+      selection.metricTargets,
+      score.kind === "ok" ? score.current : void 0
+    );
+    if (verdicts.some((v) => v.band === "red")) {
+      process.exitCode = 1;
+      return;
+    }
   }
   process.exitCode = 0;
 }
@@ -16164,8 +19258,19 @@ function runReport(path, options) {
     );
     return;
   }
-  const targetDir = resolve9(path);
-  if (!existsSync13(targetDir) || !statSync9(targetDir).isDirectory()) {
+  if (options.gate && options.format !== "md") {
+    failReport(
+      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
+    );
+    return;
+  }
+  const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
+  if (velocityWindowFlag.kind === "error") {
+    failReport(velocityWindowFlag.message);
+    return;
+  }
+  const targetDir = resolve11(path);
+  if (!existsSync16(targetDir) || !statSync10(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -16175,19 +19280,55 @@ function runReport(path, options) {
     return;
   }
   if (options.format === "md") {
-    runMarkdownReport(targetDir, options, selection.scoreWeights);
+    runMarkdownReport(targetDir, options, selection);
     return;
   }
-  const stateDir = join16(targetDir, ".ds-bridge");
+  const stateDir = join20(targetDir, ".ds-bridge");
   const warn = (message) => {
     process.stderr.write(`${message}
 `);
   };
   const aggregation = aggregateHistory(stateDir, warn);
   const parity = readParity(stateDir, warn);
-  const systemScore = computeSystemScore(stateDir, selection.scoreWeights);
+  const weightProfile = resolveWeightProfile(
+    selection.viewName,
+    selection.scoreWeights,
+    selection.scoreWeightsByView
+  );
+  const systemScore = computeSystemScore(stateDir, weightProfile.weights);
   const consumer = computeConsumerArtifacts(stateDir);
+  const parityTrend = computeParityTrend(stateDir);
+  const migrationChecklist = computeMigrationChecklist(
+    stateDir,
+    selection.migrationSitesCap
+  );
+  const audienceChangelog = computeAudienceChangelog(stateDir);
+  const frameImplementability = computeFrameImplementability(stateDir);
+  const targets = computeTargets(
+    stateDir,
+    selection.metricTargets,
+    systemScore?.current
+  );
+  const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const velocityWindowDays = velocityWindowFlag.days ?? selection.scoreVelocityWindow;
+  const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
+  const dataFreshness = computeDataFreshness(
+    stateDir,
+    generatedAt,
+    selection.freshnessThresholds
+  );
+  const componentHealth = computeComponentHealth(
+    stateDir,
+    aggregation.readiness,
+    aggregation.a11y,
+    selection.componentAliases
+  );
+  const ownershipLeaderboard = computeOwnershipLeaderboard(
+    stateDir,
+    resolveOwnership(targetDir, selection.ownership, selection.ownershipFile)
+  );
+  const releaseReadiness = computeReleaseReadiness(stateDir);
   const html = renderDashboard(
     {
       generatedAt,
@@ -16204,12 +19345,31 @@ function runReport(path, options) {
       ...aggregation.importCoverage !== void 0 ? { importCoverage: aggregation.importCoverage } : {},
       ...aggregation.libraryHealth !== void 0 ? { libraryHealth: aggregation.libraryHealth } : {},
       breakingCalendar: consumer.breakingCalendar,
-      changeFrequency: consumer.changeFrequency
+      changeFrequency: consumer.changeFrequency,
+      ...parityTrend.length > 0 ? { parityTrend } : {},
+      ...migrationChecklist.sites.length > 0 ? { migrationChecklist } : {},
+      ...audienceChangelog.slices.length > 0 ? { audienceChangelog } : {},
+      ...frameImplementability.total > 0 ? { frameImplementability } : {},
+      ...targets.length > 0 ? { targets } : {},
+      ...libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {},
+      ...scoreVelocity !== void 0 ? { scoreVelocity } : {},
+      ...dataFreshness.length > 0 ? { dataFreshness } : {},
+      ...componentHealth.length > 0 ? { componentHealth } : {},
+      ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
+      ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}
     },
     selection.artifacts,
-    selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
+    {
+      ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {},
+      // Caption the system-score section ONLY for a `view`-source profile; the
+      // renderer renders nothing for project/default (golden-neutral).
+      weightProfile: {
+        source: weightProfile.source,
+        ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
+      }
+    }
   );
-  const outPath = options.out !== void 0 ? resolve9(options.out) : join16(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve11(options.out) : join20(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -16237,6 +19397,13 @@ function registerReportCommand(program2) {
     "--delta <ref>",
     "compare against the base ref's committed history (requires --format md)"
   ).option(
+    "--gate",
+    "exit 1 when a metric_targets verdict is red (requires --format md; CI gate, C1)",
+    false
+  ).option(
+    "--velocity-window <window>",
+    "score-velocity look-back window as <N>d|<N>w (C8; overrides score_velocity_window, default 30d)"
+  ).option(
     "--out <file>",
     "output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)"
   ).option(
@@ -16250,15 +19417,15 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync as appendFileSync7,
-  existsSync as existsSync14,
-  mkdirSync as mkdirSync12,
-  readdirSync as readdirSync2,
-  readFileSync as readFileSync14,
-  statSync as statSync10,
-  writeFileSync as writeFileSync10
+  appendFileSync as appendFileSync10,
+  existsSync as existsSync17,
+  mkdirSync as mkdirSync14,
+  readdirSync as readdirSync3,
+  readFileSync as readFileSync18,
+  statSync as statSync11,
+  writeFileSync as writeFileSync11
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join17, relative as relative2, resolve as resolve10, sep as sep3 } from "path";
+import { isAbsolute as isAbsolute4, join as join21, relative as relative2, resolve as resolve12, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -16465,7 +19632,7 @@ function scanTsTheme(content) {
 
 // src/cli-commands/tokens.ts
 var TABLE_LIMIT = 20;
-var PARSERS4 = {
+var PARSERS5 = {
   w3c: parseW3c,
   "tokens-studio": parseTokensStudio,
   "style-dictionary": parseStyleDictionary
@@ -16482,7 +19649,7 @@ function countsByType(map) {
   }
   return [...counts.entries()].map(([label, value2]) => ({ label, value: value2 })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
 }
-function renderTerm11(filePath, map, color) {
+function renderTerm13(filePath, map, color) {
   const heading = `${filePath} \u2014 format: ${map.format} \u2014 ${map.tokens.length} tokens`;
   const chart = renderBarChart(countsByType(map), { width: 24, color });
   const rows = map.tokens.slice(0, TABLE_LIMIT).map((token) => [token.name, token.type, previewValue(token.value)]);
@@ -16496,7 +19663,7 @@ function renderTerm11(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync14(filePath, "utf8");
+    raw = readFileSync18(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -16523,7 +19690,7 @@ function loadTokenMap2(filePath) {
     process.exitCode = 1;
     return void 0;
   }
-  const outcome = PARSERS4[format](parsed);
+  const outcome = PARSERS5[format](parsed);
   if (outcome.kind === "error") {
     process.stderr.write(`Failed to parse "${filePath}" as ${format}:
 `);
@@ -16541,7 +19708,7 @@ function loadTokenMap2(filePath) {
   }
   return outcome.map;
 }
-var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
+var EXCLUDED_DIRS4 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   ".ds-bridge",
@@ -16568,56 +19735,56 @@ function hasOutputExtension(name) {
 function walkOutputFiles(dir, acc) {
   let entries;
   try {
-    entries = readdirSync2(dir, { withFileTypes: true });
+    entries = readdirSync3(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join17(dir, entry.name);
+    const full = join21(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS3.has(entry.name)) continue;
+      if (EXCLUDED_DIRS4.has(entry.name)) continue;
       walkOutputFiles(full, acc);
       continue;
     }
     if (entry.isFile() && hasOutputExtension(entry.name)) acc.push(full);
   }
 }
-function depthOf3(path) {
-  return path.split(sep3).filter((s) => s.length > 0).length;
+function depthOf4(path) {
+  return path.split(sep4).filter((s) => s.length > 0).length;
 }
-function isConventionalTokenFile3(name) {
+function isConventionalTokenFile4(name) {
   if (!name.endsWith(".json")) return false;
   return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
 }
-function isTokenDir3(name) {
+function isTokenDir4(name) {
   return name === "tokens" || name === "design-tokens";
 }
-function collectTokenCandidates2(dir, insideTokenDir, acc) {
+function collectTokenCandidates3(dir, insideTokenDir, acc) {
   let entries;
   try {
-    entries = readdirSync2(dir, { withFileTypes: true });
+    entries = readdirSync3(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join17(dir, entry.name);
+    const full = join21(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS3.has(entry.name)) continue;
-      collectTokenCandidates2(
+      if (EXCLUDED_DIRS4.has(entry.name)) continue;
+      collectTokenCandidates3(
         full,
-        insideTokenDir || isTokenDir3(entry.name),
+        insideTokenDir || isTokenDir4(entry.name),
         acc
       );
       continue;
     }
     if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile3(entry.name)) acc.push(full);
+    if (insideTokenDir || isConventionalTokenFile4(entry.name)) acc.push(full);
   }
 }
-function detectFileFormat3(absPath) {
+function detectFileFormat4(absPath) {
   let raw;
   try {
-    raw = readFileSync14(absPath, "utf8");
+    raw = readFileSync18(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -16630,19 +19797,19 @@ function detectFileFormat3(absPath) {
   const format = detectFormat(parsed);
   return format === "unknown" ? void 0 : format;
 }
-function discoverFirstTokenSource2(root) {
+function discoverFirstTokenSource3(root) {
   const candidates = [];
-  collectTokenCandidates2(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat3(path) !== void 0).sort((a, b) => {
-    const depth = depthOf3(a) - depthOf3(b);
+  collectTokenCandidates3(root, false, candidates);
+  const verified = candidates.filter((path) => detectFileFormat4(path) !== void 0).sort((a, b) => {
+    const depth = depthOf4(a) - depthOf4(b);
     return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
   });
   return verified[0];
 }
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve10(process.cwd(), flagTokens);
-    if (!existsSync14(abs2)) {
+    const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve12(process.cwd(), flagTokens);
+    if (!existsSync17(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -16650,11 +19817,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join17(targetDir, ".ds-bridge.json");
-  if (existsSync14(configPath)) {
+  const configPath = join21(targetDir, ".ds-bridge.json");
+  if (existsSync17(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync14(configPath, "utf8");
+      projectFileText = readFileSync18(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -16662,8 +19829,8 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute3(src) ? src : resolve10(targetDir, src);
-        if (existsSync14(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute4(src) ? src : resolve12(targetDir, src);
+        if (existsSync17(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -16671,7 +19838,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
       }
     }
   }
-  const discovered = discoverFirstTokenSource2(targetDir);
+  const discovered = discoverFirstTokenSource3(targetDir);
   if (discovered !== void 0) return { kind: "ok", path: discovered };
   return {
     kind: "error",
@@ -16682,7 +19849,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync14(tokenPath, "utf8");
+    raw = readFileSync18(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -16729,10 +19896,10 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    if (resolve10(file) === resolve10(tokenSourcePath)) continue;
+    if (resolve12(file) === resolve12(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync14(file, "utf8");
+      content = readFileSync18(file, "utf8");
     } catch {
       continue;
     }
@@ -16822,19 +19989,19 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync12(stateDir, { recursive: true });
-  appendFileSync7(
-    join17(stateDir, "history.jsonl"),
+  mkdirSync14(stateDir, { recursive: true });
+  appendFileSync10(
+    join21(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join17(stateDir, "history.jsonl");
+  const historyPath = join21(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync14(historyPath, "utf8");
+    text = readFileSync18(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -16866,11 +20033,11 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join17(stateDir, "reports");
-  mkdirSync12(reportsDir, { recursive: true });
+  const reportsDir = join21(stateDir, "reports");
+  mkdirSync14(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join17(reportsDir, `tokens-${date}.html`);
-  writeFileSync10(reportPath, html, "utf8");
+  const reportPath = join21(reportsDir, `tokens-${date}.html`);
+  writeFileSync11(reportPath, html, "utf8");
   return reportPath;
 }
 function failCheck(message) {
@@ -16886,8 +20053,8 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve10(path);
-  if (!existsSync14(targetDir) || !statSync10(targetDir).isDirectory()) {
+  const targetDir = resolve12(path);
+  if (!existsSync17(targetDir) || !statSync11(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -16901,8 +20068,8 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve10(options.outputs) : targetDir;
-  if (!existsSync14(outputsDir) || !statSync10(outputsDir).isDirectory()) {
+  const outputsDir = options.outputs !== void 0 ? resolve12(options.outputs) : targetDir;
+  if (!existsSync17(outputsDir) || !statSync11(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -16914,7 +20081,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join17(targetDir, ".ds-bridge");
+  const stateDir = join21(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -16966,7 +20133,7 @@ function registerTokensCommand(program2) {
       return;
     }
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm11(path, map, color)}
+    process.stdout.write(`${renderTerm13(path, map, color)}
 `);
   });
 }
@@ -16983,6 +20150,7 @@ function buildProgram() {
   registerReportCommand(program2);
   registerBadgeCommand(program2);
   registerHandoffCommand(program2);
+  registerFrameImplCommand(program2);
   registerRegistryCommand(program2);
   registerParityCommand(program2);
   registerA11yCommand(program2);
@@ -16993,8 +20161,11 @@ function buildProgram() {
   registerDocsCommand(program2);
   registerDashboardCommand(program2);
   registerDigestCommand(program2);
+  registerConfigCommand(program2);
+  registerReleaseCheckCommand(program2);
   return program2;
 }
+loadDotenvInto(join22(process.cwd(), ".ds-bridge.env"), process.env);
 buildProgram().parse();
 export {
   buildProgram

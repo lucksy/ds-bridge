@@ -2013,3 +2013,75 @@ describe("ds-bridge report — score velocity (C8)", () => {
 		expect(result.stderr.toLowerCase()).toContain("velocity-window");
 	});
 });
+
+// ---------- M5.1 — selection-gated md scorecard appendix blocks ----------
+//
+// The markdown scorecard appends a `###` block per SELECTED metric artifact
+// (Targets, Freshness, Score velocity, …), computed from the SAME history the
+// HTML dashboard reads. `selection.artifacts` gates them; `--delta` adds the
+// now-vs-base columns. The pure block layout is golden-tested in
+// scorecard-md.test.ts — these prove the CLI wiring + the selection gate.
+
+describe("ds-bridge report — md scorecard appendix (M5.1)", () => {
+	it("the default selection appends the Targets + Freshness blocks", async () => {
+		const dir = await freshTmp("ds-md-appendix-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 2),
+			adoptionLintLine("2026-06-03T10:00:00.000Z"),
+		]);
+		// on-system is 100·3/4 = 75% → a >=90 target bands red (no --gate → exit 0).
+		await seedProjectConfig(dir, {
+			metric_targets: { "on-system": { op: ">=", value: 90 } },
+		});
+
+		const result = await runCli(["report", dir, "--format", "md"]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("### Targets");
+		expect(result.stdout).toContain("| on-system | 75% | >= 90 | 🔴 |");
+		// Freshness is always-on once a tracked kind ran.
+		expect(result.stdout).toContain("### Freshness");
+	});
+
+	it("a narrowed --artifacts selection drops unselected blocks (gate)", async () => {
+		const dir = await freshTmp("ds-md-appendix-gate-");
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+		await seedProjectConfig(dir, {
+			metric_targets: { "on-system": { op: ">=", value: 90 } },
+		});
+
+		// Select only the system-score artifact: the configured Targets block must
+		// NOT render even though metric_targets is present.
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--artifacts",
+			"system-score",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("### Design-system scorecard");
+		expect(result.stdout).not.toContain("### Targets");
+	});
+
+	it("--delta adds the freshness Δ-age column against the committed base", async () => {
+		const dir = await freshTmp("ds-md-appendix-delta-");
+		await seedGitRepoWithHistory(
+			dir,
+			[tokensCheckLine("2026-05-01T10:00:00.000Z", 1, 0, 0)],
+			[tokensCheckLine("2026-06-01T10:00:00.000Z", 0, 0, 0)],
+		);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--format",
+			"md",
+			"--delta",
+			"main",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("### Freshness");
+		expect(result.stdout).toContain("| Kind | Last run | Age | Δ age | Band |");
+	});
+});

@@ -61,7 +61,10 @@ import {
 	type Weights,
 } from "../engines/report/score.js";
 import { buildScorecard } from "../engines/report/scorecard.js";
-import { renderScorecardMarkdown } from "../engines/report/scorecard-md.js";
+import {
+	renderScorecardMarkdown,
+	type ScorecardBlocks,
+} from "../engines/report/scorecard-md.js";
 import {
 	evaluateTargets,
 	type LatestScalars,
@@ -649,12 +652,16 @@ function resolveOwnership(
  * the section's empty state (and the no-config golden byte-identical). Pure
  * derivation over history — writes no history.
  */
-function computeOwnershipLeaderboard(
-	stateDir: string,
-	ownership: OwnershipMap | undefined,
-): OwnershipRow[] {
-	if (ownership === undefined) return [];
-	const records = replayHistory(readHistoryText(stateDir));
+/**
+ * Re-fold the LATEST adoption-bearing lint line's `byDirectory` from a replayed
+ * history into the `{dir, refs, literals}` buckets the ownership rollup maps onto
+ * owners. Parallel last-wins on field presence (a plain lint line never clears a
+ * prior adoption-bearing one — score.ts:333). Shared by the current-side (stateDir)
+ * and the `--delta` base-side (committed text) ownership computations.
+ */
+function byDirectoryFromRecords(
+	records: ReturnType<typeof replayHistory>,
+): DirectoryAdoption[] {
 	let byDirectory: DirectoryAdoption[] = [];
 	for (const { kind, record } of records) {
 		if (kind !== "lint") continue;
@@ -670,7 +677,16 @@ function computeOwnershipLeaderboard(
 			};
 		});
 	}
-	return rollupByOwner(byDirectory, ownership);
+	return byDirectory;
+}
+
+function computeOwnershipLeaderboard(
+	stateDir: string,
+	ownership: OwnershipMap | undefined,
+): OwnershipRow[] {
+	if (ownership === undefined) return [];
+	const records = replayHistory(readHistoryText(stateDir));
+	return rollupByOwner(byDirectoryFromRecords(records), ownership);
 }
 
 /**
@@ -1260,9 +1276,91 @@ function runMarkdownReport(
 		return;
 	}
 
+	// Selection-gated appendix (M5.1): compute the SAME per-metric sections the
+	// HTML dashboard does, from the SAME history, so the markdown scorecard surfaces
+	// the artifacts the active view selected. `generatedAt` is the single io-clock
+	// read (injected → reproducible ages/velocity). Each section is computed
+	// unconditionally; the renderer gates on `selection.artifacts` + presence.
+	const generatedAt = new Date().toISOString();
+	const systemScore = computeSystemScore(stateDir, effectiveWeights);
+	// runReport already validated this flag (exit 2 on a bad value) before
+	// dispatching here; re-parse for the day count and fall back to config/default.
+	const parsedWindow = parseVelocityWindow(options.velocityWindow);
+	const velocityWindowDays =
+		(parsedWindow.kind === "ok" ? parsedWindow.days : undefined) ??
+		selection.scoreVelocityWindow;
+	const ownership = resolveOwnership(
+		targetDir,
+		selection.ownership,
+		selection.ownershipFile,
+	);
+	const blocks: ScorecardBlocks = {};
+	const targets = computeTargets(
+		stateDir,
+		selection.metricTargets,
+		systemScore?.current,
+	);
+	if (targets.length > 0) blocks.targets = targets;
+	const dataFreshness = computeDataFreshness(
+		stateDir,
+		generatedAt,
+		selection.freshnessThresholds,
+	);
+	if (dataFreshness.length > 0) blocks.dataFreshness = dataFreshness;
+	const scoreVelocity =
+		systemScore !== undefined
+			? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays)
+			: undefined;
+	if (scoreVelocity !== undefined) blocks.scoreVelocity = scoreVelocity;
+	const ownershipLeaderboard = computeOwnershipLeaderboard(stateDir, ownership);
+	if (ownershipLeaderboard.length > 0) {
+		blocks.ownershipLeaderboard = ownershipLeaderboard;
+	}
+	const migrationChecklist = computeMigrationChecklist(
+		stateDir,
+		selection.migrationSitesCap,
+	);
+	if (migrationChecklist.sites.length > 0) {
+		blocks.migrationChecklist = migrationChecklist;
+	}
+	const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+	if (libraryHealthTrend.length > 0)
+		blocks.libraryHealthTrend = libraryHealthTrend;
+	const audienceChangelog = computeAudienceChangelog(stateDir);
+	if (audienceChangelog.slices.length > 0) {
+		blocks.audienceChangelog = audienceChangelog;
+	}
+
+	// Base-side delta sections (only the delta-aware blocks: freshness ages,
+	// ownership moves, library-health counts) from the committed `--delta` text.
+	let baseBlocks: ScorecardBlocks | undefined;
+	if (baseText !== undefined) {
+		const baseRecords = replayHistory(baseText);
+		const b: ScorecardBlocks = {};
+		const baseFreshness = buildFreshness(
+			baseRecords,
+			generatedAt,
+			selection.freshnessThresholds,
+		);
+		if (baseFreshness.length > 0) b.dataFreshness = baseFreshness;
+		const baseLht = buildLibraryHealthTrend(baseRecords);
+		if (baseLht.length > 0) b.libraryHealthTrend = baseLht;
+		if (ownership !== undefined) {
+			const baseOwners = rollupByOwner(
+				byDirectoryFromRecords(baseRecords),
+				ownership,
+			);
+			if (baseOwners.length > 0) b.ownershipLeaderboard = baseOwners;
+		}
+		baseBlocks = b;
+	}
+
 	const markdown = renderScorecardMarkdown(model, {
 		...(baseLabel !== undefined ? { baseLabel } : {}),
 		...(noBaseline ? { noBaseline: true } : {}),
+		artifacts: selection.artifacts,
+		blocks,
+		...(baseBlocks !== undefined ? { baseBlocks } : {}),
 	});
 
 	// --out redirects to a file (and prints the path); otherwise the markdown goes
