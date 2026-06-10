@@ -747,6 +747,77 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).not.toContain("preview");
 	});
 
+	it("C9/M3.6: an `ownership` config + adoption byDirectory populates the ownership-leaderboard", async () => {
+		const dir = await freshTmp("ds-report-ownership-");
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+		// The adoption byDirectory carries src/legacy (0%) and src/components (100%).
+		await seedProjectConfig(dir, {
+			ownership: [
+				{ owner: "@core", paths: ["src/**"] },
+				{ owner: "@legacy-team", paths: ["src/legacy/**"] },
+			],
+		});
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"ownership-leaderboard",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The leaderboard is present and NOT empty (the stub renders "preview" once
+		// ownershipLeaderboard is populated from the byDirectory ⋈ ownership join).
+		expect(html).toContain("Ownership leaderboard");
+		expect(html).toContain("preview");
+	});
+
+	it("C9/M3.6: an `ownership_file` (CODEOWNERS) populates the ownership-leaderboard", async () => {
+		const dir = await freshTmp("ds-report-ownership-file-");
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+		await writeFile(
+			join(dir, "CODEOWNERS"),
+			["# owners", "src/** @core", "src/legacy/** @legacy-team", ""].join("\n"),
+			"utf8",
+		);
+		await seedProjectConfig(dir, { ownership_file: "CODEOWNERS" });
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"ownership-leaderboard",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Ownership leaderboard");
+		expect(html).toContain("preview");
+	});
+
+	it("C9/M3.6: no ownership config → the ownership-leaderboard stays empty", async () => {
+		const dir = await freshTmp("ds-report-no-ownership-");
+		await seedHistory(dir, [adoptionLintLine("2026-06-03T10:00:00.000Z")]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"ownership-leaderboard",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		expect(html).toContain("Ownership leaderboard");
+		// byDirectory present but no ownership rules → rollup is [] → empty-state (no
+		// "preview" marker), keeping the no-config golden byte-identical.
+		expect(html).not.toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [

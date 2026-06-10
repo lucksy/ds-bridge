@@ -895,18 +895,36 @@ describe("resolveConfig — ownership / ownership_file (C9)", () => {
 		expect(outcome.config.ownershipFile).toBeUndefined();
 	});
 
-	it("reads an ownership map (path → owner)", () => {
+	it("reads an ownership array ({ owner, paths } CODEOWNERS-style)", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				ownership: { "src/checkout/**": "@team-checkout" },
+				ownership: [{ owner: "@team-checkout", paths: ["src/checkout/**"] }],
 			}),
 		});
 
 		expect(outcome.kind).toBe("ok");
 		if (outcome.kind !== "ok") return;
-		expect(outcome.config.ownership).toEqual({
-			"src/checkout/**": "@team-checkout",
+		expect(outcome.config.ownership).toEqual([
+			{ owner: "@team-checkout", paths: ["src/checkout/**"] },
+		]);
+	});
+
+	it("reads a multi-owner, multi-path ownership array", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: [
+					{ owner: "@core", paths: ["src/**", "lib/**"] },
+					{ owner: "@team-checkout", paths: ["src/checkout/**"] },
+				],
+			}),
 		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.ownership).toEqual([
+			{ owner: "@core", paths: ["src/**", "lib/**"] },
+			{ owner: "@team-checkout", paths: ["src/checkout/**"] },
+		]);
 	});
 
 	it("reads an ownership_file path", () => {
@@ -924,18 +942,32 @@ describe("resolveConfig — ownership / ownership_file (C9)", () => {
 	it("allows ownership and ownership_file together (not mutually exclusive)", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				ownership: { "src/**": "@core" },
+				ownership: [{ owner: "@core", paths: ["src/**"] }],
 				ownership_file: ".github/CODEOWNERS",
 			}),
 		});
 
 		expect(outcome.kind).toBe("ok");
 		if (outcome.kind !== "ok") return;
-		expect(outcome.config.ownership).toEqual({ "src/**": "@core" });
+		expect(outcome.config.ownership).toEqual([
+			{ owner: "@core", paths: ["src/**"] },
+		]);
 		expect(outcome.config.ownershipFile).toBe(".github/CODEOWNERS");
 	});
 
-	it("rejects a non-object ownership with a typed error", () => {
+	it("rejects a non-array ownership with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: { "src/**": "@team" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ownership");
+	});
+
+	it("rejects an ownership entry that is not a plain object", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({ ownership: ["@team"] }),
 		});
@@ -945,14 +977,70 @@ describe("resolveConfig — ownership / ownership_file (C9)", () => {
 		expect(outcome.message).toContain("ownership");
 	});
 
-	it("rejects a non-string ownership value with a typed error", () => {
+	it("rejects an ownership entry with an empty owner", () => {
 		const outcome = resolveConfig({
-			projectFileText: JSON.stringify({ ownership: { "src/**": 5 } }),
+			projectFileText: JSON.stringify({
+				ownership: [{ owner: "", paths: ["src/**"] }],
+			}),
 		});
 
 		expect(outcome.kind).toBe("invalid-project-file");
 		if (outcome.kind !== "invalid-project-file") return;
-		expect(outcome.message).toContain("ownership");
+		expect(outcome.message).toContain("owner");
+	});
+
+	it("rejects an ownership entry with a non-string owner", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: [{ owner: 5, paths: ["src/**"] }],
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("owner");
+	});
+
+	it("rejects an ownership entry with a non-array paths", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: [{ owner: "@core", paths: "src/**" }],
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("paths");
+	});
+
+	it("rejects an ownership entry with an empty paths array", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: [{ owner: "@core", paths: [] }],
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("paths");
+	});
+
+	it("rejects an ownership entry with a non-string / empty path glob", () => {
+		const nonString = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: [{ owner: "@core", paths: [5] }],
+			}),
+		});
+		expect(nonString.kind).toBe("invalid-project-file");
+
+		const empty = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: [{ owner: "@core", paths: [""] }],
+			}),
+		});
+		expect(empty.kind).toBe("invalid-project-file");
+		if (empty.kind !== "invalid-project-file") return;
+		expect(empty.message).toContain("paths");
 	});
 
 	it("rejects a non-string ownership_file with a typed error", () => {

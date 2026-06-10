@@ -26,6 +26,7 @@ import {
 	type ComponentAliases,
 	type FreshnessThresholds,
 	type MetricTargets,
+	type OwnershipMap,
 	resolveConfig,
 } from "../config.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
@@ -42,6 +43,11 @@ import { buildFreshness } from "../engines/report/freshness.js";
 import { replayHistory } from "../engines/report/history-lines.js";
 import { buildLibraryHealthTrend } from "../engines/report/library-health-trend.js";
 import { buildMigrationChecklist } from "../engines/report/migration-checklist.js";
+import {
+	type DirectoryAdoption,
+	parseCodeowners,
+	rollupByOwner,
+} from "../engines/report/ownership.js";
 import { buildParityTrend } from "../engines/report/parity-trend.js";
 import { resolveView } from "../engines/report/presets.js";
 import {
@@ -72,6 +78,7 @@ import type {
 	LibraryHealthTrendPoint,
 	LintSummary,
 	MigrationChecklist,
+	OwnershipRow,
 	Parity,
 	ParityTrendPoint,
 	Readiness,
@@ -603,6 +610,64 @@ function computeFrameImplementability(stateDir: string): FrameImplementability {
 }
 
 /**
+ * Resolve the effective CODEOWNERS-style ownership rules (C9, M3.6) for the
+ * leaderboard: the config `ownership` ARRAY takes precedence; otherwise, when an
+ * `ownership_file` path is configured, read + parse it at this io edge (relative
+ * to `targetDir`) into the SAME `{ owner, paths }` rule shape. An unreadable file
+ * degrades to no rules (the section stays empty). Returns `undefined` when no
+ * ownership source is configured at all.
+ */
+function resolveOwnership(
+	targetDir: string,
+	ownership: OwnershipMap | undefined,
+	ownershipFile: string | undefined,
+): OwnershipMap | undefined {
+	if (ownership !== undefined) return ownership;
+	if (ownershipFile === undefined) return undefined;
+	let text: string;
+	try {
+		text = readFileSync(resolve(targetDir, ownershipFile), "utf8");
+	} catch {
+		return undefined; // unreadable CODEOWNERS → no rules (empty section)
+	}
+	return parseCodeowners(text);
+}
+
+/**
+ * Build the ownership-leaderboard rows (C9, M3.6) by re-folding the LATEST
+ * adoption-bearing lint line's `byDirectory` onto named owners via the pure
+ * `rollupByOwner` engine. The owners come from the config `ownership` array OR a
+ * parsed `ownership_file` (resolved by `resolveOwnership`). No ownership source,
+ * no adoption-bearing lint line, OR no joinable directories → []; the caller only
+ * spreads a NON-empty leaderboard into ReportData so an unconfigured project keeps
+ * the section's empty state (and the no-config golden byte-identical). Pure
+ * derivation over history — writes no history.
+ */
+function computeOwnershipLeaderboard(
+	stateDir: string,
+	ownership: OwnershipMap | undefined,
+): OwnershipRow[] {
+	if (ownership === undefined) return [];
+	const records = replayHistory(readHistoryText(stateDir));
+	let byDirectory: DirectoryAdoption[] = [];
+	for (const { kind, record } of records) {
+		if (kind !== "lint") continue;
+		const adoption = asRecord(record.adoption);
+		if (adoption === undefined) continue; // plain lint line never clears prior
+		const raw = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
+		byDirectory = raw.map((entry) => {
+			const dirRec = asRecord(entry) ?? {};
+			return {
+				dir: typeof dirRec.dir === "string" ? dirRec.dir : "",
+				refs: asNumber(dirRec.refs),
+				literals: asNumber(dirRec.literals),
+			};
+		});
+	}
+	return rollupByOwner(byDirectory, ownership);
+}
+
+/**
  * Build the data-freshness rows (C4, M3.2) from the SAME `history.jsonl` replay
  * via the shared `replayHistory` iterator + the pure `buildFreshness` engine: one
  * row per tracked check-kind (most-recent run, whole-day age, RAG band). `nowIso`
@@ -927,6 +992,10 @@ interface ResolvedSelection {
 	freshnessThresholds?: FreshnessThresholds;
 	/** Component-health join keys (`component_aliases`, C5); undefined when absent. */
 	componentAliases?: ComponentAliases;
+	/** CODEOWNERS-style `ownership` rules (C9); undefined when absent. */
+	ownership?: OwnershipMap;
+	/** Path to a CODEOWNERS file (`ownership_file`, C9); undefined when absent. */
+	ownershipFile?: string;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -959,6 +1028,8 @@ function resolveSelection(
 	let metricTargets: MetricTargets | undefined;
 	let freshnessThresholds: FreshnessThresholds | undefined;
 	let componentAliases: ComponentAliases | undefined;
+	let ownership: OwnershipMap | undefined;
+	let ownershipFile: string | undefined;
 	// Default to the config's own defaults (200, C7 / 30, C8) when there is no file.
 	const defaults = resolveConfig({});
 	let migrationSitesCap =
@@ -990,6 +1061,8 @@ function resolveSelection(
 		scoreVelocityWindow = resolved.config.scoreVelocityWindow;
 		freshnessThresholds = resolved.config.freshnessThresholds;
 		componentAliases = resolved.config.componentAliases;
+		ownership = resolved.config.ownership;
+		ownershipFile = resolved.config.ownershipFile;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -1055,6 +1128,8 @@ function resolveSelection(
 				...(metricTargets !== undefined ? { metricTargets } : {}),
 				...(freshnessThresholds !== undefined ? { freshnessThresholds } : {}),
 				...(componentAliases !== undefined ? { componentAliases } : {}),
+				...(ownership !== undefined ? { ownership } : {}),
+				...(ownershipFile !== undefined ? { ownershipFile } : {}),
 			};
 		}
 	}
@@ -1304,6 +1379,15 @@ function runReport(path: string, options: ReportOptions): void {
 		aggregation.a11y,
 		selection.componentAliases,
 	);
+	// Ownership leaderboard (C9, M3.6): the latest adoption-bearing lint line's
+	// byDirectory re-folded onto named owners (config `ownership` array, or a
+	// parsed `ownership_file`). Only spread in when NON-empty so an unconfigured
+	// project keeps the section's empty state (and the no-config golden
+	// byte-identical — the golden seed has byDirectory but no ownership config).
+	const ownershipLeaderboard = computeOwnershipLeaderboard(
+		stateDir,
+		resolveOwnership(targetDir, selection.ownership, selection.ownershipFile),
+	);
 	const html = renderDashboard(
 		{
 			generatedAt,
@@ -1342,6 +1426,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(scoreVelocity !== undefined ? { scoreVelocity } : {}),
 			...(dataFreshness.length > 0 ? { dataFreshness } : {}),
 			...(componentHealth.length > 0 ? { componentHealth } : {}),
+			...(ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},

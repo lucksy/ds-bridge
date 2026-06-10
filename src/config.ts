@@ -44,6 +44,26 @@ export type MetricTargets = Partial<Record<TargetMetric, MetricTarget>>;
 export type ScoreWeightsByView = Record<string, Weights>;
 
 /**
+ * One CODEOWNERS-style ownership rule (C9, SPEC-personas §5): an owner and the
+ * path globs/prefixes they are accountable for. Each `paths` entry is a glob
+ * (`*`/`**`) or a plain directory prefix the C9 engine matches directories
+ * against. The M0.3 placeholder was a flat `{ path → owner }` map, replaced here
+ * with the array form now the consuming engine exists.
+ */
+export interface OwnerRule {
+	owner: string;
+	paths: string[];
+}
+
+/**
+ * The validated `ownership` array (C9): CODEOWNERS-style owner → path-globs
+ * rules. The C9 engine folds each adoption `byDirectory` bucket onto its owner by
+ * matching the directory against these globs (LAST matching rule wins, CODEOWNERS
+ * semantics); directories matching no rule bucket into `unowned`.
+ */
+export type OwnershipMap = OwnerRule[];
+
+/**
  * The canonical LOGICAL check-kinds data-freshness tracks (C4), the vocabulary a
  * `freshness_thresholds` map may key on. These are the dashboard-facing names —
  * the freshness engine maps each raw history kind (`tokens-check`, `handoff`) to
@@ -254,8 +274,12 @@ export interface ResolvedConfig {
 	 * per-kind defaults. `undefined` when the key is absent entirely.
 	 */
 	freshnessThresholds: FreshnessThresholds | undefined;
-	/** Ownership map (path/dir → owner, C9), or `undefined` when absent. */
-	ownership: Record<string, string> | undefined;
+	/**
+	 * The CODEOWNERS-style `ownership` rules (C9): an array of `{ owner, paths }`
+	 * where each `paths` entry is a glob/prefix the C9 engine matches directories
+	 * against (LAST matching rule wins). `undefined` when absent.
+	 */
+	ownership: OwnershipMap | undefined;
 	/** Path to a CODEOWNERS-style ownership file (C9), or `undefined` when absent. */
 	ownershipFile: string | undefined;
 	/**
@@ -309,7 +333,7 @@ interface ProjectFileValues {
 	metricTargets?: MetricTargets;
 	scoreWeightsByView?: ScoreWeightsByView;
 	freshnessThresholds?: FreshnessThresholds;
-	ownership?: Record<string, string>;
+	ownership?: OwnershipMap;
 	ownershipFile?: string;
 	componentAliases?: ComponentAliases;
 	migrationSitesCap?: number;
@@ -675,26 +699,52 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 		values.freshnessThresholds = thresholds;
 	}
 
-	// ownership: { path/dir → owner } and ownership_file: a path (C9). Both
-	// optional and NOT mutually exclusive.
+	// ownership: a CODEOWNERS-style ARRAY of { owner, paths:[glob] } (C9,
+	// SPEC-personas §5) and ownership_file: a path. Both optional and NOT mutually
+	// exclusive. Each entry is a plain object with a non-empty string `owner` and a
+	// non-empty array of non-empty string path globs.
 	if (obj.ownership !== undefined) {
-		if (!isPlainObject(obj.ownership)) {
+		if (!Array.isArray(obj.ownership)) {
 			return {
 				kind: "invalid",
-				message: "ownership must be an object of path → owner",
+				message: "ownership must be an array of { owner, paths } rules",
 			};
 		}
-		const map: Record<string, string> = {};
-		for (const [path, owner] of Object.entries(obj.ownership)) {
-			if (typeof owner !== "string" || owner === "") {
+		const rules: OwnershipMap = [];
+		for (let i = 0; i < obj.ownership.length; i += 1) {
+			const entry = obj.ownership[i];
+			if (!isPlainObject(entry)) {
 				return {
 					kind: "invalid",
-					message: `ownership.${path} must be a non-empty string (an owner)`,
+					message: `ownership[${i}] must be an object { owner, paths }`,
 				};
 			}
-			map[path] = owner;
+			if (typeof entry.owner !== "string" || entry.owner === "") {
+				return {
+					kind: "invalid",
+					message: `ownership[${i}].owner must be a non-empty string`,
+				};
+			}
+			if (!Array.isArray(entry.paths) || entry.paths.length === 0) {
+				return {
+					kind: "invalid",
+					message: `ownership[${i}].paths must be a non-empty array of path globs`,
+				};
+			}
+			const paths: string[] = [];
+			for (let j = 0; j < entry.paths.length; j += 1) {
+				const path = entry.paths[j];
+				if (typeof path !== "string" || path === "") {
+					return {
+						kind: "invalid",
+						message: `ownership[${i}].paths[${j}] must be a non-empty string (a path glob)`,
+					};
+				}
+				paths.push(path);
+			}
+			rules.push({ owner: entry.owner, paths });
 		}
-		values.ownership = map;
+		values.ownership = rules;
 	}
 	if (obj.ownership_file !== undefined) {
 		if (typeof obj.ownership_file !== "string" || obj.ownership_file === "") {
