@@ -3515,7 +3515,7 @@ var require_picocolors = __commonJS({
 
 // src/cli.ts
 import { createRequire } from "module";
-import { join as join23 } from "path";
+import { join as join24 } from "path";
 
 // node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
@@ -9408,6 +9408,50 @@ function validateArtifactIdList(entries, label) {
     artifacts.push(lookup.artifact.id);
   }
   return { kind: "ok", artifacts };
+}
+function parseSelectionFile(text) {
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { kind: "invalid", message: "dashboard file is not valid JSON" };
+  }
+  if (!isPlainObject4(raw)) {
+    return { kind: "invalid", message: "dashboard file must be a JSON object" };
+  }
+  const obj = raw;
+  const hasView = obj.view !== void 0;
+  const hasArtifacts = obj.artifacts !== void 0;
+  if (hasView && hasArtifacts) {
+    return {
+      kind: "invalid",
+      message: "view and artifacts are mutually exclusive \u2014 set exactly one"
+    };
+  }
+  if (!hasView && !hasArtifacts) {
+    return {
+      kind: "invalid",
+      message: "dashboard file must set either view or artifacts"
+    };
+  }
+  if (hasView) {
+    if (typeof obj.view !== "string" || obj.view === "") {
+      return {
+        kind: "invalid",
+        message: "view must be a non-empty string (a preset name)"
+      };
+    }
+    return { kind: "view", view: obj.view };
+  }
+  if (!Array.isArray(obj.artifacts)) {
+    return {
+      kind: "invalid",
+      message: "artifacts must be an array of artifact ids"
+    };
+  }
+  const validated = validateArtifactIdList(obj.artifacts, "artifacts");
+  if (validated.kind === "invalid") return validated;
+  return { kind: "artifacts", artifacts: validated.artifacts };
 }
 function atomicWriteJson(filePath, obj) {
   const text = `${JSON.stringify(obj, null, 2)}
@@ -16250,13 +16294,13 @@ function registerReleaseCheckCommand(program2) {
 // src/cli-commands/report.ts
 import { spawn } from "child_process";
 import {
-  existsSync as existsSync16,
-  mkdirSync as mkdirSync13,
-  readFileSync as readFileSync18,
+  existsSync as existsSync17,
+  mkdirSync as mkdirSync14,
+  readFileSync as readFileSync19,
   statSync as statSync10,
   writeFileSync as writeFileSync10
 } from "fs";
-import { basename, dirname as dirname8, join as join21, resolve as resolve11 } from "path";
+import { basename, dirname as dirname8, join as join22, resolve as resolve11 } from "path";
 import { platform } from "process";
 
 // src/engines/report/audience-changelog.ts
@@ -17517,6 +17561,97 @@ function computeVelocity(trend, nowIso, windowDays) {
   return { delta, windowDays, direction, regressionStreak };
 }
 
+// src/io/dashboards.ts
+import { existsSync as existsSync16, mkdirSync as mkdirSync13, readdirSync as readdirSync3, readFileSync as readFileSync18 } from "fs";
+import { join as join21 } from "path";
+var DASHBOARDS_DIR = "dashboards";
+var REPORT_TYPES = ["html", "md", "terminal", "site"];
+function dashboardPath(dir, name, local) {
+  const suffix = local ? ".local.json" : ".json";
+  return join21(dir, DASHBOARDS_DIR, `${name}${suffix}`);
+}
+function parseDashboard(text, fallbackName) {
+  const selectionOutcome = parseSelectionFile(text);
+  if (selectionOutcome.kind === "invalid") {
+    return { kind: "invalid", message: selectionOutcome.message };
+  }
+  const obj = JSON.parse(text);
+  const selection = selectionOutcome.kind === "view" ? { kind: "view", view: selectionOutcome.view } : { kind: "artifacts", artifacts: selectionOutcome.artifacts };
+  const dashboard = {
+    name: typeof obj.name === "string" && obj.name !== "" ? obj.name : fallbackName,
+    selection
+  };
+  if (obj.report_type !== void 0) {
+    if (!REPORT_TYPES.includes(obj.report_type)) {
+      return {
+        kind: "invalid",
+        message: `report_type must be one of ${REPORT_TYPES.join(", ")}`
+      };
+    }
+    dashboard.reportType = obj.report_type;
+  }
+  if (obj.audience !== void 0) {
+    if (typeof obj.audience !== "string") {
+      return { kind: "invalid", message: "audience must be a string" };
+    }
+    dashboard.audience = obj.audience;
+  }
+  if (obj.persona !== void 0) {
+    if (typeof obj.persona !== "string") {
+      return { kind: "invalid", message: "persona must be a string" };
+    }
+    dashboard.persona = obj.persona;
+  }
+  if (obj.score_weights !== void 0) {
+    const weights = validateWeights(obj.score_weights);
+    if (weights.kind !== "ok") {
+      return {
+        kind: "invalid",
+        message: `score_weights is invalid (${weights.kind}${"key" in weights ? `: ${weights.key}` : ""})`
+      };
+    }
+    dashboard.scoreWeights = obj.score_weights;
+  }
+  return { kind: "ok", dashboard };
+}
+function readDashboardFile(dir, name) {
+  const localPath = dashboardPath(dir, name, true);
+  const sharedPath = dashboardPath(dir, name, false);
+  const path = existsSync16(localPath) ? localPath : existsSync16(sharedPath) ? sharedPath : void 0;
+  if (path === void 0) return { kind: "not-found" };
+  let text;
+  try {
+    text = readFileSync18(path, "utf8");
+  } catch {
+    return { kind: "not-found" };
+  }
+  return parseDashboard(text, name);
+}
+function listDashboards(dir) {
+  let files;
+  try {
+    files = readdirSync3(join21(dir, DASHBOARDS_DIR));
+  } catch {
+    return [];
+  }
+  const byName2 = /* @__PURE__ */ new Map();
+  const entryFor = (name) => {
+    const existing = byName2.get(name);
+    if (existing !== void 0) return existing;
+    const created = { name, hasShared: false, hasLocal: false };
+    byName2.set(name, created);
+    return created;
+  };
+  for (const file of files) {
+    if (file.endsWith(".local.json")) {
+      entryFor(file.slice(0, -".local.json".length)).hasLocal = true;
+    } else if (file.endsWith(".json")) {
+      entryFor(file.slice(0, -".json".length)).hasShared = true;
+    }
+  }
+  return [...byName2.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // src/render/html/charts.ts
 var DEFAULT_PALETTE = [
   "#2563eb",
@@ -18591,10 +18726,10 @@ function onSystemPct3(refs, literals) {
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join21(stateDir, "history.jsonl");
+  const historyPath = join22(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync18(historyPath, "utf8");
+    text = readFileSync19(historyPath, "utf8");
   } catch {
     return {
       driftTrend: [],
@@ -18747,10 +18882,10 @@ function aggregateHistory(stateDir, onWarning) {
   };
 }
 function computeSystemScore(stateDir, weights) {
-  const historyPath = join21(stateDir, "history.jsonl");
+  const historyPath = join22(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync18(historyPath, "utf8");
+    text = readFileSync19(historyPath, "utf8");
   } catch {
     return void 0;
   }
@@ -18826,7 +18961,7 @@ function resolveOwnership(targetDir, ownership, ownershipFile) {
   if (ownershipFile === void 0) return void 0;
   let text;
   try {
-    text = readFileSync18(resolve11(targetDir, ownershipFile), "utf8");
+    text = readFileSync19(resolve11(targetDir, ownershipFile), "utf8");
   } catch {
     return void 0;
   }
@@ -18872,10 +19007,10 @@ function computeDataFreshness(stateDir, nowIso, thresholds) {
   );
 }
 function readParityRows(stateDir) {
-  const registryPath = join21(stateDir, "registry.json");
+  const registryPath = join22(stateDir, "registry.json");
   let text;
   try {
-    text = readFileSync18(registryPath, "utf8");
+    text = readFileSync19(registryPath, "utf8");
   } catch {
     return [];
   }
@@ -18976,10 +19111,10 @@ function computeTargets(stateDir, targets, systemScore) {
   return evaluateTargets(latestTargetScalars(stateDir, systemScore), targets);
 }
 function readParity(stateDir, onWarning) {
-  const registryPath = join21(stateDir, "registry.json");
+  const registryPath = join22(stateDir, "registry.json");
   let text;
   try {
-    text = readFileSync18(registryPath, "utf8");
+    text = readFileSync19(registryPath, "utf8");
   } catch {
     return void 0;
   }
@@ -18996,7 +19131,7 @@ function readParity(stateDir, onWarning) {
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync13(dirname8(outPath), { recursive: true });
+    mkdirSync14(dirname8(outPath), { recursive: true });
     writeFileSync10(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
@@ -19043,9 +19178,69 @@ function parseArtifactsFlag(raw) {
   if (raw === void 0) return void 0;
   return raw.split(",").map((id) => id.trim()).filter((id) => id.length > 0);
 }
+function resolveDashboardSelection(targetDir, name, ctx) {
+  const read = readDashboardFile(targetDir, name);
+  if (read.kind === "not-found") {
+    const names = listDashboards(targetDir).map((e4) => e4.name);
+    const available = names.length > 0 ? ` Available: ${names.join(", ")}.` : " No saved dashboards in dashboards/.";
+    return { kind: "error", message: `Unknown dashboard "${name}".${available}` };
+  }
+  if (read.kind === "invalid") {
+    return {
+      kind: "error",
+      message: `Dashboard "${name}" is invalid: ${read.message}`
+    };
+  }
+  const sel = read.dashboard.selection;
+  const outcome = resolveView(
+    sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
+    {}
+  );
+  if (outcome.kind === "unknown-view") {
+    const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
+    return {
+      kind: "error",
+      message: `Dashboard "${name}" pins an unknown view "${outcome.view}"${hint}`
+    };
+  }
+  if (outcome.kind === "unknown-artifact") {
+    return {
+      kind: "error",
+      message: `Dashboard "${name}" has an unknown artifact id "${outcome.id}".`
+    };
+  }
+  if (outcome.kind === "conflicting-selection") {
+    return {
+      kind: "error",
+      message: `Dashboard "${name}" sets both view and artifacts.`
+    };
+  }
+  for (const notice of outcome.notices) process.stderr.write(`${notice}
+`);
+  const dashWeights = read.dashboard.scoreWeights;
+  const validated = dashWeights !== void 0 ? validateWeights(dashWeights) : void 0;
+  const effectiveWeights = validated?.kind === "ok" ? validated.weights : ctx.scoreWeights;
+  const effectiveByView = dashWeights !== void 0 ? void 0 : ctx.scoreWeightsByView;
+  const viewName = sel.kind === "view" ? sel.view : void 0;
+  return {
+    artifacts: outcome.artifacts,
+    migrationSitesCap: ctx.migrationSitesCap,
+    scoreVelocityWindow: ctx.scoreVelocityWindow,
+    viewLabel: read.dashboard.name,
+    ...viewName !== void 0 ? { viewName } : {},
+    ...effectiveWeights !== void 0 ? { scoreWeights: effectiveWeights } : {},
+    ...effectiveByView !== void 0 ? { scoreWeightsByView: effectiveByView } : {},
+    ...ctx.metricTargets !== void 0 ? { metricTargets: ctx.metricTargets } : {},
+    ...ctx.freshnessThresholds !== void 0 ? { freshnessThresholds: ctx.freshnessThresholds } : {},
+    ...ctx.componentAliases !== void 0 ? { componentAliases: ctx.componentAliases } : {},
+    ...ctx.ownership !== void 0 ? { ownership: ctx.ownership } : {},
+    ...ctx.ownershipFile !== void 0 ? { ownershipFile: ctx.ownershipFile } : {}
+  };
+}
 function resolveSelection(targetDir, options) {
   let dashboardView;
   let dashboardArtifacts;
+  let dashboardDefault;
   let scoreWeights;
   let scoreWeightsByView;
   let metricTargets;
@@ -19056,11 +19251,11 @@ function resolveSelection(targetDir, options) {
   const defaults = resolveConfig({});
   let migrationSitesCap = defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
   let scoreVelocityWindow = defaults.kind === "ok" ? defaults.config.scoreVelocityWindow : 30;
-  const configPath = join21(targetDir, ".ds-bridge.json");
-  if (existsSync16(configPath)) {
+  const configPath = join22(targetDir, ".ds-bridge.json");
+  if (existsSync17(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync18(configPath, "utf8");
+      projectFileText = readFileSync19(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -19074,6 +19269,7 @@ function resolveSelection(targetDir, options) {
     }
     dashboardView = resolved.config.dashboardView;
     dashboardArtifacts = resolved.config.dashboardArtifacts;
+    dashboardDefault = resolved.config.dashboardDefault;
     scoreWeights = resolved.config.scoreWeights;
     scoreWeightsByView = resolved.config.scoreWeightsByView;
     migrationSitesCap = resolved.config.migrationSitesCap;
@@ -19085,6 +19281,26 @@ function resolveSelection(targetDir, options) {
     ownershipFile = resolved.config.ownershipFile;
   }
   const flagArtifacts = parseArtifactsFlag(options.artifacts);
+  const activeDashboard = options.dashboard ?? dashboardDefault;
+  if (activeDashboard !== void 0) {
+    if (options.dashboard !== void 0 && (options.view !== void 0 || flagArtifacts !== void 0)) {
+      return {
+        kind: "error",
+        message: "--dashboard is mutually exclusive with --view/--artifacts \u2014 pass one."
+      };
+    }
+    return resolveDashboardSelection(targetDir, activeDashboard, {
+      migrationSitesCap,
+      scoreVelocityWindow,
+      scoreWeights,
+      scoreWeightsByView,
+      metricTargets,
+      freshnessThresholds,
+      componentAliases,
+      ownership,
+      ownershipFile
+    });
+  }
   const outcome = resolveView(
     {
       ...options.view !== void 0 ? { view: options.view } : {},
@@ -19141,7 +19357,7 @@ function resolveSelection(targetDir, options) {
 }
 function readHistoryText3(stateDir) {
   try {
-    return readFileSync18(join21(stateDir, "history.jsonl"), "utf8");
+    return readFileSync19(join22(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
@@ -19152,7 +19368,7 @@ function runMarkdownReport(targetDir, options, selection) {
     selection.scoreWeights,
     selection.scoreWeightsByView
   );
-  const stateDir = join21(targetDir, ".ds-bridge");
+  const stateDir = join22(targetDir, ".ds-bridge");
   const currentText = readHistoryText3(stateDir);
   let baseText;
   let noBaseline = false;
@@ -19160,7 +19376,7 @@ function runMarkdownReport(targetDir, options, selection) {
   if (options.delta !== void 0) {
     const outcome = readFileAtRef({
       ref: options.delta,
-      path: join21(".ds-bridge", "history.jsonl"),
+      path: join22(".ds-bridge", "history.jsonl"),
       cwd: targetDir,
       exec: spawnGitExec
     });
@@ -19307,7 +19523,7 @@ function runReport(path, options) {
     return;
   }
   const targetDir = resolve11(path);
-  if (!existsSync16(targetDir) || !statSync10(targetDir).isDirectory()) {
+  if (!existsSync17(targetDir) || !statSync10(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -19320,7 +19536,7 @@ function runReport(path, options) {
     runMarkdownReport(targetDir, options, selection);
     return;
   }
-  const stateDir = join21(targetDir, ".ds-bridge");
+  const stateDir = join22(targetDir, ".ds-bridge");
   const warn = (message) => {
     process.stderr.write(`${message}
 `);
@@ -19406,7 +19622,7 @@ function runReport(path, options) {
       }
     }
   );
-  const outPath = options.out !== void 0 ? resolve11(options.out) : join21(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -19441,6 +19657,9 @@ function registerReportCommand(program2) {
     "--velocity-window <window>",
     "score-velocity look-back window as <N>d|<N>w (C8; overrides score_velocity_window, default 30d)"
   ).option(
+    "--dashboard <name>",
+    "render a saved dashboard from dashboards/<name>.json (mutually exclusive with --view/--artifacts)"
+  ).option(
     "--out <file>",
     "output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)"
   ).option(
@@ -19455,14 +19674,14 @@ function registerReportCommand(program2) {
 // src/cli-commands/tokens.ts
 import {
   appendFileSync as appendFileSync10,
-  existsSync as existsSync17,
-  mkdirSync as mkdirSync14,
-  readdirSync as readdirSync3,
-  readFileSync as readFileSync19,
+  existsSync as existsSync18,
+  mkdirSync as mkdirSync15,
+  readdirSync as readdirSync4,
+  readFileSync as readFileSync20,
   statSync as statSync11,
   writeFileSync as writeFileSync11
 } from "fs";
-import { isAbsolute as isAbsolute4, join as join22, relative as relative2, resolve as resolve12, sep as sep4 } from "path";
+import { isAbsolute as isAbsolute4, join as join23, relative as relative2, resolve as resolve12, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -19700,7 +19919,7 @@ function renderTerm13(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync19(filePath, "utf8");
+    raw = readFileSync20(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -19772,12 +19991,12 @@ function hasOutputExtension(name) {
 function walkOutputFiles(dir, acc) {
   let entries;
   try {
-    entries = readdirSync3(dir, { withFileTypes: true });
+    entries = readdirSync4(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join22(dir, entry.name);
+    const full = join23(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS4.has(entry.name)) continue;
       walkOutputFiles(full, acc);
@@ -19799,12 +20018,12 @@ function isTokenDir4(name) {
 function collectTokenCandidates3(dir, insideTokenDir, acc) {
   let entries;
   try {
-    entries = readdirSync3(dir, { withFileTypes: true });
+    entries = readdirSync4(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join22(dir, entry.name);
+    const full = join23(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS4.has(entry.name)) continue;
       collectTokenCandidates3(
@@ -19821,7 +20040,7 @@ function collectTokenCandidates3(dir, insideTokenDir, acc) {
 function detectFileFormat4(absPath) {
   let raw;
   try {
-    raw = readFileSync19(absPath, "utf8");
+    raw = readFileSync20(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -19846,7 +20065,7 @@ function discoverFirstTokenSource3(root) {
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
     const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve12(process.cwd(), flagTokens);
-    if (!existsSync17(abs2)) {
+    if (!existsSync18(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -19854,11 +20073,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join22(targetDir, ".ds-bridge.json");
-  if (existsSync17(configPath)) {
+  const configPath = join23(targetDir, ".ds-bridge.json");
+  if (existsSync18(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync19(configPath, "utf8");
+      projectFileText = readFileSync20(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -19867,7 +20086,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
         const abs2 = isAbsolute4(src) ? src : resolve12(targetDir, src);
-        if (existsSync17(abs2)) return { kind: "ok", path: abs2 };
+        if (existsSync18(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -19886,7 +20105,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync19(tokenPath, "utf8");
+    raw = readFileSync20(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -19936,7 +20155,7 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
     if (resolve12(file) === resolve12(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync19(file, "utf8");
+      content = readFileSync20(file, "utf8");
     } catch {
       continue;
     }
@@ -20026,19 +20245,19 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync14(stateDir, { recursive: true });
+  mkdirSync15(stateDir, { recursive: true });
   appendFileSync10(
-    join22(stateDir, "history.jsonl"),
+    join23(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
   );
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join22(stateDir, "history.jsonl");
+  const historyPath = join23(stateDir, "history.jsonl");
   let text;
   try {
-    text = readFileSync19(historyPath, "utf8");
+    text = readFileSync20(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -20070,10 +20289,10 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join22(stateDir, "reports");
-  mkdirSync14(reportsDir, { recursive: true });
+  const reportsDir = join23(stateDir, "reports");
+  mkdirSync15(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join22(reportsDir, `tokens-${date}.html`);
+  const reportPath = join23(reportsDir, `tokens-${date}.html`);
   writeFileSync11(reportPath, html, "utf8");
   return reportPath;
 }
@@ -20091,7 +20310,7 @@ function runCheck(path, options) {
     return;
   }
   const targetDir = resolve12(path);
-  if (!existsSync17(targetDir) || !statSync11(targetDir).isDirectory()) {
+  if (!existsSync18(targetDir) || !statSync11(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -20106,7 +20325,7 @@ function runCheck(path, options) {
     return;
   }
   const outputsDir = options.outputs !== void 0 ? resolve12(options.outputs) : targetDir;
-  if (!existsSync17(outputsDir) || !statSync11(outputsDir).isDirectory()) {
+  if (!existsSync18(outputsDir) || !statSync11(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -20118,7 +20337,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join22(targetDir, ".ds-bridge");
+  const stateDir = join23(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -20202,7 +20421,7 @@ function buildProgram() {
   registerReleaseCheckCommand(program2);
   return program2;
 }
-loadDotenvInto(join23(process.cwd(), ".ds-bridge.env"), process.env);
+loadDotenvInto(join24(process.cwd(), ".ds-bridge.env"), process.env);
 buildProgram().parse();
 export {
   buildProgram

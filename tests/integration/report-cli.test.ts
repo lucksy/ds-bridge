@@ -2102,3 +2102,101 @@ describe("ds-bridge report — md scorecard appendix (M5.1)", () => {
 		expect(result.stdout).toContain("| Kind | Last run | Age | Δ age | Band |");
 	});
 });
+
+// ---------- M8.3 — report --dashboard / dashboard_default resolution ----------
+//
+// A saved dashboard (dashboards/<name>.json) is a named SELECTION; report loads
+// it at the flags layer (--dashboard) or the project layer (dashboard_default),
+// resolves its view|artifacts through resolveView, and labels the header with the
+// dashboard NAME. Unknown/invalid → exit 2 with the available-names list.
+
+/** Seed a dashboards/<name>.json with the given object. */
+async function seedDashboardFile(
+	dir: string,
+	name: string,
+	obj: unknown,
+): Promise<void> {
+	await mkdir(join(dir, "dashboards"), { recursive: true });
+	await writeFile(
+		join(dir, "dashboards", `${name}.json`),
+		`${JSON.stringify(obj, null, 2)}\n`,
+		"utf8",
+	);
+}
+
+describe("ds-bridge report — saved dashboards (M8.3)", () => {
+	it("--dashboard <name> renders the saved selection + names the header", async () => {
+		const dir = await freshTmp("ds-report-dash-flag-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "exec", { name: "exec", view: "ds-manager" });
+
+		const result = await runCli(["report", dir, "--dashboard", "exec"]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		// ds-manager includes parity but not lint-summary; the header names "exec".
+		expect(html).toContain("Parity matrix");
+		expect(html).not.toContain("Lint violations");
+		expect(html).toContain("exec");
+	});
+
+	it("dashboard_default in config resolves the same way with no flag", async () => {
+		const dir = await freshTmp("ds-report-dash-default-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "exec", {
+			name: "exec",
+			artifacts: ["system-score", "parity"],
+		});
+		await seedProjectConfig(dir, { dashboard_default: "exec" });
+
+		const result = await runCli(["report", dir]);
+		expect(result.code).toBe(0);
+		const html = await readFile(
+			join(dir, ".ds-bridge", "reports", "dashboard.html"),
+			"utf8",
+		);
+		expect(html).toContain("Parity matrix");
+		expect(html).not.toContain("Drift trend");
+		expect(html).toContain("exec");
+	});
+
+	it("an unknown --dashboard exits 2 listing the available names", async () => {
+		const dir = await freshTmp("ds-report-dash-unknown-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "exec", { name: "exec", view: "ds-manager" });
+
+		const result = await runCli(["report", dir, "--dashboard", "nope"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("nope");
+		expect(result.stderr).toContain("exec"); // available-names list
+	});
+
+	it("--dashboard with --view exits 2 (mutually exclusive)", async () => {
+		const dir = await freshTmp("ds-report-dash-conflict-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "exec", { name: "exec", view: "ds-manager" });
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--dashboard",
+			"exec",
+			"--view",
+			"ds-manager",
+		]);
+		expect(result.code).toBe(2);
+		expect(result.stderr.toLowerCase()).toContain("mutually exclusive");
+	});
+
+	it("an invalid saved dashboard (unknown id) exits 2", async () => {
+		const dir = await freshTmp("ds-report-dash-invalid-");
+		await seedSixArtifacts(dir);
+		await seedDashboardFile(dir, "bad", { name: "bad", artifacts: ["parityy"] });
+
+		const result = await runCli(["report", dir, "--dashboard", "bad"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("parity");
+	});
+});
