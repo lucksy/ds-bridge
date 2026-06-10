@@ -10531,12 +10531,116 @@ function registerConfigCommand(program2) {
 }
 
 // src/cli-commands/dashboard.ts
-import { existsSync as existsSync6, readFileSync as readFileSync8 } from "fs";
-import { join as join9, resolve as resolvePath2 } from "path";
+import { appendFileSync as appendFileSync4, existsSync as existsSync7, readFileSync as readFileSync9, unlinkSync as unlinkSync2 } from "fs";
+import { join as join10, resolve as resolvePath2 } from "path";
+
+// src/io/dashboards.ts
+import { existsSync as existsSync6, mkdirSync as mkdirSync5, readdirSync, readFileSync as readFileSync7 } from "fs";
+import { join as join8 } from "path";
+var DASHBOARDS_DIR = "dashboards";
+var REPORT_TYPES = ["html", "md", "terminal", "site"];
+function dashboardPath(dir, name, local) {
+  const suffix = local ? ".local.json" : ".json";
+  return join8(dir, DASHBOARDS_DIR, `${name}${suffix}`);
+}
+function writeDashboardFile(dir, name, selection, opts = {}) {
+  mkdirSync5(join8(dir, DASHBOARDS_DIR), { recursive: true });
+  const obj = { name };
+  if (selection.view !== void 0) obj.view = selection.view;
+  if (selection.artifacts !== void 0)
+    obj.artifacts = [...selection.artifacts];
+  const meta = opts.meta;
+  if (meta?.persona !== void 0) obj.persona = meta.persona;
+  if (meta?.report_type !== void 0) obj.report_type = meta.report_type;
+  if (meta?.audience !== void 0) obj.audience = meta.audience;
+  if (meta?.score_weights !== void 0) obj.score_weights = meta.score_weights;
+  atomicWriteJson(dashboardPath(dir, name, opts.local ?? false), obj);
+}
+function parseDashboard(text, fallbackName) {
+  const selectionOutcome = parseSelectionFile(text);
+  if (selectionOutcome.kind === "invalid") {
+    return { kind: "invalid", message: selectionOutcome.message };
+  }
+  const obj = JSON.parse(text);
+  const selection = selectionOutcome.kind === "view" ? { kind: "view", view: selectionOutcome.view } : { kind: "artifacts", artifacts: selectionOutcome.artifacts };
+  const dashboard = {
+    name: typeof obj.name === "string" && obj.name !== "" ? obj.name : fallbackName,
+    selection
+  };
+  if (obj.report_type !== void 0) {
+    if (!REPORT_TYPES.includes(obj.report_type)) {
+      return {
+        kind: "invalid",
+        message: `report_type must be one of ${REPORT_TYPES.join(", ")}`
+      };
+    }
+    dashboard.reportType = obj.report_type;
+  }
+  if (obj.audience !== void 0) {
+    if (typeof obj.audience !== "string") {
+      return { kind: "invalid", message: "audience must be a string" };
+    }
+    dashboard.audience = obj.audience;
+  }
+  if (obj.persona !== void 0) {
+    if (typeof obj.persona !== "string") {
+      return { kind: "invalid", message: "persona must be a string" };
+    }
+    dashboard.persona = obj.persona;
+  }
+  if (obj.score_weights !== void 0) {
+    const weights = validateWeights(obj.score_weights);
+    if (weights.kind !== "ok") {
+      return {
+        kind: "invalid",
+        message: `score_weights is invalid (${weights.kind}${"key" in weights ? `: ${weights.key}` : ""})`
+      };
+    }
+    dashboard.scoreWeights = obj.score_weights;
+  }
+  return { kind: "ok", dashboard };
+}
+function readDashboardFile(dir, name) {
+  const localPath = dashboardPath(dir, name, true);
+  const sharedPath = dashboardPath(dir, name, false);
+  const path = existsSync6(localPath) ? localPath : existsSync6(sharedPath) ? sharedPath : void 0;
+  if (path === void 0) return { kind: "not-found" };
+  let text;
+  try {
+    text = readFileSync7(path, "utf8");
+  } catch {
+    return { kind: "not-found" };
+  }
+  return parseDashboard(text, name);
+}
+function listDashboards(dir) {
+  let files;
+  try {
+    files = readdirSync(join8(dir, DASHBOARDS_DIR));
+  } catch {
+    return [];
+  }
+  const byName2 = /* @__PURE__ */ new Map();
+  const entryFor = (name) => {
+    const existing = byName2.get(name);
+    if (existing !== void 0) return existing;
+    const created = { name, hasShared: false, hasLocal: false };
+    byName2.set(name, created);
+    return created;
+  };
+  for (const file of files) {
+    if (file.endsWith(".local.json")) {
+      entryFor(file.slice(0, -".local.json".length)).hasLocal = true;
+    } else if (file.endsWith(".json")) {
+      entryFor(file.slice(0, -".json".length)).hasShared = true;
+    }
+  }
+  return [...byName2.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 // src/cli-commands/dashboard-wizard.ts
-import { readFileSync as readFileSync7 } from "fs";
-import { join as join8 } from "path";
+import { readFileSync as readFileSync8 } from "fs";
+import { join as join9 } from "path";
 import { createInterface } from "readline/promises";
 var PRODUCER_PERSONAS = /* @__PURE__ */ new Set([
   "ds-designer",
@@ -10555,7 +10659,7 @@ var PROJECT_FILE_NAME2 = ".ds-bridge.json";
 function readExistingProductFileKeys(dir) {
   try {
     const raw = JSON.parse(
-      readFileSync7(join8(dir, PROJECT_FILE_NAME2), "utf8")
+      readFileSync8(join9(dir, PROJECT_FILE_NAME2), "utf8")
     );
     if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
       const pfk = raw.product_file_keys;
@@ -10721,11 +10825,11 @@ function fail5(message) {
 }
 var PROJECT_FILE_NAME3 = ".ds-bridge.json";
 function readSelection(targetDir) {
-  const configPath = join9(targetDir, PROJECT_FILE_NAME3);
+  const configPath = join10(targetDir, PROJECT_FILE_NAME3);
   let projectFileText;
-  if (existsSync6(configPath)) {
+  if (existsSync7(configPath)) {
     try {
-      projectFileText = readFileSync8(configPath, "utf8");
+      projectFileText = readFileSync9(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -10900,7 +11004,56 @@ function runSet(path, options) {
   process.exitCode = 0;
 }
 var MATERIALIZE_NOTICE = "Your view is now an explicit list and will not auto-gain future preset artifacts.";
-function runEdit(path, rawId, mode) {
+function runEditDashboard(targetDir, name, id, mode) {
+  const read = readDashboardFile(targetDir, name);
+  if (read.kind === "not-found") {
+    failUnknownDashboard(targetDir, name);
+    return;
+  }
+  if (read.kind === "invalid") {
+    fail5(`Dashboard "${name}" is invalid: ${read.message}`);
+    return;
+  }
+  const sel = read.dashboard.selection;
+  const resolved = resolveView(
+    sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
+    {}
+  );
+  if (resolved.kind !== "ok") {
+    fail5(`Dashboard "${name}" has an unresolvable selection.`);
+    return;
+  }
+  const before = resolved.artifacts;
+  const present = before.includes(id);
+  if (mode === "add" && present) {
+    process.stdout.write(`"${id}" is already in "${name}" \u2014 no change.
+`);
+    process.exitCode = 0;
+    return;
+  }
+  if (mode === "remove" && !present) {
+    process.stdout.write(`"${id}" is not in "${name}" \u2014 no change.
+`);
+    process.exitCode = 0;
+    return;
+  }
+  const next = mode === "add" ? [...before, id] : before.filter((existing) => existing !== id);
+  const entry = listDashboards(targetDir).find((e4) => e4.name === name);
+  const local = entry !== void 0 && !entry.hasShared && entry.hasLocal;
+  writeDashboardFile(
+    targetDir,
+    name,
+    { artifacts: next },
+    { local, meta: metaFrom(read.dashboard) }
+  );
+  const verb = mode === "add" ? "Added" : "Removed";
+  process.stdout.write(
+    `${verb} "${id}" in "${name}". View: ${next.join(", ")}.
+`
+  );
+  process.exitCode = 0;
+}
+function runEdit(path, rawId, mode, dashboardName) {
   const outcome = lookupArtifact(rawId);
   if (outcome.kind === "unknown") {
     const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
@@ -10909,6 +11062,10 @@ function runEdit(path, rawId, mode) {
   }
   const id = outcome.artifact.id;
   const targetDir = resolvePath2(path);
+  if (dashboardName !== void 0) {
+    runEditDashboard(targetDir, dashboardName, id, mode);
+    return;
+  }
   const current = readSelection(targetDir);
   if (current.kind === "error") {
     fail5(current.message);
@@ -10940,6 +11097,124 @@ function runEdit(path, rawId, mode) {
   }
   const verb = mode === "add" ? "Added" : "Removed";
   process.stdout.write(`${verb} "${id}". View: ${next.join(", ")}.
+`);
+  process.exitCode = 0;
+}
+function failUnknownDashboard(targetDir, name) {
+  const names = listDashboards(targetDir).map((e4) => e4.name);
+  const available = names.length > 0 ? ` Available: ${names.join(", ")}.` : " No saved dashboards in dashboards/.";
+  fail5(`Unknown dashboard "${name}".${available}`);
+}
+function metaFrom(dashboard) {
+  const meta = {};
+  if (dashboard.persona !== void 0) meta.persona = dashboard.persona;
+  if (dashboard.reportType !== void 0)
+    meta.report_type = dashboard.reportType;
+  if (dashboard.audience !== void 0) meta.audience = dashboard.audience;
+  if (dashboard.scoreWeights !== void 0) {
+    meta.score_weights = dashboard.scoreWeights;
+  }
+  return meta;
+}
+function ensureLocalGitignore(targetDir) {
+  const gitignorePath = join10(targetDir, ".gitignore");
+  const line = "dashboards/*.local.json";
+  let existing = "";
+  if (existsSync7(gitignorePath)) {
+    existing = readFileSync9(gitignorePath, "utf8");
+    if (existing.split(/\r?\n/).some((l) => l.trim() === line)) return;
+  }
+  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  appendFileSync4(gitignorePath, `${prefix}${line}
+`, "utf8");
+}
+function runSave(name, path, options) {
+  const targetDir = resolvePath2(path);
+  if (options.view !== void 0 && options.artifacts !== void 0) {
+    fail5("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
+    return;
+  }
+  let selection;
+  if (options.view !== void 0) {
+    const resolved = resolveView({ view: options.view }, {});
+    if (resolved.kind !== "ok") {
+      const hint = resolved.kind === "unknown-view" && resolved.suggestions.length > 0 ? ` \u2014 did you mean ${resolved.suggestions.join(", ")}?` : "";
+      fail5(`Unknown view "${options.view}"${hint}`);
+      return;
+    }
+    selection = options.freeze ? { artifacts: resolved.artifacts } : { view: options.view };
+  } else if (options.artifacts !== void 0) {
+    const parsed = parseArtifacts(options.artifacts);
+    if (parsed.kind === "error") {
+      fail5(parsed.message);
+      return;
+    }
+    selection = { artifacts: parsed.ids };
+  } else {
+    const current = readSelection(targetDir);
+    if (current.kind === "error") {
+      fail5(current.message);
+      return;
+    }
+    selection = current.selection.viewName !== void 0 && !options.freeze ? { view: current.selection.viewName } : { artifacts: current.selection.artifacts };
+  }
+  const local = options.local ?? false;
+  writeDashboardFile(targetDir, name, selection, { local });
+  if (local) ensureLocalGitignore(targetDir);
+  const where = `dashboards/${name}${local ? ".local" : ""}.json`;
+  const kind = "view" in selection ? `live preset "${selection.view}"` : "frozen list";
+  process.stdout.write(`Saved dashboard "${name}" (${kind}) to ${where}.
+`);
+  process.exitCode = 0;
+}
+function runLoad(name, path) {
+  const targetDir = resolvePath2(path);
+  const read = readDashboardFile(targetDir, name);
+  if (read.kind === "not-found") {
+    failUnknownDashboard(targetDir, name);
+    return;
+  }
+  if (read.kind === "invalid") {
+    fail5(`Dashboard "${name}" is invalid: ${read.message}`);
+    return;
+  }
+  writeProjectConfig(targetDir, {
+    dashboard_default: name,
+    dashboard_view: void 0,
+    dashboard_artifacts: void 0
+  });
+  process.stdout.write(`Default dashboard set to "${name}".
+`);
+  process.exitCode = 0;
+}
+function runLs(path) {
+  const targetDir = resolvePath2(path);
+  const entries = listDashboards(targetDir);
+  if (entries.length === 0) {
+    process.stdout.write("No saved dashboards in dashboards/.\n");
+    process.exitCode = 0;
+    return;
+  }
+  for (const e4 of entries) {
+    const marker = e4.hasShared && e4.hasLocal ? "shared + personal" : e4.hasShared ? "shared (committed)" : "personal (local)";
+    process.stdout.write(`${e4.name}  (${marker})
+`);
+  }
+  process.exitCode = 0;
+}
+function runRm(name, path, options) {
+  const targetDir = resolvePath2(path);
+  const file = join10(
+    targetDir,
+    "dashboards",
+    `${name}${options.local ? ".local" : ""}.json`
+  );
+  if (!existsSync7(file)) {
+    failUnknownDashboard(targetDir, name);
+    return;
+  }
+  unlinkSync2(file);
+  process.stdout.write(`Removed dashboard "${name}".
 `);
   process.exitCode = 0;
 }
@@ -10976,13 +11251,51 @@ function registerDashboardCommand(program2) {
   });
   dashboard.command("add").description(
     "Add an artifact to the view (materializes the current preset first)"
-  ).argument("<artifact>", "artifact id to add").argument("[path]", "project directory holding .ds-bridge.json", ".").action((artifact, path) => {
-    runEdit(path, artifact, "add");
-  });
+  ).argument("<artifact>", "artifact id to add").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
+    "--dashboard <name>",
+    "edit a saved dashboard instead of the project view"
+  ).action(
+    (artifact, path, options) => {
+      runEdit(path, artifact, "add", options.dashboard);
+    }
+  );
   dashboard.command("remove").description(
     "Remove an artifact from the view (materializes the current preset first)"
-  ).argument("<artifact>", "artifact id to remove").argument("[path]", "project directory holding .ds-bridge.json", ".").action((artifact, path) => {
-    runEdit(path, artifact, "remove");
+  ).argument("<artifact>", "artifact id to remove").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
+    "--dashboard <name>",
+    "edit a saved dashboard instead of the project view"
+  ).action(
+    (artifact, path, options) => {
+      runEdit(path, artifact, "remove", options.dashboard);
+    }
+  );
+  dashboard.command("save").description(
+    "Save a named dashboard (live preset by default; --freeze materializes)"
+  ).argument("<name>", "dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").option("--from-current", "save the project's current selection (default)").option("--view <preset>", "save a persona preset by name (kept live)").option(
+    "--artifacts <ids>",
+    "save an explicit comma-separated artifact list"
+  ).option(
+    "--freeze",
+    "materialize the resolved artifact list (not a live preset)"
+  ).option(
+    "--local",
+    "write a personal dashboards/<name>.local.json (gitignored)"
+  ).action((name, path, options) => {
+    runSave(name, path, options);
+  });
+  dashboard.command("load").description(
+    "Set a saved dashboard as the project default (dashboard_default)"
+  ).argument("<name>", "saved dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").action((name, path) => {
+    runLoad(name, path);
+  });
+  dashboard.command("ls").description("List saved dashboards with shared/personal markers").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
+    runLs(path);
+  });
+  dashboard.command("rm").description("Delete a saved dashboard").argument("<name>", "saved dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
+    "--local",
+    "delete the personal .local.json instead of the shared file"
+  ).action((name, path, options) => {
+    runRm(name, path, options);
   });
   dashboard.command("setup").description("Interactive wizard to compose and persist a dashboard view").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
     void runSetup(path);
@@ -10991,13 +11304,13 @@ function registerDashboardCommand(program2) {
 
 // src/cli-commands/digest.ts
 import {
-  existsSync as existsSync7,
-  mkdirSync as mkdirSync5,
-  readFileSync as readFileSync9,
+  existsSync as existsSync8,
+  mkdirSync as mkdirSync6,
+  readFileSync as readFileSync10,
   statSync as statSync4,
   writeFileSync as writeFileSync4
 } from "fs";
-import { dirname as dirname3, join as join10, resolve as resolve7 } from "path";
+import { dirname as dirname3, join as join11, resolve as resolve7 } from "path";
 import { cwd as processCwd2 } from "process";
 
 // src/engines/report/history-lines.ts
@@ -11346,17 +11659,17 @@ function parseAudience2(flag) {
 }
 function readHistoryText(stateDir) {
   try {
-    return readFileSync9(join10(stateDir, "history.jsonl"), "utf8");
+    return readFileSync10(join11(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
 function resolveReadinessThreshold(targetDir) {
-  const configPath = join10(targetDir, ".ds-bridge.json");
+  const configPath = join11(targetDir, ".ds-bridge.json");
   let projectFileText;
-  if (existsSync7(configPath)) {
+  if (existsSync8(configPath)) {
     try {
-      projectFileText = readFileSync9(configPath, "utf8");
+      projectFileText = readFileSync10(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -11392,7 +11705,7 @@ function runDigest(path, options, deps) {
     return;
   }
   const targetDir = resolve7(deps.cwd, path);
-  if (!existsSync7(targetDir) || !statSync4(targetDir).isDirectory()) {
+  if (!existsSync8(targetDir) || !statSync4(targetDir).isDirectory()) {
     deps.stderr(`Path "${targetDir}" is not a directory.
 `);
     process.exitCode = 2;
@@ -11405,7 +11718,7 @@ function runDigest(path, options, deps) {
     process.exitCode = 2;
     return;
   }
-  const stateDir = join10(targetDir, ".ds-bridge");
+  const stateDir = join11(targetDir, ".ds-bridge");
   const text = readHistoryText(stateDir);
   const model = buildDigest(
     text,
@@ -11417,7 +11730,7 @@ function runDigest(path, options, deps) {
   if (options.out !== void 0) {
     const outPath = resolve7(deps.cwd, options.out);
     try {
-      mkdirSync5(dirname3(outPath), { recursive: true });
+      mkdirSync6(dirname3(outPath), { recursive: true });
       writeFileSync4(outPath, markdown, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
@@ -11449,13 +11762,13 @@ function registerDigestCommand(program2) {
 
 // src/cli-commands/docs.ts
 import {
-  existsSync as existsSync8,
-  mkdirSync as mkdirSync6,
-  readFileSync as readFileSync10,
+  existsSync as existsSync9,
+  mkdirSync as mkdirSync7,
+  readFileSync as readFileSync11,
   statSync as statSync5,
   writeFileSync as writeFileSync5
 } from "fs";
-import { dirname as dirname4, join as join11, resolve as resolvePath3 } from "path";
+import { dirname as dirname4, join as join12, resolve as resolvePath3 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/engines/docs/merge.ts
@@ -11711,8 +12024,8 @@ async function scanCode(targetDir) {
   return scanCodeComponents(targetDir);
 }
 function loadRegistry2(targetDir) {
-  const registryPath = join11(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync8(registryPath)) {
+  const registryPath = join12(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync9(registryPath)) {
     fail6(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -11720,7 +12033,7 @@ function loadRegistry2(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync10(registryPath, "utf8");
+    raw = readFileSync11(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail6(`Could not read registry "${registryPath}": ${detail}`);
@@ -11743,7 +12056,7 @@ async function discoverTokens(targetDir) {
   if (source === void 0) return EMPTY_TOKENS;
   let raw;
   try {
-    raw = readFileSync10(source.path, "utf8");
+    raw = readFileSync11(source.path, "utf8");
   } catch {
     return EMPTY_TOKENS;
   }
@@ -11763,8 +12076,8 @@ function mdxFileName(component) {
   return `${safe.length > 0 ? safe : "component"}.mdx`;
 }
 function hasRegistry(candidate) {
-  return existsSync8(
-    join11(resolvePath3(candidate), ".ds-bridge", "registry.json")
+  return existsSync9(
+    join12(resolvePath3(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate(component, path) {
@@ -11792,7 +12105,7 @@ async function runDocs(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate(rawComponent, rawPath);
   const targetDir = resolvePath3(path);
-  if (!existsSync8(targetDir) || !statSync5(targetDir).isDirectory()) {
+  if (!existsSync9(targetDir) || !statSync5(targetDir).isDirectory()) {
     fail6(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -11813,9 +12126,9 @@ async function runDocs(rawComponent, rawPath, options) {
       return;
     }
   }
-  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join11(targetDir, ".ds-bridge", "docs");
+  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join12(targetDir, ".ds-bridge", "docs");
   try {
-    mkdirSync6(outDir, { recursive: true });
+    mkdirSync7(outDir, { recursive: true });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail6(`Could not create output directory "${outDir}": ${detail}`);
@@ -11824,7 +12137,7 @@ async function runDocs(rawComponent, rawPath, options) {
   const pages = [];
   for (const doc of docs) {
     const fileName = mdxFileName(doc.name);
-    const pagePath = join11(outDir, fileName);
+    const pagePath = join12(outDir, fileName);
     try {
       writeFileSync5(pagePath, renderComponentMdx(doc), "utf8");
     } catch (error) {
@@ -11834,7 +12147,7 @@ async function runDocs(rawComponent, rawPath, options) {
     }
     pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
   }
-  const llmsPath = join11(outDir, "llms.txt");
+  const llmsPath = join12(outDir, "llms.txt");
   try {
     writeFileSync5(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
   } catch (error) {
@@ -11868,13 +12181,13 @@ function registerDocsCommand(program2) {
 
 // src/cli-commands/frame-impl.ts
 import {
-  appendFileSync as appendFileSync4,
-  existsSync as existsSync9,
-  mkdirSync as mkdirSync7,
-  readdirSync,
-  readFileSync as readFileSync11
+  appendFileSync as appendFileSync5,
+  existsSync as existsSync10,
+  mkdirSync as mkdirSync8,
+  readdirSync as readdirSync2,
+  readFileSync as readFileSync12
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join12, resolve as resolve8, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute2, join as join13, resolve as resolve8, sep as sep2 } from "path";
 import { cwd } from "process";
 
 // src/engines/handoff/parse-url.ts
@@ -12339,21 +12652,21 @@ function clientErrorMessage(result) {
   }
 }
 function readProjectConfigText2() {
-  const configPath = join12(cwd(), ".ds-bridge.json");
-  if (!existsSync9(configPath)) return void 0;
+  const configPath = join13(cwd(), ".ds-bridge.json");
+  if (!existsSync10(configPath)) return void 0;
   try {
-    return readFileSync11(configPath, "utf8");
+    return readFileSync12(configPath, "utf8");
   } catch {
     return void 0;
   }
 }
 function loadRegistry3(registryPath) {
-  if (!existsSync9(registryPath)) {
+  if (!existsSync10(registryPath)) {
     return { kind: "error", message: missingRegistryMessage(registryPath) };
   }
   try {
     const registry = JSON.parse(
-      readFileSync11(registryPath, "utf8")
+      readFileSync12(registryPath, "utf8")
     );
     return { kind: "ok", registry };
   } catch (error) {
@@ -12374,7 +12687,7 @@ function isTokenDir2(name) {
 function detectFileFormat2(absPath) {
   let raw;
   try {
-    raw = readFileSync11(absPath, "utf8");
+    raw = readFileSync12(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -12393,12 +12706,12 @@ function depthOf2(path) {
 function collectTokenCandidates(dir, insideTokenDir, acc) {
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = readdirSync2(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join12(dir, entry.name);
+    const full = join13(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       collectTokenCandidates(
@@ -12423,11 +12736,11 @@ function discoverFirstTokenSource(root) {
 }
 function loadTokens(targetDir) {
   let tokenPath;
-  const configPath = join12(targetDir, ".ds-bridge.json");
-  if (existsSync9(configPath)) {
+  const configPath = join13(targetDir, ".ds-bridge.json");
+  if (existsSync10(configPath)) {
     try {
       const resolved = resolveConfig({
-        projectFileText: readFileSync11(configPath, "utf8")
+        projectFileText: readFileSync12(configPath, "utf8")
       });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
@@ -12440,7 +12753,7 @@ function loadTokens(targetDir) {
   if (tokenPath === void 0) {
     tokenPath = discoverFirstTokenSource(targetDir);
   }
-  if (tokenPath === void 0 || !existsSync9(tokenPath)) {
+  if (tokenPath === void 0 || !existsSync10(tokenPath)) {
     return {
       kind: "error",
       message: `No design-token source found for "${targetDir}".
@@ -12449,7 +12762,7 @@ Set token_source in .ds-bridge.json, or add a conventional token file (tokens.js
   }
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync11(tokenPath, "utf8"));
+    parsed = JSON.parse(readFileSync12(tokenPath, "utf8"));
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -12596,10 +12909,10 @@ function renderTerm6(impl, color) {
   return lines.join("\n");
 }
 function appendFrameImplHistory(record) {
-  const stateDir = join12(cwd(), ".ds-bridge");
-  mkdirSync7(stateDir, { recursive: true });
-  appendFileSync4(
-    join12(stateDir, "history.jsonl"),
+  const stateDir = join13(cwd(), ".ds-bridge");
+  mkdirSync8(stateDir, { recursive: true });
+  appendFileSync5(
+    join13(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -12652,7 +12965,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
   }
   const fileKey = fileKeyOutcome.key;
   const targetDir = cwd();
-  const registryPath = join12(targetDir, ".ds-bridge", "registry.json");
+  const registryPath = join13(targetDir, ".ds-bridge", "registry.json");
   const registryOutcome = loadRegistry3(registryPath);
   if (registryOutcome.kind === "error") {
     fail7(registryOutcome.message);
@@ -12731,8 +13044,8 @@ function registerFrameImplCommand(program2) {
 }
 
 // src/cli-commands/handoff.ts
-import { appendFileSync as appendFileSync5, mkdirSync as mkdirSync8 } from "fs";
-import { join as join13 } from "path";
+import { appendFileSync as appendFileSync6, mkdirSync as mkdirSync9 } from "fs";
+import { join as join14 } from "path";
 import { cwd as cwd2 } from "process";
 
 // src/engines/handoff/score.ts
@@ -12921,7 +13234,7 @@ var RULE_LABEL = {
 };
 var HISTORY_DEDUCTION_LIMIT = 3;
 function appendHandoffHistory(report, frameName) {
-  const stateDir = join13(cwd2(), ".ds-bridge");
+  const stateDir = join14(cwd2(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "handoff",
@@ -12929,9 +13242,9 @@ function appendHandoffHistory(report, frameName) {
     frameName,
     deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
   };
-  mkdirSync8(stateDir, { recursive: true });
-  appendFileSync5(
-    join13(stateDir, "history.jsonl"),
+  mkdirSync9(stateDir, { recursive: true });
+  appendFileSync6(
+    join14(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -13179,13 +13492,13 @@ function registerHandoffCommand(program2) {
 
 // src/cli-commands/impact.ts
 import {
-  appendFileSync as appendFileSync6,
-  existsSync as existsSync10,
-  mkdirSync as mkdirSync9,
-  readFileSync as readFileSync12,
+  appendFileSync as appendFileSync7,
+  existsSync as existsSync11,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync13,
   writeFileSync as writeFileSync6
 } from "fs";
-import { dirname as dirname5, join as join14 } from "path";
+import { dirname as dirname5, join as join15 } from "path";
 import { cwd as cwd3, env as processEnv } from "process";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
@@ -13600,10 +13913,10 @@ function clientErrorMessage3(result) {
   }
 }
 function readProjectConfigText3() {
-  const configPath = join14(cwd3(), ".ds-bridge.json");
-  if (!existsSync10(configPath)) return void 0;
+  const configPath = join15(cwd3(), ".ds-bridge.json");
+  if (!existsSync11(configPath)) return void 0;
   try {
-    return readFileSync12(configPath, "utf8");
+    return readFileSync13(configPath, "utf8");
   } catch {
     return void 0;
   }
@@ -13611,14 +13924,14 @@ function readProjectConfigText3() {
 function cursorPath() {
   const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join14(dataDir, "impact-cursor.json");
+    return join15(dataDir, "impact-cursor.json");
   }
-  return join14(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
+  return join15(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
 }
 function readCursor(path) {
-  if (!existsSync10(path)) return void 0;
+  if (!existsSync11(path)) return void 0;
   try {
-    const parsed = JSON.parse(readFileSync12(path, "utf8"));
+    const parsed = JSON.parse(readFileSync13(path, "utf8"));
     if (!Array.isArray(parsed.snapshot)) return void 0;
     return parsed;
   } catch {
@@ -13627,7 +13940,7 @@ function readCursor(path) {
 }
 function writeCursor(path, cursor) {
   try {
-    mkdirSync9(dirname5(path), { recursive: true });
+    mkdirSync10(dirname5(path), { recursive: true });
     writeFileSync6(path, `${JSON.stringify(cursor, null, 2)}
 `, "utf8");
     return true;
@@ -13636,10 +13949,10 @@ function writeCursor(path, cursor) {
   }
 }
 function loadRegistry4() {
-  const registryPath = join14(cwd3(), ".ds-bridge", "registry.json");
-  if (!existsSync10(registryPath)) return void 0;
+  const registryPath = join15(cwd3(), ".ds-bridge", "registry.json");
+  if (!existsSync11(registryPath)) return void 0;
   try {
-    return JSON.parse(readFileSync12(registryPath, "utf8"));
+    return JSON.parse(readFileSync13(registryPath, "utf8"));
   } catch {
     return void 0;
   }
@@ -13702,7 +14015,7 @@ function buildMigrationSites(diff, usageByName, cap) {
   return { sites: truncated ? all.slice(0, limit) : all, truncated };
 }
 function appendImpactHistory(targetDir, diff, usageByName, cap) {
-  const stateDir = join14(targetDir, ".ds-bridge");
+  const stateDir = join15(targetDir, ".ds-bridge");
   let touchedCallSites = 0;
   for (const usage of usageByName.values()) {
     touchedCallSites += usage.usages.length;
@@ -13716,9 +14029,9 @@ function appendImpactHistory(targetDir, diff, usageByName, cap) {
     ...sites.length > 0 ? { sites } : {},
     ...truncated ? { sitesTruncated: true } : {}
   };
-  mkdirSync9(stateDir, { recursive: true });
-  appendFileSync6(
-    join14(stateDir, "history.jsonl"),
+  mkdirSync10(stateDir, { recursive: true });
+  appendFileSync7(
+    join15(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -14021,13 +14334,13 @@ function registerImpactCommand(program2) {
 
 // src/cli-commands/library-health.ts
 import {
-  appendFileSync as appendFileSync7,
-  existsSync as existsSync11,
-  mkdirSync as mkdirSync10,
-  readFileSync as readFileSync13,
+  appendFileSync as appendFileSync8,
+  existsSync as existsSync12,
+  mkdirSync as mkdirSync11,
+  readFileSync as readFileSync14,
   writeFileSync as writeFileSync7
 } from "fs";
-import { join as join16 } from "path";
+import { join as join17 } from "path";
 import { cwd as cwd4, env as processEnv2 } from "process";
 
 // src/engines/figma/library-health.ts
@@ -14121,14 +14434,14 @@ function assessLibraryHealth(file, opts) {
 }
 
 // src/io/figma/cache.ts
-import { dirname as dirname6, join as join15 } from "path";
+import { dirname as dirname6, join as join16 } from "path";
 function cachePath(args) {
   const fileName = `library-${args.key}.json`;
   const dataDir = args.env.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join15(dataDir, "figma", fileName);
+    return join16(dataDir, "figma", fileName);
   }
-  return join15(args.cwd, ".ds-bridge", "cache", fileName);
+  return join16(args.cwd, ".ds-bridge", "cache", fileName);
 }
 function isEnvelope(value2) {
   return typeof value2 === "object" && value2 !== null && typeof value2.stampedAtMs === "number";
@@ -14192,10 +14505,10 @@ function missingFileKeyMessage2() {
   ].join("\n");
 }
 function readProjectConfigText4() {
-  const configPath = join16(cwd4(), ".ds-bridge.json");
-  if (!existsSync11(configPath)) return void 0;
+  const configPath = join17(cwd4(), ".ds-bridge.json");
+  if (!existsSync12(configPath)) return void 0;
   try {
-    return readFileSync13(configPath, "utf8");
+    return readFileSync14(configPath, "utf8");
   } catch {
     return void 0;
   }
@@ -14228,17 +14541,17 @@ function clientErrorMessage4(result) {
   }
 }
 var fsAdapter = {
-  exists: (path) => existsSync11(path),
-  read: (path) => readFileSync13(path, "utf8"),
+  exists: (path) => existsSync12(path),
+  read: (path) => readFileSync14(path, "utf8"),
   mkdir: (path) => {
-    mkdirSync10(path, { recursive: true });
+    mkdirSync11(path, { recursive: true });
   },
   write: (path, content) => {
     writeFileSync7(path, content, "utf8");
   }
 };
 function appendLibraryHealthHistory(totals) {
-  const stateDir = join16(cwd4(), ".ds-bridge");
+  const stateDir = join17(cwd4(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "library-health",
@@ -14246,9 +14559,9 @@ function appendLibraryHealthHistory(totals) {
     deprecatedUsage: totals.deprecatedUsage,
     detachedCandidates: totals.detachedCandidates
   };
-  mkdirSync10(stateDir, { recursive: true });
-  appendFileSync7(
-    join16(stateDir, "history.jsonl"),
+  mkdirSync11(stateDir, { recursive: true });
+  appendFileSync8(
+    join17(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -14359,7 +14672,7 @@ async function runLibraryHealth(options) {
     } else if (result.kind === "rate-limited") {
       process.stderr.write(`warning: ${clientErrorMessage4(result)}
 `);
-      const fallback = existsSync11(cachePath(cacheArgs)) ? readCache({
+      const fallback = existsSync12(cachePath(cacheArgs)) ? readCache({
         ...cacheArgs,
         fs: fsAdapter,
         now: Date.now(),
@@ -14403,15 +14716,15 @@ function registerLibraryHealthCommand(program2) {
 // src/cli-commands/lint.ts
 import { spawnSync as spawnSync2 } from "child_process";
 import {
-  appendFileSync as appendFileSync8,
-  existsSync as existsSync12,
-  mkdirSync as mkdirSync11,
-  readdirSync as readdirSync2,
-  readFileSync as readFileSync14,
+  appendFileSync as appendFileSync9,
+  existsSync as existsSync13,
+  mkdirSync as mkdirSync12,
+  readdirSync as readdirSync3,
+  readFileSync as readFileSync15,
   statSync as statSync6,
   writeFileSync as writeFileSync8
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join17, relative, resolve as resolve9, sep as sep3 } from "path";
+import { isAbsolute as isAbsolute3, join as join18, relative, resolve as resolve9, sep as sep3 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -14910,7 +15223,7 @@ function computeAdoption(files, findings) {
   const perFile = cssFiles.map((file) => {
     let refs = 0;
     try {
-      refs = countTokenRefs(readFileSync14(file.abs, "utf8"));
+      refs = countTokenRefs(readFileSync15(file.abs, "utf8"));
     } catch {
       refs = 0;
     }
@@ -14932,16 +15245,16 @@ function isCssLike(path) {
   return lower.endsWith(".css") || lower.endsWith(".scss");
 }
 function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join17(targetDir, ".ds-bridge");
+  const stateDir = join18(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
     byKind: countByKind(findings),
     adoption: computeAdoption(files, findings)
   };
-  mkdirSync11(stateDir, { recursive: true });
-  appendFileSync8(
-    join17(stateDir, "history.jsonl"),
+  mkdirSync12(stateDir, { recursive: true });
+  appendFileSync9(
+    join18(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
     "utf8"
@@ -14954,12 +15267,12 @@ function hasExtension(name) {
 function walkLintableFiles(dir, acc) {
   let entries;
   try {
-    entries = readdirSync2(dir, { withFileTypes: true });
+    entries = readdirSync3(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join17(dir, entry.name);
+    const full = join18(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkLintableFiles(full, acc);
@@ -14971,7 +15284,7 @@ function walkLintableFiles(dir, acc) {
 function resolveTokenSource(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
     const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve9(process.cwd(), flagTokens);
-    if (!existsSync12(abs2)) {
+    if (!existsSync13(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -14979,11 +15292,11 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join17(targetDir, ".ds-bridge.json");
-  if (existsSync12(configPath)) {
+  const configPath = join18(targetDir, ".ds-bridge.json");
+  if (existsSync13(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync14(configPath, "utf8");
+      projectFileText = readFileSync15(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -14992,7 +15305,7 @@ function resolveTokenSource(targetDir, flagTokens) {
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
         const abs2 = isAbsolute3(src) ? src : resolve9(targetDir, src);
-        if (existsSync12(abs2)) return { kind: "ok", path: abs2 };
+        if (existsSync13(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -15030,12 +15343,12 @@ function isTokenDir3(name) {
 function collectTokenCandidates2(dir, insideTokenDir, acc) {
   let entries;
   try {
-    entries = readdirSync2(dir, { withFileTypes: true });
+    entries = readdirSync3(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join17(dir, entry.name);
+    const full = join18(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       collectTokenCandidates2(
@@ -15052,7 +15365,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
 function detectFileFormat3(absPath) {
   let raw;
   try {
-    raw = readFileSync14(absPath, "utf8");
+    raw = readFileSync15(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -15068,7 +15381,7 @@ function detectFileFormat3(absPath) {
 function loadTokenMap(tokenPath) {
   let raw;
   try {
-    raw = readFileSync14(tokenPath, "utf8");
+    raw = readFileSync15(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -15110,7 +15423,7 @@ ${lines.join("\n")}`
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync14(absPath, "utf8");
+    content = readFileSync15(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -15216,7 +15529,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync14(absPath, "utf8");
+      content = readFileSync15(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -15263,7 +15576,7 @@ function registerLintCommand(program2) {
       return;
     }
     const targetPath = resolve9(path);
-    if (!existsSync12(targetPath)) {
+    if (!existsSync13(targetPath)) {
       fail11(`Path "${targetPath}" does not exist.`);
       return;
     }
@@ -15386,8 +15699,8 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync13, readFileSync as readFileSync15, statSync as statSync7 } from "fs";
-import { join as join18, resolve as resolvePath4 } from "path";
+import { existsSync as existsSync14, readFileSync as readFileSync16, statSync as statSync7 } from "fs";
+import { join as join19, resolve as resolvePath4 } from "path";
 
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
@@ -15502,8 +15815,8 @@ function statusSeverity2(status) {
   }
 }
 function loadRegistry5(targetDir) {
-  const registryPath = join18(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync13(registryPath)) {
+  const registryPath = join19(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync14(registryPath)) {
     fail12(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -15511,7 +15824,7 @@ function loadRegistry5(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync15(registryPath, "utf8");
+    raw = readFileSync16(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail12(`Could not read registry "${registryPath}": ${detail}`);
@@ -15610,8 +15923,8 @@ function renderMarkdown(report) {
   return [header, separator, ...rows, "", summaryLine2].join("\n");
 }
 function hasRegistry2(candidate) {
-  return existsSync13(
-    join18(resolvePath4(candidate), ".ds-bridge", "registry.json")
+  return existsSync14(
+    join19(resolvePath4(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate2(component, path) {
@@ -15628,7 +15941,7 @@ function runParity(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate2(rawComponent, rawPath);
   const targetDir = resolvePath4(path);
-  if (!existsSync13(targetDir) || !statSync7(targetDir).isDirectory()) {
+  if (!existsSync14(targetDir) || !statSync7(targetDir).isDirectory()) {
     fail12(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -15671,14 +15984,14 @@ function registerParityCommand(program2) {
 
 // src/cli-commands/registry.ts
 import {
-  appendFileSync as appendFileSync9,
-  existsSync as existsSync14,
-  mkdirSync as mkdirSync12,
-  readFileSync as readFileSync16,
+  appendFileSync as appendFileSync10,
+  existsSync as existsSync15,
+  mkdirSync as mkdirSync13,
+  readFileSync as readFileSync17,
   statSync as statSync8,
   writeFileSync as writeFileSync9
 } from "fs";
-import { dirname as dirname7, join as join19, resolve as resolvePath5 } from "path";
+import { dirname as dirname7, join as join20, resolve as resolvePath5 } from "path";
 import { fileURLToPath as fileURLToPath4 } from "url";
 
 // src/engines/registry/match.ts
@@ -15933,7 +16246,7 @@ async function runBuild(path, options) {
     return;
   }
   const targetDir = resolvePath5(path);
-  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
+  if (!existsSync15(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail13(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -15978,10 +16291,10 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join19(targetDir, ".ds-bridge");
-  const registryPath = join19(stateDir, "registry.json");
+  const stateDir = join20(targetDir, ".ds-bridge");
+  const registryPath = join20(stateDir, "registry.json");
   try {
-    mkdirSync12(stateDir, { recursive: true });
+    mkdirSync13(stateDir, { recursive: true });
     writeFileSync9(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
@@ -16023,9 +16336,9 @@ function parityRecordFrom(registry, generatedAt) {
 }
 function appendParityHistory(stateDir, record) {
   try {
-    mkdirSync12(stateDir, { recursive: true });
-    appendFileSync9(
-      join19(stateDir, "history.jsonl"),
+    mkdirSync13(stateDir, { recursive: true });
+    appendFileSync10(
+      join20(stateDir, "history.jsonl"),
       `${JSON.stringify(record)}
 `,
       "utf8"
@@ -16063,8 +16376,8 @@ function renderBuildSummary(registry, registryPath, parity) {
   return lines.join("\n");
 }
 function loadRegistry6(targetDir) {
-  const registryPath = join19(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync14(registryPath)) {
+  const registryPath = join20(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync15(registryPath)) {
     fail13(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -16072,7 +16385,7 @@ function loadRegistry6(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync16(registryPath, "utf8");
+    raw = readFileSync17(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail13(`Could not read registry "${registryPath}": ${detail}`);
@@ -16088,7 +16401,7 @@ function loadRegistry6(targetDir) {
 }
 function runResolve(nodeNameOrId, path) {
   const targetDir = resolvePath5(path);
-  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
+  if (!existsSync15(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail13(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -16142,8 +16455,8 @@ function registerRegistryCommand(program2) {
 }
 
 // src/cli-commands/release-check.ts
-import { existsSync as existsSync15, readFileSync as readFileSync17, statSync as statSync9 } from "fs";
-import { join as join20, resolve as resolve10 } from "path";
+import { existsSync as existsSync16, readFileSync as readFileSync18, statSync as statSync9 } from "fs";
+import { join as join21, resolve as resolve10 } from "path";
 
 // src/engines/report/release-readiness.ts
 function asNumber3(value2) {
@@ -16236,7 +16549,7 @@ function fail14(message) {
 }
 function readHistoryText2(stateDir) {
   try {
-    return readFileSync17(join20(stateDir, "history.jsonl"), "utf8");
+    return readFileSync18(join21(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
@@ -16261,11 +16574,11 @@ function runReleaseCheck(path, options) {
     return;
   }
   const targetDir = resolve10(path);
-  if (!existsSync15(targetDir) || !statSync9(targetDir).isDirectory()) {
+  if (!existsSync16(targetDir) || !statSync9(targetDir).isDirectory()) {
     fail14(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const stateDir = join20(targetDir, ".ds-bridge");
+  const stateDir = join21(targetDir, ".ds-bridge");
   const signals = extractReleaseSignals(
     replayHistory(readHistoryText2(stateDir))
   );
@@ -17559,97 +17872,6 @@ function computeVelocity(trend, nowIso, windowDays) {
     else break;
   }
   return { delta, windowDays, direction, regressionStreak };
-}
-
-// src/io/dashboards.ts
-import { existsSync as existsSync16, mkdirSync as mkdirSync13, readdirSync as readdirSync3, readFileSync as readFileSync18 } from "fs";
-import { join as join21 } from "path";
-var DASHBOARDS_DIR = "dashboards";
-var REPORT_TYPES = ["html", "md", "terminal", "site"];
-function dashboardPath(dir, name, local) {
-  const suffix = local ? ".local.json" : ".json";
-  return join21(dir, DASHBOARDS_DIR, `${name}${suffix}`);
-}
-function parseDashboard(text, fallbackName) {
-  const selectionOutcome = parseSelectionFile(text);
-  if (selectionOutcome.kind === "invalid") {
-    return { kind: "invalid", message: selectionOutcome.message };
-  }
-  const obj = JSON.parse(text);
-  const selection = selectionOutcome.kind === "view" ? { kind: "view", view: selectionOutcome.view } : { kind: "artifacts", artifacts: selectionOutcome.artifacts };
-  const dashboard = {
-    name: typeof obj.name === "string" && obj.name !== "" ? obj.name : fallbackName,
-    selection
-  };
-  if (obj.report_type !== void 0) {
-    if (!REPORT_TYPES.includes(obj.report_type)) {
-      return {
-        kind: "invalid",
-        message: `report_type must be one of ${REPORT_TYPES.join(", ")}`
-      };
-    }
-    dashboard.reportType = obj.report_type;
-  }
-  if (obj.audience !== void 0) {
-    if (typeof obj.audience !== "string") {
-      return { kind: "invalid", message: "audience must be a string" };
-    }
-    dashboard.audience = obj.audience;
-  }
-  if (obj.persona !== void 0) {
-    if (typeof obj.persona !== "string") {
-      return { kind: "invalid", message: "persona must be a string" };
-    }
-    dashboard.persona = obj.persona;
-  }
-  if (obj.score_weights !== void 0) {
-    const weights = validateWeights(obj.score_weights);
-    if (weights.kind !== "ok") {
-      return {
-        kind: "invalid",
-        message: `score_weights is invalid (${weights.kind}${"key" in weights ? `: ${weights.key}` : ""})`
-      };
-    }
-    dashboard.scoreWeights = obj.score_weights;
-  }
-  return { kind: "ok", dashboard };
-}
-function readDashboardFile(dir, name) {
-  const localPath = dashboardPath(dir, name, true);
-  const sharedPath = dashboardPath(dir, name, false);
-  const path = existsSync16(localPath) ? localPath : existsSync16(sharedPath) ? sharedPath : void 0;
-  if (path === void 0) return { kind: "not-found" };
-  let text;
-  try {
-    text = readFileSync18(path, "utf8");
-  } catch {
-    return { kind: "not-found" };
-  }
-  return parseDashboard(text, name);
-}
-function listDashboards(dir) {
-  let files;
-  try {
-    files = readdirSync3(join21(dir, DASHBOARDS_DIR));
-  } catch {
-    return [];
-  }
-  const byName2 = /* @__PURE__ */ new Map();
-  const entryFor = (name) => {
-    const existing = byName2.get(name);
-    if (existing !== void 0) return existing;
-    const created = { name, hasShared: false, hasLocal: false };
-    byName2.set(name, created);
-    return created;
-  };
-  for (const file of files) {
-    if (file.endsWith(".local.json")) {
-      entryFor(file.slice(0, -".local.json".length)).hasLocal = true;
-    } else if (file.endsWith(".json")) {
-      entryFor(file.slice(0, -".json".length)).hasShared = true;
-    }
-  }
-  return [...byName2.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // src/render/html/charts.ts
@@ -19183,7 +19405,10 @@ function resolveDashboardSelection(targetDir, name, ctx) {
   if (read.kind === "not-found") {
     const names = listDashboards(targetDir).map((e4) => e4.name);
     const available = names.length > 0 ? ` Available: ${names.join(", ")}.` : " No saved dashboards in dashboards/.";
-    return { kind: "error", message: `Unknown dashboard "${name}".${available}` };
+    return {
+      kind: "error",
+      message: `Unknown dashboard "${name}".${available}`
+    };
   }
   if (read.kind === "invalid") {
     return {
@@ -19673,7 +19898,7 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync as appendFileSync10,
+  appendFileSync as appendFileSync11,
   existsSync as existsSync18,
   mkdirSync as mkdirSync15,
   readdirSync as readdirSync4,
@@ -20246,7 +20471,7 @@ function checkJson(result) {
 }
 function appendHistory(stateDir, record) {
   mkdirSync15(stateDir, { recursive: true });
-  appendFileSync10(
+  appendFileSync11(
     join23(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,

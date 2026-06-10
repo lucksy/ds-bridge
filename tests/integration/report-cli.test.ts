@@ -2193,7 +2193,10 @@ describe("ds-bridge report — saved dashboards (M8.3)", () => {
 	it("an invalid saved dashboard (unknown id) exits 2", async () => {
 		const dir = await freshTmp("ds-report-dash-invalid-");
 		await seedSixArtifacts(dir);
-		await seedDashboardFile(dir, "bad", { name: "bad", artifacts: ["parityy"] });
+		await seedDashboardFile(dir, "bad", {
+			name: "bad",
+			artifacts: ["parityy"],
+		});
 
 		const result = await runCli(["report", dir, "--dashboard", "bad"]);
 		expect(result.code).toBe(2);

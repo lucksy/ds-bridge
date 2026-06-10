@@ -1114,7 +1114,10 @@ function resolveDashboardSelection(
 			names.length > 0
 				? ` Available: ${names.join(", ")}.`
 				: " No saved dashboards in dashboards/.";
-		return { kind: "error", message: `Unknown dashboard "${name}".${available}` };
+		return {
+			kind: "error",
+			message: `Unknown dashboard "${name}".${available}`,
+		};
 	}
 	if (read.kind === "invalid") {
 		return {
@@ -1170,7 +1173,9 @@ function resolveDashboardSelection(
 		scoreVelocityWindow: ctx.scoreVelocityWindow,
 		viewLabel: read.dashboard.name,
 		...(viewName !== undefined ? { viewName } : {}),
-		...(effectiveWeights !== undefined ? { scoreWeights: effectiveWeights } : {}),
+		...(effectiveWeights !== undefined
+			? { scoreWeights: effectiveWeights }
+			: {}),
 		...(effectiveByView !== undefined
 			? { scoreWeightsByView: effectiveByView }
 			: {}),

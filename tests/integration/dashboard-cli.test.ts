@@ -404,3 +404,175 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		expect(text).toContain('  "figma_file_key"');
 	});
 });
+
+// ---------- M8.4 — dashboard save / load / ls / rm + --freeze + gitignore ----------
+//
+// Saved dashboards live in dashboards/<name>(.local).json. `save` keeps a preset
+// LIVE by default (stores the view name) and materializes with --freeze; `load`
+// points dashboard_default at a saved name; `ls` lists them with shared/personal
+// markers; `rm` deletes one. `--local` writes a .local.json and gitignores them.
+
+async function readJson(file: string): Promise<Record<string, unknown>> {
+	return JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>;
+}
+
+describe("ds-bridge dashboard save (built dist/cli.mjs)", () => {
+	it("save --view keeps the preset LIVE (stores the view name)", async () => {
+		const result = await run([
+			"dashboard",
+			"save",
+			"exec",
+			"--view",
+			"ds-manager",
+			dir,
+		]);
+		expect(result.code).toBe(0);
+		const saved = await readJson(join(dir, "dashboards", "exec.json"));
+		expect(saved).toMatchObject({ name: "exec", view: "ds-manager" });
+		expect(saved.artifacts).toBeUndefined();
+	});
+
+	it("save --freeze materializes the resolved artifact list", async () => {
+		const result = await run([
+			"dashboard",
+			"save",
+			"exec",
+			"--view",
+			"ds-manager",
+			"--freeze",
+			dir,
+		]);
+		expect(result.code).toBe(0);
+		const saved = await readJson(join(dir, "dashboards", "exec.json"));
+		expect(saved.view).toBeUndefined();
+		expect(Array.isArray(saved.artifacts)).toBe(true);
+		expect((saved.artifacts as string[])[0]).toBe("system-score");
+		expect(saved.artifacts).toContain("ownership-leaderboard");
+	});
+
+	it("save --artifacts persists an explicit list", async () => {
+		const result = await run([
+			"dashboard",
+			"save",
+			"slim",
+			"--artifacts",
+			"system-score,parity",
+			dir,
+		]);
+		expect(result.code).toBe(0);
+		const saved = await readJson(join(dir, "dashboards", "slim.json"));
+		expect(saved.artifacts).toEqual(["system-score", "parity"]);
+	});
+
+	it("save --from-current saves the project's live view", async () => {
+		await run(["dashboard", "set", "--view", "ds-designer", dir]);
+		const result = await run([
+			"dashboard",
+			"save",
+			"mine",
+			"--from-current",
+			dir,
+		]);
+		expect(result.code).toBe(0);
+		const saved = await readJson(join(dir, "dashboards", "mine.json"));
+		expect(saved.view).toBe("ds-designer");
+	});
+
+	it("save --local writes a .local.json and gitignores them", async () => {
+		const result = await run([
+			"dashboard",
+			"save",
+			"mine",
+			"--view",
+			"ds-designer",
+			"--local",
+			dir,
+		]);
+		expect(result.code).toBe(0);
+		await expect(
+			readFile(join(dir, "dashboards", "mine.local.json"), "utf8"),
+		).resolves.toContain("ds-designer");
+		const gitignore = await readFile(join(dir, ".gitignore"), "utf8");
+		expect(gitignore).toContain("dashboards/*.local.json");
+	});
+});
+
+describe("ds-bridge dashboard load/ls/rm (built dist/cli.mjs)", () => {
+	it("load points dashboard_default at the saved name, clearing view/artifacts", async () => {
+		await run(["dashboard", "save", "exec", "--view", "ds-manager", dir]);
+		await run(["dashboard", "set", "--view", "ds-designer", dir]);
+		const result = await run(["dashboard", "load", "exec", dir]);
+		expect(result.code).toBe(0);
+		const cfg = await readConfig();
+		expect(cfg.dashboard_default).toBe("exec");
+		expect(cfg.dashboard_view).toBeUndefined();
+		expect(cfg.dashboard_artifacts).toBeUndefined();
+	});
+
+	it("load of an unknown name exits 2 with the available list", async () => {
+		await run(["dashboard", "save", "exec", "--view", "ds-manager", dir]);
+		const result = await run(["dashboard", "load", "nope", dir]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("exec");
+	});
+
+	it("ls lists saved dashboards with shared/personal markers", async () => {
+		await run(["dashboard", "save", "exec", "--view", "ds-manager", dir]);
+		await run([
+			"dashboard",
+			"save",
+			"mine",
+			"--view",
+			"ds-designer",
+			"--local",
+			dir,
+		]);
+		const result = await run(["dashboard", "ls", dir]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("exec");
+		expect(result.stdout).toContain("mine");
+		expect(result.stdout.toLowerCase()).toMatch(/shared|personal/);
+	});
+
+	it("ls with no saved dashboards prints a friendly note", async () => {
+		const result = await run(["dashboard", "ls", dir]);
+		expect(result.code).toBe(0);
+		expect(result.stdout.toLowerCase()).toContain("no saved dashboards");
+	});
+
+	it("rm deletes a saved dashboard", async () => {
+		await run(["dashboard", "save", "exec", "--view", "ds-manager", dir]);
+		const result = await run(["dashboard", "rm", "exec", dir]);
+		expect(result.code).toBe(0);
+		await expect(
+			readFile(join(dir, "dashboards", "exec.json"), "utf8"),
+		).rejects.toThrow();
+	});
+
+	it("rm of an unknown name exits 2", async () => {
+		const result = await run(["dashboard", "rm", "nope", dir]);
+		expect(result.code).toBe(2);
+	});
+
+	it("add --dashboard materializes + edits a saved dashboard's artifact list", async () => {
+		await run([
+			"dashboard",
+			"save",
+			"exec",
+			"--artifacts",
+			"system-score,parity",
+			dir,
+		]);
+		const result = await run([
+			"dashboard",
+			"add",
+			"impact",
+			"--dashboard",
+			"exec",
+			dir,
+		]);
+		expect(result.code).toBe(0);
+		const saved = await readJson(join(dir, "dashboards", "exec.json"));
+		expect(saved.artifacts).toEqual(["system-score", "parity", "impact"]);
+	});
+});
