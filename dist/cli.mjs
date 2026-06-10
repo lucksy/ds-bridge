@@ -10534,6 +10534,31 @@ function registerConfigCommand(program2) {
 import { appendFileSync as appendFileSync4, existsSync as existsSync7, readFileSync as readFileSync9, unlinkSync as unlinkSync2 } from "fs";
 import { join as join10, resolve as resolvePath2 } from "path";
 
+// src/engines/report/nl-match.ts
+function tokenize2(phrase) {
+  return (phrase.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+    (t) => t.length >= 3
+  );
+}
+function matchPhrase(phrase) {
+  const tokens = tokenize2(phrase);
+  if (tokens.length === 0) return [];
+  const matches = [];
+  for (const meta of CATALOG) {
+    const haystack = `${meta.id} ${meta.title}`.toLowerCase();
+    let score = 0;
+    for (const token of tokens) {
+      if (haystack.includes(token)) {
+        score += 2;
+      } else if (suggestArtifactIds(token, 3).includes(meta.id)) {
+        score += 1;
+      }
+    }
+    if (score > 0) matches.push({ id: meta.id, title: meta.title, score });
+  }
+  return matches.sort((a, b) => b.score - a.score);
+}
+
 // src/io/dashboards.ts
 import { existsSync as existsSync6, mkdirSync as mkdirSync5, readdirSync, readFileSync as readFileSync7 } from "fs";
 import { join as join8 } from "path";
@@ -11218,6 +11243,26 @@ function runRm(name, path, options) {
 `);
   process.exitCode = 0;
 }
+function runSuggest(phrase) {
+  const matches = matchPhrase(phrase);
+  if (matches.length === 0) {
+    process.stdout.write(`No artifacts matched "${phrase}".
+`);
+    process.exitCode = 0;
+    return;
+  }
+  for (const m of matches) {
+    process.stdout.write(`${m.id}	${m.title}
+`);
+  }
+  const ids = matches.map((m) => m.id).join(",");
+  process.stdout.write(
+    `
+Save with: dashboard save <name> --artifacts ${ids}
+`
+  );
+  process.exitCode = 0;
+}
 async function runSetup(path) {
   const isTTY = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
   if (!isTTY) {
@@ -11296,6 +11341,11 @@ function registerDashboardCommand(program2) {
     "delete the personal .local.json instead of the shared file"
   ).action((name, path, options) => {
     runRm(name, path, options);
+  });
+  dashboard.command("suggest").description(
+    "Suggest artifact ids for a free-text phrase (offline NL match, no LLM)"
+  ).argument("<phrase>", "free-text description of the dashboard you want").action((phrase) => {
+    runSuggest(phrase);
   });
   dashboard.command("setup").description("Interactive wizard to compose and persist a dashboard view").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
     void runSetup(path);
@@ -13504,7 +13554,7 @@ import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/engines/impact/component-diff.ts
 var RENAME_THRESHOLD = 0.5;
-function tokenize2(name) {
+function tokenize3(name) {
   const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
   const tokens = [];
   for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
@@ -13514,8 +13564,8 @@ function tokenize2(name) {
   return tokens;
 }
 function nameSimilarity(a, b) {
-  const setA = new Set(tokenize2(a));
-  const setB = new Set(tokenize2(b));
+  const setA = new Set(tokenize3(a));
+  const setB = new Set(tokenize3(b));
   if (setA.size === 0 || setB.size === 0) return 0;
   let intersection = 0;
   for (const token of setA) {
@@ -16004,7 +16054,7 @@ var MAX_CANDIDATES = 3;
 function normalizeName4(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
-function tokenize3(name) {
+function tokenize4(name) {
   const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
   const tokens = [];
   for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
@@ -16014,8 +16064,8 @@ function tokenize3(name) {
   return tokens;
 }
 function tokenSetScore(a, b) {
-  const setA = new Set(tokenize3(a));
-  const setB = new Set(tokenize3(b));
+  const setA = new Set(tokenize4(a));
+  const setB = new Set(tokenize4(b));
   if (setA.size === 0 || setB.size === 0) return 0;
   let intersection = 0;
   for (const token of setA) {

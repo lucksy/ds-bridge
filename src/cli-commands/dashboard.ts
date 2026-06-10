@@ -22,6 +22,7 @@ import {
 	CATALOG,
 	lookupArtifact,
 } from "../engines/report/catalog.js";
+import { matchPhrase } from "../engines/report/nl-match.js";
 import {
 	PRESET_DESCRIPTIONS,
 	PRESET_NAMES,
@@ -645,6 +646,29 @@ function runRm(name: string, path: string, options: RmOptions): void {
 }
 
 /**
+ * Execute `dashboard suggest "<phrase>"` (M9.2): offline NL→artifact matching for
+ * the conversational builder. Prints the ranked matches + a ready-to-paste
+ * `dashboard save … --artifacts` line. Pure match (no I/O); the actual save
+ * re-validates every id, so this is a suggestion surface, never the guardrail.
+ */
+function runSuggest(phrase: string): void {
+	const matches = matchPhrase(phrase);
+	if (matches.length === 0) {
+		process.stdout.write(`No artifacts matched "${phrase}".\n`);
+		process.exitCode = 0;
+		return;
+	}
+	for (const m of matches) {
+		process.stdout.write(`${m.id}\t${m.title}\n`);
+	}
+	const ids = matches.map((m) => m.id).join(",");
+	process.stdout.write(
+		`\nSave with: dashboard save <name> --artifacts ${ids}\n`,
+	);
+	process.exitCode = 0;
+}
+
+/**
  * Execute `dashboard setup`: detect TTY, then drive the injected-stream wizard
  * over the real process streams. Non-TTY is short-circuited to stderr + exit 2
  * (pointing at `dashboard set`) so a piped/CI invocation gets the actionable
@@ -790,6 +814,16 @@ export function registerDashboardCommand(program: Command): void {
 		)
 		.action((name: string, path: string, options: RmOptions) => {
 			runRm(name, path, options);
+		});
+
+	dashboard
+		.command("suggest")
+		.description(
+			"Suggest artifact ids for a free-text phrase (offline NL match, no LLM)",
+		)
+		.argument("<phrase>", "free-text description of the dashboard you want")
+		.action((phrase: string) => {
+			runSuggest(phrase);
 		});
 
 	dashboard

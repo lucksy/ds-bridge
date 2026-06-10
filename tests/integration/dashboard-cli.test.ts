@@ -576,3 +576,23 @@ describe("ds-bridge dashboard load/ls/rm (built dist/cli.mjs)", () => {
 		expect(saved.artifacts).toEqual(["system-score", "parity", "impact"]);
 	});
 });
+
+describe("ds-bridge dashboard suggest (built dist/cli.mjs)", () => {
+	it("ranks catalog matches for a free-text phrase + prints a save line", async () => {
+		const result = await run([
+			"dashboard",
+			"suggest",
+			"adoption trend and the breaking calendar",
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("adoption-trend");
+		expect(result.stdout).toContain("breaking-calendar");
+		expect(result.stdout).toContain("dashboard save");
+	});
+
+	it("reports no match for an all-noise phrase", async () => {
+		const result = await run(["dashboard", "suggest", "to go it"]);
+		expect(result.code).toBe(0);
+		expect(result.stdout.toLowerCase()).toContain("no artifacts matched");
+	});
+});
