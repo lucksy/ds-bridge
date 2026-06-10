@@ -679,6 +679,29 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).not.toContain("preview");
 	});
 
+	it("C4/M3.2: a dated history line populates the data-freshness section", async () => {
+		const dir = await freshTmp("ds-report-freshness-");
+		await seedHistory(dir, [
+			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 0, 0),
+		]);
+
+		const result = await runCli([
+			"report",
+			dir,
+			"--artifacts",
+			"data-freshness",
+		]);
+		expect(result.code).toBe(0);
+
+		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
+		const html = await readFile(reportPath, "utf8");
+		// The data-freshness section is present and NOT empty (the stub renders a
+		// "preview" marker once dataFreshness is populated). buildFreshness ALWAYS
+		// returns one row per tracked kind, so any tracked-kind run populates it.
+		expect(html).toContain("Data freshness");
+		expect(html).toContain("preview");
+	});
+
 	it("B6 ACCEPTANCE: all thirteen artifacts present → THIRTEEN svg charts", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
@@ -721,10 +744,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// impact populate the calendar list).
 		expect(countSvgs(html)).toBe(13);
 		// None of the thirteen DATA sections falls back to the empty state; of the 11
-		// metric-artifact stubs (C1–C13), two now POPULATE from this seed — C6
-		// library-health-trend (a dated library-health line) and C8 score-velocity
-		// (a multi-point system-score trend) → 9 empty-state stubs remain.
-		expect(html.split("No data yet").length - 1).toBe(9);
+		// metric-artifact stubs (C1–C13), three now POPULATE from this seed — C6
+		// library-health-trend (a dated library-health line), C8 score-velocity
+		// (a multi-point system-score trend), and C4 data-freshness (the dated lines
+		// give per-kind freshness rows) → 8 empty-state stubs remain.
+		expect(html.split("No data yet").length - 1).toBe(8);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {

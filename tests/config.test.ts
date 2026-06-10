@@ -767,7 +767,7 @@ describe("resolveConfig — score_weights_by_view (C2)", () => {
 	});
 });
 
-describe("resolveConfig — freshness_thresholds (C4)", () => {
+describe("resolveConfig — freshness_thresholds (C4, per-kind)", () => {
 	it("leaves freshnessThresholds undefined when absent", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
@@ -778,37 +778,68 @@ describe("resolveConfig — freshness_thresholds (C4)", () => {
 		expect(outcome.config.freshnessThresholds).toBeUndefined();
 	});
 
-	it("reads amberDays/redDays from the project file", () => {
+	it("reads a per-kind { aging, stale } map from the project file", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				freshness_thresholds: { amberDays: 30, redDays: 60 },
+				freshness_thresholds: {
+					a11y: { aging: 30, stale: 60 },
+					drift: { aging: 14, stale: 30 },
+				},
 			}),
 		});
 
 		expect(outcome.kind).toBe("ok");
 		if (outcome.kind !== "ok") return;
 		expect(outcome.config.freshnessThresholds).toEqual({
-			amberDays: 30,
-			redDays: 60,
+			a11y: { aging: 30, stale: 60 },
+			drift: { aging: 14, stale: 30 },
 		});
 	});
 
-	it("rejects amber > red with a typed error", () => {
+	it("accepts a PARTIAL map (only some kinds configured)", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				freshness_thresholds: { amberDays: 60, redDays: 30 },
+				freshness_thresholds: { parity: { aging: 20, stale: 40 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.freshnessThresholds).toEqual({
+			parity: { aging: 20, stale: 40 },
+		});
+	});
+
+	it("rejects an unknown check-kind with a nearest-match suggestion", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { a11yy: { aging: 30, stale: 60 } },
 			}),
 		});
 
 		expect(outcome.kind).toBe("invalid-project-file");
 		if (outcome.kind !== "invalid-project-file") return;
 		expect(outcome.message).toContain("freshness_thresholds");
+		expect(outcome.message).toContain("a11y");
+	});
+
+	it("rejects aging > stale with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { a11y: { aging: 60, stale: 30 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("freshness_thresholds");
+		expect(outcome.message).toContain("stale");
 	});
 
 	it("rejects a non-positive day count with a typed error", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				freshness_thresholds: { amberDays: 0, redDays: 30 },
+				freshness_thresholds: { drift: { aging: 0, stale: 30 } },
 			}),
 		});
 
@@ -820,7 +851,19 @@ describe("resolveConfig — freshness_thresholds (C4)", () => {
 	it("rejects a non-finite day count with a typed error", () => {
 		const outcome = resolveConfig({
 			projectFileText: JSON.stringify({
-				freshness_thresholds: { amberDays: 30, redDays: "later" },
+				freshness_thresholds: { drift: { aging: 14, stale: "later" } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("freshness_thresholds");
+	});
+
+	it("rejects a non-object band value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { drift: 14 },
 			}),
 		});
 

@@ -22,7 +22,11 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { platform } from "node:process";
 import type { Command } from "commander";
-import { type MetricTargets, resolveConfig } from "../config.js";
+import {
+	type FreshnessThresholds,
+	type MetricTargets,
+	resolveConfig,
+} from "../config.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import { buildAudienceChangelog } from "../engines/report/audience-changelog.js";
@@ -32,6 +36,7 @@ import {
 	buildChangeFrequency,
 } from "../engines/report/consumer.js";
 import { buildFrameImplementability } from "../engines/report/frame-implementability.js";
+import { buildFreshness } from "../engines/report/freshness.js";
 import { replayHistory } from "../engines/report/history-lines.js";
 import { buildLibraryHealthTrend } from "../engines/report/library-health-trend.js";
 import { buildMigrationChecklist } from "../engines/report/migration-checklist.js";
@@ -56,6 +61,7 @@ import type {
 	ChangeFrequency,
 	DriftTrendPoint,
 	FrameImplementability,
+	FreshnessRow,
 	ImpactSummary,
 	ImportCoverage,
 	LeaderboardRow,
@@ -593,6 +599,30 @@ function computeFrameImplementability(stateDir: string): FrameImplementability {
 	return buildFrameImplementability(latestFrameImpl);
 }
 
+/**
+ * Build the data-freshness rows (C4, M3.2) from the SAME `history.jsonl` replay
+ * via the shared `replayHistory` iterator + the pure `buildFreshness` engine: one
+ * row per tracked check-kind (most-recent run, whole-day age, RAG band). `nowIso`
+ * is the injected render instant (`generatedAt`) so the ages are reproducible;
+ * `thresholds` is the resolved per-kind `freshness_thresholds` (or undefined →
+ * the engine's per-kind defaults). buildFreshness ALWAYS returns one row per
+ * tracked kind (never-run kinds become `unknown`-band rows), so the section
+ * populates for any project that has run at least one tracked check — the caller
+ * spreads it only when NON-empty, which on a tracked-kind list means "always
+ * present" (the empty array only arises if the tracked list itself were empty).
+ */
+function computeDataFreshness(
+	stateDir: string,
+	nowIso: string,
+	thresholds: FreshnessThresholds | undefined,
+): FreshnessRow[] {
+	return buildFreshness(
+		replayHistory(readHistoryText(stateDir)),
+		nowIso,
+		thresholds,
+	);
+}
+
 /** A non-null object record, or undefined. */
 function asRecord(value: unknown): Record<string, unknown> | undefined {
 	return typeof value === "object" && value !== null
@@ -833,6 +863,8 @@ interface ResolvedSelection {
 	metricTargets?: MetricTargets;
 	/** Score-velocity window in days (C8); the config default (30) when no file. */
 	scoreVelocityWindow: number;
+	/** Per-kind `freshness_thresholds` map (C4); undefined → engine defaults. */
+	freshnessThresholds?: FreshnessThresholds;
 }
 
 /** Split a `--artifacts a,b,c` flag into trimmed, non-empty ids (undefined if unset). */
@@ -863,6 +895,7 @@ function resolveSelection(
 	let dashboardArtifacts: ArtifactId[] | undefined;
 	let scoreWeights: Weights | undefined;
 	let metricTargets: MetricTargets | undefined;
+	let freshnessThresholds: FreshnessThresholds | undefined;
 	// Default to the config's own defaults (200, C7 / 30, C8) when there is no file.
 	const defaults = resolveConfig({});
 	let migrationSitesCap =
@@ -892,6 +925,7 @@ function resolveSelection(
 		migrationSitesCap = resolved.config.migrationSitesCap;
 		metricTargets = resolved.config.metricTargets;
 		scoreVelocityWindow = resolved.config.scoreVelocityWindow;
+		freshnessThresholds = resolved.config.freshnessThresholds;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -955,6 +989,7 @@ function resolveSelection(
 				...(viewLabel !== undefined ? { viewLabel } : {}),
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
 				...(metricTargets !== undefined ? { metricTargets } : {}),
+				...(freshnessThresholds !== undefined ? { freshnessThresholds } : {}),
 			};
 		}
 	}
@@ -1184,6 +1219,16 @@ function runReport(path: string, options: ReportOptions): void {
 		systemScore !== undefined
 			? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays)
 			: undefined;
+	// Data freshness (C4, M3.2): one row per tracked check-kind (most-recent run,
+	// whole-day age, RAG band), aged from the injected `generatedAt` (reproducible)
+	// against the resolved per-kind `freshness_thresholds` (or the engine defaults).
+	// buildFreshness returns the full tracked-kind list (never-run kinds banded
+	// `unknown`), so the section populates whenever the tracked list is non-empty.
+	const dataFreshness = computeDataFreshness(
+		stateDir,
+		generatedAt,
+		selection.freshnessThresholds,
+	);
 	const html = renderDashboard(
 		{
 			generatedAt,
@@ -1220,6 +1265,7 @@ function runReport(path: string, options: ReportOptions): void {
 			...(targets.length > 0 ? { targets } : {}),
 			...(libraryHealthTrend.length > 0 ? { libraryHealthTrend } : {}),
 			...(scoreVelocity !== undefined ? { scoreVelocity } : {}),
+			...(dataFreshness.length > 0 ? { dataFreshness } : {}),
 		},
 		selection.artifacts,
 		selection.viewLabel !== undefined ? { viewLabel: selection.viewLabel } : {},

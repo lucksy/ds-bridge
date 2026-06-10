@@ -43,11 +43,65 @@ export type MetricTargets = Partial<Record<TargetMetric, MetricTarget>>;
 /** Per-view (persona/dashboard) partial weight overrides, merged onto defaults (C2). */
 export type ScoreWeightsByView = Record<string, Weights>;
 
-/** Data-freshness aging/stale day bands (C4). amberDays ≤ redDays. */
-export interface FreshnessThresholds {
-	amberDays: number;
-	redDays: number;
+/**
+ * The canonical LOGICAL check-kinds data-freshness tracks (C4), the vocabulary a
+ * `freshness_thresholds` map may key on. These are the dashboard-facing names —
+ * the freshness engine maps each raw history kind (`tokens-check`, `handoff`) to
+ * its logical kind (`drift`, `readiness`) before banding. An unknown key in the
+ * config is a typed error carrying a nearest-match suggestion.
+ */
+export const FRESHNESS_KINDS = [
+	"drift",
+	"lint",
+	"readiness",
+	"a11y",
+	"impact",
+	"adoption",
+	"parity",
+	"library-health",
+	"changelog",
+	"frame-impl",
+] as const;
+export type FreshnessKind = (typeof FRESHNESS_KINDS)[number];
+
+/** One check-kind's aging/stale day bands (C4). `aging ≤ stale`, both positive finite. */
+export interface FreshnessBand {
+	/** Days before a kind is "aging" (amber). Green below this. */
+	aging: number;
+	/** Days before a kind is "stale" (red). Amber between aging and stale. */
+	stale: number;
 }
+
+/**
+ * Per-kind data-freshness thresholds (C4): logical check-kind → its aging/stale
+ * day bands. A partial map — kinds absent from the user's config fall back to the
+ * engine's per-kind defaults (see {@link DEFAULT_FRESHNESS_THRESHOLDS}).
+ */
+export type FreshnessThresholds = Partial<Record<FreshnessKind, FreshnessBand>>;
+
+/**
+ * The per-kind default aging/stale day bands (C4, SPEC-personas §5). The slower
+ * design-source checks (a11y, handoff/readiness, parity, library-health,
+ * changelog) age over 30/60d; the fast code-source churn checks (drift, lint,
+ * adoption, impact, frame-impl) over 14/30d. Used both as the C4 engine's
+ * fallback for an absent/partial `freshness_thresholds` and to document the
+ * defaults in one place.
+ */
+export const DEFAULT_FRESHNESS_THRESHOLDS: Record<
+	FreshnessKind,
+	FreshnessBand
+> = {
+	drift: { aging: 14, stale: 30 },
+	lint: { aging: 14, stale: 30 },
+	readiness: { aging: 30, stale: 60 },
+	a11y: { aging: 30, stale: 60 },
+	impact: { aging: 14, stale: 30 },
+	adoption: { aging: 14, stale: 30 },
+	parity: { aging: 30, stale: 60 },
+	"library-health": { aging: 30, stale: 60 },
+	changelog: { aging: 30, stale: 60 },
+	"frame-impl": { aging: 14, stale: 30 },
+};
 
 /** Default migration-checklist site cap (C7). */
 const DEFAULT_MIGRATION_SITES_CAP = 200;
@@ -105,6 +159,30 @@ function suggestTargetMetrics(input: string, limit = 3): TargetMetric[] {
 		.map((c) => c.metric);
 }
 
+/**
+ * Nearest known freshness kinds for a user-supplied key (C4): ascending edit
+ * distance, declaration order breaking ties. Mirrors `suggestTargetMetrics`.
+ */
+function suggestFreshnessKinds(input: string, limit = 3): FreshnessKind[] {
+	const needle = input.toLowerCase();
+	const MAX_DISTANCE = 4;
+	return FRESHNESS_KINDS.map((kind, index) => ({
+		kind,
+		index,
+		prefix: kind.startsWith(needle),
+		distance: editDistance(needle, kind),
+	}))
+		.filter((c) => c.prefix || c.distance <= MAX_DISTANCE)
+		.sort(
+			(a, b) =>
+				Number(b.prefix) - Number(a.prefix) ||
+				a.distance - b.distance ||
+				a.index - b.index,
+		)
+		.slice(0, limit)
+		.map((c) => c.kind);
+}
+
 /** True for a plain (non-array, non-null) object. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -152,7 +230,11 @@ export interface ResolvedConfig {
 	 * never written back to global config.
 	 */
 	scoreWeightsByView: ScoreWeightsByView | undefined;
-	/** Data-freshness aging/stale day bands (C4), or `undefined` when absent. */
+	/**
+	 * Per-kind data-freshness aging/stale day bands (C4): logical check-kind →
+	 * `{ aging, stale }`. A PARTIAL map — absent kinds fall back to the engine's
+	 * per-kind defaults. `undefined` when the key is absent entirely.
+	 */
 	freshnessThresholds: FreshnessThresholds | undefined;
 	/** Ownership map (path/dir → owner, C9), or `undefined` when absent. */
 	ownership: Record<string, string> | undefined;
@@ -509,38 +591,66 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 		values.scoreWeightsByView = byView;
 	}
 
-	// freshness_thresholds: { amberDays, redDays } (C4). Both positive finite;
-	// amberDays ≤ redDays (the amber band precedes the red band).
+	// freshness_thresholds: { <kind>: { aging, stale } } (C4, SPEC-personas §5).
+	// A PER-KIND map keyed by logical check-kind. Each kind must be a known
+	// FreshnessKind (unknown → nearest-match suggestion); aging/stale positive
+	// finite numbers with aging ≤ stale. Absent kinds fall back to the engine's
+	// per-kind defaults — a partial map is valid.
 	if (obj.freshness_thresholds !== undefined) {
 		if (!isPlainObject(obj.freshness_thresholds)) {
 			return {
 				kind: "invalid",
 				message:
-					"freshness_thresholds must be an object { amberDays, redDays }",
+					"freshness_thresholds must be an object of check-kind → { aging, stale }",
 			};
 		}
-		const { amberDays, redDays } = obj.freshness_thresholds;
-		for (const [name, value] of [
-			["amberDays", amberDays],
-			["redDays", redDays],
-		] as const) {
-			if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+		const thresholds: FreshnessThresholds = {};
+		for (const [kind, band] of Object.entries(obj.freshness_thresholds)) {
+			if (!FRESHNESS_KINDS.includes(kind as FreshnessKind)) {
+				const suggestions = suggestFreshnessKinds(kind);
+				const hint =
+					suggestions.length > 0
+						? ` — did you mean ${suggestions.join(", ")}?`
+						: "";
 				return {
 					kind: "invalid",
-					message: `freshness_thresholds.${name} must be a positive finite number`,
+					message: `freshness_thresholds has an unknown check-kind ${JSON.stringify(kind)}${hint}`,
 				};
 			}
-		}
-		if ((amberDays as number) > (redDays as number)) {
-			return {
-				kind: "invalid",
-				message: "freshness_thresholds.amberDays must be ≤ redDays",
+			if (!isPlainObject(band)) {
+				return {
+					kind: "invalid",
+					message: `freshness_thresholds.${kind} must be an object { aging, stale }`,
+				};
+			}
+			const { aging, stale } = band;
+			for (const [name, value] of [
+				["aging", aging],
+				["stale", stale],
+			] as const) {
+				if (
+					typeof value !== "number" ||
+					!Number.isFinite(value) ||
+					value <= 0
+				) {
+					return {
+						kind: "invalid",
+						message: `freshness_thresholds.${kind}.${name} must be a positive finite number`,
+					};
+				}
+			}
+			if ((aging as number) > (stale as number)) {
+				return {
+					kind: "invalid",
+					message: `freshness_thresholds.${kind}.aging must be ≤ stale`,
+				};
+			}
+			thresholds[kind as FreshnessKind] = {
+				aging: aging as number,
+				stale: stale as number,
 			};
 		}
-		values.freshnessThresholds = {
-			amberDays: amberDays as number,
-			redDays: redDays as number,
-		};
+		values.freshnessThresholds = thresholds;
 	}
 
 	// ownership: { path/dir → owner } and ownership_file: a path (C9). Both
