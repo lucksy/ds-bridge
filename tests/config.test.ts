@@ -418,6 +418,749 @@ describe("resolveConfig — score_weights key (S4a)", () => {
 	});
 });
 
+// ─── M0.3 — persona-wave project-file schema (SPEC-personas §6, §6.5) ────────
+// Nine new project-file-only keys + two env merges. Each bad input is a typed
+// invalid-project-file outcome (never a throw); unknown enumerated keys carry a
+// nearest-match suggestion. All keys coexist with the existing config surface.
+
+describe("resolveConfig — dashboard_default (third mutually-exclusive key)", () => {
+	it("reads dashboard_default as a saved-dashboard name", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ dashboard_default: "exec" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.dashboardDefault).toBe("exec");
+		expect(outcome.config.dashboardView).toBeUndefined();
+		expect(outcome.config.dashboardArtifacts).toBeUndefined();
+	});
+
+	it("validates dashboard_default SYNTACTICALLY only — any non-empty string", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ dashboard_default: "not-a-saved-one" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.dashboardDefault).toBe("not-a-saved-one");
+	});
+
+	it("rejects a non-string dashboard_default with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ dashboard_default: 7 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("dashboard_default");
+	});
+
+	it("rejects an empty-string dashboard_default with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ dashboard_default: "" }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("dashboard_default");
+	});
+
+	it("rejects dashboard_default + dashboard_view (a pair) with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				dashboard_default: "exec",
+				dashboard_view: "owner",
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("dashboard_default");
+		expect(outcome.message).toContain("dashboard_view");
+	});
+
+	it("rejects dashboard_default + dashboard_artifacts (a pair) with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				dashboard_default: "exec",
+				dashboard_artifacts: ["parity"],
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("dashboard_default");
+		expect(outcome.message).toContain("dashboard_artifacts");
+	});
+
+	it("rejects all three dashboard keys at once with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				dashboard_default: "exec",
+				dashboard_view: "owner",
+				dashboard_artifacts: ["parity"],
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toMatch(/mutually exclusive/i);
+	});
+});
+
+describe("resolveConfig — product_file_keys (alias→key MAP)", () => {
+	it("defaults productFileKeys to an empty object when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.productFileKeys).toEqual({});
+	});
+
+	it("reads a product_file_keys map from the project file", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				product_file_keys: { checkout: "AbC123", settings: "DeF456" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.productFileKeys).toEqual({
+			checkout: "AbC123",
+			settings: "DeF456",
+		});
+	});
+
+	it("rejects a non-object product_file_keys (array) with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ product_file_keys: ["AbC123"] }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("product_file_keys");
+	});
+
+	it("rejects a product_file_keys value that is not a string", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ product_file_keys: { checkout: 5 } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("product_file_keys");
+		expect(outcome.message).toContain("checkout");
+	});
+
+	it("rejects a product_file_keys value that is an empty string", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ product_file_keys: { checkout: "" } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("product_file_keys");
+		expect(outcome.message).toContain("checkout");
+	});
+});
+
+describe("resolveConfig — metric_targets (C1)", () => {
+	it("leaves metricTargets undefined when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.metricTargets).toBeUndefined();
+	});
+
+	it("reads a valid metric_targets map (with and without warn)", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				metric_targets: {
+					"on-system": { op: ">=", value: 90, warn: 85 },
+					drift: { op: "==", value: 0 },
+					parity: { op: ">=", value: 100 },
+				},
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.metricTargets).toEqual({
+			"on-system": { op: ">=", value: 90, warn: 85 },
+			drift: { op: "==", value: 0 },
+			parity: { op: ">=", value: 100 },
+		});
+	});
+
+	it("rejects an unknown metric key with a nearest-match suggestion", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				metric_targets: { "on-systm": { op: ">=", value: 90 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("on-systm");
+		expect(outcome.message).toContain("on-system"); // suggestion
+	});
+
+	it("rejects a bad op with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				metric_targets: { drift: { op: "<", value: 0 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("metric_targets");
+		expect(outcome.message).toContain("drift");
+	});
+
+	it("rejects a non-finite value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				metric_targets: { parity: { op: ">=", value: "lots" } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("parity");
+	});
+
+	it("rejects a non-finite warn with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				metric_targets: { drift: { op: "==", value: 0, warn: "soon" } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("drift");
+		expect(outcome.message).toContain("warn");
+	});
+
+	it("rejects a non-object metric_targets entry with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ metric_targets: { drift: 0 } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("drift");
+	});
+
+	it("rejects a non-object metric_targets with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ metric_targets: [1, 2] }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("metric_targets");
+	});
+});
+
+describe("resolveConfig — score_weights_by_view (C2)", () => {
+	it("leaves scoreWeightsByView undefined when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.scoreWeightsByView).toBeUndefined();
+	});
+
+	it("reads per-view partial weight overrides, merged onto the engine defaults", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				score_weights_by_view: {
+					"ds-designer": { readiness: 40, a11y: 30 },
+					"product-engineer": { adoption: 35, lint: 30 },
+				},
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.scoreWeightsByView).toEqual({
+			"ds-designer": {
+				drift: 25,
+				lint: 25,
+				readiness: 40,
+				a11y: 30,
+				adoption: 20,
+			},
+			"product-engineer": {
+				drift: 25,
+				lint: 30,
+				readiness: 15,
+				a11y: 15,
+				adoption: 35,
+			},
+		});
+	});
+
+	it("rejects a non-object score_weights_by_view with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_weights_by_view: [1] }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_weights_by_view");
+	});
+
+	it("rejects an unknown weight subkey inside a view, naming the view", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				score_weights_by_view: { "ds-designer": { parity: 10 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ds-designer");
+		expect(outcome.message).toContain("parity");
+	});
+
+	it("rejects a non-positive weight inside a view, naming the view", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				score_weights_by_view: { "ds-designer": { readiness: 0 } },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ds-designer");
+		expect(outcome.message).toContain("readiness");
+	});
+
+	it("rejects a non-object per-view value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				score_weights_by_view: { "ds-designer": "30,30" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ds-designer");
+	});
+});
+
+describe("resolveConfig — freshness_thresholds (C4)", () => {
+	it("leaves freshnessThresholds undefined when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.freshnessThresholds).toBeUndefined();
+	});
+
+	it("reads amberDays/redDays from the project file", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { amberDays: 30, redDays: 60 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.freshnessThresholds).toEqual({
+			amberDays: 30,
+			redDays: 60,
+		});
+	});
+
+	it("rejects amber > red with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { amberDays: 60, redDays: 30 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("freshness_thresholds");
+	});
+
+	it("rejects a non-positive day count with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { amberDays: 0, redDays: 30 },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("freshness_thresholds");
+	});
+
+	it("rejects a non-finite day count with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				freshness_thresholds: { amberDays: 30, redDays: "later" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("freshness_thresholds");
+	});
+
+	it("rejects a non-object freshness_thresholds with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ freshness_thresholds: 30 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("freshness_thresholds");
+	});
+});
+
+describe("resolveConfig — ownership / ownership_file (C9)", () => {
+	it("leaves ownership and ownershipFile undefined when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.ownership).toBeUndefined();
+		expect(outcome.config.ownershipFile).toBeUndefined();
+	});
+
+	it("reads an ownership map (path → owner)", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: { "src/checkout/**": "@team-checkout" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.ownership).toEqual({
+			"src/checkout/**": "@team-checkout",
+		});
+	});
+
+	it("reads an ownership_file path", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership_file: ".github/CODEOWNERS",
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.ownershipFile).toBe(".github/CODEOWNERS");
+	});
+
+	it("allows ownership and ownership_file together (not mutually exclusive)", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				ownership: { "src/**": "@core" },
+				ownership_file: ".github/CODEOWNERS",
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.ownership).toEqual({ "src/**": "@core" });
+		expect(outcome.config.ownershipFile).toBe(".github/CODEOWNERS");
+	});
+
+	it("rejects a non-object ownership with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ ownership: ["@team"] }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ownership");
+	});
+
+	it("rejects a non-string ownership value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ ownership: { "src/**": 5 } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ownership");
+	});
+
+	it("rejects a non-string ownership_file with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ ownership_file: 5 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ownership_file");
+	});
+
+	it("rejects an empty-string ownership_file with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ ownership_file: "" }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("ownership_file");
+	});
+});
+
+describe("resolveConfig — component_aliases (C5)", () => {
+	it("leaves componentAliases undefined when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.componentAliases).toBeUndefined();
+	});
+
+	it("reads a component_aliases map (alias → canonical name)", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({
+				component_aliases: { Btn: "Button", Cta: "Button / Primary" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.componentAliases).toEqual({
+			Btn: "Button",
+			Cta: "Button / Primary",
+		});
+	});
+
+	it("rejects a non-object component_aliases with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ component_aliases: ["Button"] }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("component_aliases");
+	});
+
+	it("rejects a non-string component_aliases value with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ component_aliases: { Btn: 5 } }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("component_aliases");
+	});
+});
+
+describe("resolveConfig — migration_sites_cap (C7, default 200)", () => {
+	it("defaults migrationSitesCap to 200 when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.migrationSitesCap).toBe(200);
+	});
+
+	it("reads a positive integer migration_sites_cap", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ migration_sites_cap: 50 }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.migrationSitesCap).toBe(50);
+	});
+
+	it("rejects a non-positive migration_sites_cap with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ migration_sites_cap: 0 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("migration_sites_cap");
+	});
+
+	it("rejects a non-integer migration_sites_cap with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ migration_sites_cap: 12.5 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("migration_sites_cap");
+	});
+});
+
+describe("resolveConfig — score_velocity_window (C8, default 30)", () => {
+	it("defaults scoreVelocityWindow to 30 when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.scoreVelocityWindow).toBe(30);
+	});
+
+	it("reads a positive integer score_velocity_window (days)", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_velocity_window: 14 }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.scoreVelocityWindow).toBe(14);
+	});
+
+	it("rejects a non-positive score_velocity_window with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_velocity_window: -1 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_velocity_window");
+	});
+
+	it("rejects a non-integer score_velocity_window with a typed error", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ score_velocity_window: 7.5 }),
+		});
+
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain("score_velocity_window");
+	});
+});
+
+describe("resolveConfig — FIGMA_DESIGN_SYSTEM_FILE env alias (§6.3)", () => {
+	it("resolves the library key from FIGMA_DESIGN_SYSTEM_FILE", () => {
+		const outcome = resolveConfig({
+			env: { FIGMA_DESIGN_SYSTEM_FILE: "design-sys-key" },
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe("design-sys-key");
+	});
+
+	it("ranks CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY above FIGMA_DESIGN_SYSTEM_FILE", () => {
+		const outcome = resolveConfig({
+			env: {
+				CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "plugin-key",
+				FIGMA_DESIGN_SYSTEM_FILE: "design-sys-key",
+			},
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe("plugin-key");
+	});
+
+	it("ranks FIGMA_DESIGN_SYSTEM_FILE above the project file key", () => {
+		const outcome = resolveConfig({
+			env: { FIGMA_DESIGN_SYSTEM_FILE: "design-sys-key" },
+			projectFileText: JSON.stringify({ figma_file_key: "project-key" }),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe("design-sys-key");
+	});
+
+	it("ranks flags.figmaFileKey above FIGMA_DESIGN_SYSTEM_FILE", () => {
+		const outcome = resolveConfig({
+			flags: { figmaFileKey: "flag-key" },
+			env: { FIGMA_DESIGN_SYSTEM_FILE: "design-sys-key" },
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe("flag-key");
+	});
+});
+
+describe("resolveConfig — FIGMA_PRODUCT_FILE_<NAME> env merge (§6.4, §11.5)", () => {
+	it("derives a lower-cased alias from the env suffix", () => {
+		const outcome = resolveConfig({
+			env: { FIGMA_PRODUCT_FILE_CHECKOUT: "EnvCheckout" },
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.productFileKeys).toEqual({ checkout: "EnvCheckout" });
+	});
+
+	it("merges env product keys with the project-file map", () => {
+		const outcome = resolveConfig({
+			env: { FIGMA_PRODUCT_FILE_BILLING: "EnvBilling" },
+			projectFileText: JSON.stringify({
+				product_file_keys: { checkout: "ProjCheckout" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.productFileKeys).toEqual({
+			checkout: "ProjCheckout",
+			billing: "EnvBilling",
+		});
+	});
+
+	it("env wins over the project-file map for the same alias", () => {
+		const outcome = resolveConfig({
+			env: { FIGMA_PRODUCT_FILE_CHECKOUT: "EnvCheckout" },
+			projectFileText: JSON.stringify({
+				product_file_keys: { checkout: "ProjCheckout" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.productFileKeys).toEqual({ checkout: "EnvCheckout" });
+	});
+
+	it("ignores an empty-value FIGMA_PRODUCT_FILE_<NAME>", () => {
+		const outcome = resolveConfig({
+			env: { FIGMA_PRODUCT_FILE_CHECKOUT: "" },
+			projectFileText: JSON.stringify({
+				product_file_keys: { checkout: "ProjCheckout" },
+			}),
+		});
+
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.productFileKeys).toEqual({
+			checkout: "ProjCheckout",
+		});
+	});
+});
+
 describe("writeProjectConfig", () => {
 	let dir: string;
 
