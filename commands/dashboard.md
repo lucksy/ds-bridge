@@ -1,11 +1,16 @@
 ---
-description: "Open the ds-bridge dashboard report, or compose your view with --setup"
-argument-hint: "[--setup] [path]"
+description: "Open the ds-bridge dashboard report, compose with --setup, or build one from a description"
+argument-hint: "[--setup] [\"free-text view description\"] [path]"
 ---
 
 ## Your task
 
-This command has two modes, decided by whether `$ARGUMENTS` contains `--setup`.
+This command has THREE modes, decided by `$ARGUMENTS`:
+- contains `--setup` → **Mode 2** (the persona wizard);
+- contains a quoted free-text phrase (a description of the view you want) →
+  **Mode 3** (the conversational builder);
+- otherwise → **Mode 1** (render).
+
 There is no pre-executed output block: run the CLI yourself with the Bash tool.
 (Deliberate — M3.1: an eager `` !`…` `` block would fire before you could
 branch, opening a stale default report mid-wizard.)
@@ -66,6 +71,29 @@ hand-authored prose that could drift from the shipped presets.
    `product_file_keys` entry — never `report_style` / `readiness_threshold`.
 5. Show the CLI's confirmation output, then offer to render now; if accepted,
    run `… report <path> --open`.
+
+### Mode 3 — build from a description (free-text)
+
+A quoted free-text argument (e.g. `"exec view: score trend + adoption +
+breaking calendar, save as exec"`) is a request to BUILD a named dashboard. The
+catalog is the only vocabulary — never invent ids.
+
+1. **Ground in the live catalog FIRST.** Run
+   `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs dashboard list --format=json` and map
+   the phrase to artifact ids **only** by their `id`/`title`/`personas` in that
+   JSON. Optionally seed candidates with
+   `… dashboard suggest "<phrase>"` (offline, deterministic — no LLM). Emit ONLY
+   ids that appear in the JSON.
+2. **Preview before saving.** Echo the resolved ordered id list (with titles) +
+   the target name and ask the user to confirm. If your confidence is low (the
+   phrase is vague, or a token maps to several artifacts), DROP to an
+   **AskUserQuestion** built from the catalog rows instead of guessing.
+3. **Save through the CLI boundary** — never hand-write the JSON. Run
+   `… dashboard save <name> --artifacts <comma,separated,ids>` (add `--local`
+   for a personal dashboard). The CLI **re-validates every id**; a hallucinated
+   id exits 2 with nearest-match suggestions — relay them verbatim and retry with
+   a corrected list. The validation IS the guardrail.
+4. Offer to render it: `… report <path> --dashboard <name> --open`.
 
 ## Rules
 
