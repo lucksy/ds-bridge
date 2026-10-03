@@ -77,6 +77,22 @@ function looksLikeFigmaKey(value: string): boolean {
 	return value.length >= FIGMA_KEY_MIN_LENGTH && /^[A-Za-z0-9]+$/.test(value);
 }
 
+/**
+ * Normalize a user-supplied file-key value to a BARE Figma file key. Users
+ * routinely paste a whole library URL; the REST API needs only the key segment
+ * (`…/file/<key>/…`, `…/design/<key>/…`, also board/proto/slides) — anything else
+ * (query string, file slug) is noise that yields a 404. A value that is not a
+ * Figma URL is returned trimmed and unchanged, so a bare key OR a product alias
+ * passes through untouched. Pure; never throws.
+ */
+export function extractFigmaFileKey(value: string): string {
+	const trimmed = value.trim();
+	const match = trimmed.match(
+		/figma\.(?:com|site)\/(?:file|design|board|proto|slides)\/([A-Za-z0-9]+)/i,
+	);
+	return match?.[1] ?? trimmed;
+}
+
 /** What the caller passes; all sources injected so the helper stays pure. */
 export interface ResolveFileKeyInput {
 	/** The `--file-key` flag value, if the user passed one. */
@@ -109,7 +125,13 @@ export type ResolveFileKeyOutcome =
 export function resolveFileKey(
 	input: ResolveFileKeyInput,
 ): ResolveFileKeyOutcome {
-	const { flagValue, productFileKeys, defaultKey } = input;
+	const { productFileKeys, defaultKey } = input;
+	// A pasted library URL collapses to its bare key first; a bare key or an alias
+	// word is untouched, so alias matching below still works.
+	const flagValue =
+		input.flagValue !== undefined
+			? extractFigmaFileKey(input.flagValue)
+			: undefined;
 
 	if (flagValue === undefined || flagValue === "") {
 		if (defaultKey !== undefined && defaultKey !== "") {

@@ -3,11 +3,66 @@
 // never throws — unknown alias surfaces as a typed outcome carrying nearest-match
 // suggestions. Precedence: flagValue (alias-resolved, else raw) > defaultKey.
 import { describe, expect, it } from "vitest";
-import { resolveFileKey } from "../../src/io/figma/file-key.js";
+import {
+	extractFigmaFileKey,
+	resolveFileKey,
+} from "../../src/io/figma/file-key.js";
 
 const RAW_KEY = "ABcdEFghIJklMNopQRstUV"; // 22 chars — a real-shaped Figma key
 
+describe("extractFigmaFileKey", () => {
+	it("pulls the key from a /design/ URL with a slug and query string", () => {
+		// The exact shape a user pastes from the Figma address bar.
+		expect(
+			extractFigmaFileKey(
+				"https://www.figma.com/design/xfXJSaAWt65rlq486RKvJB/Sahasra-Design-System?m=auto&t=yLJi3bLlwAayHnI2-6",
+			),
+		).toBe("xfXJSaAWt65rlq486RKvJB");
+	});
+
+	it("pulls the key from a /file/ URL", () => {
+		expect(
+			extractFigmaFileKey("https://figma.com/file/ABcdEFghIJklMNopQRstUV/Lib"),
+		).toBe("ABcdEFghIJklMNopQRstUV");
+	});
+
+	it("handles board/proto/slides and figma.site URLs", () => {
+		expect(extractFigmaFileKey("https://figma.com/board/KEYboard123/x")).toBe(
+			"KEYboard123",
+		);
+		expect(extractFigmaFileKey("https://figma.com/proto/KEYproto456/x")).toBe(
+			"KEYproto456",
+		);
+		expect(
+			extractFigmaFileKey("https://my.figma.site/design/SiteKey789/x"),
+		).toBe("SiteKey789");
+	});
+
+	it("passes a bare key through unchanged (just trimmed)", () => {
+		expect(extractFigmaFileKey("  xfXJSaAWt65rlq486RKvJB  ")).toBe(
+			"xfXJSaAWt65rlq486RKvJB",
+		);
+	});
+
+	it("passes a non-figma word/alias through (does not over-match)", () => {
+		expect(extractFigmaFileKey("checkout")).toBe("checkout");
+		expect(extractFigmaFileKey("https://example.com/design/notfigma/x")).toBe(
+			"https://example.com/design/notfigma/x",
+		);
+	});
+});
+
 describe("resolveFileKey", () => {
+	it("normalizes a pasted Figma URL flagValue to its bare key", () => {
+		const out = resolveFileKey({
+			flagValue:
+				"https://www.figma.com/design/xfXJSaAWt65rlq486RKvJB/Sahasra?m=auto",
+			productFileKeys: { checkout: "AbC123" },
+			defaultKey: "home-library",
+		});
+		expect(out).toEqual({ kind: "ok", key: "xfXJSaAWt65rlq486RKvJB" });
+	});
+
 	it("resolves a flagValue that is an alias to its mapped key", () => {
 		const out = resolveFileKey({
 			flagValue: "checkout",

@@ -39,6 +39,7 @@ import {
 	severityColor,
 	shouldColor,
 } from "../render/terminal/index.js";
+import { missingFigmaTokenMessage } from "./figma-auth-help.js";
 
 type HandoffFormat = "json" | "term";
 
@@ -118,14 +119,7 @@ function fail(message: string): void {
 
 /** Guidance shown when no Figma PAT is configured. Scopes per SPEC §3. */
 function missingTokenMessage(): string {
-	return [
-		"No Figma personal access token configured.",
-		"",
-		"Set one via the plugin config dialog (stored in the system keychain) or,",
-		"for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-		"",
-		"  export FIGMA_TOKEN=figd_your_token_here",
-		"",
+	return missingFigmaTokenMessage([
 		"Create the token at figma.com → Settings → Security → Personal access",
 		"tokens, with these scopes:",
 		"  file_content:read, library_content:read, file_versions:read,",
@@ -133,7 +127,7 @@ function missingTokenMessage(): string {
 		"",
 		"Note: the PAT must come from a Dev or Full seat — a View seat is rate-",
 		"limited to roughly a handful of requests per month and cannot be used here.",
-	].join("\n");
+	]);
 }
 
 /** Translate a non-ok Figma client result into an actionable stderr message. */

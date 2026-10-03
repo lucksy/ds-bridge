@@ -45,14 +45,18 @@ JSON object but a plain error line, handle these cases:
      access to Figma)"
    - **Build it now** · **Not now**
 
-   On **Build it now**, run this with the Bash tool (it inherits the configured
-   Figma file key and PAT from the plugin environment):
+   On **Build it now**, run this with the Bash tool:
 
    `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry build`
 
-   If it reports a missing token or file key, surface that one fix (configure it
-   via `/plugin configure` and restart) and stop. On success, rerun this command
-   and continue below. On **Not now**, stop and report nothing further.
+   If it reports a **missing token**, do NOT tell the user to "configure and
+   restart" — Claude Code drops the plugin's sensitive Figma token on restart
+   (issue #62442), so that path loops. Point them to **`/ds-bridge:connect`**,
+   which saves the token to a gitignored `.ds-bridge.env` that survives restarts,
+   then have them rerun this command. If it reports a **missing file key**, that one
+   is safe to set via `/plugin configure` (non-sensitive options persist across
+   restarts). On success, rerun this command and continue below. On **Not now**,
+   stop and report nothing further.
 2. **Component not found.** If the block shows "No component named … Candidates:
    …": tell the user the named component is not in the registry and list the
    candidate names from the message so they can retry with a valid one.

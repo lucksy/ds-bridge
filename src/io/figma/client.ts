@@ -88,6 +88,9 @@ export interface FigmaUser {
 	id: string;
 	handle: string;
 	img_url: string;
+	// GET /v1/me also returns the account email; the embedded `user` objects on
+	// comments/versions do not. Optional so both shapes satisfy this interface.
+	email?: string;
 }
 
 export interface FigmaContainingFrame {
@@ -173,6 +176,8 @@ export type FigmaResult<T> =
 	| { kind: "network-error"; message: string };
 
 export interface FigmaClient {
+	/** GET /v1/me — the cheapest token-validity / identity probe (used by verify). */
+	getMe(): Promise<FigmaResult<FigmaUser>>;
 	getFile(key: string): Promise<FigmaResult<FigmaFile>>;
 	getFileNodes(
 		key: string,
@@ -339,6 +344,10 @@ export function createFigmaClient(options: FigmaClientOptions): FigmaClient {
 	}
 
 	return {
+		getMe() {
+			return get<FigmaUser>(`${BASE_URL}/me`);
+		},
+
 		getFile(key) {
 			return get<FigmaFile>(`${BASE_URL}/files/${key}`);
 		},

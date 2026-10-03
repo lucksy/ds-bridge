@@ -1228,6 +1228,44 @@ describe("resolveConfig — score_velocity_window (C8, default 30)", () => {
 	});
 });
 
+describe("resolveConfig — figma_file_key URL normalization", () => {
+	const URL =
+		"https://www.figma.com/design/xfXJSaAWt65rlq486RKvJB/Sahasra-Design-System?m=auto&t=yLJi3bLlwAayHnI2-6";
+	const KEY = "xfXJSaAWt65rlq486RKvJB";
+
+	it("collapses a pasted URL in FIGMA_DESIGN_SYSTEM_FILE to the bare key", () => {
+		const outcome = resolveConfig({ env: { FIGMA_DESIGN_SYSTEM_FILE: URL } });
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe(KEY);
+	});
+
+	it("collapses a URL in CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY", () => {
+		const outcome = resolveConfig({
+			env: { CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: URL },
+		});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe(KEY);
+	});
+
+	it("collapses a URL in the project file's figma_file_key", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: URL }),
+		});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe(KEY);
+	});
+
+	it("leaves a bare key untouched", () => {
+		const outcome = resolveConfig({ env: { FIGMA_DESIGN_SYSTEM_FILE: KEY } });
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.figmaFileKey).toBe(KEY);
+	});
+});
+
 describe("resolveConfig — FIGMA_DESIGN_SYSTEM_FILE env alias (§6.3)", () => {
 	it("resolves the library key from FIGMA_DESIGN_SYSTEM_FILE", () => {
 		const outcome = resolveConfig({

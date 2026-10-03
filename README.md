@@ -101,7 +101,7 @@ When you enable the plugin, Claude Code prompts for these options natively (no
 | Option | Type | Default | What it does |
 |---|---|---|---|
 | `figma_file_key` | string | — | Key from your Figma **library file** URL (`…/file/<KEY>/…`). Used by `registry build` and any library-wide audit. |
-| `figma_token` | string · **sensitive** | — | Figma personal access token. Stored in the system **keychain**, never in a file. See PAT guidance below. |
+| `figma_token` | string · **sensitive** | — | Figma personal access token. ⚠️ Claude Code does **not** persist this across restarts ([#62442](https://github.com/anthropics/claude-code/issues/62442)) — set it once, then run `/ds-bridge:connect` to save it durably. See PAT guidance below. |
 | `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file. If unset, DS Bridge discovers it from common paths. |
 | `report_style` | string | `both` | Report output: `html`, `terminal`, or `both`. |
 | `readiness_threshold` | number (0–100) | `80` | The handoff-readiness gate `/ds-bridge:handoff-qa` must clear for a frame to pass. |
@@ -119,15 +119,44 @@ message, never a crash.
 - **Required scopes:** `file_content:read`, `library_content:read`,
   `file_versions:read`, `file_comments:read`, `file_comments:write`. (The
   legacy `files:read` scope is deprecated.)
-- **Sensitive → keychain.** Because `figma_token` is `sensitive: true`, Claude
-  Code stores it in your OS keychain and exposes it to plugin scripts as
-  `CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN`. **Never** put it in `.ds-bridge.json` (the
-  config loader explicitly ignores a token there and warns).
-- **Standalone CLI users** set `FIGMA_TOKEN` in the environment instead; the CLI
-  checks both variables.
+- **Connecting the token (important).** `figma_token` is `sensitive: true`, and
+  Claude Code does **not** persist a plugin's sensitive config across restarts
+  ([#62442](https://github.com/anthropics/claude-code/issues/62442)) — the value
+  you type into `/plugin configure` lives only in that session and is gone after a
+  restart. To connect durably, run **`/ds-bridge:connect`** — it points you to the
+  interactive `ds-bridge config connect`, which prompts for the token with the input
+  **hidden**, then writes a gitignored `.ds-bridge.env` (mode `0600`) that the CLI
+  auto-loads on every run. The token never enters the chat or your shell history.
+  **Never** put the token in `.ds-bridge.json` (the config loader ignores a token
+  there and warns).
+- **Standalone CLI users** set `FIGMA_TOKEN` in the environment, or drop it into
+  `.ds-bridge.env` (`FIGMA_TOKEN=figd_…`) — the CLI checks env vars and that file.
+- **Verify the connection.** `ds-bridge config connect --verify` pings Figma
+  (`/v1/me` + a library read) right after writing, so a throttled View-seat token
+  is caught immediately instead of failing later at `registry build`.
 - **The MCP connection is separate.** The remote Figma MCP server
   (`https://mcp.figma.com/mcp`) authenticates on its own — the REST PAT above
   does not authenticate MCP, and vice versa.
+
+### Setting your library and product files
+
+The token is the only secret — your Figma file *keys* are not, so they live in the
+committed `.ds-bridge.json` and the whole team shares them.
+
+- **Library (the source of components/variables):** `ds-bridge config set-library
+  <url-or-key>` writes `figma_file_key`. A pasted Figma URL collapses to the bare
+  key automatically. This is the file `registry build` and every library-wide audit
+  read.
+- **Product/consumer files:** `ds-bridge config add-product <alias> <url>` registers
+  each under a short alias in `product_file_keys`; target it with `--file-key
+  <alias>` on `impact` / `library-health` / `frame-impl`. `ds-bridge config list`
+  shows them all.
+- **Check what resolved:** `ds-bridge config show` prints the effective config
+  (token masked) and **which source won** each value — flag, env, `.ds-bridge.env`,
+  or `.ds-bridge.json`.
+
+New to the Figma side? The [Connect ds-bridge to Figma](website/content/tutorials/connect-figma.mdx)
+tutorial walks the whole flow start to finish.
 
 ## Commands
 
@@ -138,6 +167,7 @@ that runs the CLI and interprets its `--format=json` output. The CLI exits
 
 | Slash command | CLI underneath | What it does | Exit codes |
 |---|---|---|---|
+| `/ds-bridge:connect` | `ds-bridge config persist-token` | Save your Figma token from the session into a gitignored `.ds-bridge.env` (`0600`) so it survives restarts — the durable fix for [#62442](https://github.com/anthropics/claude-code/issues/62442). Run it once after setting the token. | 0 saved · 2 no token in env |
 | `/ds-bridge:ds-lint [--fix] [path]` | `ds-bridge lint [path] [--fix] [--format] [--tokens] [--changed]` | Find hardcoded values that should be design tokens; `--fix` rewrites **exact** matches only (never near-misses). | 0 clean · 1 violations · 2 error |
 | `/ds-bridge:token-check [--report] [path]` | `ds-bridge tokens check [path] [--report] [--tokens] [--outputs] [--format]` | Detect drift between the token source and built outputs (stale / missing / orphan); `--report` writes the dashboard. | 0 in-sync · 1 drift · 2 error |
 | `/ds-bridge:dashboard [path]` | `ds-bridge report [path] [--open] [--out]` | Render the offline HTML dashboard from `.ds-bridge/history.jsonl`; `--open` launches the browser. | 0 ok · 2 error |
@@ -151,6 +181,12 @@ Supporting CLI commands (no slash wrapper of their own):
 | `ds-bridge tokens parse <path> [--format]` | Parse a token file and print its normalized model. | 0 ok · 1 parse error |
 | `ds-bridge registry build [path] [--format]` | Scan code components + fetch the Figma library → write `.ds-bridge/registry.json`. | 0 ok · 2 missing token/file-key |
 | `ds-bridge registry resolve <nodeNameOrId> [path]` | Resolve a Figma node id or name against the saved registry (used by the planned `figma-impl`). | 0 resolved · 1 unresolved · 2 no registry |
+| `ds-bridge config persist-token [path]` | Write a Figma token **already in the environment** (+ file key) to `<path>/.ds-bridge.env` (gitignored, `0600`). The CLI auto-loads it on every run. Wrapped by `/ds-bridge:connect`. | 0 saved · 2 no token in env |
+| `ds-bridge config connect [path] [--verify]` | **Interactive** (run in your terminal): prompt for the Figma token (hidden input) + library file key, write `.ds-bridge.env` (`0600`) and gitignore it. The secret never enters the chat or shell history. `--verify` then pings Figma (`/v1/me` + a library read) to confirm the token works and the seat can read library content. | 0 connected/verified · 2 no TTY / empty / verify failed |
+| `ds-bridge config show [path]` | Print the effective config — Figma token (**masked**), library file key, token source, report style, readiness gate, and product files — each annotated with **which source won** (plugin dialog / `.ds-bridge.env` / `.ds-bridge.json` / default). | 0 ok · 2 invalid project file |
+| `ds-bridge config set-library <url-or-key> [path]` | Write the design-system library file key (a pasted URL collapses to the bare key) to the **committed** `.ds-bridge.json` (`figma_file_key`) — the non-secret key the whole team shares. | 0 saved · 2 write error |
+| `ds-bridge config add-product <alias> <url-or-key> [path]` | Register a product/consumer Figma file under an alias in `.ds-bridge.json` (`product_file_keys`), merging with any existing aliases. Target it later with `--file-key <alias>` on `impact` / `library-health` / `frame-impl`. | 0 saved · 2 write error |
+| `ds-bridge config list [path]` | List the targetable file keys: the library default and every product alias (env-merged), each with its source. | 0 ok · 2 invalid project file |
 
 Every command supports `--format=json` (machine-readable, used by skills and
 tests), `--format=term` (default; colors, unicode bars), and where applicable

@@ -6,6 +6,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type ArtifactId, lookupArtifact } from "./engines/report/catalog.js";
 import { validateWeights, type Weights } from "./engines/report/score.js";
+import { extractFigmaFileKey } from "./io/figma/file-key.js";
 
 export type ReportStyle = "html" | "terminal" | "both";
 
@@ -887,9 +888,10 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 	// the base; `FIGMA_PRODUCT_FILE_<NAME>` env vars are layered ON TOP (env wins
 	// for the same alias). Enumerating injected-env keys keeps resolveConfig pure —
 	// it reads only its `env` argument. The alias is the suffix, lower-cased.
-	const productFileKeys: Record<string, string> = {
-		...(project.productFileKeys ?? {}),
-	};
+	const productFileKeys: Record<string, string> = {};
+	for (const [alias, key] of Object.entries(project.productFileKeys ?? {})) {
+		productFileKeys[alias] = extractFigmaFileKey(key);
+	}
 	const PRODUCT_FILE_ENV_PREFIX = "FIGMA_PRODUCT_FILE_";
 	for (const envKey of Object.keys(env)) {
 		if (!envKey.startsWith(PRODUCT_FILE_ENV_PREFIX)) continue;
@@ -897,15 +899,23 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 		if (value === undefined || value === "") continue;
 		const alias = envKey.slice(PRODUCT_FILE_ENV_PREFIX.length).toLowerCase();
 		if (alias === "") continue;
-		productFileKeys[alias] = value;
+		productFileKeys[alias] = extractFigmaFileKey(value);
 	}
+
+	// A pasted Figma URL (the natural thing a user does) collapses to its bare key
+	// here, so every consumer of figmaFileKey — registry build, impact, handoff,
+	// library-health — gets a key the REST API accepts instead of a 404.
+	const rawFigmaFileKey =
+		flags.figmaFileKey ??
+		env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ??
+		env.FIGMA_DESIGN_SYSTEM_FILE ??
+		project.figmaFileKey;
 
 	const config: ResolvedConfig = {
 		figmaFileKey:
-			flags.figmaFileKey ??
-			env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ??
-			env.FIGMA_DESIGN_SYSTEM_FILE ??
-			project.figmaFileKey,
+			rawFigmaFileKey !== undefined
+				? extractFigmaFileKey(rawFigmaFileKey)
+				: undefined,
 		figmaToken:
 			tokenValue !== undefined && tokenValue !== ""
 				? { kind: "present", value: tokenValue }
