@@ -1,0 +1,22 @@
+{
+	// The insights mod (hooks/register.tsx and hooks/insights/), typed against the
+	// Claude Code mod API. Claude Code writes those declarations into
+	// .claude-plugin/types/ each time it loads this folder as a plugin
+	// (`claude --plugin-dir .`), so load it once before `npm run typecheck:mod`.
+	// The mod runs with no DOM and no Node, so neither is in `lib` or `types`.
+	"compilerOptions": {
+		"target": "es2023",
+		"lib": ["es2023"],
+		"types": [],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"jsx": "react",
+		"jsxFactory": "h",
+		"jsxFragmentFactory": "Fragment"
+	},
+	"include": [".claude-plugin/types", "hooks", "types", "mod-tests"]
+}

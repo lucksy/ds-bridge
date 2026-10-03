@@ -7,6 +7,9 @@ dist/
 # Test coverage
 coverage/
 
+# Storybook's local build cache
+.cache/
+
 # Environment & secrets
 .env
 .env.*
@@ -31,6 +34,10 @@ npm-debug.log*
 
 # Claude Code per-machine local state (plugin enablement, etc.) — never committed
 .claude/settings.local.json
+
+# The mod API declarations Claude Code writes beside the plugin each time it loads it
+# (tsconfig.mod.json reads them); regenerated per Claude Code build, never committed.
+.claude-plugin/types/
 
 # Next.js (website/)
 website/.next/

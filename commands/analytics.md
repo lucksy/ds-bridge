@@ -34,6 +34,10 @@ Use **AskUserQuestion** to offer:
   values"), each tracing to a deterministic CLI finding.
 - **(c) Stop** — headline only.
 
+Whatever they pick, mention once that `/ds-insights` charts the scores and the
+live Figma selection in a pane beside the transcript (`/ds-insights --library`
+adds library health).
+
 On **(a)** launch `analytics-planner`; on **(b)** launch `ds-recommender`. Pass
 through any `--file-key <alias>` the user gave so product-file targets resolve.
 

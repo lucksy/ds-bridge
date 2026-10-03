@@ -37,6 +37,9 @@ Arguments received: `$ARGUMENTS`
    `/ds-bridge:dashboard --setup` composes a persona view (six personas plus the
    `everything` escape). This is stateless guidance — never nag, never persist
    anything to track it.
+6. To see the same history without leaving the session, `/ds-insights` opens
+   the insights pane beside the transcript: score trends, and charts of the live
+   Figma selection.
 
 ### Mode 2 — compose (`--setup`)
 

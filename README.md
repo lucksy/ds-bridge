@@ -105,6 +105,9 @@ When you enable the plugin, Claude Code prompts for these options natively (no
 | `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file. If unset, DS Bridge discovers it from common paths. |
 | `report_style` | string | `both` | Report output: `html`, `terminal`, or `both`. |
 | `readiness_threshold` | number (0–100) | `80` | The handoff-readiness gate `/ds-bridge:handoff-qa` must clear for a frame to pass. |
+| `insights_palette` | string | `echarts` | Chart colours in the [insights pane](#insights-pane-claude-code-mod) on the Claude Desktop app: `echarts`, `nivo`, `ds-bridge` or `mono`. |
+| `insights_share_style` | string | `donut` | How the insights pane draws the parts of a whole on the Desktop app: `donut`, `pie` or `bar`. |
+| `insights_corner_radius` | number (0–12) | `4` | Rounding of bars and slices in the Desktop app's insights charts, in pixels. |
 
 **Config resolution order** (highest wins): CLI flags → env vars
 (`CLAUDE_PLUGIN_OPTION_*`, `FIGMA_TOKEN`) → project `.ds-bridge.json` →
@@ -197,6 +200,37 @@ The `parity-audit` command can hand off to the **`parity-auditor`** agent
 `figma-impl` flagship command and its background-knowledge skill are planned for
 v1.0.0 (see roadmap) and are **not** shipped at v0.4.0.
 
+## Insights pane (Claude Code mod)
+
+DS Bridge also ships a **mod** (Claude Code v2.1.287+): a pane beside the
+transcript that charts your design system without leaving the session. It's
+[`hooks/register.tsx`](./hooks/register.tsx), listed under `modules` in
+[`hooks/hooks.json`](./hooks/hooks.json) next to the settings hooks.
+
+| Run | What it charts | Needs |
+|---|---|---|
+| `/ds-insights [node id]` | The **live Figma selection** (or a node): layers by type, most used components, variables by kind and collection, and **token adoption** (bound `var(--…)` values vs. hard-coded colours and sizes, with the hard-coded colours to replace). Also the **check history** in `.ds-bridge/history.jsonl`: each check's latest score and its scores run by run. | The Figma **desktop** MCP server (`figma-desktop`), connected in `/mcp` |
+| `/ds-insights --library` | All of the above, plus `ds-bridge library-health`: deprecated components still in use, override hotspots, and detach candidates (a heuristic). | A built `dist/cli.mjs`, plus the Figma token and library file key (`/ds-bridge:connect`) |
+| Ask Claude for a chart | Claude reads the numbers from the Figma MCP or the CLI's `--format=json` output and calls the mod's `show_insights` tool to draw them. | — |
+
+A source that isn't available becomes one note in the pane, and the others
+still draw. The pane's **Rescan selection** (`r`) and **Library health** (`l`)
+buttons rerun it.
+
+**How it looks.** In the terminal the charts are DS Bridge's own text bars: a
+solid bar on a `░` track, in muted ok / near-miss / off-system colours, with the
+count and, for the parts of a whole, the percent. Score history draws as
+sparklines. The **Claude Desktop app** draws the same charts as Apache ECharts
+SVG, styled by the three `insights_*` options above. Every result is also
+written into the transcript as text, so the VS Code panel and `claude -p` get
+it too.
+
+The mod only reads. It never writes to Figma or your code, and the Figma
+token stays with the CLI: the mod runs `dist/cli.mjs`, which loads
+`.ds-bridge.env` itself. ECharts is vendored as one file in
+[`hooks/insights/vendor/`](./hooks/insights/vendor) (Apache-2.0), because a
+mod can't import from npm; its README says how to rebuild it.
+
 ## Hooks
 
 Two hooks ship in [`hooks/hooks.json`](./hooks/hooks.json). Both are
@@ -243,7 +277,9 @@ npm run lint           # biome check .
 npm run lint:fix       # biome check --write .
 npm run build          # tsup → dist/cli.mjs (committed at release tags)
 npm run validate       # claude plugin validate . --strict
-npm run check          # typecheck + lint + test + validate (pre-commit gate)
+npm run test:mod       # the insights mod's tests, under `claude plugin test`
+npm run typecheck:mod  # type-check the mod (after `claude --plugin-dir .` has written its API types)
+npm run check          # typecheck + lint + test + validate + test:mod (pre-commit gate)
 ```
 
 The marketing site is its own package under [`website/`](./website) (Next.js

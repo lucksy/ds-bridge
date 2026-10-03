@@ -36,6 +36,29 @@
 			"default": 80,
 			"min": 0,
 			"max": 100
+		},
+		"insights_palette": {
+			"type": "string",
+			"title": "Insights pane: chart palette",
+			"description": "Colours of the Desktop app's charts in /ds-insights: echarts | nivo | ds-bridge | mono",
+			"default": "echarts",
+			"options": ["echarts", "nivo", "ds-bridge", "mono"]
+		},
+		"insights_share_style": {
+			"type": "string",
+			"title": "Insights pane: share charts",
+			"description": "How the Desktop app draws the parts of a whole: donut | pie | bar",
+			"default": "donut",
+			"options": ["donut", "pie", "bar"]
+		},
+		"insights_corner_radius": {
+			"type": "number",
+			"title": "Insights pane: corner radius",
+			"description": "Rounding of bars and slices in the Desktop app's charts, in pixels",
+			"default": 4,
+			"min": 0,
+			"max": 12
 		}
-	}
+	},
+	"types": "./types/index.d.ts"
 }
