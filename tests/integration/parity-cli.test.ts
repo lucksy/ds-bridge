@@ -9,11 +9,17 @@
 //   1  at least one non-ok row (CI gate)
 //   2  operational error (missing registry, bad path)
 import { execFile } from "node:child_process";
+import { mkdtempSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
+
+// The CLI reads <cwd>/.ds-bridge.env and resolves "." against cwd, so run it from
+// an empty dir: a checkout's own gitignored state (a real token, a registry) must
+// not leak into what these tests assert.
+const neutralCwd = mkdtempSync(join(tmpdir(), "ds-cli-cwd-"));
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -121,7 +127,11 @@ async function runCli(
 		const { stdout, stderr } = await execFileAsync(
 			process.execPath,
 			[cliPath, ...args],
-			{ encoding: "utf8", env: { ...process.env, NO_COLOR: "1" } },
+			{
+				encoding: "utf8",
+				cwd: neutralCwd,
+				env: { ...process.env, NO_COLOR: "1" },
+			},
 		);
 		return { code: 0, stdout, stderr };
 	} catch (error) {

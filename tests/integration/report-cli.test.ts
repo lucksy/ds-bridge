@@ -1015,6 +1015,13 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 // ---------- M1.3 — config-resolved artifact selection + v1.0.0 golden ----------
 
 /** The repo-relative path to the recorded v1.0.0 no-config golden fixture. */
+/**
+ * The instant both goldens were rendered at (2026-06-10T18:00:00Z), passed as
+ * SOURCE_DATE_EPOCH so their ages ("2d"…"8d") and 30-day score velocity are
+ * measured from the same day however long after the seed dates the suite runs.
+ */
+const GOLDEN_ENV = { SOURCE_DATE_EPOCH: "1781114400" } as const;
+
 const goldenPath = join(
 	repoRoot,
 	"tests",
@@ -1095,7 +1102,7 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		const dir = join(base, "report-golden");
 		await seedSixArtifacts(dir);
 
-		const result = await runCli(["report", dir]);
+		const result = await runCli(["report", dir], GOLDEN_ENV);
 		expect(result.code).toBe(0);
 
 		const html = await readFile(
@@ -2360,6 +2367,7 @@ describe("ds-bridge report — terminal format (M10.3)", () => {
 
 		const result = await runCli(["report", dir, "--format", "terminal"], {
 			NO_COLOR: "1",
+			...GOLDEN_ENV,
 		});
 		expect(result.code).toBe(0);
 		const normalized = withSentinelTimestampTxt(result.stdout);
@@ -2481,7 +2489,10 @@ describe("ds-bridge report — snapshots (M12.1)", () => {
 		const result = await runCli(["report", dir, "--snapshot"]);
 		expect(result.code).toBe(0);
 		const snapDir = join(dir, ".ds-bridge", "snapshots");
-		const page = await readFile(join(snapDir, "ds-manager.snapshot.html"), "utf8");
+		const page = await readFile(
+			join(snapDir, "ds-manager.snapshot.html"),
+			"utf8",
+		);
 		// Normalized: the live timestamp is the fixed sentinel.
 		expect(page).toContain("Generated __GENERATED_AT__");
 		expect(page).not.toMatch(/Generated \d{4}-\d\d-\d\dT/);
@@ -2524,7 +2535,13 @@ describe("ds-bridge report — snapshots (M12.1)", () => {
 	it("--snapshot with --format md → exit 2 (HTML-only)", async () => {
 		const dir = await freshTmp("ds-report-snap-md-");
 		await seedSixArtifacts(dir);
-		const result = await runCli(["report", dir, "--snapshot", "--format", "md"]);
+		const result = await runCli([
+			"report",
+			dir,
+			"--snapshot",
+			"--format",
+			"md",
+		]);
 		expect(result.code).toBe(2);
 		expect(result.stderr).toContain("--snapshot");
 	});

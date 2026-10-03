@@ -234,6 +234,20 @@ interface Aggregation {
 	libraryHealth: LibraryHealth | undefined;
 }
 
+/**
+ * The render instant every age and velocity window is measured from: the
+ * `SOURCE_DATE_EPOCH` env var (whole seconds since the epoch, the
+ * reproducible-builds convention) when it holds one, else now. Pinning it makes a
+ * report built from fixed history byte-identical on any day; the golden tests do.
+ */
+export function renderInstant(env: NodeJS.ProcessEnv = process.env): string {
+	const epoch = env.SOURCE_DATE_EPOCH?.trim();
+	if (epoch !== undefined && /^\d+$/.test(epoch)) {
+		return new Date(Number(epoch) * 1000).toISOString();
+	}
+	return new Date().toISOString();
+}
+
 function asNumber(value: unknown): number {
 	return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -1454,7 +1468,7 @@ function runMarkdownReport(
 	// the artifacts the active view selected. `generatedAt` is the single io-clock
 	// read (injected → reproducible ages/velocity). Each section is computed
 	// unconditionally; the renderer gates on `selection.artifacts` + presence.
-	const generatedAt = new Date().toISOString();
+	const generatedAt = renderInstant();
 	const systemScore = computeSystemScore(stateDir, effectiveWeights);
 	// runReport already validated this flag (exit 2 on a bad value) before
 	// dispatching here; re-parse for the day count and fall back to config/default.
@@ -1854,7 +1868,7 @@ function runReport(path: string, options: ReportOptions): void {
 	// Optional sections are only spread in when present so
 	// `exactOptionalPropertyTypes` keeps an absent section a genuine "not
 	// provided" rather than an explicit `undefined`.
-	const generatedAt = new Date().toISOString();
+	const generatedAt = renderInstant();
 	// Score velocity (C8, M3.5): the windowed delta of the composite over the
 	// system-score trend, evaluated at `generatedAt` (injected → reproducible).
 	// Window precedence: --velocity-window flag > score_velocity_window config > 30.

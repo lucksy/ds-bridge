@@ -12,6 +12,7 @@
 //   • round-trip: after persist, the M1.1 dotenv loader hydrates process.env and
 //     resolveConfig sees the token; a real-env value WINS over the file.
 import { execFile } from "node:child_process";
+import { mkdtempSync } from "node:fs";
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -19,6 +20,11 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resolveConfig } from "../../src/config.js";
 import { loadDotenvInto, parseDotenv } from "../../src/io/dotenv.js";
+
+// The CLI reads <cwd>/.ds-bridge.env and resolves "." against cwd, so run it from
+// an empty dir: a checkout's own gitignored state (a real token, a registry) must
+// not leak into what these tests assert.
+const neutralCwd = mkdtempSync(join(tmpdir(), "ds-cli-cwd-"));
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -58,7 +64,7 @@ async function run(
 		const { stdout, stderr } = await execFileAsync(
 			process.execPath,
 			[cliPath, ...args],
-			{ env },
+			{ env, cwd: neutralCwd },
 		);
 		return { code: 0, stdout, stderr };
 	} catch (error) {
