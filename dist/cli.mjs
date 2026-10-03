@@ -8349,7 +8349,7 @@ async function scanUsage(registry, projectDir) {
     globals.__filename = filename;
     globals.__dirname = dirname(filename);
   }
-  const { mapUsage } = await import("./usage-OFLQCL5F.mjs");
+  const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
   const changedFigmaNames = registry.matches.map((m) => m.figmaName);
   return mapUsage({ registry, changedFigmaNames, projectDir });
 }
@@ -8888,6 +8888,76 @@ function scoreFromHistory(text, weights) {
   };
 }
 
+// src/io/figma/file-key.ts
+function editDistance2(a, b) {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dist = Array.from({ length: rows * cols }, () => 0);
+  for (let i = 0; i < rows; i++) {
+    dist[i * cols] = i;
+  }
+  for (let j = 0; j < cols; j++) {
+    dist[j] = j;
+  }
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
+      dist[i * cols + j] = Math.min(
+        (dist[(i - 1) * cols + j] ?? 0) + 1,
+        (dist[i * cols + j - 1] ?? 0) + 1,
+        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
+      );
+    }
+  }
+  return dist[rows * cols - 1] ?? 0;
+}
+function suggestAliases(input, aliases, limit = 3) {
+  const needle = input.toLowerCase();
+  const MAX_DISTANCE = 4;
+  return aliases.map((alias, index) => ({
+    alias,
+    index,
+    prefix: alias.toLowerCase().startsWith(needle),
+    distance: editDistance2(needle, alias.toLowerCase())
+  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
+  ).slice(0, limit).map((c2) => c2.alias);
+}
+var FIGMA_KEY_MIN_LENGTH = 22;
+function looksLikeFigmaKey(value2) {
+  return value2.length >= FIGMA_KEY_MIN_LENGTH && /^[A-Za-z0-9]+$/.test(value2);
+}
+function extractFigmaFileKey(value2) {
+  const trimmed = value2.trim();
+  const match = trimmed.match(
+    /figma\.(?:com|site)\/(?:file|design|board|proto|slides)\/([A-Za-z0-9]+)/i
+  );
+  return match?.[1] ?? trimmed;
+}
+function resolveFileKey(input) {
+  const { productFileKeys, defaultKey } = input;
+  const flagValue = input.flagValue !== void 0 ? extractFigmaFileKey(input.flagValue) : void 0;
+  if (flagValue === void 0 || flagValue === "") {
+    if (defaultKey !== void 0 && defaultKey !== "") {
+      return { kind: "ok", key: defaultKey };
+    }
+    return { kind: "missing" };
+  }
+  const mapped = Object.hasOwn(productFileKeys, flagValue) ? productFileKeys[flagValue] : void 0;
+  if (mapped !== void 0) {
+    return { kind: "ok", key: mapped };
+  }
+  const aliases = Object.keys(productFileKeys);
+  if (aliases.length === 0 || looksLikeFigmaKey(flagValue)) {
+    return { kind: "ok", key: flagValue };
+  }
+  return {
+    kind: "unknown-alias",
+    alias: flagValue,
+    suggestions: suggestAliases(flagValue, aliases)
+  };
+}
+
 // src/config.ts
 var TARGET_METRICS = [
   "on-system",
@@ -8924,7 +8994,7 @@ var DEFAULT_FRESHNESS_THRESHOLDS = {
 var DEFAULT_MIGRATION_SITES_CAP = 200;
 var DEFAULT_SCORE_VELOCITY_WINDOW = 30;
 var TARGET_OPS = [">=", "<=", "=="];
-function editDistance2(a, b) {
+function editDistance3(a, b) {
   const rows = a.length + 1;
   const cols = b.length + 1;
   const dist = Array.from({ length: rows * cols }, () => 0);
@@ -8953,7 +9023,7 @@ function suggestTargetMetrics(input, limit = 3) {
     metric,
     index,
     prefix: metric.startsWith(needle),
-    distance: editDistance2(needle, metric)
+    distance: editDistance3(needle, metric)
   })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
   ).slice(0, limit).map((c2) => c2.metric);
@@ -8965,7 +9035,7 @@ function suggestFreshnessKinds(input, limit = 3) {
     kind,
     index,
     prefix: kind.startsWith(needle),
-    distance: editDistance2(needle, kind)
+    distance: editDistance3(needle, kind)
   })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
   ).slice(0, limit).map((c2) => c2.kind);
@@ -9421,9 +9491,10 @@ function resolveConfig(inputs) {
     }
   }
   const tokenValue = flags.figmaToken ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN;
-  const productFileKeys = {
-    ...project.productFileKeys ?? {}
-  };
+  const productFileKeys = {};
+  for (const [alias, key] of Object.entries(project.productFileKeys ?? {})) {
+    productFileKeys[alias] = extractFigmaFileKey(key);
+  }
   const PRODUCT_FILE_ENV_PREFIX = "FIGMA_PRODUCT_FILE_";
   for (const envKey of Object.keys(env)) {
     if (!envKey.startsWith(PRODUCT_FILE_ENV_PREFIX)) continue;
@@ -9431,10 +9502,11 @@ function resolveConfig(inputs) {
     if (value2 === void 0 || value2 === "") continue;
     const alias = envKey.slice(PRODUCT_FILE_ENV_PREFIX.length).toLowerCase();
     if (alias === "") continue;
-    productFileKeys[alias] = value2;
+    productFileKeys[alias] = extractFigmaFileKey(value2);
   }
+  const rawFigmaFileKey = flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? project.figmaFileKey;
   const config = {
-    figmaFileKey: flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? project.figmaFileKey,
+    figmaFileKey: rawFigmaFileKey !== void 0 ? extractFigmaFileKey(rawFigmaFileKey) : void 0,
     figmaToken: tokenValue !== void 0 && tokenValue !== "" ? { kind: "present", value: tokenValue } : { kind: "missing" },
     tokenSource: flags.tokenSource ?? env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ?? project.tokenSource,
     reportStyle: flags.reportStyle ?? envReportStyle ?? project.reportStyle ?? DEFAULTS.reportStyle,
@@ -9585,7 +9657,7 @@ var PRESET_DESCRIPTIONS = {
   "product-engineer": "Builds product UI from the DS-code package; works a migration queue of breaking changes.",
   everything: "The full 24-artifact catalog \u2014 the no-setup escape for an unconfigured repo."
 };
-function editDistance3(a, b) {
+function editDistance4(a, b) {
   const rows = a.length + 1;
   const cols = b.length + 1;
   const dist = Array.from({ length: rows * cols }, () => 0);
@@ -9614,7 +9686,7 @@ function suggestViewNames(input, limit = 3) {
     name,
     index,
     prefix: name.startsWith(needle),
-    distance: editDistance3(needle, name)
+    distance: editDistance4(needle, name)
   })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
   ).slice(0, limit).map((c2) => c2.name);
@@ -10153,6 +10225,9 @@ function createFigmaClient(options) {
     return request(url, { method: "GET", headers: { ...baseHeaders } });
   }
   return {
+    getMe() {
+      return get(`${BASE_URL}/me`);
+    },
     getFile(key) {
       return get(`${BASE_URL}/files/${key}`);
     },
@@ -10489,6 +10564,7 @@ function registerChangelogCommand(program2) {
 
 // src/cli-commands/config.ts
 import {
+  appendFileSync as appendFileSync4,
   chmodSync,
   existsSync as existsSync5,
   readFileSync as readFileSync6,
@@ -10497,6 +10573,7 @@ import {
   writeFileSync as writeFileSync3
 } from "fs";
 import { join as join7, resolve as resolvePath } from "path";
+import * as readline from "readline";
 
 // src/io/dotenv.ts
 import { readFileSync as readFileSync5 } from "fs";
@@ -10537,8 +10614,89 @@ function loadDotenvInto(filePath, env) {
   }
 }
 
+// src/io/figma/verify.ts
+async function verifyConnection(opts) {
+  const client = createFigmaClient({
+    token: opts.token,
+    ...opts.baseUrl !== void 0 ? { baseUrl: opts.baseUrl } : {},
+    ...opts.fetchImpl !== void 0 ? { fetch: opts.fetchImpl } : {},
+    ...opts.sleep !== void 0 ? { sleep: opts.sleep } : {},
+    ...opts.jitter !== void 0 ? { jitter: opts.jitter } : {}
+  });
+  const lines = [];
+  const me = await client.getMe();
+  switch (me.kind) {
+    case "ok": {
+      const who = me.data.email ? `${me.data.handle} <${me.data.email}>` : me.data.handle;
+      lines.push(`\u2713 Token valid \u2014 authenticated as ${who}.`);
+      break;
+    }
+    case "auth-error":
+      lines.push(
+        "\u2717 Token rejected (401) \u2014 it is invalid, revoked, or mistyped."
+      );
+      return { ok: false, lines };
+    case "scope-error":
+      lines.push(`\u2717 Token is missing a required scope: ${me.message}`);
+      return { ok: false, lines };
+    case "rate-limited":
+      lines.push(
+        `\u2717 Rate-limited (429) on /v1/me \u2014 retry after ${me.retryAfterSeconds}s. A View-seat PAT is throttled this hard; create the token from a Dev or Full seat.`
+      );
+      return { ok: false, lines };
+    case "not-found":
+      lines.push(
+        "\u2717 Unexpected 404 from /v1/me \u2014 is FIGMA_API_BASE pointed somewhere odd?"
+      );
+      return { ok: false, lines };
+    case "network-error":
+      lines.push(`\u2717 Could not reach Figma: ${me.message}`);
+      return { ok: false, lines };
+  }
+  if (opts.fileKey === void 0 || opts.fileKey === "") {
+    lines.push(
+      "\u2139 No library file key set, so library read access wasn't checked. Set one with `config set-library <url|key>`."
+    );
+    return { ok: true, lines };
+  }
+  const file = await client.getFile(opts.fileKey);
+  switch (file.kind) {
+    case "ok":
+      lines.push(
+        `\u2713 Library readable \u2014 "${file.data.name}" (${opts.fileKey}). Your seat can read library content.`
+      );
+      return { ok: true, lines };
+    case "auth-error":
+      lines.push(
+        `\u26A0 Authenticated, but cannot read file ${opts.fileKey} (403) \u2014 the token lacks file_content:read or your seat can't access this file.`
+      );
+      return { ok: false, lines };
+    case "scope-error":
+      lines.push(
+        `\u26A0 Authenticated, but the token is missing a scope for file reads: ${file.message}`
+      );
+      return { ok: false, lines };
+    case "rate-limited":
+      lines.push(
+        `\u26A0 Authenticated, but reading the library was rate-limited (429, retry ${file.retryAfterSeconds}s) \u2014 the classic View-seat throttle. Use a Dev/Full-seat PAT.`
+      );
+      return { ok: false, lines };
+    case "not-found":
+      lines.push(
+        `\u26A0 Authenticated, but file ${opts.fileKey} was not found (404). Double-check the library file key.`
+      );
+      return { ok: false, lines };
+    case "network-error":
+      lines.push(
+        `\u26A0 Authenticated, but the library read failed: ${file.message}`
+      );
+      return { ok: false, lines };
+  }
+}
+
 // src/cli-commands/config.ts
 var ENV_FILE_NAME = ".ds-bridge.env";
+var PROJECT_FILE_NAME2 = ".ds-bridge.json";
 function fail4(message) {
   process.stderr.write(`${message}
 `);
@@ -10577,11 +10735,12 @@ function runPersistToken(path) {
   const token = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN ?? void 0;
   if (token === void 0 || token === "") {
     fail4(
-      "No Figma token in this session's environment. Configure it in the plugin dialog (`/plugin configure`) first, then run this in the SAME session."
+      "No Figma token in this session's environment, so nothing was written. Either add it directly to .ds-bridge.env (FIGMA_TOKEN=figd_\u2026, gitignored) \u2014 the durable path the CLI auto-loads on every run \u2014 or set it in the plugin dialog (`/plugin configure`) and run this in the SAME session (before a restart: Claude Code drops the sensitive value on restart, #62442)."
     );
     return;
   }
-  const fileKey = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? void 0;
+  const rawFileKey = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? void 0;
+  const fileKey = rawFileKey !== void 0 ? extractFigmaFileKey(rawFileKey) : void 0;
   const targetDir = resolvePath(path);
   const updates = { FIGMA_TOKEN: token };
   if (fileKey !== void 0 && fileKey !== "") {
@@ -10601,6 +10760,389 @@ function runPersistToken(path) {
   );
   process.exitCode = 0;
 }
+function ensureGitignored(dir) {
+  const gitignorePath = join7(dir, ".gitignore");
+  let existing = "";
+  if (existsSync5(gitignorePath)) {
+    existing = readFileSync6(gitignorePath, "utf8");
+    if (existing.split(/\r?\n/).some((line) => line.trim() === ENV_FILE_NAME)) {
+      return false;
+    }
+  }
+  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  appendFileSync4(
+    gitignorePath,
+    `${prefix}# ds-bridge Figma token \u2014 never commit
+${ENV_FILE_NAME}
+`,
+    "utf8"
+  );
+  return true;
+}
+function detectFileKeyDefault(dir) {
+  const filePath = join7(dir, ENV_FILE_NAME);
+  if (existsSync5(filePath)) {
+    try {
+      const existing = parseDotenv(readFileSync6(filePath, "utf8"));
+      const fromFile = existing.FIGMA_DESIGN_SYSTEM_FILE;
+      if (fromFile !== void 0 && fromFile !== "") {
+        return extractFigmaFileKey(fromFile);
+      }
+    } catch {
+    }
+  }
+  const env = process.env;
+  const fromEnv = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE;
+  return fromEnv !== void 0 && fromEnv !== "" ? extractFigmaFileKey(fromEnv) : void 0;
+}
+function applyConnect(dir, token, fileKey) {
+  const updates = { FIGMA_TOKEN: token };
+  const trimmedKey = extractFigmaFileKey(fileKey);
+  if (trimmedKey !== "") updates.FIGMA_DESIGN_SYSTEM_FILE = trimmedKey;
+  writeEnvFileMerged(dir, updates);
+  const gitignoreUpdated = ensureGitignored(dir);
+  return {
+    envPath: join7(dir, ENV_FILE_NAME),
+    masked: maskToken(token),
+    fileKey: trimmedKey === "" ? void 0 : trimmedKey,
+    gitignoreUpdated
+  };
+}
+function promptHidden(question) {
+  return new Promise((resolve13) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: true
+    });
+    let promptShown = false;
+    rl._writeToOutput = () => {
+      if (!promptShown) {
+        process.stdout.write(question);
+        promptShown = true;
+      }
+    };
+    rl.question(question, (answer) => {
+      rl.close();
+      process.stdout.write("\n");
+      resolve13(answer.trim());
+    });
+  });
+}
+function promptLine(question) {
+  return new Promise((resolve13) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve13(answer.trim());
+    });
+  });
+}
+async function runConnect(path, verify) {
+  const targetDir = resolvePath(path);
+  if (!process.stdin.isTTY) {
+    const cliPath = process.argv[1] ?? "<path-to>/dist/cli.mjs";
+    fail4(
+      `\`config connect\` is interactive and needs a real terminal so it can prompt for your token without echoing it. Run it directly in your shell (not through Claude Code's tool runner):
+
+  node ${cliPath} config connect
+
+Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` instead, which is non-interactive.`
+    );
+    return;
+  }
+  process.stdout.write(
+    "Connect ds-bridge to Figma. The token is written to .ds-bridge.env (gitignored, mode 0600) and is never echoed or printed in full.\n\n"
+  );
+  const token = await promptHidden("Figma personal access token (hidden): ");
+  if (token === "") {
+    fail4("No token entered \u2014 nothing was written.");
+    return;
+  }
+  if (!token.startsWith("figd_") && !token.startsWith("figd-")) {
+    process.stdout.write(
+      "warning: that does not look like a Figma PAT (expected a figd_\u2026 value) \u2014 saving it anyway.\n"
+    );
+  }
+  const defaultKey = detectFileKeyDefault(targetDir);
+  const keyPrompt = defaultKey !== void 0 ? `Figma library file key [${defaultKey}]: ` : "Figma library file key (optional \u2014 Enter to skip): ";
+  const keyInput = await promptLine(keyPrompt);
+  const fileKey = keyInput !== "" ? keyInput : defaultKey ?? "";
+  let summary;
+  try {
+    summary = applyConnect(targetDir, token, fileKey);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail4(`Could not write ${join7(targetDir, ENV_FILE_NAME)}: ${detail}`);
+    return;
+  }
+  const ignoreNote = summary.gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.
+` : "";
+  const keyNote = summary.fileKey !== void 0 ? ` and library file key (${summary.fileKey})` : "";
+  process.stdout.write(
+    `
+${ignoreNote}Saved Figma token (${summary.masked})${keyNote} to ${summary.envPath} (mode 0600).
+
+Connected. Back in Claude Code, run /ds-bridge:ds-docs (or /ds-bridge:connect) \u2014 the CLI auto-loads .ds-bridge.env on every run.
+`
+  );
+  if (verify) {
+    await runVerify(token, summary.fileKey);
+    return;
+  }
+  process.exitCode = 0;
+}
+async function runVerify(token, fileKey) {
+  process.stdout.write("\nVerifying with Figma\u2026\n");
+  let result;
+  try {
+    const apiBase = process.env.FIGMA_API_BASE;
+    result = await verifyConnection({
+      token,
+      ...fileKey !== void 0 ? { fileKey } : {},
+      ...apiBase !== void 0 ? { baseUrl: apiBase } : {}
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail4(`Verification could not run: ${detail}`);
+    return;
+  }
+  for (const line of result.lines) {
+    process.stdout.write(`  ${line}
+`);
+  }
+  process.exitCode = result.ok ? 0 : 2;
+}
+function readProjectObject(dir) {
+  const filePath = join7(dir, PROJECT_FILE_NAME2);
+  if (!existsSync5(filePath)) return {};
+  try {
+    const raw = JSON.parse(readFileSync6(filePath, "utf8"));
+    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+      return raw;
+    }
+  } catch {
+  }
+  return {};
+}
+function readEnvFile(dir) {
+  const filePath = join7(dir, ENV_FILE_NAME);
+  if (!existsSync5(filePath)) return {};
+  try {
+    return parseDotenv(readFileSync6(filePath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+function readProductFileKeys(dir) {
+  const raw = readProjectObject(dir).product_file_keys;
+  const out = {};
+  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+    for (const [k4, v] of Object.entries(raw)) {
+      if (typeof v === "string") out[k4] = v;
+    }
+  }
+  return out;
+}
+function envBacking(envFile, env, key) {
+  const value2 = env[key];
+  if (value2 === void 0 || value2 === "") return void 0;
+  return envFile[key] === value2 ? "file" : "env";
+}
+function productSourceLabel(env, alias) {
+  const envKey = `FIGMA_PRODUCT_FILE_${alias.toUpperCase()}`;
+  const fromEnv = env[envKey];
+  return fromEnv !== void 0 && fromEnv !== "" ? `environment (${envKey})` : `${PROJECT_FILE_NAME2} (product_file_keys.${alias})`;
+}
+function renderRows(rows) {
+  const labelW = Math.max(...rows.map((r2) => r2.label.length));
+  const valueW = Math.max(...rows.map((r2) => r2.value.length));
+  return rows.map(
+    (r2) => `  ${r2.label.padEnd(labelW)}  ${r2.value.padEnd(valueW)}  \u2190 ${r2.source}`
+  );
+}
+function buildShowReport(dir) {
+  const env = process.env;
+  const projObj = readProjectObject(dir);
+  const envFile = readEnvFile(dir);
+  const projectFilePath = join7(dir, PROJECT_FILE_NAME2);
+  const projectFileText = existsSync5(projectFilePath) ? readFileSync6(projectFilePath, "utf8") : void 0;
+  const resolved = resolveConfig({
+    env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind === "invalid-project-file") {
+    return { kind: "invalid", message: resolved.message };
+  }
+  const cfg = resolved.config;
+  const tokenSource = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ? "plugin dialog (CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN, session-only)" : envBacking(envFile, env, "FIGMA_TOKEN") === "file" ? ENV_FILE_NAME : envBacking(envFile, env, "FIGMA_TOKEN") === "env" ? "environment (FIGMA_TOKEN)" : "\u2014";
+  const keyBacking = envBacking(envFile, env, "FIGMA_DESIGN_SYSTEM_FILE");
+  const librarySource = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ? "plugin dialog (CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY, session-only)" : keyBacking === "file" ? `${ENV_FILE_NAME} (FIGMA_DESIGN_SYSTEM_FILE)` : keyBacking === "env" ? "environment (FIGMA_DESIGN_SYSTEM_FILE)" : typeof projObj.figma_file_key === "string" ? `${PROJECT_FILE_NAME2} (figma_file_key)` : "\u2014";
+  const tokenSrcSource = env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ? "plugin dialog (session-only)" : typeof projObj.token_source === "string" ? PROJECT_FILE_NAME2 : "auto-detected at run time";
+  const reportSource = env.CLAUDE_PLUGIN_OPTION_REPORT_STYLE === cfg.reportStyle ? "plugin dialog (session-only)" : typeof projObj.report_style === "string" ? PROJECT_FILE_NAME2 : "default";
+  const readinessSource = env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD !== void 0 && Number(env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD) === cfg.readinessThreshold ? "plugin dialog (session-only)" : typeof projObj.readiness_threshold === "number" ? PROJECT_FILE_NAME2 : "default";
+  const core = renderRows([
+    {
+      label: "Figma token",
+      value: cfg.figmaToken.kind === "present" ? maskToken(cfg.figmaToken.value) : "\u2014 (not set)",
+      source: tokenSource
+    },
+    {
+      label: "Library file key",
+      value: cfg.figmaFileKey ?? "\u2014 (not set)",
+      source: librarySource
+    },
+    {
+      label: "Token source",
+      value: cfg.tokenSource ?? "\u2014 (auto-detect)",
+      source: tokenSrcSource
+    },
+    { label: "Report style", value: cfg.reportStyle, source: reportSource },
+    {
+      label: "Readiness gate",
+      value: String(cfg.readinessThreshold),
+      source: readinessSource
+    }
+  ]);
+  const lines = [
+    `ds-bridge configuration  (${dir})`,
+    "",
+    ...core,
+    ""
+  ];
+  const aliases = Object.keys(cfg.productFileKeys);
+  if (aliases.length === 0) {
+    lines.push(
+      "  Product files: none \u2014 add one with `config add-product <alias> <url>`."
+    );
+  } else {
+    lines.push(`  Product files (${aliases.length}):`);
+    lines.push(
+      ...renderRows(
+        aliases.map((alias) => ({
+          label: `  ${alias}`,
+          value: cfg.productFileKeys[alias] ?? "",
+          source: productSourceLabel(env, alias)
+        }))
+      )
+    );
+  }
+  for (const warning of resolved.warnings) {
+    lines.push("", `  \u26A0 ${warning}`);
+  }
+  return { kind: "ok", lines };
+}
+function runShow(path) {
+  const dir = resolvePath(path);
+  const report = buildShowReport(dir);
+  if (report.kind === "invalid") {
+    fail4(report.message);
+    return;
+  }
+  process.stdout.write(`${report.lines.join("\n")}
+`);
+  process.exitCode = 0;
+}
+function runSetLibrary(value2, path) {
+  const key = extractFigmaFileKey(value2);
+  if (key === "") {
+    fail4(
+      "Provide a Figma library URL or file key, e.g. `config set-library https://www.figma.com/design/<KEY>/...`"
+    );
+    return;
+  }
+  if (!/^[A-Za-z0-9]+$/.test(key)) {
+    process.stdout.write(
+      `warning: "${key}" doesn't look like a bare Figma file key (letters/digits only) \u2014 saving it anyway.
+`
+    );
+  }
+  const dir = resolvePath(path);
+  try {
+    writeProjectConfig(dir, { figma_file_key: key });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail4(`Could not write ${join7(dir, PROJECT_FILE_NAME2)}: ${detail}`);
+    return;
+  }
+  process.stdout.write(
+    `Set figma_file_key to ${key} in ${join7(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
+`
+  );
+  process.exitCode = 0;
+}
+function runAddProduct(alias, value2, path) {
+  const cleanAlias = alias.trim();
+  if (cleanAlias === "") {
+    fail4("Provide an alias, e.g. `config add-product web <url>`.");
+    return;
+  }
+  const key = extractFigmaFileKey(value2);
+  if (key === "") {
+    fail4(
+      `Provide a Figma URL or file key for "${cleanAlias}", e.g. \`config add-product web https://www.figma.com/design/<KEY>/...\``
+    );
+    return;
+  }
+  const dir = resolvePath(path);
+  const existing = readProductFileKeys(dir);
+  const merged = { ...existing, [cleanAlias]: key };
+  try {
+    writeProjectConfig(dir, { product_file_keys: merged });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail4(`Could not write ${join7(dir, PROJECT_FILE_NAME2)}: ${detail}`);
+    return;
+  }
+  const verb = Object.hasOwn(existing, cleanAlias) ? "Updated" : "Registered";
+  process.stdout.write(
+    `${verb} product file "${cleanAlias}" \u2192 ${key} in ${join7(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
+`
+  );
+  process.exitCode = 0;
+}
+function runList(path) {
+  const dir = resolvePath(path);
+  const env = process.env;
+  const projectFilePath = join7(dir, PROJECT_FILE_NAME2);
+  const projectFileText = existsSync5(projectFilePath) ? readFileSync6(projectFilePath, "utf8") : void 0;
+  const resolved = resolveConfig({
+    env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind === "invalid-project-file") {
+    fail4(resolved.message);
+    return;
+  }
+  const cfg = resolved.config;
+  const lines = [
+    `Library (default):  ${cfg.figmaFileKey ?? "\u2014 (not set \u2014 `config set-library <url|key>`)"}`,
+    ""
+  ];
+  const aliases = Object.keys(cfg.productFileKeys);
+  if (aliases.length === 0) {
+    lines.push(
+      "Product files: none \u2014 add one with `config add-product <alias> <url>`."
+    );
+  } else {
+    lines.push(`Product files (${aliases.length}):`);
+    lines.push(
+      ...renderRows(
+        aliases.map((alias) => ({
+          label: alias,
+          value: cfg.productFileKeys[alias] ?? "",
+          source: productSourceLabel(env, alias)
+        }))
+      )
+    );
+  }
+  process.stdout.write(`${lines.join("\n")}
+`);
+  process.exitCode = 0;
+}
 function registerConfigCommand(program2) {
   const config = program2.command("config").description("Manage ds-bridge project configuration");
   config.command("persist-token").description(
@@ -10608,10 +11150,38 @@ function registerConfigCommand(program2) {
   ).argument("[path]", "project directory to write .ds-bridge.env into", ".").action((path) => {
     runPersistToken(path);
   });
+  config.command("connect").description(
+    "Interactively connect Figma: prompt for the token (hidden input) and write .ds-bridge.env (gitignored, 0600). Run it in your own terminal."
+  ).argument("[path]", "project directory to write .ds-bridge.env into", ".").option(
+    "--verify",
+    "after writing, ping Figma (/v1/me + a library read) to confirm the token works"
+  ).action((path, options) => {
+    void runConnect(path, options.verify === true);
+  });
+  config.command("show").description(
+    "Print the effective ds-bridge config (token masked) and which source won each value"
+  ).argument("[path]", "project directory to read config from", ".").action((path) => {
+    runShow(path);
+  });
+  config.command("set-library").description(
+    "Write the design-system library file key (a URL or bare key) to the committed .ds-bridge.json (figma_file_key) \u2014 shared by the whole team"
+  ).argument("<url-or-key>", "Figma library file URL or bare file key").argument("[path]", "project directory whose .ds-bridge.json to write", ".").action((urlOrKey, path) => {
+    runSetLibrary(urlOrKey, path);
+  });
+  config.command("add-product").description(
+    "Register a product/consumer Figma file under an alias in .ds-bridge.json (product_file_keys); target it later with --file-key <alias>"
+  ).argument("<alias>", "short alias, e.g. web | mobile | admin").argument("<url-or-key>", "the product Figma file URL or bare file key").argument("[path]", "project directory whose .ds-bridge.json to write", ".").action((alias, urlOrKey, path) => {
+    runAddProduct(alias, urlOrKey, path);
+  });
+  config.command("list").description(
+    "List the targetable file keys: the library default and every product alias"
+  ).argument("[path]", "project directory to read config from", ".").action((path) => {
+    runList(path);
+  });
 }
 
 // src/cli-commands/dashboard.ts
-import { appendFileSync as appendFileSync4, existsSync as existsSync7, readFileSync as readFileSync9, unlinkSync as unlinkSync2 } from "fs";
+import { appendFileSync as appendFileSync5, existsSync as existsSync7, readFileSync as readFileSync9, unlinkSync as unlinkSync2 } from "fs";
 import { join as join10, resolve as resolvePath2 } from "path";
 
 // src/engines/report/nl-match.ts
@@ -10746,7 +11316,7 @@ function listDashboards(dir) {
 // src/cli-commands/dashboard-wizard.ts
 import { readFileSync as readFileSync8 } from "fs";
 import { join as join9 } from "path";
-import { createInterface } from "readline/promises";
+import { createInterface as createInterface2 } from "readline/promises";
 var PRODUCER_PERSONAS = /* @__PURE__ */ new Set([
   "ds-designer",
   "ds-manager",
@@ -10760,11 +11330,11 @@ var PERSONA_AUDIENCE = {
   "product-manager": "both",
   "product-engineer": "developers"
 };
-var PROJECT_FILE_NAME2 = ".ds-bridge.json";
+var PROJECT_FILE_NAME3 = ".ds-bridge.json";
 function readExistingProductFileKeys(dir) {
   try {
     const raw = JSON.parse(
-      readFileSync8(join9(dir, PROJECT_FILE_NAME2), "utf8")
+      readFileSync8(join9(dir, PROJECT_FILE_NAME3), "utf8")
     );
     if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
       const pfk = raw.product_file_keys;
@@ -10879,7 +11449,7 @@ async function runSetupWizard(deps) {
     );
     return { exitCode: 2 };
   }
-  const rl = createInterface({ input, output });
+  const rl = createInterface2({ input, output });
   const reader = new LineReader(rl);
   try {
     const preset = await pickPreset(reader, output);
@@ -10928,9 +11498,9 @@ function fail5(message) {
 `);
   process.exitCode = 2;
 }
-var PROJECT_FILE_NAME3 = ".ds-bridge.json";
+var PROJECT_FILE_NAME4 = ".ds-bridge.json";
 function readSelection(targetDir) {
-  const configPath = join10(targetDir, PROJECT_FILE_NAME3);
+  const configPath = join10(targetDir, PROJECT_FILE_NAME4);
   let projectFileText;
   if (existsSync7(configPath)) {
     try {
@@ -10939,7 +11509,7 @@ function readSelection(targetDir) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
         kind: "error",
-        message: `Could not read ${PROJECT_FILE_NAME3} at "${configPath}": ${detail}`
+        message: `Could not read ${PROJECT_FILE_NAME4} at "${configPath}": ${detail}`
       };
     }
   }
@@ -11016,7 +11586,7 @@ function renderTerm4(data) {
   const viewLabel = data.view.viewName !== void 0 ? `${data.view.viewName} (${data.view.source})` : data.view.source;
   return [`View: ${viewLabel}`, table].join("\n");
 }
-function runList(path, options) {
+function runList2(path, options) {
   const format = options.format;
   if (format !== "json" && format !== "term") {
     fail5(`Unknown --format "${options.format}". Expected "term" or "json".`);
@@ -11230,7 +11800,7 @@ function ensureLocalGitignore(targetDir) {
     if (existing.split(/\r?\n/).some((l) => l.trim() === line)) return;
   }
   const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
-  appendFileSync4(gitignorePath, `${prefix}${line}
+  appendFileSync5(gitignorePath, `${prefix}${line}
 `, "utf8");
 }
 function runSave(name, path, options) {
@@ -11367,7 +11937,7 @@ function registerDashboardCommand(program2) {
   dashboard.command("list").description(
     "List the artifact catalog with an enabled marker for the resolved view"
   ).argument("[path]", "project directory holding .ds-bridge.json", ".").option("--format <format>", "output format: term | json", "term").action((path, options) => {
-    runList(path, options);
+    runList2(path, options);
   });
   dashboard.command("set").description(
     "Persist the dashboard view: --view <preset> XOR --artifacts <a,b,\u2026>"
@@ -12150,7 +12720,7 @@ async function scanCode(targetDir) {
     globals.__filename = filename;
     globals.__dirname = dirname4(filename);
   }
-  const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
+  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
   return scanCodeComponents(targetDir);
 }
 function loadRegistry2(targetDir) {
@@ -12311,7 +12881,7 @@ function registerDocsCommand(program2) {
 
 // src/cli-commands/frame-impl.ts
 import {
-  appendFileSync as appendFileSync5,
+  appendFileSync as appendFileSync6,
   existsSync as existsSync10,
   mkdirSync as mkdirSync8,
   readdirSync as readdirSync2,
@@ -12657,66 +13227,22 @@ function findGaps(input) {
   return { resolved, gaps };
 }
 
-// src/io/figma/file-key.ts
-function editDistance4(a, b) {
-  const rows = a.length + 1;
-  const cols = b.length + 1;
-  const dist = Array.from({ length: rows * cols }, () => 0);
-  for (let i = 0; i < rows; i++) {
-    dist[i * cols] = i;
-  }
-  for (let j = 0; j < cols; j++) {
-    dist[j] = j;
-  }
-  for (let i = 1; i < rows; i++) {
-    for (let j = 1; j < cols; j++) {
-      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
-      dist[i * cols + j] = Math.min(
-        (dist[(i - 1) * cols + j] ?? 0) + 1,
-        (dist[i * cols + j - 1] ?? 0) + 1,
-        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
-      );
-    }
-  }
-  return dist[rows * cols - 1] ?? 0;
-}
-function suggestAliases(input, aliases, limit = 3) {
-  const needle = input.toLowerCase();
-  const MAX_DISTANCE = 4;
-  return aliases.map((alias, index) => ({
-    alias,
-    index,
-    prefix: alias.toLowerCase().startsWith(needle),
-    distance: editDistance4(needle, alias.toLowerCase())
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
-    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.alias);
-}
-var FIGMA_KEY_MIN_LENGTH = 22;
-function looksLikeFigmaKey(value2) {
-  return value2.length >= FIGMA_KEY_MIN_LENGTH && /^[A-Za-z0-9]+$/.test(value2);
-}
-function resolveFileKey(input) {
-  const { flagValue, productFileKeys, defaultKey } = input;
-  if (flagValue === void 0 || flagValue === "") {
-    if (defaultKey !== void 0 && defaultKey !== "") {
-      return { kind: "ok", key: defaultKey };
-    }
-    return { kind: "missing" };
-  }
-  const mapped = Object.hasOwn(productFileKeys, flagValue) ? productFileKeys[flagValue] : void 0;
-  if (mapped !== void 0) {
-    return { kind: "ok", key: mapped };
-  }
-  const aliases = Object.keys(productFileKeys);
-  if (aliases.length === 0 || looksLikeFigmaKey(flagValue)) {
-    return { kind: "ok", key: flagValue };
-  }
-  return {
-    kind: "unknown-alias",
-    alias: flagValue,
-    suggestions: suggestAliases(flagValue, aliases)
-  };
+// src/cli-commands/figma-auth-help.ts
+function missingFigmaTokenMessage(scopeNote) {
+  return [
+    "No Figma personal access token configured.",
+    "",
+    "Give the CLI a Dev/Full-seat PAT. The durable way (survives restarts) is a",
+    "gitignored .ds-bridge.env in your project \u2014 the CLI auto-loads it on every run:",
+    "",
+    "  echo 'FIGMA_TOKEN=figd_your_token_here' >> .ds-bridge.env",
+    "",
+    "Inside Claude Code, /ds-bridge:connect writes that file for you. Setting the",
+    "token only in the /plugin configure dialog is not enough \u2014 Claude Code drops a",
+    "plugin's sensitive value on restart (issue #62442).",
+    "",
+    ...scopeNote
+  ].join("\n");
 }
 
 // src/cli-commands/frame-impl.ts
@@ -12734,17 +13260,10 @@ function fail7(message) {
   process.exitCode = 2;
 }
 function missingTokenMessage() {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Set one via the plugin config dialog (stored in the system keychain) or,",
-    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-    "",
-    "  export FIGMA_TOKEN=figd_your_token_here",
-    "",
+  return missingFigmaTokenMessage([
     "The token needs the file_content:read scope, and must come from a Dev or",
     "Full seat \u2014 a View seat is rate-limited and cannot be used here."
-  ].join("\n");
+  ]);
 }
 function unknownAliasMessage(outcome, productFileKeys) {
   const aliases = Object.keys(productFileKeys);
@@ -13041,7 +13560,7 @@ function renderTerm6(impl, color) {
 function appendFrameImplHistory(record) {
   const stateDir = join13(cwd(), ".ds-bridge");
   mkdirSync8(stateDir, { recursive: true });
-  appendFileSync5(
+  appendFileSync6(
     join13(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
@@ -13174,7 +13693,7 @@ function registerFrameImplCommand(program2) {
 }
 
 // src/cli-commands/handoff.ts
-import { appendFileSync as appendFileSync6, mkdirSync as mkdirSync9 } from "fs";
+import { appendFileSync as appendFileSync7, mkdirSync as mkdirSync9 } from "fs";
 import { join as join14 } from "path";
 import { cwd as cwd2 } from "process";
 
@@ -13373,7 +13892,7 @@ function appendHandoffHistory(report, frameName) {
     deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
   };
   mkdirSync9(stateDir, { recursive: true });
-  appendFileSync6(
+  appendFileSync7(
     join14(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
@@ -13386,14 +13905,7 @@ function fail8(message) {
   process.exitCode = 2;
 }
 function missingTokenMessage2() {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Set one via the plugin config dialog (stored in the system keychain) or,",
-    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-    "",
-    "  export FIGMA_TOKEN=figd_your_token_here",
-    "",
+  return missingFigmaTokenMessage([
     "Create the token at figma.com \u2192 Settings \u2192 Security \u2192 Personal access",
     "tokens, with these scopes:",
     "  file_content:read, library_content:read, file_versions:read,",
@@ -13401,7 +13913,7 @@ function missingTokenMessage2() {
     "",
     "Note: the PAT must come from a Dev or Full seat \u2014 a View seat is rate-",
     "limited to roughly a handful of requests per month and cannot be used here."
-  ].join("\n");
+  ]);
 }
 function clientErrorMessage2(result) {
   switch (result.kind) {
@@ -13622,7 +14134,7 @@ function registerHandoffCommand(program2) {
 
 // src/cli-commands/impact.ts
 import {
-  appendFileSync as appendFileSync7,
+  appendFileSync as appendFileSync8,
   existsSync as existsSync11,
   mkdirSync as mkdirSync10,
   readFileSync as readFileSync13,
@@ -13991,18 +14503,11 @@ function fail9(message) {
   process.exitCode = 2;
 }
 function missingTokenMessage3() {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Set one via the plugin config dialog (stored in the system keychain) or,",
-    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-    "",
-    "  export FIGMA_TOKEN=figd_your_token_here",
-    "",
+  return missingFigmaTokenMessage([
     "The token needs the library_content:read and file_versions:read scopes, and",
     "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
     "be used here."
-  ].join("\n");
+  ]);
 }
 function missingFileKeyMessage() {
   return [
@@ -14094,7 +14599,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
     globals.__filename = filename;
     globals.__dirname = dirname5(filename);
   }
-  const { mapUsage } = await import("./usage-OFLQCL5F.mjs");
+  const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
@@ -14160,7 +14665,7 @@ function appendImpactHistory(targetDir, diff, usageByName, cap) {
     ...truncated ? { sitesTruncated: true } : {}
   };
   mkdirSync10(stateDir, { recursive: true });
-  appendFileSync7(
+  appendFileSync8(
     join15(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
@@ -14464,7 +14969,7 @@ function registerImpactCommand(program2) {
 
 // src/cli-commands/library-health.ts
 import {
-  appendFileSync as appendFileSync8,
+  appendFileSync as appendFileSync9,
   existsSync as existsSync12,
   mkdirSync as mkdirSync11,
   readFileSync as readFileSync14,
@@ -14611,17 +15116,10 @@ function fail10(message) {
   process.exitCode = 2;
 }
 function missingTokenMessage4() {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Connect Figma via the plugin config dialog (stored in the system keychain)",
-    "or, for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-    "",
-    "  export FIGMA_TOKEN=figd_your_token_here",
-    "",
+  return missingFigmaTokenMessage([
     "The token needs the file_content:read scope, and must come from a Dev or",
     "Full seat \u2014 a View seat is rate-limited and cannot be used here."
-  ].join("\n");
+  ]);
 }
 function missingFileKeyMessage2() {
   return [
@@ -14690,7 +15188,7 @@ function appendLibraryHealthHistory(totals) {
     detachedCandidates: totals.detachedCandidates
   };
   mkdirSync11(stateDir, { recursive: true });
-  appendFileSync8(
+  appendFileSync9(
     join17(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
@@ -14846,7 +15344,7 @@ function registerLibraryHealthCommand(program2) {
 // src/cli-commands/lint.ts
 import { spawnSync as spawnSync2 } from "child_process";
 import {
-  appendFileSync as appendFileSync9,
+  appendFileSync as appendFileSync10,
   existsSync as existsSync13,
   mkdirSync as mkdirSync12,
   readdirSync as readdirSync3,
@@ -15383,7 +15881,7 @@ function appendLintHistory(targetDir, findings, files) {
     adoption: computeAdoption(files, findings)
   };
   mkdirSync12(stateDir, { recursive: true });
-  appendFileSync9(
+  appendFileSync10(
     join18(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,
@@ -16114,7 +16612,7 @@ function registerParityCommand(program2) {
 
 // src/cli-commands/registry.ts
 import {
-  appendFileSync as appendFileSync10,
+  appendFileSync as appendFileSync11,
   existsSync as existsSync15,
   mkdirSync as mkdirSync13,
   readFileSync as readFileSync17,
@@ -16321,7 +16819,7 @@ async function scanCode2(targetDir) {
     globals.__filename = filename;
     globals.__dirname = dirname7(filename);
   }
-  const { scanCodeComponents } = await import("./scan-code-XUHRU37J.mjs");
+  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
   return scanCodeComponents(targetDir);
 }
 var DEFAULT_FIGMA_API_BASE6 = "https://api.figma.com";
@@ -16331,18 +16829,11 @@ function fail13(message) {
   process.exitCode = 2;
 }
 function missingTokenMessage5() {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Set one via the plugin config dialog (stored in the system keychain) or,",
-    "for standalone CLI use, export FIGMA_TOKEN with a Dev/Full-seat PAT:",
-    "",
-    "  export FIGMA_TOKEN=figd_your_token_here",
-    "",
+  return missingFigmaTokenMessage([
     "The token needs the file_content:read and library_content:read scopes, and",
     "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
     "be used here."
-  ].join("\n");
+  ]);
 }
 function missingFileKeyMessage3() {
   return [
@@ -16467,7 +16958,7 @@ function parityRecordFrom(registry, generatedAt) {
 function appendParityHistory(stateDir, record) {
   try {
     mkdirSync13(stateDir, { recursive: true });
-    appendFileSync10(
+    appendFileSync11(
       join20(stateDir, "history.jsonl"),
       `${JSON.stringify(record)}
 `,
@@ -19640,6 +20131,13 @@ var RULE_REASON = {
   component: "Component usage",
   naming: "Naming"
 };
+function renderInstant(env = process.env) {
+  const epoch = env.SOURCE_DATE_EPOCH?.trim();
+  if (epoch !== void 0 && /^\d+$/.test(epoch)) {
+    return new Date(Number(epoch) * 1e3).toISOString();
+  }
+  return (/* @__PURE__ */ new Date()).toISOString();
+}
 function asNumber10(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
@@ -20324,7 +20822,7 @@ function runMarkdownReport(targetDir, options, selection) {
     );
     return;
   }
-  const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const generatedAt = renderInstant();
   const systemScore = computeSystemScore(stateDir, effectiveWeights);
   const parsedWindow = parseVelocityWindow(options.velocityWindow);
   const velocityWindowDays = (parsedWindow.kind === "ok" ? parsedWindow.days : void 0) ?? selection.scoreVelocityWindow;
@@ -20591,7 +21089,7 @@ function runReport(path, options) {
     systemScore?.current
   );
   const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
-  const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const generatedAt = renderInstant();
   const velocityWindowDays = velocityWindowFlag.days ?? selection.scoreVelocityWindow;
   const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
   const dataFreshness = computeDataFreshness(
@@ -20746,7 +21244,7 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync as appendFileSync11,
+  appendFileSync as appendFileSync12,
   existsSync as existsSync18,
   mkdirSync as mkdirSync15,
   readdirSync as readdirSync4,
@@ -21319,7 +21817,7 @@ function checkJson(result) {
 }
 function appendHistory(stateDir, record) {
   mkdirSync15(stateDir, { recursive: true });
-  appendFileSync11(
+  appendFileSync12(
     join23(stateDir, "history.jsonl"),
     `${JSON.stringify(record)}
 `,

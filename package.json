@@ -1,6 +1,6 @@
 {
 	"name": "ds-bridge",
-	"version": "1.8.0",
+	"version": "1.9.0",
 	"description": "Claude Code plugin connecting design-system Figma libraries to codebases: token drift, DS-aware linting, design-to-code, handoff QA",
 	"type": "module",
 	"private": true,
@@ -26,11 +26,11 @@
 		"@biomejs/biome": "^2.4.16",
 		"@types/culori": "^4.0.1",
 		"@types/node": "^25.9.1",
-		"@vitest/coverage-v8": "^4.1.8",
+		"@vitest/coverage-v8": "^4.1.11",
 		"tsup": "^8.5.1",
 		"tsx": "^4.22.4",
 		"typescript": "^5.9.3",
-		"vitest": "^4.1.8"
+		"vitest": "^4.1.11"
 	},
 	"dependencies": {
 		"commander": "^14.0.3",
