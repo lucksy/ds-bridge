@@ -3178,9 +3178,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
           helpWidth: context.helpWidth,
           outputHasColors: context.hasColors
         });
-        const text = helper.formatHelp(this, helper);
-        if (context.hasColors) return text;
-        return this._outputConfiguration.stripColor(text);
+        const text2 = helper.formatHelp(this, helper);
+        if (context.hasColors) return text2;
+        return this._outputConfiguration.stripColor(text2);
       }
       /**
        * @typedef HelpContext
@@ -3340,7 +3340,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {(string | Function)} text - string to add, or a function returning a string
        * @return {Command} `this` command for chaining
        */
-      addHelpText(position, text) {
+      addHelpText(position, text2) {
         const allowedValues = ["beforeAll", "before", "after", "afterAll"];
         if (!allowedValues.includes(position)) {
           throw new Error(`Unexpected value for position to addHelpText.
@@ -3349,10 +3349,10 @@ Expecting one of '${allowedValues.join("', '")}'`);
         const helpEvent = `${position}Help`;
         this.on(helpEvent, (context) => {
           let helpStr;
-          if (typeof text === "function") {
-            helpStr = text({ error: context.error, command: context.command });
+          if (typeof text2 === "function") {
+            helpStr = text2({ error: context.error, command: context.command });
           } else {
-            helpStr = text;
+            helpStr = text2;
           }
           if (helpStr) {
             context.write(`${helpStr}
@@ -7885,9 +7885,9 @@ var PALETTE = {
   info: (s) => colors3.cyan(s),
   ok: (s) => colors3.green(s)
 };
-function severityColor(level, text, opts) {
-  if (!opts.color) return text;
-  return PALETTE[level](text);
+function severityColor(level, text2, opts) {
+  if (!opts.color) return text2;
+  return PALETTE[level](text2);
 }
 var FORCE_OFF = /* @__PURE__ */ new Set(["0", "false"]);
 function shouldColor(env, isTTY) {
@@ -8834,10 +8834,10 @@ function combineScore(latest, weights) {
   const combined = combine(latest, weights);
   return combined === void 0 ? void 0 : combined.current;
 }
-function scoreFromHistory(text, weights) {
+function scoreFromHistory(text2, weights) {
   const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
   const entries = [];
-  const lines = text.split("\n");
+  const lines = text2.split("\n");
   for (let i = 0; i < lines.length; i += 1) {
     const trimmed = (lines[i] ?? "").trim();
     if (trimmed === "") continue;
@@ -9049,10 +9049,10 @@ var DEFAULTS = {
   reportStyle: "both",
   readinessThreshold: 80
 };
-function parseProjectFile(text) {
+function parseProjectFile(text2) {
   let raw;
   try {
-    raw = JSON.parse(text);
+    raw = JSON.parse(text2);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -9562,10 +9562,10 @@ function validateArtifactIdList(entries, label) {
   }
   return { kind: "ok", artifacts };
 }
-function parseSelectionFile(text) {
+function parseSelectionFile(text2) {
   let raw;
   try {
-    raw = JSON.parse(text);
+    raw = JSON.parse(text2);
   } catch {
     return { kind: "invalid", message: "dashboard file is not valid JSON" };
   }
@@ -9607,10 +9607,10 @@ function parseSelectionFile(text) {
   return { kind: "artifacts", artifacts: validated.artifacts };
 }
 function atomicWriteJson(filePath, obj) {
-  const text = `${JSON.stringify(obj, null, 2)}
+  const text2 = `${JSON.stringify(obj, null, 2)}
 `;
   const tempPath = `${filePath}.${process.pid}.tmp`;
-  writeFileSync(tempPath, text, "utf8");
+  writeFileSync(tempPath, text2, "utf8");
   renameSync(tempPath, filePath);
 }
 function writeProjectConfig(dir, patch) {
@@ -9790,8 +9790,8 @@ function bandFill(score) {
   if (score >= 70) return BAND_AMBER;
   return BAND_RED;
 }
-function segmentWidth(text) {
-  return text.length * CHAR_WIDTH + SEGMENT_PADDING * 2;
+function segmentWidth(text2) {
+  return text2.length * CHAR_WIDTH + SEGMENT_PADDING * 2;
 }
 function renderBadge(input) {
   const label = input.label ?? DEFAULT_LABEL;
@@ -10094,8 +10094,8 @@ function badge(severity) {
 function dateKey(entry) {
   return entry.dateIso.slice(0, 10);
 }
-function escapeInline(text) {
-  return text.replace(/([\\*_`])/g, "\\$1");
+function escapeInline(text2) {
+  return text2.replace(/([\\*_`])/g, "\\$1");
 }
 function inSection(entry, sectionAudience) {
   return entry.audience === sectionAudience || entry.audience === "both";
@@ -10157,8 +10157,8 @@ function parseRetryAfter(headers) {
   return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS;
 }
 function mentionsScope(body) {
-  const text = typeof body === "string" ? body : JSON.stringify(body ?? "");
-  return /scope/i.test(text);
+  const text2 = typeof body === "string" ? body : JSON.stringify(body ?? "");
+  return /scope/i.test(text2);
 }
 function createFigmaClient(options) {
   const fetchImpl = options.fetch ?? fetch;
@@ -10360,8 +10360,8 @@ function defaultDeps() {
     env: process.env,
     cwd: processCwd(),
     now: () => /* @__PURE__ */ new Date(),
-    stdout: (text) => process.stdout.write(text),
-    stderr: (text) => process.stderr.write(text)
+    stdout: (text2) => process.stdout.write(text2),
+    stderr: (text2) => process.stderr.write(text2)
   };
 }
 function severityFor(severity) {
@@ -10578,9 +10578,9 @@ import * as readline from "readline";
 
 // src/io/dotenv.ts
 import { readFileSync as readFileSync5 } from "fs";
-function parseDotenv(text) {
+function parseDotenv(text2) {
   const out = {};
-  for (const rawLine of text.split("\n")) {
+  for (const rawLine of text2.split("\n")) {
     const line = rawLine.trim();
     if (line === "" || line.startsWith("#")) continue;
     const eq = line.indexOf("=");
@@ -10601,13 +10601,13 @@ function stripOneQuoteLayer(value2) {
   return value2;
 }
 function loadDotenvInto(filePath, env) {
-  let text;
+  let text2;
   try {
-    text = readFileSync5(filePath, "utf8");
+    text2 = readFileSync5(filePath, "utf8");
   } catch {
     return;
   }
-  for (const [key, value2] of Object.entries(parseDotenv(text))) {
+  for (const [key, value2] of Object.entries(parseDotenv(text2))) {
     const current = env[key];
     if (current === void 0 || current === "") {
       env[key] = value2;
@@ -10717,10 +10717,10 @@ function writeEnvFileMerged(dir, updates) {
   const filePath = join7(dir, ENV_FILE_NAME);
   const existing = existsSync5(filePath) ? parseDotenv(readFileSync6(filePath, "utf8")) : {};
   const merged = { ...existing, ...updates };
-  const text = serializeDotenv(merged);
+  const text2 = serializeDotenv(merged);
   const tempPath = join7(dir, `${ENV_FILE_NAME}.${process.pid}.tmp`);
   try {
-    writeFileSync3(tempPath, text, { encoding: "utf8", mode: 384 });
+    writeFileSync3(tempPath, text2, { encoding: "utf8", mode: 384 });
     renameSync2(tempPath, filePath);
   } catch (error) {
     try {
@@ -11232,12 +11232,12 @@ function writeDashboardFile(dir, name, selection, opts = {}) {
   if (meta?.score_weights !== void 0) obj.score_weights = meta.score_weights;
   atomicWriteJson(dashboardPath(dir, name, opts.local ?? false), obj);
 }
-function parseDashboard(text, fallbackName) {
-  const selectionOutcome = parseSelectionFile(text);
+function parseDashboard(text2, fallbackName) {
+  const selectionOutcome = parseSelectionFile(text2);
   if (selectionOutcome.kind === "invalid") {
     return { kind: "invalid", message: selectionOutcome.message };
   }
-  const obj = JSON.parse(text);
+  const obj = JSON.parse(text2);
   const selection = selectionOutcome.kind === "view" ? { kind: "view", view: selectionOutcome.view } : { kind: "artifacts", artifacts: selectionOutcome.artifacts };
   const dashboard = {
     name: typeof obj.name === "string" && obj.name !== "" ? obj.name : fallbackName,
@@ -11281,13 +11281,13 @@ function readDashboardFile(dir, name) {
   const sharedPath = dashboardPath(dir, name, false);
   const path = existsSync6(localPath) ? localPath : existsSync6(sharedPath) ? sharedPath : void 0;
   if (path === void 0) return { kind: "not-found" };
-  let text;
+  let text2;
   try {
-    text = readFileSync7(path, "utf8");
+    text2 = readFileSync7(path, "utf8");
   } catch {
     return { kind: "not-found" };
   }
-  return parseDashboard(text, name);
+  return parseDashboard(text2, name);
 }
 function listDashboards(dir) {
   let files;
@@ -12018,9 +12018,9 @@ import { cwd as processCwd2 } from "process";
 function asObject(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
-function replayHistory(text) {
+function replayHistory(text2) {
   const records = [];
-  const lines = text.split("\n");
+  const lines = text2.split("\n");
   for (let i = 0; i < lines.length; i += 1) {
     const trimmed = (lines[i] ?? "").trim();
     if (trimmed === "") continue;
@@ -12178,8 +12178,8 @@ function directionOf(baseline, current) {
   if (current < baseline) return "down";
   return "flat";
 }
-function buildDigest(text, sinceIso, audience, readinessThreshold) {
-  const records = replayHistory(text);
+function buildDigest(text2, sinceIso, audience, readinessThreshold) {
+  const records = replayHistory(text2);
   const before = {};
   const inWindow = {};
   let anyInWindow = false;
@@ -12340,8 +12340,8 @@ function defaultDeps2() {
   return {
     cwd: processCwd2(),
     now: () => /* @__PURE__ */ new Date(),
-    stdout: (text) => process.stdout.write(text),
-    stderr: (text) => process.stderr.write(text)
+    stdout: (text2) => process.stdout.write(text2),
+    stderr: (text2) => process.stderr.write(text2)
   };
 }
 function parseAudience2(flag) {
@@ -12420,9 +12420,9 @@ function runDigest(path, options, deps) {
     return;
   }
   const stateDir = join11(targetDir, ".ds-bridge");
-  const text = readHistoryText(stateDir);
+  const text2 = readHistoryText(stateDir);
   const model = buildDigest(
-    text,
+    text2,
     since.sinceIso,
     audience.value,
     threshold.value
@@ -12619,8 +12619,8 @@ function renderLlmsTxt(docs, tokens) {
 function statusOf(doc) {
   return doc.gaps.length > 0 ? "gaps" : "documented";
 }
-function escapeCell(text) {
-  return text.replace(/\|/g, "\\|");
+function escapeCell(text2) {
+  return text2.replace(/\|/g, "\\|");
 }
 function renderImport(doc) {
   if (doc.code.importPath.length === 0) return void 0;
@@ -15379,21 +15379,21 @@ function isSpacingProperty(property) {
   }
   return false;
 }
-function blankComments(text) {
+function blankComments(text2) {
   let out = "";
   let i = 0;
-  while (i < text.length) {
-    const ch = text[i];
-    if (ch === "/" && text[i + 1] === "*") {
-      const end = text.indexOf("*/", i + 2);
-      const stop = end === -1 ? text.length : end + 2;
-      for (let j = i; j < stop; j++) out += text[j] === "\n" ? "\n" : " ";
+  while (i < text2.length) {
+    const ch = text2[i];
+    if (ch === "/" && text2[i + 1] === "*") {
+      const end = text2.indexOf("*/", i + 2);
+      const stop = end === -1 ? text2.length : end + 2;
+      for (let j = i; j < stop; j++) out += text2[j] === "\n" ? "\n" : " ";
       i = stop;
       continue;
     }
-    if (ch === "/" && text[i + 1] === "/" && text[i - 1] !== ":") {
+    if (ch === "/" && text2[i + 1] === "/" && text2[i - 1] !== ":") {
       let j = i;
-      while (j < text.length && text[j] !== "\n") {
+      while (j < text2.length && text2[j] !== "\n") {
         out += " ";
         j += 1;
       }
@@ -15403,12 +15403,12 @@ function blankComments(text) {
     if (ch === '"' || ch === "'") {
       out += ch;
       i += 1;
-      while (i < text.length && text[i] !== ch) {
-        out += text[i] === "\n" ? "\n" : " ";
+      while (i < text2.length && text2[i] !== ch) {
+        out += text2[i] === "\n" ? "\n" : " ";
         i += 1;
       }
-      if (i < text.length) {
-        out += text[i];
+      if (i < text2.length) {
+        out += text2[i];
         i += 1;
       }
       continue;
@@ -15459,9 +15459,9 @@ function* scanValue(value2, property) {
     i += 1;
   }
 }
-function extractCss(text, lineBase, colBase) {
+function extractCss(text2, lineBase, colBase) {
   const hits = [];
-  const cleaned = blankComments(text);
+  const cleaned = blankComments(text2);
   const lines = cleaned.split("\n");
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li] ?? "";
@@ -15706,9 +15706,9 @@ function applyEdits(content, edits) {
   }
   for (const [line, lineEdits] of byLine) {
     const index = line - 1;
-    const text = lines[index];
-    if (text === void 0) continue;
-    let next = text;
+    const text2 = lines[index];
+    if (text2 === void 0) continue;
+    let next = text2;
     for (const edit of [...lineEdits].sort((a, b) => b.col - a.col)) {
       const start = edit.col - 1;
       if (start < 0 || start > next.length) continue;
@@ -17781,9 +17781,9 @@ function rollupByOwner(byDirectory, ownership) {
     (a, b) => a.pct - b.pct || (a.owner < b.owner ? -1 : a.owner > b.owner ? 1 : 0)
   );
 }
-function parseCodeowners(text) {
+function parseCodeowners(text2) {
   const rules = [];
-  for (const rawLine of text.split("\n")) {
+  for (const rawLine of text2.split("\n")) {
     const line = rawLine.trim();
     if (line === "" || line.startsWith("#")) continue;
     const tokens = line.split(/\s+/).filter((t) => t.length > 0);
@@ -17843,9 +17843,9 @@ function pct4(part, whole) {
 function asRecord2(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
-function extractLatest(text) {
+function extractLatest(text2) {
   const latest = {};
-  for (const { kind, record } of replayHistory(text)) {
+  for (const { kind, record } of replayHistory(text2)) {
     switch (kind) {
       case "tokens-check":
         latest.tokensCheck = record;
@@ -17872,8 +17872,8 @@ function extractLatest(text) {
   }
   return latest;
 }
-function scoreFor(text, weights) {
-  const outcome = scoreFromHistory(text, weights);
+function scoreFor(text2, weights) {
+  const outcome = scoreFromHistory(text2, weights);
   if (outcome.kind === "no-data") return void 0;
   return {
     current: outcome.current,
@@ -18049,8 +18049,8 @@ function signed(delta) {
   return delta > 0 ? `+${delta}` : `${delta}`;
 }
 function driftCell(counts, bold) {
-  const text = `${counts.stale}/${counts.missing}/${counts.orphan}`;
-  return bold ? `**${text}**` : text;
+  const text2 = `${counts.stale}/${counts.missing}/${counts.orphan}`;
+  return bold ? `**${text2}**` : text2;
 }
 function isPercent(id) {
   return id === "on-system" || id === "contrast";
@@ -18497,19 +18497,33 @@ function computeVelocity(trend, nowIso, windowDays) {
 }
 
 // src/render/html/charts.ts
-var DEFAULT_PALETTE = [
-  "#2563eb",
-  "#16a34a",
-  "#dc2626",
-  "#d97706",
-  "#7c3aed",
-  "#0891b2"
+var PALETTE2 = [
+  "#a3384b",
+  "#7f9139",
+  "#e3a73b",
+  "#d06f2e",
+  "#b89a6a",
+  "#8f9a5a"
 ];
-var TRACK_COLOR = "#e5e7eb";
-var TEXT_COLOR2 = "#374151";
-var GAUGE_COLOR = "#2563eb";
-var HEAT_COLOR = "#2563eb";
-var AXIS_COLOR = "#9ca3af";
+var TONE = {
+  ok: "#6f8a2e",
+  warn: "#c98a1e",
+  error: "#b83f4f",
+  neutral: "#8a8f98"
+};
+function toneFor(pct5) {
+  if (pct5 >= 80) return "ok";
+  if (pct5 >= 50) return "warn";
+  return "error";
+}
+function bandColor(pct5) {
+  return TONE[toneFor(pct5)];
+}
+var TRACK_COLOR = "#eceae4";
+var TEXT_COLOR2 = "#2a2a27";
+var MUTED_COLOR = "#7a7a72";
+var GRID_COLOR = "#e6e4dd";
+var FONT = "-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif";
 function escapeXml2(value2) {
   return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
@@ -18560,25 +18574,43 @@ function niceTicks(min, max, maxTicks) {
 function svgOpen(width, height) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img">`;
 }
+function text(x, y, body, attrs = {}) {
+  const weight = attrs.weight === void 0 ? "" : ` font-weight="${attrs.weight}"`;
+  return `<text x="${round2(x)}" y="${round2(y)}" text-anchor="${attrs.anchor ?? "start"}" fill="${attrs.fill ?? TEXT_COLOR2}" font-family="${FONT}" font-size="${attrs.size ?? 12}"${weight}>${body}</text>`;
+}
 function emptyState(width, height, title) {
   const safe = escapeXml2(title);
   return [
     svgOpen(width, height),
     `<title>${safe}</title>`,
-    `<text x="${round2(width / 2)}" y="${round2(height / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="12">No data</text>`,
+    `<text x="${round2(width / 2)}" y="${round2(height / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${MUTED_COLOR}" font-family="${FONT}" font-size="12">No data</text>`,
     "</svg>"
   ].join("");
+}
+function clip(label, chars) {
+  return label.length <= chars ? label : `${label.slice(0, Math.max(1, chars - 1))}\u2026`;
+}
+var CHAR_W = 6.6;
+function formatTick(value2, unit) {
+  const n = Number.isInteger(value2) ? String(value2) : String(round2(value2));
+  return unit ? `${n}${unit}` : n;
 }
 function lineChart(series, opts = {}) {
   const width = opts.width ?? 480;
   const height = opts.height ?? 240;
-  const palette = opts.colors ?? [...DEFAULT_PALETTE];
+  const palette = opts.colors ?? [...PALETTE2];
   const plottable = series.filter((s) => s.points.length > 0);
   const allPoints = plottable.flatMap((s) => s.points);
   if (plottable.length === 0 || allPoints.length === 0) {
     return emptyState(width, height, "Line chart (no data)");
   }
-  const pad2 = { top: 16, right: 16, bottom: 28, left: 40 };
+  const legend = plottable.length > 1;
+  const pad2 = {
+    top: legend ? 30 : 12,
+    right: 14,
+    bottom: opts.xLabels ? 26 : 14,
+    left: 36
+  };
   const plotW = Math.max(0, width - pad2.left - pad2.right);
   const plotH = Math.max(0, height - pad2.top - pad2.bottom);
   const xs = allPoints.map((p4) => p4.x);
@@ -18599,36 +18631,95 @@ function lineChart(series, opts = {}) {
   parts.push(
     `<title>Line chart: ${escapeXml2(series.map((s) => s.label).join(", "))}</title>`
   );
+  if (legend) {
+    let lx = pad2.left;
+    plottable.forEach((s, index) => {
+      const color = palette[index % palette.length] ?? PALETTE2[0];
+      parts.push(
+        `<rect x="${round2(lx)}" y="8" width="10" height="10" rx="5" fill="${color}" />`
+      );
+      parts.push(
+        text(lx + 15, 17, escapeXml2(s.label), { size: 12, fill: MUTED_COLOR })
+      );
+      lx += 15 + s.label.length * CHAR_W + 18;
+    });
+  }
   for (const tick of yTicks) {
     const y = round2(sy(tick));
     parts.push(
-      `<line x1="${pad2.left}" y1="${y}" x2="${round2(width - pad2.right)}" y2="${y}" stroke="${AXIS_COLOR}" stroke-width="0.5" />`
+      `<line x1="${pad2.left}" y1="${y}" x2="${round2(width - pad2.right)}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
     );
     parts.push(
-      `<text x="${round2(pad2.left - 6)}" y="${round2(y + 3)}" text-anchor="end" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="10">${tick}</text>`
+      text(pad2.left - 7, y + 4, formatTick(tick, opts.unit), {
+        anchor: "end",
+        size: 11,
+        fill: MUTED_COLOR
+      })
     );
   }
-  plottable.forEach((s, index) => {
-    const stroke = palette[index % palette.length] ?? GAUGE_COLOR;
-    const pointsAttr = s.points.map((p4) => `${round2(sx(p4.x))},${round2(sy(p4.y))}`).join(" ");
+  if (opts.xLabels) {
+    const base = round2(height - 8);
     parts.push(
-      `<polyline fill="none" stroke="${stroke}" stroke-width="2" points="${pointsAttr}" />`
+      text(pad2.left, base, escapeXml2(opts.xLabels[0]), {
+        size: 11,
+        fill: MUTED_COLOR
+      })
     );
+    parts.push(
+      text(width - pad2.right, base, escapeXml2(opts.xLabels[1]), {
+        anchor: "end",
+        size: 11,
+        fill: MUTED_COLOR
+      })
+    );
+  }
+  const filled = (opts.area ?? true) && plottable.length === 1;
+  plottable.forEach((s, index) => {
+    const stroke = palette[index % palette.length] ?? PALETTE2[0];
+    const coords = s.points.map((p4) => `${round2(sx(p4.x))},${round2(sy(p4.y))}`);
+    if (filled && s.points.length > 1) {
+      const first = s.points[0];
+      const last = s.points[s.points.length - 1];
+      if (first && last) {
+        const floor = round2(sy(yLo));
+        parts.push(
+          `<polygon points="${round2(sx(first.x))},${floor} ${coords.join(" ")} ${round2(sx(last.x))},${floor}" fill="${stroke}" fill-opacity="0.12" />`
+        );
+      }
+    }
+    parts.push(
+      `<polyline fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${coords.join(" ")}" />`
+    );
+    for (const p4 of s.points) {
+      parts.push(
+        `<circle cx="${round2(sx(p4.x))}" cy="${round2(sy(p4.y))}" r="3" fill="#ffffff" stroke="${stroke}" stroke-width="2" />`
+      );
+    }
   });
   parts.push("</svg>");
   return parts.join("");
 }
 function barChart(items, opts = {}) {
   const width = opts.width ?? 480;
-  const rowH = 24;
-  const height = opts.height ?? Math.max(rowH, items.length * rowH + 16);
-  const fill = opts.color ?? DEFAULT_PALETTE[0];
+  const rowH = 26;
+  const height = opts.height ?? Math.max(rowH, items.length * rowH + 8);
+  const fill = opts.color ?? PALETTE2[0];
   if (items.length === 0) {
     return emptyState(width, height, "Bar chart (no data)");
   }
-  const pad2 = { top: 8, right: 40, bottom: 8, left: 80 };
+  const values = items.map((i) => formatTick(i.value, opts.unit));
+  const longest = Math.max(...items.map((i) => i.label.length));
+  const labelChars = Math.max(
+    4,
+    Math.min(longest, Math.floor(width * 0.42 / CHAR_W))
+  );
+  const labelW = Math.ceil(labelChars * CHAR_W + 10);
+  const valueW = Math.ceil(
+    Math.max(...values.map((v) => v.length)) * CHAR_W + 12
+  );
+  const pad2 = { top: 4, left: labelW, right: valueW };
   const trackW = Math.max(0, width - pad2.left - pad2.right);
-  const max = Math.max(0, ...items.map((i) => i.value));
+  const max = opts.max ?? Math.max(0, ...items.map((i) => i.value));
   const parts = [];
   parts.push(svgOpen(width, height));
   parts.push(
@@ -18636,63 +18727,73 @@ function barChart(items, opts = {}) {
   );
   items.forEach((item, index) => {
     const clamped = Math.max(0, item.value);
-    const barW = max > 0 ? round2(clamped / max * trackW) : 0;
+    const barW = max > 0 ? round2(Math.min(clamped, max) / max * trackW) : 0;
     const y = pad2.top + index * rowH;
-    const barY = y + 4;
-    const barH = rowH - 8;
-    const midY = round2(y + rowH / 2 + 3);
+    const barY = round2(y + 6);
+    const barH = rowH - 12;
+    const midY = round2(y + rowH / 2 + 4);
+    const label = clip(item.label, labelChars);
+    const tip = label === item.label ? "" : `<title>${escapeXml2(item.label)}</title>`;
     parts.push(
-      `<text x="${round2(pad2.left - 6)}" y="${midY}" text-anchor="end" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11">${escapeXml2(item.label)}</text>`
+      `<g>${tip}${text(pad2.left - 8, midY, escapeXml2(label), { anchor: "end", size: 12, fill: TEXT_COLOR2 })}</g>`
     );
     parts.push(
-      `<rect class="bar" x="${pad2.left}" y="${barY}" width="${barW}" height="${barH}" fill="${fill}" rx="2" />`
+      `<rect x="${pad2.left}" y="${barY}" width="${round2(trackW)}" height="${barH}" fill="${TRACK_COLOR}" rx="${barH / 2}" />`
     );
     parts.push(
-      `<text x="${round2(pad2.left + barW + 4)}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11">${escapeXml2(String(item.value))}</text>`
+      `<rect class="bar" x="${pad2.left}" y="${barY}" width="${barW}" height="${barH}" fill="${item.color ?? fill}" rx="${barH / 2}" />`
+    );
+    parts.push(
+      text(pad2.left + trackW + 8, midY, escapeXml2(values[index] ?? ""), {
+        size: 12,
+        fill: TEXT_COLOR2,
+        weight: 600
+      })
     );
   });
   parts.push("</svg>");
   return parts.join("");
 }
 function donutGauge(value2, opts = {}) {
-  const size = 120;
+  const size = 132;
   const clamped = clamp3(value2, 0, 100);
   const display = Math.round(clamped);
   const cx = size / 2;
   const cy = size / 2;
-  const strokeWidth = 12;
+  const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const drawn = round2(clamped / 100 * circumference);
   const gap = round2(circumference - drawn);
+  const color = opts.color ?? bandColor(clamped);
   const labelText = opts.label !== void 0 ? `${opts.label}: ` : "";
   const title = `${labelText}${display}%`;
   return [
     svgOpen(size, size),
     `<title>${escapeXml2(title)}</title>`,
     `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${TRACK_COLOR}" stroke-width="${strokeWidth}" />`,
-    `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${GAUGE_COLOR}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-dasharray="${drawn} ${gap}" transform="rotate(-90 ${cx} ${cy})" />`,
-    `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="24" font-weight="600">${display}</text>`,
+    `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-dasharray="${drawn} ${gap}" transform="rotate(-90 ${cx} ${cy})" />`,
+    `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${TEXT_COLOR2}" font-family="${FONT}" font-size="30" font-weight="700">${display}</text>`,
     "</svg>"
   ].join("");
 }
 var STATUS_BAND_FILL = {
-  green: "#16a34a",
-  amber: "#d97706",
-  red: "#dc2626",
+  green: TONE.ok,
+  amber: TONE.warn,
+  red: TONE.error,
   unknown: TRACK_COLOR
 };
 function statusGrid(rows, opts = {}) {
   const width = opts.width ?? 480;
-  const rowH = 28;
+  const rowH = 32;
   const height = opts.height ?? Math.max(rowH, rows.length * rowH + 8);
   if (rows.length === 0) {
     return emptyState(width, height, "Status grid (no data)");
   }
-  const pad2 = { top: 4, left: 8, right: 8 };
-  const pillW = 76;
+  const pad2 = { top: 4, left: 2, right: 2 };
+  const pillW = 66;
   const pillX = round2(width - pad2.right - pillW);
-  const measuredX = round2(width * 0.42);
+  const measuredX = round2(width * 0.44);
   const targetX = round2(width * 0.62);
   const parts = [];
   parts.push(svgOpen(width, height));
@@ -18701,35 +18802,49 @@ function statusGrid(rows, opts = {}) {
   );
   rows.forEach((row, index) => {
     const y = pad2.top + index * rowH;
-    const midY = round2(y + rowH / 2 + 3);
+    const midY = round2(y + rowH / 2 + 4);
     const fill = STATUS_BAND_FILL[row.band];
     const pillTextColor = row.band === "unknown" ? TEXT_COLOR2 : "#ffffff";
+    if (index > 0) {
+      parts.push(
+        `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
+      );
+    }
     parts.push(
-      `<text x="${pad2.left}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11" font-weight="600">${escapeXml2(row.label)}</text>`
+      text(pad2.left, midY, escapeXml2(row.label), { size: 12, weight: 600 })
     );
     parts.push(
-      `<text x="${measuredX}" y="${midY}" text-anchor="start" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11">${escapeXml2(row.measured)}</text>`
+      text(measuredX, midY, escapeXml2(row.measured), { size: 12, weight: 600 })
     );
     parts.push(
-      `<text x="${targetX}" y="${midY}" text-anchor="start" fill="${AXIS_COLOR}" font-family="sans-serif" font-size="11">${escapeXml2(row.target)}</text>`
+      text(targetX, midY, escapeXml2(row.target), {
+        size: 12,
+        fill: MUTED_COLOR
+      })
     );
     parts.push(
-      `<rect class="pill" x="${pillX}" y="${round2(y + 5)}" width="${pillW}" height="${rowH - 10}" fill="${fill}" rx="9" />`
+      `<rect class="pill" x="${pillX}" y="${round2(y + 7)}" width="${pillW}" height="${rowH - 14}" fill="${fill}" rx="${(rowH - 14) / 2}" />`
     );
     parts.push(
-      `<text x="${round2(pillX + pillW / 2)}" y="${midY}" text-anchor="middle" fill="${pillTextColor}" font-family="sans-serif" font-size="10" font-weight="600">${escapeXml2(row.band)}</text>`
+      text(pillX + pillW / 2, midY - 0.5, escapeXml2(row.band), {
+        anchor: "middle",
+        size: 11,
+        fill: pillTextColor,
+        weight: 600
+      })
     );
   });
   parts.push("</svg>");
   return parts.join("");
 }
 function heatGrid(rows, opts = {}) {
-  const cellSize = 28;
-  const labelW = 72;
+  const cellSize = 26;
+  const longest = Math.max(0, ...rows.map((r2) => r2.label.length));
+  const labelW = Math.ceil(Math.min(18, Math.max(4, longest)) * CHAR_W + 12);
   const maxCells = Math.max(0, ...rows.map((r2) => r2.cells.length));
   const width = opts.width ?? labelW + Math.max(1, maxCells) * cellSize + 8;
   const height = opts.height ?? Math.max(cellSize, rows.length * cellSize + 8);
-  const fill = opts.color ?? HEAT_COLOR;
+  const fill = opts.color ?? PALETTE2[0];
   if (rows.length === 0) {
     return emptyState(width, height, "Heat grid (no data)");
   }
@@ -18742,13 +18857,19 @@ function heatGrid(rows, opts = {}) {
   rows.forEach((row, rowIndex) => {
     const y = pad2.top + rowIndex * cellSize;
     parts.push(
-      `<text x="${labelW - 6}" y="${round2(y + cellSize / 2 + 3)}" text-anchor="end" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="11">${escapeXml2(row.label)}</text>`
+      text(labelW - 8, y + cellSize / 2 + 3, escapeXml2(clip(row.label, 18)), {
+        anchor: "end",
+        size: 12
+      })
     );
     row.cells.forEach((cell, cellIndex) => {
       const x = pad2.left + cellIndex * cellSize;
       const opacity = round2(clamp3(cell.intensity, 0, 1));
       parts.push(
-        `<rect class="cell" x="${x}" y="${y}" width="${cellSize - 2}" height="${cellSize - 2}" fill="${fill}" fill-opacity="${opacity}" rx="2" />`
+        `<rect x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${TRACK_COLOR}" rx="4" />`
+      );
+      parts.push(
+        `<rect class="cell" x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${fill}" fill-opacity="${opacity}" rx="4" />`
       );
     });
   });
@@ -18757,20 +18878,36 @@ function heatGrid(rows, opts = {}) {
 }
 
 // src/render/html/dashboard.ts
+var CARD_W = 332;
+var WIDE_W = 720;
+function dateEnds(trend) {
+  return [trend[0]?.date ?? "", trend[trend.length - 1]?.date ?? ""];
+}
+function dayOf(value2) {
+  return /^\d{4}-\d{2}-\d{2}T/.test(value2) ? value2.slice(0, 10) : value2;
+}
 function escapeHtml(value2) {
   return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 var STYLE = `
 :root {
-	--bg: #f7f8fa;
+	--bg: #f6f5f1;
 	--surface: #ffffff;
-	--text: #1c2128;
-	--text-subtle: #57606a;
-	--border: #d8dee4;
-	--accent: #0d7d62;
-	--accent-soft: #e6f7f1;
-	--radius: 12px;
-	--shadow: 0 1px 2px rgba(28, 33, 40, 0.06), 0 4px 12px rgba(28, 33, 40, 0.04);
+	--text: #1f1e1b;
+	--text-subtle: #6b6a63;
+	--border: #e6e3da;
+	--track: #eceae4;
+	--accent: #a3384b;
+	--accent-soft: #f6e9ec;
+	--ok: #6f8a2e;
+	--warn: #c98a1e;
+	--error: #b83f4f;
+	--radius: 14px;
+	--bar: #2a2622;
+	--bar-text: #f6f5f1;
+	--bar-subtle: #b9b3a6;
+	--bar-accent: #e3a73b;
+	--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
 body {
@@ -18778,102 +18915,162 @@ body {
 	background: var(--bg);
 	color: var(--text);
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	font-size: 14px;
 	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
 }
-.wrap { max-width: 1080px; margin: 0 auto; padding: 32px 24px 64px; }
-header.dash {
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 72px; }
+header.dash { background: var(--bar); color: var(--bar-text); }
+header.dash .bar {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 18px 24px;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	justify-content: space-between;
-	gap: 8px 24px;
-	padding-bottom: 20px;
-	border-bottom: 1px solid var(--border);
-	margin-bottom: 28px;
+	gap: 6px 16px;
 }
-header.dash h1 { font-size: 22px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
-header.dash .project { color: var(--accent); }
-header.dash .generated { color: var(--text-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+header.dash h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; flex: 1 1 auto; }
+header.dash .project { color: var(--bar-accent); }
+header.dash .view {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bar-text);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 999px;
+	padding: 2px 10px;
+}
+header.dash .generated { color: var(--bar-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+.kpis {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.kpi {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 14px 16px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.kpi.ok { --tone: var(--ok); }
+.kpi.warn { --tone: var(--warn); }
+.kpi.error { --tone: var(--error); }
+.kpi-label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
+.kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--tone, var(--text)); font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-	gap: 20px;
+	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	grid-auto-flow: row dense;
+	align-items: start;
+	gap: 16px;
 }
 section.panel {
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	box-shadow: var(--shadow);
 	padding: 18px 20px 20px;
 	min-width: 0;
 }
+section.panel.wide { grid-column: span 2; }
+@media (max-width: 780px) { section.panel.wide { grid-column: auto; } }
 section.panel h2 {
-	font-size: 14px;
-	font-weight: 600;
-	margin: 0 0 14px;
+	font-size: 15px;
+	font-weight: 650;
+	margin: 0 0 12px;
 	color: var(--text);
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
+	letter-spacing: -0.005em;
 }
-.chart { overflow-x: auto; }
+.chart { overflow-x: auto; margin: 4px 0; }
 .chart svg { max-width: 100%; height: auto; display: block; }
+.chart.center svg { margin: 0 auto; }
+.split { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: center; }
+@media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
 .empty {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 4px;
 	align-items: flex-start;
 	justify-content: center;
-	min-height: 120px;
-	padding: 16px;
+	min-height: 96px;
+	padding: 14px 16px;
 	border: 1px dashed var(--border);
-	border-radius: 8px;
+	border-radius: 10px;
 	background: var(--bg);
 	color: var(--text-subtle);
+	font-size: 13px;
 }
 .empty .empty-title { font-weight: 600; color: var(--text); }
-.empty code {
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+.empty code, .meta code {
+	font-family: var(--mono);
 	font-size: 12px;
-	background: var(--accent-soft);
-	color: var(--accent);
-	padding: 2px 6px;
-	border-radius: 6px;
-}
-table.parity-key, .meta {
-	width: 100%;
-	margin-top: 12px;
-	font-size: 12px;
-	color: var(--text-subtle);
-	border-collapse: collapse;
-}
-.cols { margin-top: 10px; font-size: 12px; color: var(--text-subtle); }
-.cols b { color: var(--text); font-weight: 600; }
-table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
-table.weights th, table.weights td { padding: 4px 8px; border-top: 1px solid var(--border); text-align: left; }
-table.weights th { color: var(--text-subtle); font-weight: 600; }
-table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
-ul.offenders { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.offenders li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-top: 1px solid var(--border); }
-ul.offenders code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
-ul.offenders .count { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; }
-ul.deductions { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
-ul.deductions .pts { color: var(--text-subtle); font-variant-numeric: tabular-nums; }
-.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 10px; text-align: center; }
-ul.calendar { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.calendar li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--border); }
-ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
-ul.calendar .detail { color: var(--text-subtle); text-align: right; }
-.badge {
-	display: inline-block;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 11px;
 	background: var(--accent-soft);
 	color: var(--accent);
 	padding: 1px 6px;
 	border-radius: 6px;
+}
+table.parity-key, .meta {
+	width: 100%;
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: var(--text-subtle);
+	border-collapse: collapse;
+}
+.meta:first-of-type { margin-top: 0; }
+.cols { margin-top: 8px; font-size: 12px; color: var(--text-subtle); }
+.cols b { color: var(--text); font-weight: 600; }
+.cols:has(.audience-col) { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; margin-top: 0; }
+.audience-col .cols b { font-size: 13px; text-transform: capitalize; }
+.stat { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
+.stat-value { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat-value.ok { color: var(--ok); }
+.stat-value.error { color: var(--error); }
+.stat-sub { color: var(--text-subtle); font-size: 13px; }
+table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
+table.weights th, table.weights td { padding: 5px 8px; border-top: 1px solid var(--border); text-align: left; }
+table.weights th { color: var(--text-subtle); font-weight: 600; border-top: 0; }
+table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
+ul.offenders, ul.deductions, ul.calendar { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
+ul.offenders li, ul.calendar li {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	padding: 6px 0;
+	border-top: 1px solid var(--border);
+}
+ul.offenders code, ul.calendar code {
+	font-family: var(--mono);
+	color: var(--text);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+ul.offenders .count { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+ul.deductions .pts { color: var(--error); font-variant-numeric: tabular-nums; font-weight: 600; }
+.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 6px; text-align: center; }
+ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; white-space: nowrap; }
+ul.calendar .detail { color: var(--text-subtle); text-align: right; }
+ul.calendar.stack li { flex-direction: column; align-items: flex-start; gap: 1px; }
+ul.calendar.stack .detail { text-align: left; }
+.badge {
+	display: inline-block;
+	font-family: var(--mono);
+	font-size: 11px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 1px 7px;
+	border-radius: 999px;
 	margin-right: 4px;
+	white-space: nowrap;
 }
 `.trim();
 function emptyState2(command) {
@@ -18884,9 +19081,9 @@ function emptyState2(command) {
     "</div>"
   ].join("");
 }
-function panel(title, body) {
+function panel(title, body, size) {
   return [
-    '<section class="panel">',
+    size === "wide" ? '<section class="panel wide">' : '<section class="panel">',
     `<h2>${escapeHtml(title)}</h2>`,
     body,
     "</section>"
@@ -18927,11 +19124,14 @@ function systemScoreSection(data, weightProfile) {
   return panel(
     "System score",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(score.current, { label: "System score" })}</div>`,
-      `<div class="chart">${lineChart(trendSeries)}</div>`,
+      '<div class="split">',
+      `<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
+      `<div class="chart">${lineChart(trendSeries, { width: WIDE_W - 170, height: 180, colors: [PALETTE2[0]] })}</div>`,
+      "</div>",
       legend,
       caption
-    ].join("")
+    ].join(""),
+    "wide"
   );
 }
 function driftSection(data) {
@@ -18952,9 +19152,10 @@ function driftSection(data) {
   return panel(
     "Drift trend",
     [
-      `<div class="chart">${lineChart(series)}</div>`,
+      `<div class="chart">${lineChart(series, { width: WIDE_W, height: 220, xLabels: dateEnds(trend), colors: [TONE.error, TONE.ok, PALETTE2[4]] })}</div>`,
       `<div class="cols"><b>Breaking</b> \xB7 <b>Additive</b> \xB7 <b>Cosmetic</b> over ${dateRange}</div>`
-    ].join("")
+    ].join(""),
+    "wide"
   );
 }
 function lintSection(data) {
@@ -18963,9 +19164,9 @@ function lintSection(data) {
     return panel("Lint violations", emptyState2("lint"));
   }
   const bars = [
-    { label: "Exact", value: lint.byKind.exact },
-    { label: "Near", value: lint.byKind.near },
-    { label: "Off-system", value: lint.byKind.offSystem }
+    { label: "Exact", value: lint.byKind.exact, color: PALETTE2[2] },
+    { label: "Near", value: lint.byKind.near, color: PALETTE2[3] },
+    { label: "Off-system", value: lint.byKind.offSystem, color: PALETTE2[0] }
   ];
   const offenders = lint.topOffenders.length > 0 ? [
     '<ul class="offenders">',
@@ -18976,7 +19177,7 @@ function lintSection(data) {
   ].join("") : "";
   return panel(
     "Lint violations",
-    `<div class="chart">${barChart(bars)}</div>${offenders}`
+    `<div class="chart">${barChart(bars, { width: CARD_W })}</div>${offenders}`
   );
 }
 function readinessSection(data) {
@@ -18994,7 +19195,7 @@ function readinessSection(data) {
   return panel(
     "Readiness",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(readiness.score, { label: "Readiness" })}</div>`,
+      `<div class="chart center">${donutGauge(readiness.score, { label: "Readiness" })}</div>`,
       `<div class="frame-name">${escapeHtml(readiness.frameName)}</div>`,
       deductions
     ].join("")
@@ -19046,7 +19247,7 @@ function a11ySection(data) {
     "Contrast (a11y)",
     [
       `<div class="meta">Failures by mode \xB7 level ${escapeHtml(a11y.level)}</div>`,
-      `<div class="chart">${barChart(bars)}</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W, color: TONE.error })}</div>`,
       tallies
     ].join("")
   );
@@ -19057,15 +19258,15 @@ function impactSection(data) {
     return panel("Change impact", emptyState2("impact"));
   }
   const bars = [
-    { label: "Breaking", value: impact.breaking },
-    { label: "Additive", value: impact.additive },
-    { label: "Cosmetic", value: impact.cosmetic }
+    { label: "Breaking", value: impact.breaking, color: TONE.error },
+    { label: "Additive", value: impact.additive, color: TONE.ok },
+    { label: "Cosmetic", value: impact.cosmetic, color: PALETTE2[4] }
   ];
   const sites = impact.touchedCallSites;
   const radius = `<div class="meta">Touches ${escapeHtml(String(sites))} call site${sites === 1 ? "" : "s"}</div>`;
   return panel(
     "Change impact",
-    `<div class="chart">${barChart(bars)}</div>${radius}`
+    `<div class="chart">${barChart(bars, { width: CARD_W })}</div>${radius}`
   );
 }
 function onSystemPct2(refs, literals) {
@@ -19089,7 +19290,7 @@ function adoptionTrendSection(data) {
   return panel(
     "Adoption trend",
     [
-      `<div class="chart">${lineChart(series)}</div>`,
+      `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[1]] })}</div>`,
       `<div class="meta">On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)</div>`
     ].join("")
   );
@@ -19114,7 +19315,7 @@ function importCoverageSection(data) {
   return panel(
     "Import coverage",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(pct5, { label: "Import coverage" })}</div>`,
+      `<div class="chart center">${donutGauge(pct5, { label: "Import coverage" })}</div>`,
       `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
       list,
       overflow
@@ -19126,10 +19327,10 @@ function leaderboardSection(data) {
   if (rows === void 0 || rows.length === 0) {
     return panel("Adoption leaderboard", emptyState2("lint <dir>"));
   }
-  const bars = rows.map((row) => ({
-    label: row.dir,
-    value: onSystemPct2(row.refs, row.literals)
-  }));
+  const bars = rows.map((row) => {
+    const pct5 = onSystemPct2(row.refs, row.literals);
+    return { label: row.dir, value: pct5, color: bandColor(pct5) };
+  });
   const labels = [
     '<ul class="offenders">',
     ...rows.map(
@@ -19143,7 +19344,7 @@ function leaderboardSection(data) {
     "Adoption leaderboard",
     [
       `<div class="meta">On-system % by directory, worst-first \xB7 css/scss values only</div>`,
-      `<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
       labels
     ].join("")
   );
@@ -19155,9 +19356,21 @@ function libraryHealthSection(data) {
   }
   const { totals } = health;
   const bars = [
-    { label: "Override hotspots", value: totals.overrideHotspots },
-    { label: "Deprecated usage", value: totals.deprecatedUsage },
-    { label: "Detached candidates", value: totals.detachedCandidates }
+    {
+      label: "Override hotspots",
+      value: totals.overrideHotspots,
+      color: PALETTE2[3]
+    },
+    {
+      label: "Deprecated usage",
+      value: totals.deprecatedUsage,
+      color: PALETTE2[0]
+    },
+    {
+      label: "Detached candidates",
+      value: totals.detachedCandidates,
+      color: PALETTE2[4]
+    }
   ];
   const detachedCaveat = [
     '<div class="meta">',
@@ -19175,7 +19388,7 @@ function libraryHealthSection(data) {
   return panel(
     "Library health",
     [
-      `<div class="chart">${barChart(bars)}</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W })}</div>`,
       detachedCaveat,
       hotspots
     ].join("")
@@ -19214,10 +19427,13 @@ function changeFrequencySection(data) {
     label: bucket.kind,
     value: bucket.count
   }));
-  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `<div class="meta">Records per kind \xB7 ${escapeHtml(frequency.windowFirst)} \u2192 ${escapeHtml(frequency.windowLast)}</div>` : '<div class="meta">Records per kind</div>';
+  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `<div class="meta">Records per kind \xB7 ${escapeHtml(dayOf(frequency.windowFirst))} \u2192 ${escapeHtml(dayOf(frequency.windowLast))}</div>` : '<div class="meta">Records per kind</div>';
   return panel(
     "Change frequency",
-    [window, `<div class="chart">${barChart(bars)}</div>`].join("")
+    [
+      window,
+      `<div class="chart">${barChart(bars, { width: CARD_W, color: PALETTE2[1] })}</div>`
+    ].join("")
   );
 }
 function targetsSection(data) {
@@ -19244,7 +19460,10 @@ function targetsSection(data) {
   ].join("");
   return panel(
     "Targets / SLAs",
-    [`<div class="chart">${statusGrid(rows)}</div>`, legend].join("")
+    [
+      `<div class="chart">${statusGrid(rows, { width: CARD_W })}</div>`,
+      legend
+    ].join("")
   );
 }
 function parityTrendSection(data) {
@@ -19264,7 +19483,7 @@ function parityTrendSection(data) {
   return panel(
     "Parity trend",
     [
-      `<div class="chart">${lineChart(series)}</div>`,
+      `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[2]] })}</div>`,
       `<div class="meta">Component parity pass-% over ${dateRange}</div>`
     ].join("")
   );
@@ -19276,7 +19495,8 @@ function componentHealthSection(data) {
   }
   const bars = rows.map((row) => ({
     label: row.component,
-    value: row.healthScore
+    value: row.healthScore,
+    color: bandColor(row.healthScore)
   }));
   const offenders = rows.slice(0, 5);
   const list = [
@@ -19291,9 +19511,10 @@ function componentHealthSection(data) {
     "Component health",
     [
       '<div class="meta">Composite health per component, worst-first</div>',
-      `<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+      `<div class="chart">${barChart(bars, { width: WIDE_W, max: 100 })}</div>`,
       list
-    ].join("")
+    ].join(""),
+    "wide"
   );
 }
 function libraryHealthTrendSection(data) {
@@ -19316,7 +19537,7 @@ function libraryHealthTrendSection(data) {
   return panel(
     "Library health trend",
     [
-      `<div class="chart">${lineChart(series)}</div>`,
+      `<div class="chart">${lineChart(series, { width: CARD_W, height: 200, xLabels: dateEnds(trend), colors: [PALETTE2[3], PALETTE2[0], PALETTE2[4]] })}</div>`,
       `<div class="cols"><b>Overrides</b> \xB7 <b>Deprecated</b> \xB7 <b>Detached</b> over ${dateRange}</div>`
     ].join("")
   );
@@ -19336,9 +19557,10 @@ function migrationChecklistSection(data) {
     "Migration checklist",
     [
       `<div class="meta">${escapeHtml(String(checklist.sites.length))} call site${checklist.sites.length === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to</div>`,
-      `<ul class="calendar">${rows}</ul>`,
+      `<ul class="calendar stack">${rows}</ul>`,
       overflow
-    ].join("")
+    ].join(""),
+    "wide"
   );
 }
 function scoreVelocitySection(data) {
@@ -19358,7 +19580,7 @@ function scoreVelocitySection(data) {
   return panel(
     "Score velocity",
     [
-      `<div class="cols"><b>${escapeHtml(arrow3)} ${escapeHtml(signedDelta)}</b> over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</div>`,
+      `<div class="stat"><span class="stat-value ${direction === "up" ? "ok" : direction === "down" ? "error" : ""}">${escapeHtml(arrow3)} ${escapeHtml(signedDelta)}</span><span class="stat-sub">over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</span></div>`,
       `<div class="meta">${escapeHtml(direction)} \xB7 regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`
     ].join("")
   );
@@ -19370,7 +19592,8 @@ function ownershipLeaderboardSection(data) {
   }
   const bars = rows.map((row) => ({
     label: row.owner,
-    value: row.pct
+    value: row.pct,
+    color: bandColor(row.pct)
   }));
   const labels = [
     '<ul class="offenders">',
@@ -19387,7 +19610,7 @@ function ownershipLeaderboardSection(data) {
     "Ownership leaderboard",
     [
       `<div class="meta">On-system % by owner, worst-first \xB7 css/scss values only</div>`,
-      `<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
       labels
     ].join("")
   );
@@ -19418,7 +19641,11 @@ function audienceChangelogSection(data) {
       "</div>"
     ].join("");
   }).join("");
-  return panel("Changelog by audience", `<div class="cols">${columns}</div>`);
+  return panel(
+    "Changelog by audience",
+    `<div class="cols">${columns}</div>`,
+    "wide"
+  );
 }
 function frameImplementabilitySection(data) {
   const frame = data.frameImplementability;
@@ -19436,7 +19663,7 @@ function frameImplementabilitySection(data) {
   return panel(
     "Frame implementability",
     [
-      `<div class="chart" style="text-align:center">${donutGauge(pct5, { label: "Frame implementability" })}</div>`,
+      `<div class="chart center">${donutGauge(pct5, { label: "Frame implementability" })}</div>`,
       `<div class="meta">${escapeHtml(String(resolved))}/${escapeHtml(String(total))} requirements resolve to the system</div>`,
       gapList
     ].join("")
@@ -19447,8 +19674,8 @@ function releaseReadinessSection(data) {
   if (readiness === void 0 || readiness.checks.length === 0) {
     return panel("Release readiness", emptyState2("release-check"));
   }
-  const GO_FILL = "#16a34a";
-  const NO_GO_FILL = "#dc2626";
+  const GO_FILL = TONE.ok;
+  const NO_GO_FILL = TONE.error;
   const headerFill = readiness.go ? GO_FILL : NO_GO_FILL;
   const headerText = readiness.go ? "GO" : "NO-GO";
   const header = `<div class="meta"><span class="badge" style="background:${headerFill};color:#ffffff">${escapeHtml(headerText)}</span></div>`;
@@ -19469,10 +19696,10 @@ function dataFreshnessSection(data) {
     return panel("Data freshness", emptyState2("report"));
   }
   const BAND_FILL = {
-    green: "#16a34a",
-    amber: "#d97706",
-    red: "#dc2626",
-    unknown: "#57606a"
+    green: TONE.ok,
+    amber: TONE.warn,
+    red: TONE.error,
+    unknown: TONE.neutral
   };
   const ageLabel = (row) => {
     if (row.ageDays === void 0) return "never";
@@ -19521,20 +19748,138 @@ var SECTION_RENDERERS = {
   "release-readiness": releaseReadinessSection,
   "data-freshness": dataFreshnessSection
 };
+function signed2(delta) {
+  if (delta > 0) return `+${delta}`;
+  if (delta < 0) return `\u2212${Math.abs(delta)}`;
+  return "\xB10";
+}
+function kpis(data, selection) {
+  const on = new Set(selection);
+  const out = [];
+  const score = data.systemScore;
+  if (on.has("system-score") && score !== void 0) {
+    const velocity = data.scoreVelocity;
+    const first = score.trend[0]?.score;
+    const sub = velocity !== void 0 ? `${signed2(velocity.delta)} over ${velocity.windowDays} day${velocity.windowDays === 1 ? "" : "s"}` : first !== void 0 && score.trend.length > 1 ? `${signed2(score.current - first)} over ${score.trend.length} runs` : void 0;
+    out.push({
+      label: "System score",
+      value: String(score.current),
+      tone: toneFor(score.current),
+      ...sub === void 0 ? {} : { sub }
+    });
+  }
+  const adoption = data.adoptionTrend;
+  const lastAdoption = adoption?.[adoption.length - 1];
+  if (on.has("adoption-trend") && adoption !== void 0 && lastAdoption) {
+    const first = adoption[0];
+    out.push({
+      label: "On-system",
+      value: `${lastAdoption.pct}%`,
+      tone: toneFor(lastAdoption.pct),
+      ...first !== void 0 && adoption.length > 1 ? {
+        sub: `${signed2(lastAdoption.pct - first.pct)} pts since ${first.date}`
+      } : {}
+    });
+  }
+  if (on.has("readiness") && data.readiness !== void 0) {
+    out.push({
+      label: "Readiness",
+      value: String(data.readiness.score),
+      tone: toneFor(data.readiness.score),
+      sub: data.readiness.frameName
+    });
+  }
+  const parity = data.parityTrend;
+  const lastParity = parity?.[parity.length - 1];
+  if (on.has("parity-trend") && lastParity) {
+    out.push({
+      label: "Parity",
+      value: `${lastParity.pct}%`,
+      tone: toneFor(lastParity.pct),
+      sub: `as of ${lastParity.date}`
+    });
+  }
+  const drift = data.driftTrend;
+  const lastDrift = drift?.[drift.length - 1];
+  if (on.has("drift-trend") && lastDrift) {
+    out.push({
+      label: "Breaking drift",
+      value: String(lastDrift.breaking),
+      tone: lastDrift.breaking > 0 ? "error" : "ok",
+      sub: `${lastDrift.additive} additive \xB7 ${lastDrift.cosmetic} cosmetic`
+    });
+  }
+  const a11y = data.a11y;
+  if (on.has("a11y") && a11y !== void 0 && a11y.modes.length > 0) {
+    const failed = a11y.modes.reduce((sum, m) => sum + m.failed, 0);
+    out.push({
+      label: "Contrast failures",
+      value: String(failed),
+      tone: failed > 0 ? "error" : "ok",
+      sub: `${a11y.modes.length} mode${a11y.modes.length === 1 ? "" : "s"} \xB7 level ${a11y.level}`
+    });
+  }
+  const release = data.releaseReadiness;
+  if (on.has("release-readiness") && release !== void 0 && release.checks.length > 0) {
+    const passed = release.checks.filter((c2) => c2.pass).length;
+    out.push({
+      label: "Release",
+      value: release.go ? "Go" : "No-go",
+      tone: release.go ? "ok" : "error",
+      sub: `${passed}/${release.checks.length} checks pass`
+    });
+  }
+  return out;
+}
+function kpiStrip(items) {
+  if (items.length === 0) return "";
+  const cards = items.map(
+    (k4) => [
+      `<div class="kpi${k4.tone === void 0 ? "" : ` ${k4.tone}`}">`,
+      `<span class="kpi-label">${escapeHtml(k4.label)}</span>`,
+      `<span class="kpi-value">${escapeHtml(k4.value)}</span>`,
+      k4.sub === void 0 ? "" : `<span class="kpi-sub">${escapeHtml(k4.sub)}</span>`,
+      "</div>"
+    ].join("")
+  );
+  return `<div class="kpis">${cards.join("")}</div>`;
+}
+var MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
+function readableInstant(iso) {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso;
+  const hh = String(at.getUTCHours()).padStart(2, "0");
+  const mm = String(at.getUTCMinutes()).padStart(2, "0");
+  return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
+}
 function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   const project = escapeHtml(data.project);
-  const generatedAt = escapeHtml(data.generatedAt);
+  const generatedAt = escapeHtml(readableInstant(data.generatedAt));
   const viewLabel = options.viewLabel === void 0 ? "" : `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
   const sections = selection.map(
     (id) => id === "system-score" ? systemScoreSection(data, options.weightProfile) : SECTION_RENDERERS[id](data)
   );
   const body = [
-    '<div class="wrap">',
-    '<header class="dash">',
+    '<header class="dash"><div class="bar">',
     `<h1>ds-bridge report \xB7 <span class="project">${project}</span></h1>`,
     viewLabel,
     `<span class="generated">Generated ${generatedAt}</span>`,
-    "</header>",
+    "</div></header>",
+    '<div class="wrap">',
+    kpiStrip(kpis(data, selection)),
     '<div class="grid">',
     ...sections,
     "</div>",
@@ -20150,9 +20495,9 @@ function onSystemPct3(refs, literals) {
 }
 function aggregateHistory(stateDir, onWarning) {
   const historyPath = join22(stateDir, "history.jsonl");
-  let text;
+  let text2;
   try {
-    text = readFileSync19(historyPath, "utf8");
+    text2 = readFileSync19(historyPath, "utf8");
   } catch {
     return {
       driftTrend: [],
@@ -20175,7 +20520,7 @@ function aggregateHistory(stateDir, onWarning) {
   let leaderboard;
   let importCoverage;
   let libraryHealth;
-  const lines = text.split("\n");
+  const lines = text2.split("\n");
   for (let index = 0; index < lines.length; index += 1) {
     const trimmed = (lines[index] ?? "").trim();
     if (trimmed === "") continue;
@@ -20306,13 +20651,13 @@ function aggregateHistory(stateDir, onWarning) {
 }
 function computeSystemScore(stateDir, weights) {
   const historyPath = join22(stateDir, "history.jsonl");
-  let text;
+  let text2;
   try {
-    text = readFileSync19(historyPath, "utf8");
+    text2 = readFileSync19(historyPath, "utf8");
   } catch {
     return void 0;
   }
-  const outcome = scoreFromHistory(text, weights);
+  const outcome = scoreFromHistory(text2, weights);
   if (outcome.kind === "no-data") return void 0;
   return {
     current: outcome.current,
@@ -20382,13 +20727,13 @@ function computeFrameImplementability(stateDir) {
 function resolveOwnership(targetDir, ownership, ownershipFile) {
   if (ownership !== void 0) return ownership;
   if (ownershipFile === void 0) return void 0;
-  let text;
+  let text2;
   try {
-    text = readFileSync19(resolve11(targetDir, ownershipFile), "utf8");
+    text2 = readFileSync19(resolve11(targetDir, ownershipFile), "utf8");
   } catch {
     return void 0;
   }
-  return parseCodeowners(text);
+  return parseCodeowners(text2);
 }
 function byDirectoryFromRecords(records) {
   let byDirectory = [];
@@ -20431,15 +20776,15 @@ function computeDataFreshness(stateDir, nowIso, thresholds) {
 }
 function readParityRows(stateDir) {
   const registryPath = join22(stateDir, "registry.json");
-  let text;
+  let text2;
   try {
-    text = readFileSync19(registryPath, "utf8");
+    text2 = readFileSync19(registryPath, "utf8");
   } catch {
     return [];
   }
   let registry;
   try {
-    registry = JSON.parse(text);
+    registry = JSON.parse(text2);
   } catch {
     return [];
   }
@@ -20535,15 +20880,15 @@ function computeTargets(stateDir, targets, systemScore) {
 }
 function readParity(stateDir, onWarning) {
   const registryPath = join22(stateDir, "registry.json");
-  let text;
+  let text2;
   try {
-    text = readFileSync19(registryPath, "utf8");
+    text2 = readFileSync19(registryPath, "utf8");
   } catch {
     return void 0;
   }
   let registry;
   try {
-    registry = JSON.parse(text);
+    registry = JSON.parse(text2);
   } catch {
     onWarning(`warning: skipping unreadable registry ${registryPath}`);
     return void 0;
@@ -21156,14 +21501,14 @@ function runReport(path, options) {
   }
   if (format === "terminal") {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    const text = renderTerminalDashboard(data, selection.artifacts, {
+    const text2 = renderTerminalDashboard(data, selection.artifacts, {
       generatedAt,
       color,
       ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
     });
     if (options.out !== void 0) {
       const outPath2 = resolve11(options.out);
-      const written2 = writeDashboard(outPath2, text);
+      const written2 = writeDashboard(outPath2, text2);
       if (written2.kind === "error") {
         failReport(written2.message);
         return;
@@ -21171,7 +21516,7 @@ function runReport(path, options) {
       process.stdout.write(`${outPath2}
 `);
     } else {
-      process.stdout.write(`${text}
+      process.stdout.write(`${text2}
 `);
     }
     process.exitCode = 0;
@@ -21829,14 +22174,14 @@ function appendHistory(stateDir, record) {
 }
 function readDriftTrend(stateDir) {
   const historyPath = join23(stateDir, "history.jsonl");
-  let text;
+  let text2;
   try {
-    text = readFileSync20(historyPath, "utf8");
+    text2 = readFileSync20(historyPath, "utf8");
   } catch {
     return [];
   }
   const points = [];
-  for (const line of text.split("\n")) {
+  for (const line of text2.split("\n")) {
     const trimmed = line.trim();
     if (trimmed === "") continue;
     let record;
