@@ -6,8 +6,12 @@ function isNumericCell(value: string): boolean {
 	return trimmed !== "" && !Number.isNaN(Number(trimmed));
 }
 
+// SGR colour codes (`\x1b[31m` … `\x1b[39m`) take no columns on screen; a cell
+// that callers coloured must still pad to its visible width.
+const ANSI_SGR = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+
 function displayWidth(value: string): number {
-	return [...value].length;
+	return [...value.replace(ANSI_SGR, "")].length;
 }
 
 function pad(value: string, width: number, alignRight: boolean): string {

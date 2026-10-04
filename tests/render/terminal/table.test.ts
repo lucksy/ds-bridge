@@ -51,6 +51,23 @@ describe("renderTable", () => {
 		`);
 	});
 
+	it("aligns columns on visible width when cells carry ANSI colour codes", () => {
+		const red = (text: string) => `\u001b[31m${text}\u001b[39m`;
+		const out = renderTable(
+			["kind", "count"],
+			[
+				[red("exact"), "3"],
+				["near", "3"],
+			],
+			{ color: true },
+		);
+		const ansi = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+		const visible = out.replace(ansi, "");
+		const widths = new Set(visible.split("\n").map((line) => [...line].length));
+		expect(widths.size).toBe(1);
+		expect(visible).toContain("│ exact │     3 │");
+	});
+
 	it("treats a missing cell as empty without throwing", () => {
 		const out = renderTable(["A", "B"], [["x"]], { color: false });
 		expect(out).toMatchInlineSnapshot(`
