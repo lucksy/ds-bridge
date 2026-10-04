@@ -18937,7 +18937,7 @@ function systemScoreSection(data, weightProfile) {
 function driftSection(data) {
   const trend = data.driftTrend;
   if (trend === void 0 || trend.length === 0) {
-    return panel("Drift trend", emptyState2("diff --since <ref>"));
+    return panel("Drift trend", emptyState2("tokens check"));
   }
   const toSeries = (label, pick) => ({
     label,
@@ -18960,7 +18960,7 @@ function driftSection(data) {
 function lintSection(data) {
   const lint = data.lintSummary;
   if (lint === void 0) {
-    return panel("Lint violations", emptyState2("ds-lint"));
+    return panel("Lint violations", emptyState2("lint"));
   }
   const bars = [
     { label: "Exact", value: lint.byKind.exact },
@@ -18982,7 +18982,7 @@ function lintSection(data) {
 function readinessSection(data) {
   const readiness = data.readiness;
   if (readiness === void 0) {
-    return panel("Readiness", emptyState2("qa <frame>"));
+    return panel("Readiness", emptyState2("handoff <frame-url>"));
   }
   const deductions = readiness.deductions.length > 0 ? [
     '<ul class="deductions">',
@@ -19034,9 +19034,11 @@ function a11ySection(data) {
     value: m.failed
   }));
   const tallies = [
-    '<ul class="modes">',
+    // The offenders list's layout (mode left, tally right), and a real space
+    // between the two so the text reads "light 12 passed", not "light12 passed".
+    '<ul class="offenders modes">',
     ...a11y.modes.map(
-      (m) => `<li><code>${escapeHtml(m.mode)}</code><span class="count">${escapeHtml(String(m.passed))} passed \xB7 ${escapeHtml(String(m.failed))} failed</span></li>`
+      (m) => `<li><code>${escapeHtml(m.mode)}</code> <span class="count">${escapeHtml(String(m.passed))} passed \xB7 ${escapeHtml(String(m.failed))} failed</span></li>`
     ),
     "</ul>"
   ].join("");
@@ -19186,7 +19188,7 @@ var BREAKING_SOURCE_LABEL = {
 function breakingCalendarSection(data) {
   const calendar = data.breakingCalendar;
   if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel("Breaking calendar", emptyState2("tokens-check"));
+    return panel("Breaking calendar", emptyState2("tokens check"));
   }
   const rows = calendar.entries.map((entry) => {
     const badge2 = `<span class="badge">${escapeHtml(
@@ -19206,7 +19208,7 @@ function breakingCalendarSection(data) {
 function changeFrequencySection(data) {
   const frequency = data.changeFrequency;
   if (frequency === void 0 || frequency.byKind.length === 0) {
-    return panel("Change frequency", emptyState2("tokens-check"));
+    return panel("Change frequency", emptyState2("tokens check"));
   }
   const bars = frequency.byKind.map((bucket) => ({
     label: bucket.kind,
@@ -19393,7 +19395,7 @@ function ownershipLeaderboardSection(data) {
 function audienceChangelogSection(data) {
   const changelog = data.audienceChangelog;
   if (changelog === void 0 || changelog.slices.length === 0) {
-    return panel("Changelog by audience", emptyState2("ds-changelog"));
+    return panel("Changelog by audience", emptyState2("changelog"));
   }
   const columns = changelog.slices.map((slice) => {
     const badges = [
@@ -19649,7 +19651,7 @@ function systemScoreTerminalSection(data, color) {
 function driftTrendTerminalSection(data, _color) {
   const trend = data.driftTrend;
   if (trend === void 0 || trend.length === 0) {
-    return panel2("Drift trend", emptyState3("diff --since <ref>"));
+    return panel2("Drift trend", emptyState3("tokens check"));
   }
   const breaking = sparkline(trend.map((point) => point.breaking));
   const additive = sparkline(trend.map((point) => point.additive));
@@ -19668,7 +19670,7 @@ function driftTrendTerminalSection(data, _color) {
 function lintSummaryTerminalSection(data, color) {
   const lint = data.lintSummary;
   if (lint === void 0) {
-    return panel2("Lint violations", emptyState3("ds-lint"));
+    return panel2("Lint violations", emptyState3("lint"));
   }
   const bars = renderBarChart(
     [
@@ -19686,7 +19688,7 @@ ${offenders}`;
 function readinessTerminalSection(data, color) {
   const readiness = data.readiness;
   if (readiness === void 0) {
-    return panel2("Readiness", emptyState3("qa <frame>"));
+    return panel2("Readiness", emptyState3("handoff <frame-url>"));
   }
   const gauge = renderGauge(readiness.score, {
     label: "Readiness",
@@ -19834,7 +19836,7 @@ function libraryHealthTerminalSection(data, color) {
 function breakingCalendarTerminalSection(data, color) {
   const calendar = data.breakingCalendar;
   if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel2("Breaking calendar", emptyState3("tokens-check"));
+    return panel2("Breaking calendar", emptyState3("tokens check"));
   }
   const BREAKING_SOURCE_LABEL2 = {
     tokens: "tokens",
@@ -19854,7 +19856,7 @@ function breakingCalendarTerminalSection(data, color) {
 function changeFrequencyTerminalSection(data, color) {
   const frequency = data.changeFrequency;
   if (frequency === void 0 || frequency.byKind.length === 0) {
-    return panel2("Change frequency", emptyState3("tokens-check"));
+    return panel2("Change frequency", emptyState3("tokens check"));
   }
   const items = frequency.byKind.map((bucket) => ({
     label: bucket.kind,
@@ -20005,7 +20007,7 @@ function ownershipLeaderboardTerminalSection(data, color) {
 function audienceChangelogTerminalSection(data, color) {
   const changelog = data.audienceChangelog;
   if (changelog === void 0 || changelog.slices.length === 0) {
-    return panel2("Changelog by audience", emptyState3("ds-changelog"));
+    return panel2("Changelog by audience", emptyState3("changelog"));
   }
   const headers = ["audience", "breaking", "additive", "cosmetic", "recent"];
   const rows = changelog.slices.map((slice) => [
