@@ -18,12 +18,32 @@ import type {
 } from "../../engines/report/types.js";
 import type { LineSeries } from "./charts.js";
 import {
+	bandColor,
 	barChart,
 	donutGauge,
 	heatGrid,
 	lineChart,
+	PALETTE,
 	statusGrid,
+	TONE,
+	toneFor,
 } from "./charts.js";
+
+// Chart widths that match the cards they sit in (a 1200px page, 3 columns), so
+// the SVG draws at 1:1 and its 11–12px labels stay 11–12px. Narrower screens
+// scale them down.
+const CARD_W = 332;
+const WIDE_W = 720;
+
+/** The first and last date of a dated trend, for a line chart's x axis. */
+function dateEnds(trend: readonly { date: string }[]): [string, string] {
+	return [trend[0]?.date ?? "", trend[trend.length - 1]?.date ?? ""];
+}
+
+/** "2026-06-01T10:00:00.000Z" → "2026-06-01"; other text unchanged. */
+function dayOf(value: string): string {
+	return /^\d{4}-\d{2}-\d{2}T/.test(value) ? value.slice(0, 10) : value;
+}
 
 /** Escape the five XML-significant characters for safe HTML text/attributes. */
 export function escapeHtml(value: string): string {
@@ -35,19 +55,27 @@ export function escapeHtml(value: string): string {
 		.replace(/'/g, "&#39;");
 }
 
-// Palette + tokens inspired by docs/ds-bridge.html (mood only). System font
-// stacks keep the document fully offline — no web-font requests.
+// Harvest palette + tokens shared with the website and the insights pane.
+// System font stacks keep the document fully offline — no web-font requests.
 export const STYLE = `
 :root {
-	--bg: #f7f8fa;
+	--bg: #f6f5f1;
 	--surface: #ffffff;
-	--text: #1c2128;
-	--text-subtle: #57606a;
-	--border: #d8dee4;
-	--accent: #0d7d62;
-	--accent-soft: #e6f7f1;
-	--radius: 12px;
-	--shadow: 0 1px 2px rgba(28, 33, 40, 0.06), 0 4px 12px rgba(28, 33, 40, 0.04);
+	--text: #1f1e1b;
+	--text-subtle: #6b6a63;
+	--border: #e6e3da;
+	--track: #eceae4;
+	--accent: #a3384b;
+	--accent-soft: #f6e9ec;
+	--ok: #6f8a2e;
+	--warn: #c98a1e;
+	--error: #b83f4f;
+	--radius: 14px;
+	--bar: #2a2622;
+	--bar-text: #f6f5f1;
+	--bar-subtle: #b9b3a6;
+	--bar-accent: #e3a73b;
+	--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
 body {
@@ -55,102 +83,162 @@ body {
 	background: var(--bg);
 	color: var(--text);
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	font-size: 14px;
 	line-height: 1.5;
 	-webkit-font-smoothing: antialiased;
 }
-.wrap { max-width: 1080px; margin: 0 auto; padding: 32px 24px 64px; }
-header.dash {
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 72px; }
+header.dash { background: var(--bar); color: var(--bar-text); }
+header.dash .bar {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 18px 24px;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	justify-content: space-between;
-	gap: 8px 24px;
-	padding-bottom: 20px;
-	border-bottom: 1px solid var(--border);
-	margin-bottom: 28px;
+	gap: 6px 16px;
 }
-header.dash h1 { font-size: 22px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
-header.dash .project { color: var(--accent); }
-header.dash .generated { color: var(--text-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+header.dash h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; flex: 1 1 auto; }
+header.dash .project { color: var(--bar-accent); }
+header.dash .view {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bar-text);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 999px;
+	padding: 2px 10px;
+}
+header.dash .generated { color: var(--bar-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+.kpis {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.kpi {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 14px 16px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.kpi.ok { --tone: var(--ok); }
+.kpi.warn { --tone: var(--warn); }
+.kpi.error { --tone: var(--error); }
+.kpi-label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
+.kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--tone, var(--text)); font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-	gap: 20px;
+	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	grid-auto-flow: row dense;
+	align-items: start;
+	gap: 16px;
 }
 section.panel {
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	box-shadow: var(--shadow);
 	padding: 18px 20px 20px;
 	min-width: 0;
 }
+section.panel.wide { grid-column: span 2; }
+@media (max-width: 780px) { section.panel.wide { grid-column: auto; } }
 section.panel h2 {
-	font-size: 14px;
-	font-weight: 600;
-	margin: 0 0 14px;
+	font-size: 15px;
+	font-weight: 650;
+	margin: 0 0 12px;
 	color: var(--text);
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
+	letter-spacing: -0.005em;
 }
-.chart { overflow-x: auto; }
+.chart { overflow-x: auto; margin: 4px 0; }
 .chart svg { max-width: 100%; height: auto; display: block; }
+.chart.center svg { margin: 0 auto; }
+.split { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: center; }
+@media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
 .empty {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 4px;
 	align-items: flex-start;
 	justify-content: center;
-	min-height: 120px;
-	padding: 16px;
+	min-height: 96px;
+	padding: 14px 16px;
 	border: 1px dashed var(--border);
-	border-radius: 8px;
+	border-radius: 10px;
 	background: var(--bg);
 	color: var(--text-subtle);
+	font-size: 13px;
 }
 .empty .empty-title { font-weight: 600; color: var(--text); }
-.empty code {
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+.empty code, .meta code {
+	font-family: var(--mono);
 	font-size: 12px;
-	background: var(--accent-soft);
-	color: var(--accent);
-	padding: 2px 6px;
-	border-radius: 6px;
-}
-table.parity-key, .meta {
-	width: 100%;
-	margin-top: 12px;
-	font-size: 12px;
-	color: var(--text-subtle);
-	border-collapse: collapse;
-}
-.cols { margin-top: 10px; font-size: 12px; color: var(--text-subtle); }
-.cols b { color: var(--text); font-weight: 600; }
-table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
-table.weights th, table.weights td { padding: 4px 8px; border-top: 1px solid var(--border); text-align: left; }
-table.weights th { color: var(--text-subtle); font-weight: 600; }
-table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
-ul.offenders { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.offenders li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-top: 1px solid var(--border); }
-ul.offenders code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
-ul.offenders .count { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; }
-ul.deductions { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
-ul.deductions .pts { color: var(--text-subtle); font-variant-numeric: tabular-nums; }
-.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 10px; text-align: center; }
-ul.calendar { margin: 12px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.calendar li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-top: 1px solid var(--border); }
-ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
-ul.calendar .detail { color: var(--text-subtle); text-align: right; }
-.badge {
-	display: inline-block;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 11px;
 	background: var(--accent-soft);
 	color: var(--accent);
 	padding: 1px 6px;
 	border-radius: 6px;
+}
+table.parity-key, .meta {
+	width: 100%;
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: var(--text-subtle);
+	border-collapse: collapse;
+}
+.meta:first-of-type { margin-top: 0; }
+.cols { margin-top: 8px; font-size: 12px; color: var(--text-subtle); }
+.cols b { color: var(--text); font-weight: 600; }
+.cols:has(.audience-col) { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; margin-top: 0; }
+.audience-col .cols b { font-size: 13px; text-transform: capitalize; }
+.stat { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
+.stat-value { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat-value.ok { color: var(--ok); }
+.stat-value.error { color: var(--error); }
+.stat-sub { color: var(--text-subtle); font-size: 13px; }
+table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
+table.weights th, table.weights td { padding: 5px 8px; border-top: 1px solid var(--border); text-align: left; }
+table.weights th { color: var(--text-subtle); font-weight: 600; border-top: 0; }
+table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
+ul.offenders, ul.deductions, ul.calendar { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
+ul.offenders li, ul.calendar li {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	padding: 6px 0;
+	border-top: 1px solid var(--border);
+}
+ul.offenders code, ul.calendar code {
+	font-family: var(--mono);
+	color: var(--text);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+ul.offenders .count { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+ul.deductions .pts { color: var(--error); font-variant-numeric: tabular-nums; font-weight: 600; }
+.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 6px; text-align: center; }
+ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; white-space: nowrap; }
+ul.calendar .detail { color: var(--text-subtle); text-align: right; }
+ul.calendar.stack li { flex-direction: column; align-items: flex-start; gap: 1px; }
+ul.calendar.stack .detail { text-align: left; }
+.badge {
+	display: inline-block;
+	font-family: var(--mono);
+	font-size: 11px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 1px 7px;
+	border-radius: 999px;
 	margin-right: 4px;
+	white-space: nowrap;
 }
 `.trim();
 
@@ -164,10 +252,15 @@ function emptyState(command: string): string {
 	].join("");
 }
 
-/** Wrap section content in a titled panel. */
-function panel(title: string, body: string): string {
+/**
+ * Wrap section content in a titled panel. A `wide` panel spans two grid columns
+ * (trends, tables, long lists); its charts are drawn at {@link WIDE_W}.
+ */
+function panel(title: string, body: string, size?: "wide"): string {
 	return [
-		'<section class="panel">',
+		size === "wide"
+			? '<section class="panel wide">'
+			: '<section class="panel">',
 		`<h2>${escapeHtml(title)}</h2>`,
 		body,
 		"</section>",
@@ -250,11 +343,14 @@ function systemScoreSection(
 	return panel(
 		"System score",
 		[
-			`<div class="chart" style="text-align:center">${donutGauge(score.current, { label: "System score" })}</div>`,
-			`<div class="chart">${lineChart(trendSeries)}</div>`,
+			'<div class="split">',
+			`<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
+			`<div class="chart">${lineChart(trendSeries, { width: WIDE_W - 170, height: 180, colors: [PALETTE[0]] })}</div>`,
+			"</div>",
 			legend,
 			caption,
 		].join(""),
+		"wide",
 	);
 }
 
@@ -291,9 +387,10 @@ function driftSection(data: ReportData): string {
 	return panel(
 		"Drift trend",
 		[
-			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="chart">${lineChart(series, { width: WIDE_W, height: 220, xLabels: dateEnds(trend), colors: [TONE.error, TONE.ok, PALETTE[4]] })}</div>`,
 			`<div class="cols"><b>Breaking</b> · <b>Additive</b> · <b>Cosmetic</b> over ${dateRange}</div>`,
 		].join(""),
+		"wide",
 	);
 }
 
@@ -305,9 +402,9 @@ function lintSection(data: ReportData): string {
 	}
 
 	const bars = [
-		{ label: "Exact", value: lint.byKind.exact },
-		{ label: "Near", value: lint.byKind.near },
-		{ label: "Off-system", value: lint.byKind.offSystem },
+		{ label: "Exact", value: lint.byKind.exact, color: PALETTE[2] },
+		{ label: "Near", value: lint.byKind.near, color: PALETTE[3] },
+		{ label: "Off-system", value: lint.byKind.offSystem, color: PALETTE[0] },
 	];
 
 	const offenders =
@@ -324,7 +421,7 @@ function lintSection(data: ReportData): string {
 
 	return panel(
 		"Lint violations",
-		`<div class="chart">${barChart(bars)}</div>${offenders}`,
+		`<div class="chart">${barChart(bars, { width: CARD_W })}</div>${offenders}`,
 	);
 }
 
@@ -350,7 +447,7 @@ function readinessSection(data: ReportData): string {
 	return panel(
 		"Readiness",
 		[
-			`<div class="chart" style="text-align:center">${donutGauge(readiness.score, { label: "Readiness" })}</div>`,
+			`<div class="chart center">${donutGauge(readiness.score, { label: "Readiness" })}</div>`,
 			`<div class="frame-name">${escapeHtml(readiness.frameName)}</div>`,
 			deductions,
 		].join(""),
@@ -419,7 +516,7 @@ function a11ySection(data: ReportData): string {
 		"Contrast (a11y)",
 		[
 			`<div class="meta">Failures by mode · level ${escapeHtml(a11y.level)}</div>`,
-			`<div class="chart">${barChart(bars)}</div>`,
+			`<div class="chart">${barChart(bars, { width: CARD_W, color: TONE.error })}</div>`,
 			tallies,
 		].join(""),
 	);
@@ -433,16 +530,16 @@ function impactSection(data: ReportData): string {
 	}
 
 	const bars = [
-		{ label: "Breaking", value: impact.breaking },
-		{ label: "Additive", value: impact.additive },
-		{ label: "Cosmetic", value: impact.cosmetic },
+		{ label: "Breaking", value: impact.breaking, color: TONE.error },
+		{ label: "Additive", value: impact.additive, color: TONE.ok },
+		{ label: "Cosmetic", value: impact.cosmetic, color: PALETTE[4] },
 	];
 	const sites = impact.touchedCallSites;
 	const radius = `<div class="meta">Touches ${escapeHtml(String(sites))} call site${sites === 1 ? "" : "s"}</div>`;
 
 	return panel(
 		"Change impact",
-		`<div class="chart">${barChart(bars)}</div>${radius}`,
+		`<div class="chart">${barChart(bars, { width: CARD_W })}</div>${radius}`,
 	);
 }
 
@@ -476,7 +573,7 @@ function adoptionTrendSection(data: ReportData): string {
 	return panel(
 		"Adoption trend",
 		[
-			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE[1]] })}</div>`,
 			`<div class="meta">On-system % over ${dateRange} · css/scss values only (var(--…) vs literals)</div>`,
 		].join(""),
 	);
@@ -517,7 +614,7 @@ function importCoverageSection(data: ReportData): string {
 	return panel(
 		"Import coverage",
 		[
-			`<div class="chart" style="text-align:center">${donutGauge(pct, { label: "Import coverage" })}</div>`,
+			`<div class="chart center">${donutGauge(pct, { label: "Import coverage" })}</div>`,
 			`<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported · resolved .tsx imports only (a floor)</div>`,
 			list,
 			overflow,
@@ -536,10 +633,10 @@ function leaderboardSection(data: ReportData): string {
 		return panel("Adoption leaderboard", emptyState("lint <dir>"));
 	}
 
-	const bars = rows.map((row) => ({
-		label: row.dir,
-		value: onSystemPct(row.refs, row.literals),
-	}));
+	const bars = rows.map((row) => {
+		const pct = onSystemPct(row.refs, row.literals);
+		return { label: row.dir, value: pct, color: bandColor(pct) };
+	});
 
 	// Per-directory pct labels (the bar widths are the same percentages).
 	const labels = [
@@ -557,7 +654,7 @@ function leaderboardSection(data: ReportData): string {
 		"Adoption leaderboard",
 		[
 			`<div class="meta">On-system % by directory, worst-first · css/scss values only</div>`,
-			`<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+			`<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
 			labels,
 		].join(""),
 	);
@@ -579,9 +676,21 @@ function libraryHealthSection(data: ReportData): string {
 
 	const { totals } = health;
 	const bars = [
-		{ label: "Override hotspots", value: totals.overrideHotspots },
-		{ label: "Deprecated usage", value: totals.deprecatedUsage },
-		{ label: "Detached candidates", value: totals.detachedCandidates },
+		{
+			label: "Override hotspots",
+			value: totals.overrideHotspots,
+			color: PALETTE[3],
+		},
+		{
+			label: "Deprecated usage",
+			value: totals.deprecatedUsage,
+			color: PALETTE[0],
+		},
+		{
+			label: "Detached candidates",
+			value: totals.detachedCandidates,
+			color: PALETTE[4],
+		},
 	];
 
 	// The detached-candidate caveat lives INLINE adjacent to the detached count:
@@ -611,7 +720,7 @@ function libraryHealthSection(data: ReportData): string {
 	return panel(
 		"Library health",
 		[
-			`<div class="chart">${barChart(bars)}</div>`,
+			`<div class="chart">${barChart(bars, { width: CARD_W })}</div>`,
 			detachedCaveat,
 			hotspots,
 		].join(""),
@@ -675,12 +784,15 @@ function changeFrequencySection(data: ReportData): string {
 
 	const window =
 		frequency.windowFirst !== undefined && frequency.windowLast !== undefined
-			? `<div class="meta">Records per kind · ${escapeHtml(frequency.windowFirst)} → ${escapeHtml(frequency.windowLast)}</div>`
+			? `<div class="meta">Records per kind · ${escapeHtml(dayOf(frequency.windowFirst))} → ${escapeHtml(dayOf(frequency.windowLast))}</div>`
 			: '<div class="meta">Records per kind</div>';
 
 	return panel(
 		"Change frequency",
-		[window, `<div class="chart">${barChart(bars)}</div>`].join(""),
+		[
+			window,
+			`<div class="chart">${barChart(bars, { width: CARD_W, color: PALETTE[1] })}</div>`,
+		].join(""),
 	);
 }
 
@@ -728,7 +840,10 @@ function targetsSection(data: ReportData): string {
 
 	return panel(
 		"Targets / SLAs",
-		[`<div class="chart">${statusGrid(rows)}</div>`, legend].join(""),
+		[
+			`<div class="chart">${statusGrid(rows, { width: CARD_W })}</div>`,
+			legend,
+		].join(""),
 	);
 }
 
@@ -758,7 +873,7 @@ function parityTrendSection(data: ReportData): string {
 	return panel(
 		"Parity trend",
 		[
-			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE[2]] })}</div>`,
 			`<div class="meta">Component parity pass-% over ${dateRange}</div>`,
 		].join(""),
 	);
@@ -781,6 +896,7 @@ function componentHealthSection(data: ReportData): string {
 	const bars = rows.map((row) => ({
 		label: row.component,
 		value: row.healthScore,
+		color: bandColor(row.healthScore),
 	}));
 
 	// The worst few components (already worst-first) with their joined issues.
@@ -799,9 +915,10 @@ function componentHealthSection(data: ReportData): string {
 		"Component health",
 		[
 			'<div class="meta">Composite health per component, worst-first</div>',
-			`<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+			`<div class="chart">${barChart(bars, { width: WIDE_W, max: 100 })}</div>`,
 			list,
 		].join(""),
+		"wide",
 	);
 }
 
@@ -843,7 +960,7 @@ function libraryHealthTrendSection(data: ReportData): string {
 	return panel(
 		"Library health trend",
 		[
-			`<div class="chart">${lineChart(series)}</div>`,
+			`<div class="chart">${lineChart(series, { width: CARD_W, height: 200, xLabels: dateEnds(trend), colors: [PALETTE[3], PALETTE[0], PALETTE[4]] })}</div>`,
 			`<div class="cols"><b>Overrides</b> · <b>Deprecated</b> · <b>Detached</b> over ${dateRange}</div>`,
 		].join(""),
 	);
@@ -879,9 +996,10 @@ function migrationChecklistSection(data: ReportData): string {
 		"Migration checklist",
 		[
 			`<div class="meta">${escapeHtml(String(checklist.sites.length))} call site${checklist.sites.length === 1 ? "" : "s"} to migrate · file:line · subject · from → to</div>`,
-			`<ul class="calendar">${rows}</ul>`,
+			`<ul class="calendar stack">${rows}</ul>`,
 			overflow,
 		].join(""),
+		"wide",
 	);
 }
 
@@ -921,7 +1039,7 @@ function scoreVelocitySection(data: ReportData): string {
 	return panel(
 		"Score velocity",
 		[
-			`<div class="cols"><b>${escapeHtml(arrow)} ${escapeHtml(signedDelta)}</b> over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</div>`,
+			`<div class="stat"><span class="stat-value ${direction === "up" ? "ok" : direction === "down" ? "error" : ""}">${escapeHtml(arrow)} ${escapeHtml(signedDelta)}</span><span class="stat-sub">over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</span></div>`,
 			`<div class="meta">${escapeHtml(direction)} · regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`,
 		].join(""),
 	);
@@ -944,6 +1062,7 @@ function ownershipLeaderboardSection(data: ReportData): string {
 	const bars = rows.map((row) => ({
 		label: row.owner,
 		value: row.pct,
+		color: bandColor(row.pct),
 	}));
 
 	// Per-owner pct labels with the refs/literals split (the bar widths are the
@@ -965,7 +1084,7 @@ function ownershipLeaderboardSection(data: ReportData): string {
 		"Ownership leaderboard",
 		[
 			`<div class="meta">On-system % by owner, worst-first · css/scss values only</div>`,
-			`<div class="chart">${barChart(bars, { color: "#dc2626" })}</div>`,
+			`<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
 			labels,
 		].join(""),
 	);
@@ -1013,7 +1132,11 @@ function audienceChangelogSection(data: ReportData): string {
 		})
 		.join("");
 
-	return panel("Changelog by audience", `<div class="cols">${columns}</div>`);
+	return panel(
+		"Changelog by audience",
+		`<div class="cols">${columns}</div>`,
+		"wide",
+	);
 }
 
 /**
@@ -1045,7 +1168,7 @@ function frameImplementabilitySection(data: ReportData): string {
 	return panel(
 		"Frame implementability",
 		[
-			`<div class="chart" style="text-align:center">${donutGauge(pct, { label: "Frame implementability" })}</div>`,
+			`<div class="chart center">${donutGauge(pct, { label: "Frame implementability" })}</div>`,
 			`<div class="meta">${escapeHtml(String(resolved))}/${escapeHtml(String(total))} requirements resolve to the system</div>`,
 			gapList,
 		].join(""),
@@ -1066,9 +1189,9 @@ function releaseReadinessSection(data: ReportData): string {
 		return panel("Release readiness", emptyState("release-check"));
 	}
 
-	// RAG palette (mirrors badge.ts BAND_GREEN/BAND_RED): green = go, red = no-go.
-	const GO_FILL = "#16a34a";
-	const NO_GO_FILL = "#dc2626";
+	// The harvest tones: ok = go, error = no-go.
+	const GO_FILL = TONE.ok;
+	const NO_GO_FILL = TONE.error;
 
 	const headerFill = readiness.go ? GO_FILL : NO_GO_FILL;
 	const headerText = readiness.go ? "GO" : "NO-GO";
@@ -1110,10 +1233,10 @@ function dataFreshnessSection(data: ReportData): string {
 	// "unknown" (never run) gets a neutral subtle fill so it reads as absence,
 	// not a verdict. Inlined here because the section may import no new modules.
 	const BAND_FILL: Record<"green" | "amber" | "red" | "unknown", string> = {
-		green: "#16a34a",
-		amber: "#d97706",
-		red: "#dc2626",
-		unknown: "#57606a",
+		green: TONE.ok,
+		amber: TONE.warn,
+		red: TONE.error,
+		unknown: TONE.neutral,
 	};
 
 	// Human age label: never-run → "never"; 0 days → "today"; else "Nd ago".
@@ -1174,6 +1297,168 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"data-freshness": dataFreshnessSection,
 };
 
+/** One headline number in the summary strip above the cards. */
+interface Kpi {
+	label: string;
+	value: string;
+	sub?: string;
+	tone?: "ok" | "warn" | "error";
+}
+
+/** "+3" / "−3" / "±0" — a signed change that never reads ambiguously. */
+function signed(delta: number): string {
+	if (delta > 0) return `+${delta}`;
+	if (delta < 0) return `−${Math.abs(delta)}`;
+	return "±0";
+}
+
+/**
+ * The headline numbers for the strip above the cards: one per selected artifact
+ * that has data, in a fixed order, each toned by its band. Text only, no SVG.
+ * Empty when nothing selected carries a headline number.
+ */
+function kpis(data: ReportData, selection: readonly ArtifactId[]): Kpi[] {
+	const on = new Set(selection);
+	const out: Kpi[] = [];
+
+	const score = data.systemScore;
+	if (on.has("system-score") && score !== undefined) {
+		const velocity = data.scoreVelocity;
+		const first = score.trend[0]?.score;
+		const sub =
+			velocity !== undefined
+				? `${signed(velocity.delta)} over ${velocity.windowDays} day${velocity.windowDays === 1 ? "" : "s"}`
+				: first !== undefined && score.trend.length > 1
+					? `${signed(score.current - first)} over ${score.trend.length} runs`
+					: undefined;
+		out.push({
+			label: "System score",
+			value: String(score.current),
+			tone: toneFor(score.current),
+			...(sub === undefined ? {} : { sub }),
+		});
+	}
+
+	const adoption = data.adoptionTrend;
+	const lastAdoption = adoption?.[adoption.length - 1];
+	if (on.has("adoption-trend") && adoption !== undefined && lastAdoption) {
+		const first = adoption[0];
+		out.push({
+			label: "On-system",
+			value: `${lastAdoption.pct}%`,
+			tone: toneFor(lastAdoption.pct),
+			...(first !== undefined && adoption.length > 1
+				? {
+						sub: `${signed(lastAdoption.pct - first.pct)} pts since ${first.date}`,
+					}
+				: {}),
+		});
+	}
+
+	if (on.has("readiness") && data.readiness !== undefined) {
+		out.push({
+			label: "Readiness",
+			value: String(data.readiness.score),
+			tone: toneFor(data.readiness.score),
+			sub: data.readiness.frameName,
+		});
+	}
+
+	const parity = data.parityTrend;
+	const lastParity = parity?.[parity.length - 1];
+	if (on.has("parity-trend") && lastParity) {
+		out.push({
+			label: "Parity",
+			value: `${lastParity.pct}%`,
+			tone: toneFor(lastParity.pct),
+			sub: `as of ${lastParity.date}`,
+		});
+	}
+
+	const drift = data.driftTrend;
+	const lastDrift = drift?.[drift.length - 1];
+	if (on.has("drift-trend") && lastDrift) {
+		out.push({
+			label: "Breaking drift",
+			value: String(lastDrift.breaking),
+			tone: lastDrift.breaking > 0 ? "error" : "ok",
+			sub: `${lastDrift.additive} additive · ${lastDrift.cosmetic} cosmetic`,
+		});
+	}
+
+	const a11y = data.a11y;
+	if (on.has("a11y") && a11y !== undefined && a11y.modes.length > 0) {
+		const failed = a11y.modes.reduce((sum, m) => sum + m.failed, 0);
+		out.push({
+			label: "Contrast failures",
+			value: String(failed),
+			tone: failed > 0 ? "error" : "ok",
+			sub: `${a11y.modes.length} mode${a11y.modes.length === 1 ? "" : "s"} · level ${a11y.level}`,
+		});
+	}
+
+	const release = data.releaseReadiness;
+	if (
+		on.has("release-readiness") &&
+		release !== undefined &&
+		release.checks.length > 0
+	) {
+		const passed = release.checks.filter((c) => c.pass).length;
+		out.push({
+			label: "Release",
+			value: release.go ? "Go" : "No-go",
+			tone: release.go ? "ok" : "error",
+			sub: `${passed}/${release.checks.length} checks pass`,
+		});
+	}
+
+	return out;
+}
+
+/** The summary strip's markup; "" when there is nothing to headline. */
+function kpiStrip(items: readonly Kpi[]): string {
+	if (items.length === 0) return "";
+	const cards = items.map((k) =>
+		[
+			`<div class="kpi${k.tone === undefined ? "" : ` ${k.tone}`}">`,
+			`<span class="kpi-label">${escapeHtml(k.label)}</span>`,
+			`<span class="kpi-value">${escapeHtml(k.value)}</span>`,
+			k.sub === undefined
+				? ""
+				: `<span class="kpi-sub">${escapeHtml(k.sub)}</span>`,
+			"</div>",
+		].join(""),
+	);
+	return `<div class="kpis">${cards.join("")}</div>`;
+}
+
+const MONTHS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
+
+/**
+ * "2026-10-04T16:00:00.000Z" → "4 Oct 2026, 16:00 UTC". Always UTC, so the
+ * output is the same on every machine; text that isn't a date passes through.
+ */
+export function readableInstant(iso: string): string {
+	const at = new Date(iso);
+	if (Number.isNaN(at.getTime())) return iso;
+	const hh = String(at.getUTCHours()).padStart(2, "0");
+	const mm = String(at.getUTCMinutes()).padStart(2, "0");
+	return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
+}
+
 /** Optional rendering controls that do not affect which sections appear. */
 export interface RenderDashboardOptions {
 	/** Active view name; rendered in the document header when supplied. */
@@ -1210,7 +1495,7 @@ export function renderDashboard(
 	options: RenderDashboardOptions = {},
 ): string {
 	const project = escapeHtml(data.project);
-	const generatedAt = escapeHtml(data.generatedAt);
+	const generatedAt = escapeHtml(readableInstant(data.generatedAt));
 
 	const viewLabel =
 		options.viewLabel === undefined
@@ -1227,12 +1512,13 @@ export function renderDashboard(
 	);
 
 	const body = [
-		'<div class="wrap">',
-		'<header class="dash">',
+		'<header class="dash"><div class="bar">',
 		`<h1>ds-bridge report · <span class="project">${project}</span></h1>`,
 		viewLabel,
 		`<span class="generated">Generated ${generatedAt}</span>`,
-		"</header>",
+		"</div></header>",
+		'<div class="wrap">',
+		kpiStrip(kpis(data, selection)),
 		'<div class="grid">',
 		...sections,
 		"</div>",

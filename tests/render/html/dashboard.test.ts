@@ -231,10 +231,10 @@ describe("renderDashboard — document shape", () => {
 		expect(countMatches(html, /<\/body>/gi)).toBe(1);
 	});
 
-	it("renders the project name and generatedAt verbatim in the header", () => {
+	it("renders the project name and generatedAt (as a UTC date) in the header", () => {
 		const html = renderDashboard(fullData);
 		expect(html).toContain("acme-design-system");
-		expect(html).toContain("2026-06-05T12:00:00.000Z");
+		expect(html).toContain("Generated 5 Jun 2026, 12:00 UTC");
 	});
 
 	it("includes an inline <style> block", () => {
@@ -673,7 +673,7 @@ describe("renderDashboard — default-call equivalence", () => {
 
 	it("an empty selection renders no sections at all", () => {
 		const html = renderDashboard(fullData, []);
-		expect(countMatches(html, /<section class="panel">/g)).toBe(0);
+		expect(countMatches(html, /<section class="panel[ "]/g)).toBe(0);
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
 		expect(html).not.toMatch(/No data yet/i);
 		// the document scaffold and header still render.
@@ -755,7 +755,7 @@ describe("renderDashboard — selection order drives section order", () => {
 		expect(driftAt).toBeGreaterThan(-1);
 		expect(parityAt).toBeLessThan(driftAt);
 		// exactly the two selected sections, nothing else.
-		expect(countMatches(html, /<section class="panel">/g)).toBe(2);
+		expect(countMatches(html, /<section class="panel[ "]/g)).toBe(2);
 	});
 
 	it("renders only the subset's sections (no other artifact leaks in)", () => {

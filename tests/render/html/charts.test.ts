@@ -365,7 +365,7 @@ describe("inline snapshots (one tiny SVG per chart type)", () => {
 				{ width: 100, height: 60, colors: ["#1f77b4"] },
 			),
 		).toMatchInlineSnapshot(
-			`"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="60" viewBox="0 0 100 60" role="img"><title>Line chart: s</title><line x1="40" y1="32" x2="84" y2="32" stroke="#9ca3af" stroke-width="0.5" /><text x="34" y="35" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="10">0</text><line x1="40" y1="28" x2="84" y2="28" stroke="#9ca3af" stroke-width="0.5" /><text x="34" y="31" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="10">2.5</text><line x1="40" y1="24" x2="84" y2="24" stroke="#9ca3af" stroke-width="0.5" /><text x="34" y="27" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="10">5</text><line x1="40" y1="20" x2="84" y2="20" stroke="#9ca3af" stroke-width="0.5" /><text x="34" y="23" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="10">7.5</text><line x1="40" y1="16" x2="84" y2="16" stroke="#9ca3af" stroke-width="0.5" /><text x="34" y="19" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="10">10</text><polyline fill="none" stroke="#1f77b4" stroke-width="2" points="40,32 84,16" /></svg>"`,
+			`"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="60" viewBox="0 0 100 60" role="img"><title>Line chart: s</title><line x1="36" y1="46" x2="86" y2="46" stroke="#e6e4dd" stroke-width="1" /><text x="29" y="50" text-anchor="end" fill="#7a7a72" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="11">0</text><line x1="36" y1="37.5" x2="86" y2="37.5" stroke="#e6e4dd" stroke-width="1" /><text x="29" y="41.5" text-anchor="end" fill="#7a7a72" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="11">2.5</text><line x1="36" y1="29" x2="86" y2="29" stroke="#e6e4dd" stroke-width="1" /><text x="29" y="33" text-anchor="end" fill="#7a7a72" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="11">5</text><line x1="36" y1="20.5" x2="86" y2="20.5" stroke="#e6e4dd" stroke-width="1" /><text x="29" y="24.5" text-anchor="end" fill="#7a7a72" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="11">7.5</text><line x1="36" y1="12" x2="86" y2="12" stroke="#e6e4dd" stroke-width="1" /><text x="29" y="16" text-anchor="end" fill="#7a7a72" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="11">10</text><polygon points="36,46 36,46 86,12 86,46" fill="#1f77b4" fill-opacity="0.12" /><polyline fill="none" stroke="#1f77b4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="36,46 86,12" /><circle cx="36" cy="46" r="3" fill="#ffffff" stroke="#1f77b4" stroke-width="2" /><circle cx="86" cy="12" r="3" fill="#ffffff" stroke="#1f77b4" stroke-width="2" /></svg>"`,
 		);
 	});
 
@@ -373,13 +373,13 @@ describe("inline snapshots (one tiny SVG per chart type)", () => {
 		expect(
 			barChart([{ label: "a", value: 4 }], { width: 200, height: 40 }),
 		).toMatchInlineSnapshot(
-			`"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40" role="img"><title>Bar chart: a</title><text x="74" y="23" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="11">a</text><rect class="bar" x="80" y="12" width="80" height="16" fill="#2563eb" rx="2" /><text x="164" y="23" text-anchor="start" fill="#374151" font-family="sans-serif" font-size="11">4</text></svg>"`,
+			`"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40" role="img"><title>Bar chart: a</title><g><text x="29" y="21" text-anchor="end" fill="#2a2a27" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="12">a</text></g><rect x="37" y="10" width="144" height="14" fill="#eceae4" rx="7" /><rect class="bar" x="37" y="10" width="144" height="14" fill="#a3384b" rx="7" /><text x="189" y="21" text-anchor="start" fill="#2a2a27" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="12" font-weight="600">4</text></svg>"`,
 		);
 	});
 
 	it("donutGauge", () => {
 		expect(donutGauge(50, { label: "G" })).toMatchInlineSnapshot(
-			`"<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img"><title>G: 50%</title><circle cx="60" cy="60" r="54" fill="none" stroke="#e5e7eb" stroke-width="12" /><circle cx="60" cy="60" r="54" fill="none" stroke="#2563eb" stroke-width="12" stroke-linecap="round" stroke-dasharray="169.646 169.646" transform="rotate(-90 60 60)" /><text x="60" y="60" text-anchor="middle" dominant-baseline="central" fill="#374151" font-family="sans-serif" font-size="24" font-weight="600">50</text></svg>"`,
+			`"<svg xmlns="http://www.w3.org/2000/svg" width="132" height="132" viewBox="0 0 132 132" role="img"><title>G: 50%</title><circle cx="66" cy="66" r="59" fill="none" stroke="#eceae4" stroke-width="14" /><circle cx="66" cy="66" r="59" fill="none" stroke="#c98a1e" stroke-width="14" stroke-linecap="round" stroke-dasharray="185.354 185.354" transform="rotate(-90 66 66)" /><text x="66" y="66" text-anchor="middle" dominant-baseline="central" fill="#2a2a27" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="30" font-weight="700">50</text></svg>"`,
 		);
 	});
 
@@ -390,7 +390,7 @@ describe("inline snapshots (one tiny SVG per chart type)", () => {
 				height: 40,
 			}),
 		).toMatchInlineSnapshot(
-			`"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40" viewBox="0 0 100 40" role="img"><title>Heat grid: r</title><text x="66" y="21" text-anchor="end" fill="#374151" font-family="sans-serif" font-size="11">r</text><rect class="cell" x="72" y="4" width="26" height="26" fill="#2563eb" fill-opacity="0.5" rx="2" /></svg>"`,
+			`"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="40" viewBox="0 0 100 40" role="img"><title>Heat grid: r</title><text x="31" y="20" text-anchor="end" fill="#2a2a27" font-family="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif" font-size="12">r</text><rect x="39" y="4" width="23" height="23" fill="#eceae4" rx="4" /><rect class="cell" x="39" y="4" width="23" height="23" fill="#a3384b" fill-opacity="0.5" rx="4" /></svg>"`,
 		);
 	});
 });

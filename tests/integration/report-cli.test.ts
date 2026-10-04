@@ -531,7 +531,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// renderer lists the call site(s) to migrate.
 		expect(html).toContain("Migration checklist");
 		expect(html).toContain("call site");
-		expect(html).toContain('<ul class="calendar">');
+		expect(html).toContain('<ul class="calendar stack">');
 	});
 
 	it("C7/M2.2: an impact line WITHOUT sites leaves the migration-checklist empty", async () => {

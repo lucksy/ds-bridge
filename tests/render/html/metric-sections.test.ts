@@ -57,9 +57,9 @@ describe("targetsSection — Targets / SLAs", () => {
 		// the new statusGrid chart is present
 		expect(html).toMatch(/<svg\b/);
 		expect(html).toMatch(/Status grid:/);
-		// one band-colored pill per band (green / amber / red constants + neutral)
-		expect(html).toMatch(/fill="#16a34a"/); // green
-		expect(html).toMatch(/fill="#dc2626"/); // red
+		// one band-colored pill per band (harvest ok / error tones + neutral)
+		expect(html).toMatch(/fill="#6f8a2e"/); // green
+		expect(html).toMatch(/fill="#b83f4f"/); // red
 		// the unmeasured verdict reads as a dash, target+op text present
 		expect(html).toMatch(/&#8212;|—/);
 		expect(html).toMatch(/&gt;= 80|>= 80/);
@@ -256,7 +256,7 @@ describe("migrationChecklistSection (migration-checklist artifact)", () => {
 		expect(html).toContain("Migration checklist");
 		expect(html).not.toContain("No data yet");
 		// The list markup and a site's file:line render.
-		expect(html).toContain('<ul class="calendar">');
+		expect(html).toContain('<ul class="calendar stack">');
 		expect(html).toContain("src/Button.tsx:42");
 		expect(html).toContain("src/Card.tsx:7");
 		// from → to arrow and subject are present.
@@ -622,9 +622,9 @@ describe("dataFreshnessSection (data-freshness artifact)", () => {
 		expect(html).toContain("today");
 		expect(html).toContain("never");
 
-		// Band-colored pills using the RAG palette + neutral unknown.
-		expect(html).toContain("background:#d97706");
-		expect(html).toContain("background:#16a34a");
-		expect(html).toContain("background:#57606a");
+		// Band-colored pills in the harvest tones + neutral unknown.
+		expect(html).toContain("background:#c98a1e");
+		expect(html).toContain("background:#6f8a2e");
+		expect(html).toContain("background:#8a8f98");
 	});
 });
