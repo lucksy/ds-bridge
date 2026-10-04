@@ -1,8 +1,8 @@
 import { init, use } from 'echarts/core'
-import { BarChart, LineChart, PieChart } from 'echarts/charts'
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
+import { BarChart, GaugeChart, HeatmapChart, LineChart, PieChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, TooltipComponent, VisualMapComponent } from 'echarts/components'
 import { SVGRenderer } from 'echarts/renderers'
-use([BarChart, LineChart, PieChart, GridComponent, LegendComponent, TooltipComponent, SVGRenderer])
+use([BarChart, GaugeChart, HeatmapChart, LineChart, PieChart, GridComponent, LegendComponent, TooltipComponent, VisualMapComponent, SVGRenderer])
 /** Renders one ECharts option to an SVG string, without a DOM. */
 export function renderSvg(option, width, height) {
   const chart = init(null, null, { renderer: 'svg', ssr: true, width, height })

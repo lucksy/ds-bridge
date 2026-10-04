@@ -123,8 +123,8 @@ describe("drawing", () => {
 			60,
 		);
 		expect(tokens?.percent.trim()).toBe("90%");
-		expect(tokens?.color).toBe("#7a9e6b");
-		expect(raw?.color).toBe("#c8605a");
+		expect(tokens?.color).toBe("#8a9a4a");
+		expect(raw?.color).toBe("#b4505c");
 		expect(raw?.track).toMatch(/^░+$/);
 		expect(
 			[...(tokens?.fill ?? "")].length + [...(tokens?.track ?? "")].length,
@@ -139,7 +139,7 @@ describe("drawing", () => {
 		});
 		expect(style).toEqual({ palette: "nivo", share: "pie", radius: 12 });
 		expect(chartStyleFrom({ insights_palette: "neon" }).palette).toBe(
-			"echarts",
+			"harvest",
 		);
 		const bar = chartSvg(
 			{
@@ -207,7 +207,8 @@ describe("the mod", () => {
 		expect(text).toContain("Token adoption: 40%");
 		expect(text).toContain("ds-bridge check scores, run by run");
 		expect(text).toContain("Deprecated components still in use");
-		expect(text).toMatch(/tokens\s+[█▏▎▍▌▋▊▉]+░*\s+2\s+40%/);
+		expect(text).toMatch(/Token adoption\n {2}[█▏▎▍▌▋▊▉]+░+ 40%/);
+		expect(text).toMatch(/■ tokens {2}40% · 2/);
 	});
 
 	test("a missing token is one note, and the other sources still draw", async ($, on) => {
@@ -265,7 +266,7 @@ describe("the mod", () => {
 
 		const terminal = await $.ui.mount({ ...PANE, surface: "terminal" });
 		expect((await terminal.findAll({ type: "Svg" })).length).toBe(0);
-		expect(await terminal.find({ type: "Text", text: /░/ })).toBeDefined();
+		expect(await terminal.find({ type: "Text", text: /■/ })).toBeDefined();
 		await terminal.unmount();
 		expect(
 			reportText({

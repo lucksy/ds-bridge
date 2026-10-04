@@ -40,9 +40,9 @@
 		"insights_palette": {
 			"type": "string",
 			"title": "Insights pane: chart palette",
-			"description": "Colours of the Desktop app's charts in /ds-insights: echarts | nivo | ds-bridge | mono",
-			"default": "echarts",
-			"options": ["echarts", "nivo", "ds-bridge", "mono"]
+			"description": "Colours of the insights pane's charts in /ds-insights: harvest | nivo | echarts | ds-bridge | mono",
+			"default": "harvest",
+			"options": ["harvest", "nivo", "echarts", "ds-bridge", "mono"]
 		},
 		"insights_share_style": {
 			"type": "string",

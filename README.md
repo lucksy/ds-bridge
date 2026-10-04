@@ -105,7 +105,7 @@ When you enable the plugin, Claude Code prompts for these options natively (no
 | `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file. If unset, DS Bridge discovers it from common paths. |
 | `report_style` | string | `both` | Report output: `html`, `terminal`, or `both`. |
 | `readiness_threshold` | number (0–100) | `80` | The handoff-readiness gate `/ds-bridge:handoff-qa` must clear for a frame to pass. |
-| `insights_palette` | string | `echarts` | Chart colours in the [insights pane](#insights-pane-claude-code-mod) on the Claude Desktop app: `echarts`, `nivo`, `ds-bridge` or `mono`. |
+| `insights_palette` | string | `harvest` | Chart colours in the [insights pane](#insights-pane-claude-code-mod): `harvest` (autumn berry, olive, mustard, burnt orange, khaki, sage), `nivo`, `echarts`, `ds-bridge` or `mono`. |
 | `insights_share_style` | string | `donut` | How the insights pane draws the parts of a whole on the Desktop app: `donut`, `pie` or `bar`. |
 | `insights_corner_radius` | number (0–12) | `4` | Rounding of bars and slices in the Desktop app's insights charts, in pixels. |
 
@@ -217,11 +217,20 @@ A source that isn't available becomes one note in the pane, and the others
 still draw. The pane's **Rescan selection** (`r`) and **Library health** (`l`)
 buttons rerun it.
 
-**How it looks.** In the terminal the charts are DS Bridge's own text bars: a
-solid bar on a `░` track, in muted ok / near-miss / off-system colours, with the
-count and, for the parts of a whole, the percent. Score history draws as
-sparklines. The **Claude Desktop app** draws the same charts as Apache ECharts
-SVG, styled by the three `insights_*` options above. Every result is also
+**How it looks.** The data picks the chart, the same way on every surface
+(`hooks/insights/chart-kinds.ts`):
+
+| Data | Chart | Claude Desktop (Nivo-style SVG) | Terminal pane |
+|---|---|---|---|
+| One value out of a scale (token adoption 65%) | gauge | radial gauge | track bar and figure |
+| 2–6 parts of a whole | share | donut (or pie / bars) | waffle of 100 squares |
+| A ranking | bar | rounded bars | DS Bridge's `░`-track bars |
+| Values run by run | line | smooth lines, area fill | braille line plot |
+| Rows × columns (findings by kind × run) | heatmap | heatmap cells | shaded cell grid |
+
+The Desktop charts are Apache ECharts styled after Nivo, in the `harvest`
+palette by default and the three `insights_*` options above. Claude's
+`show_insights` tool takes the same kinds, or `auto`. Every result is also
 written into the transcript as text, so the VS Code panel and `claude -p` get
 it too.
 

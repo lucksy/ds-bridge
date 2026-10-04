@@ -25,26 +25,84 @@ export type Section = {
 	notes: string[];
 };
 
-export type HistoryEntry = { at: string; kind: string; score: number };
+/** What one history row says: a 0–100 score, a count of open findings, or both. */
+export type HistoryEntry = {
+	at: string;
+	kind: string;
+	score?: number;
+	findings?: number;
+	/** Lint only: findings per kind (`exact`, `near`, `offSystem`). */
+	byKind?: Record<string, number>;
+};
 
-/** The `{ kind, score }` rows of a history file; lines that don't parse, or have no score, are skipped. */
+function finite(value: unknown): value is number {
+	return typeof value === "number" && Number.isFinite(value);
+}
+
+/** The sum of an object's numeric values (`byKind: { exact: 3, near: 1 }` → 4). */
+function total(value: unknown): number {
+	if (value === null || typeof value !== "object") return 0;
+	return Object.values(value).reduce<number>(
+		(sum, v) => sum + (finite(v) ? v : 0),
+		0,
+	);
+}
+
+/**
+ * One history row, read by its kind's shape. Handoff and parity rows carry a
+ * `score`; lint rows carry finding counts and on-system adoption (refs vs
+ * literals, as a 0–100 score); drift rows carry stale/missing/orphan counts;
+ * a11y rows carry failures per mode. A row with neither is skipped.
+ */
+function readRow(row: Record<string, unknown>): HistoryEntry | undefined {
+	if (typeof row.kind !== "string") return undefined;
+	const entry: HistoryEntry = { at: String(row.at ?? ""), kind: row.kind };
+	if (finite(row.score)) entry.score = row.score;
+	if (row.kind === "lint") {
+		if (row.byKind !== null && typeof row.byKind === "object") {
+			entry.findings = total(row.byKind);
+			entry.byKind = Object.fromEntries(
+				Object.entries(row.byKind).filter((pair): pair is [string, number] =>
+					finite(pair[1]),
+				),
+			);
+		}
+		const adoption = row.adoption as Record<string, unknown> | undefined;
+		const refs = finite(adoption?.refs) ? adoption.refs : 0;
+		const literals = finite(adoption?.literals) ? adoption.literals : 0;
+		if (refs + literals > 0) {
+			entry.score = Math.round((refs / (refs + literals)) * 100);
+		}
+	}
+	if (row.kind === "tokens-check") {
+		entry.findings = [row.stale, row.missing, row.orphan].reduce<number>(
+			(sum, v) => sum + (finite(v) ? v : 0),
+			0,
+		);
+	}
+	if (row.kind === "a11y" && Array.isArray(row.modes)) {
+		entry.findings = row.modes.reduce<number>(
+			(sum, mode) =>
+				sum +
+				(finite((mode as { failed?: unknown }).failed)
+					? (mode as { failed: number }).failed
+					: 0),
+			0,
+		);
+	}
+	return entry.score !== undefined || entry.findings !== undefined
+		? entry
+		: undefined;
+}
+
+/** The history file's rows; lines that don't parse, or say nothing chartable, are skipped. */
 export function parseHistory(text: string): HistoryEntry[] {
 	const entries: HistoryEntry[] = [];
 	for (const line of text.split("\n")) {
 		if (!line.trim()) continue;
 		try {
-			const row = JSON.parse(line) as Record<string, unknown>;
-			if (
-				typeof row.kind === "string" &&
-				typeof row.score === "number" &&
-				Number.isFinite(row.score)
-			) {
-				entries.push({
-					at: String(row.at ?? ""),
-					kind: row.kind,
-					score: row.score,
-				});
-			}
+			const entry = readRow(JSON.parse(line) as Record<string, unknown>);
+			if (entry) entries.push(entry);
 		} catch {
 			// A torn last line from an interrupted write: the rest of the history still counts.
 		}
@@ -58,53 +116,150 @@ export function kindLabel(kind: string): string {
 	return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** The latest score of each check, and each check's scores run by run (the last `runs` of them). */
+/** Lint's score is its on-system share, so it is named for that, not "Lint score". */
+function scoreLabel(kind: string): string {
+	return kind === "lint" ? "On-system" : `${kindLabel(kind)} score`;
+}
+
+const FINDINGS_LABELS: Record<string, string> = {
+	lint: "Lint findings",
+	"tokens-check": "Drift entries",
+	a11y: "Contrast failures",
+};
+
+function findingsLabel(kind: string): string {
+	return FINDINGS_LABELS[kind] ?? `${kindLabel(kind)} findings`;
+}
+
+/** One series per check kind, from the last `runs` rows that carry `pick`. */
+function seriesOf(
+	entries: readonly HistoryEntry[],
+	pick: (entry: HistoryEntry) => number | undefined,
+	label: (kind: string) => string,
+	runs: number,
+): InsightSeries[] {
+	const byKind = new Map<string, number[]>();
+	for (const entry of entries) {
+		const value = pick(entry);
+		if (value === undefined) continue;
+		byKind.set(entry.kind, [...(byKind.get(entry.kind) ?? []), value]);
+	}
+	return [...byKind].map(([kind, values]) => ({
+		label: label(kind),
+		points: values.slice(-runs).map((y, n) => ({ x: n + 1, y })),
+	}));
+}
+
+function ends(series: InsightSeries): [number, number] | undefined {
+	const first = series.points[0]?.y;
+	const last = series.points[series.points.length - 1]?.y;
+	return first !== undefined && last !== undefined && series.points.length > 1
+		? [first, last]
+		: undefined;
+}
+
+const LINT_KINDS: readonly [string, string][] = [
+	["exact", "exact"],
+	["near", "near-miss"],
+	["offSystem", "off-system"],
+];
+
+/** "2026-09-05T…" → "09-05"; a row with no date is numbered instead. */
+function runLabel(at: string, n: number): string {
+	const date = /^\d{4}-(\d{2})-(\d{2})/.exec(at);
+	return date ? `${date[1]}-${date[2]}` : `#${n + 1}`;
+}
+
+/** Lint findings by kind, run by run: a heatmap once there are two lint runs. */
+function lintHeatmap(
+	entries: readonly HistoryEntry[],
+	runs: number,
+): InsightChart | undefined {
+	const lint = entries
+		.filter((e) => e.kind === "lint" && e.byKind !== undefined)
+		.slice(-Math.min(runs, 10));
+	if (lint.length < 2) return undefined;
+	return {
+		title: "Lint findings by kind, run by run",
+		kind: "heatmap",
+		items: [],
+		matrix: {
+			rows: LINT_KINDS.map(([, label]) => label),
+			columns: lint.map((e, n) => runLabel(e.at, n)),
+			values: LINT_KINDS.map(([key]) => lint.map((e) => e.byKind?.[key] ?? 0)),
+		},
+	};
+}
+
+/**
+ * The latest score and open-findings count of each check, and both run by
+ * run (the last `runs` of them), with a note for any score that fell or any
+ * count that rose.
+ */
 export function historySection(
 	entries: readonly HistoryEntry[],
 	runs = 30,
 ): Section {
-	const byKind = new Map<string, HistoryEntry[]>();
-	for (const entry of entries) {
-		const list = byKind.get(entry.kind) ?? [];
-		list.push(entry);
-		byKind.set(entry.kind, list);
-	}
+	const scores = seriesOf(entries, (e) => e.score, scoreLabel, runs);
+	const findings = seriesOf(entries, (e) => e.findings, findingsLabel, runs);
+
+	const latest = (s: InsightSeries) => s.points[s.points.length - 1]?.y;
 	const stats: InsightStat[] = [];
-	const series: InsightSeries[] = [];
-	for (const [kind, list] of byKind) {
-		const recent = list.slice(-runs);
-		const last = recent[recent.length - 1];
-		if (last !== undefined)
-			stats.push({
-				label: `${kindLabel(kind)} score`,
-				value: String(last.score),
-			});
-		series.push({
-			label: kindLabel(kind),
-			points: recent.map((e, n) => ({ x: n + 1, y: e.score })),
+	for (const s of scores) {
+		const value = latest(s);
+		if (value === undefined) continue;
+		stats.push({
+			label: s.label === "On-system" ? "On-system" : s.label,
+			value: s.label === "On-system" ? `${value}%` : String(value),
 		});
 	}
-	const notes: string[] = [];
+	for (const s of findings) {
+		const value = latest(s);
+		if (value !== undefined)
+			stats.push({ label: s.label, value: String(value) });
+	}
+
 	const charts: InsightChart[] = [];
-	if (series.length > 0) {
+	if (scores.length > 0) {
 		charts.push({
 			title: "ds-bridge check scores, run by run",
 			kind: "line",
 			items: [],
-			series,
+			series: scores.map((s) => ({
+				...s,
+				label:
+					s.label === "On-system"
+						? "On-system %"
+						: s.label.replace(/ score$/, ""),
+			})),
 		});
 	}
-	for (const s of series) {
-		const first = s.points[0]?.y;
-		const last = s.points[s.points.length - 1]?.y;
-		if (
-			first !== undefined &&
-			last !== undefined &&
-			s.points.length > 1 &&
-			last < first
-		) {
+	if (findings.length > 0) {
+		charts.push({
+			title: "Open findings, run by run",
+			kind: "line",
+			items: [],
+			series: findings,
+		});
+	}
+
+	const heatmap = lintHeatmap(entries, runs);
+	if (heatmap) charts.push(heatmap);
+
+	const notes: string[] = [];
+	for (const s of scores) {
+		const pair = ends(s);
+		if (pair && pair[1] < pair[0]) {
 			notes.push(
-				`${s.label} score fell from ${first} to ${last} over the last ${s.points.length} runs.`,
+				`${s.label} fell from ${pair[0]} to ${pair[1]} over the last ${s.points.length} runs.`,
+			);
+		}
+	}
+	for (const s of findings) {
+		const pair = ends(s);
+		if (pair && pair[1] > pair[0]) {
+			notes.push(
+				`${s.label} rose from ${pair[0]} to ${pair[1]} over the last ${s.points.length} runs.`,
 			);
 		}
 	}

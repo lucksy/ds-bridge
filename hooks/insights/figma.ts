@@ -218,6 +218,16 @@ function tokenCharts(usage: TokenUsage): {
 	const total = colors.tokens + colors.raw + sizes.tokens + sizes.raw;
 	const adoption =
 		total > 0 ? percent(colors.tokens + sizes.tokens, total) : undefined;
+	// The headline number leads: one gauge for the whole selection's adoption.
+	if (adoption !== undefined) {
+		charts.unshift({
+			title: "Token adoption",
+			kind: "gauge",
+			items: [],
+			value: adoption,
+			unit: "%",
+		});
+	}
 	if (adoption !== undefined && adoption < 80) {
 		notes.push(
 			`Token adoption is ${adoption}%: ${plural(colors.raw, "color")} and ${plural(sizes.raw, "size")} are hard-coded.`,
