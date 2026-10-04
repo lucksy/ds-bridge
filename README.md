@@ -40,14 +40,14 @@ Claude Code installs plugins from a **marketplace**. Point one at this repo,
 then install `ds-bridge` from it:
 
 ```bash
-# 1. Register this repo as a marketplace (URL, local path, or GitHub repo work)
-claude plugin marketplace add <git-url-or-owner/repo>
+# 1. Register this repo as a marketplace (its name is `ds-bridge`)
+claude plugin marketplace add lucksy/ds-bridge
 
 # 2. Install the plugin from that marketplace
 claude plugin install ds-bridge
 
 #    (disambiguate when several marketplaces are configured)
-claude plugin install ds-bridge@<marketplace-name>
+claude plugin install ds-bridge@ds-bridge
 ```
 
 You can pre-seed `userConfig` options non-interactively with repeatable
