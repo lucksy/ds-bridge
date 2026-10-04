@@ -10,7 +10,9 @@ The brain is a standalone CLI (`ds-bridge`, bundled to a single
 runs inside Claude Code, on your machine, and in CI. Works with **Figma
 Professional+** (the remote Figma MCP server is available on all plans).
 
-> **Status:** v0.4.0 — spec-driven, strict TDD. See [`SPEC.md`](./SPEC.md)
+> **Status:** released and free to use — the current version and its notes
+> are on the [releases page](https://github.com/lucksy/ds-bridge/releases).
+> Spec-driven, strict TDD. See [`SPEC.md`](./SPEC.md)
 > (contract), [`PLAN.md`](./PLAN.md) (build strategy), [`TASKS.md`](./TASKS.md)
 > (live task tracker). The marketing site under [`website/`](./website) is built
 > and live at **<https://ds-bridge.pages.dev>** (Cloudflare Pages).
@@ -196,9 +198,8 @@ tests), `--format=term` (default; colors, unicode bars), and where applicable
 `--report`/`--out` for the HTML dashboard.
 
 The `parity-audit` command can hand off to the **`parity-auditor`** agent
-(`model: sonnet`, read-only tools) for a full reconciliation plan. The
-`figma-impl` flagship command and its background-knowledge skill are planned for
-v1.0.0 (see roadmap) and are **not** shipped at v0.4.0.
+(`model: sonnet`, read-only tools) for a full reconciliation plan, and
+`/ds-bridge:analytics` fans out to the analytics subagents in `agents/`.
 
 ## Insights pane (Claude Code mod)
 
@@ -335,14 +336,13 @@ never failed.
 
 ## Status & roadmap
 
-- **v0.4.0 (today):** `ds-lint`, `token-check`, `dashboard`, `handoff-qa`,
-  `parity-audit` slash commands live over a fully-tested CLI; the
-  `parity-auditor` agent and two fail-quiet hooks; offline HTML dashboard with
-  drift/lint trends; Figma REST client with a nightly live smoke test.
-- **v1.0.0 (next):** the flagship `/ds-bridge:figma-impl` (frame → on-system
-  code via the registry + a structured gaps report) and headless E2E coverage
-  that proves the plugin loads in `claude -p --bare`.
-- **Website:** live at <https://ds-bridge.pages.dev> — landing page + ten
-  tutorials, deployed from `website/` via Cloudflare Pages.
+Released and free. Each version's changes are on the
+[releases page](https://github.com/lucksy/ds-bridge/releases); the shipped
+surface is thirteen slash commands over a fully tested CLI, the analytics and
+parity subagents, three fail-quiet settings hooks, the insights pane (a Claude
+Code mod), the offline HTML dashboard, and a Figma REST client with a nightly
+live smoke test. The website is live at <https://ds-bridge.pages.dev>, deployed
+from `website/` via Cloudflare Pages. Planned work lives in
+[`TASKS.md`](./TASKS.md).
 
 License: [MIT](./LICENSE)
