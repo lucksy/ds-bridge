@@ -419,7 +419,7 @@ describe("audienceChangelogSection (audience-changelog)", () => {
 		const html = renderDashboard(base, ["audience-changelog"]);
 		expect(html).toMatch(/Changelog by audience/);
 		expect(html).toMatch(/No data yet/i);
-		expect(html).toMatch(/ds-bridge ds-changelog/);
+		expect(html).toMatch(/ds-bridge changelog</);
 	});
 
 	it("renders audience columns, count badges and the recent list (no empty-state) when populated", () => {

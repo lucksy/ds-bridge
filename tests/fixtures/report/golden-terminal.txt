@@ -148,7 +148,7 @@ No data yet — run `ds-bridge lint` to populate this section.
 
 Changelog by audience
 ─────────────────────
-No data yet — run `ds-bridge ds-changelog` to populate this section.
+No data yet — run `ds-bridge changelog` to populate this section.
 
 Frame implementability
 ──────────────────────

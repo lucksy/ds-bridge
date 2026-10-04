@@ -262,7 +262,7 @@ function systemScoreSection(
 function driftSection(data: ReportData): string {
 	const trend = data.driftTrend;
 	if (trend === undefined || trend.length === 0) {
-		return panel("Drift trend", emptyState("diff --since <ref>"));
+		return panel("Drift trend", emptyState("tokens check"));
 	}
 
 	const toSeries = (
@@ -301,7 +301,7 @@ function driftSection(data: ReportData): string {
 function lintSection(data: ReportData): string {
 	const lint = data.lintSummary;
 	if (lint === undefined) {
-		return panel("Lint violations", emptyState("ds-lint"));
+		return panel("Lint violations", emptyState("lint"));
 	}
 
 	const bars = [
@@ -332,7 +332,7 @@ function lintSection(data: ReportData): string {
 function readinessSection(data: ReportData): string {
 	const readiness = data.readiness;
 	if (readiness === undefined) {
-		return panel("Readiness", emptyState("qa <frame>"));
+		return panel("Readiness", emptyState("handoff <frame-url>"));
 	}
 
 	const deductions =
@@ -405,10 +405,12 @@ function a11ySection(data: ReportData): string {
 	}));
 
 	const tallies = [
-		'<ul class="modes">',
+		// The offenders list's layout (mode left, tally right), and a real space
+		// between the two so the text reads "light 12 passed", not "light12 passed".
+		'<ul class="offenders modes">',
 		...a11y.modes.map(
 			(m) =>
-				`<li><code>${escapeHtml(m.mode)}</code><span class="count">${escapeHtml(String(m.passed))} passed · ${escapeHtml(String(m.failed))} failed</span></li>`,
+				`<li><code>${escapeHtml(m.mode)}</code> <span class="count">${escapeHtml(String(m.passed))} passed · ${escapeHtml(String(m.failed))} failed</span></li>`,
 		),
 		"</ul>",
 	].join("");
@@ -632,7 +634,7 @@ const BREAKING_SOURCE_LABEL: Record<"tokens" | "figma", string> = {
 function breakingCalendarSection(data: ReportData): string {
 	const calendar = data.breakingCalendar;
 	if (calendar === undefined || calendar.entries.length === 0) {
-		return panel("Breaking calendar", emptyState("tokens-check"));
+		return panel("Breaking calendar", emptyState("tokens check"));
 	}
 
 	const rows = calendar.entries
@@ -663,7 +665,7 @@ function breakingCalendarSection(data: ReportData): string {
 function changeFrequencySection(data: ReportData): string {
 	const frequency = data.changeFrequency;
 	if (frequency === undefined || frequency.byKind.length === 0) {
-		return panel("Change frequency", emptyState("tokens-check"));
+		return panel("Change frequency", emptyState("tokens check"));
 	}
 
 	const bars = frequency.byKind.map((bucket) => ({
@@ -979,7 +981,7 @@ function ownershipLeaderboardSection(data: ReportData): string {
 function audienceChangelogSection(data: ReportData): string {
 	const changelog = data.audienceChangelog;
 	if (changelog === undefined || changelog.slices.length === 0) {
-		return panel("Changelog by audience", emptyState("ds-changelog"));
+		return panel("Changelog by audience", emptyState("changelog"));
 	}
 
 	const columns = changelog.slices

@@ -73,7 +73,7 @@ function systemScoreTerminalSection(data: ReportData, color: boolean): string {
 function driftTrendTerminalSection(data: ReportData, _color: boolean): string {
 	const trend = data.driftTrend;
 	if (trend === undefined || trend.length === 0) {
-		return panel("Drift trend", emptyState("diff --since <ref>"));
+		return panel("Drift trend", emptyState("tokens check"));
 	}
 
 	// §8 mapping: trend artifact → one sparkline per severity series.
@@ -100,7 +100,7 @@ function driftTrendTerminalSection(data: ReportData, _color: boolean): string {
 function lintSummaryTerminalSection(data: ReportData, color: boolean): string {
 	const lint = data.lintSummary;
 	if (lint === undefined) {
-		return panel("Lint violations", emptyState("ds-lint"));
+		return panel("Lint violations", emptyState("lint"));
 	}
 
 	// §8 mapping: count artifact → bar chart of byKind tallies.
@@ -126,7 +126,7 @@ function lintSummaryTerminalSection(data: ReportData, color: boolean): string {
 function readinessTerminalSection(data: ReportData, color: boolean): string {
 	const readiness = data.readiness;
 	if (readiness === undefined) {
-		return panel("Readiness", emptyState("qa <frame>"));
+		return panel("Readiness", emptyState("handoff <frame-url>"));
 	}
 
 	// §8 mapping: score artifact → gauge of the readiness score.
@@ -356,7 +356,7 @@ function breakingCalendarTerminalSection(
 ): string {
 	const calendar = data.breakingCalendar;
 	if (calendar === undefined || calendar.entries.length === 0) {
-		return panel("Breaking calendar", emptyState("tokens-check"));
+		return panel("Breaking calendar", emptyState("tokens check"));
 	}
 
 	// Human-readable source badge: built-output drift ("tokens") vs Figma
@@ -389,7 +389,7 @@ function changeFrequencyTerminalSection(
 ): string {
 	const frequency = data.changeFrequency;
 	if (frequency === undefined || frequency.byKind.length === 0) {
-		return panel("Change frequency", emptyState("tokens-check"));
+		return panel("Change frequency", emptyState("tokens check"));
 	}
 
 	const items = frequency.byKind.map((bucket) => ({
@@ -648,7 +648,7 @@ function audienceChangelogTerminalSection(
 ): string {
 	const changelog = data.audienceChangelog;
 	if (changelog === undefined || changelog.slices.length === 0) {
-		return panel("Changelog by audience", emptyState("ds-changelog"));
+		return panel("Changelog by audience", emptyState("changelog"));
 	}
 
 	// The assembly hands slices pre-shaped (recent capped, breaking-first); the

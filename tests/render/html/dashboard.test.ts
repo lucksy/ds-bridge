@@ -353,6 +353,14 @@ describe("renderDashboard — full data", () => {
 		expect(html).toContain("AA");
 	});
 
+	it("sets each a11y mode apart from its tally, in text and in layout", () => {
+		// The list read "light12 passed" with no space and no layout rule.
+		expect(html).toMatch(
+			/<ul class="offenders modes"><li><code>light<\/code> <span class="count">\d+ passed/,
+		);
+		expect(html).not.toMatch(/<\/code><span class="count">\d+ passed/);
+	});
+
 	it("includes impact severity bars and the call-site blast radius (T7.22)", () => {
 		expect(html).toMatch(/Change impact/i);
 		expect(html).toMatch(/Breaking/);

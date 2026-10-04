@@ -46,7 +46,7 @@ describe("renderTerminalDashboard", () => {
 		const out = renderTerminalDashboard(BARE, ALL_ARTIFACT_IDS, OPTS);
 		expect(out).toContain("ds-bridge report"); // system-score / targets
 		expect(out).toContain("ds-bridge parity"); // parity
-		expect(out).toContain("ds-bridge ds-changelog"); // audience-changelog
+		expect(out).toContain("ds-bridge changelog`"); // audience-changelog
 		expect(out).toContain("ds-bridge release-check"); // release-readiness
 		expect(out).toContain("ds-bridge library-health"); // library-health
 	});
