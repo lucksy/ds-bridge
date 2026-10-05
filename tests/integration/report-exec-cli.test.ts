@@ -256,7 +256,8 @@ describe("ds-bridge report --format exec (markdown manager report)", () => {
 		);
 		// Checks `record` does not run get their own command.
 		expect(result.stdout).toContain(
-			"2. Start measuring handoff readiness: run ds-bridge handoff <frame-url>",
+			// `<frame-url>` is escaped, or GitHub would swallow it as an HTML tag.
+			"2. Start measuring handoff readiness: run ds-bridge handoff \\<frame-url\\>",
 		);
 	});
 

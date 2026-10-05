@@ -80,7 +80,9 @@ describe("renderRollupMarkdown", () => {
 	it("renders a heading, aggregate and an escaped table", () => {
 		expect(md).toContain("## Design-system org rollup");
 		expect(md).toContain("| # | Repo |");
-		expect(md).toContain("web\\|<b>");
+		// `|` cannot split the cell; `<b>` stays literal text.
+		expect(md).toContain("web\\|\\<b\\>");
+		expect(md).not.toContain("<b>");
 		expect(md).toContain("default weights");
 	});
 

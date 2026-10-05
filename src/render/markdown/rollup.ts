@@ -1,5 +1,6 @@
 // R4 — Markdown org rollup (SPEC-rollup §4): paste-ready for a PR comment or
-// $GITHUB_STEP_SUMMARY. PURE: model in → Markdown out; table cells escape `|`.
+// $GITHUB_STEP_SUMMARY. PURE: model in → Markdown out; every model string goes
+// through mdText (one line, Markdown escaped).
 import type { RollupModel } from "../../engines/rollup/rollup.js";
 import {
 	aggregateLines,
@@ -11,16 +12,13 @@ import {
 	TABLE_HEADERS,
 	WEIGHTS_NOTE,
 } from "../rollup-cells.js";
-
-function cell(value: string): string {
-	return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
-}
+import { mdText } from "./text.js";
 
 function table(headers: readonly string[], rows: string[][]): string[] {
 	return [
-		`| ${headers.map(cell).join(" | ")} |`,
+		`| ${headers.map(mdText).join(" | ")} |`,
 		`|${headers.map(() => " --- ").join("|")}|`,
-		...rows.map((r) => `| ${r.map(cell).join(" | ")} |`),
+		...rows.map((r) => `| ${r.map(mdText).join(" | ")} |`),
 	];
 }
 
@@ -63,7 +61,7 @@ export function renderRollupMarkdown(model: RollupModel): string {
 		);
 	}
 	const notes = model.repos.flatMap((r) =>
-		r.notes.map((n) => `- **${cell(r.name)}**: ${n}`),
+		r.notes.map((n) => `- **${mdText(r.name)}**: ${mdText(n)}`),
 	);
 	if (notes.length > 0) out.push("### Notes", "", ...notes, "");
 	out.push(`_${WEIGHTS_NOTE} ${DRILL_DOWN_NOTE}_`);

@@ -7,6 +7,7 @@
 // order; a deselected artifact emits NO block, a selected-but-empty one its
 // empty-state. (Section bodies drafted by the m10.2-terminal-twins workflow,
 // then reconciled + golden-pinned here.)
+
 import type { ArtifactId } from "../../engines/report/catalog.js";
 import type {
 	FreshnessRow,
@@ -27,6 +28,7 @@ import {
 import { renderBarChart } from "./bar-chart.js";
 import { renderGauge } from "./gauge.js";
 import { renderMatrix } from "./matrix.js";
+import { terminalSafe } from "./sanitize.js";
 import { severityColor } from "./severity.js";
 import { sparkline } from "./sparkline.js";
 import { renderTable } from "./table.js";
@@ -995,5 +997,7 @@ export function renderTerminalDashboard(
 	const sections = selection.map((id) =>
 		SECTION_RENDERERS_TERMINAL[id](data, opts.color),
 	);
-	return [header, ...sections].join("\n\n");
+	// Untrusted names (Figma components/frames, debt subjects…) are printed
+	// raw above; strip any control sequence but our SGR colour at the boundary.
+	return terminalSafe([header, ...sections].join("\n\n"));
 }

@@ -1,4 +1,5 @@
 // T1.7 — aligned unicode box-drawing table. PURE string building.
+import { terminalCell } from "./sanitize.js";
 import type { ColorOptions } from "./severity.js";
 
 function isNumericCell(value: string): boolean {
@@ -38,7 +39,11 @@ export function renderTable(
 ): string {
 	const columnCount = headers.length;
 
-	const cellAt = (row: string[], column: number): string => row[column] ?? "";
+	// Every cell (and header) is one line with no control sequence but SGR
+	// colour: names in cells can come from Figma, configs or git (./sanitize.ts).
+	const cellAt = (row: string[], column: number): string =>
+		terminalCell(row[column] ?? "");
+	headers = headers.map((header) => terminalCell(header));
 
 	const widths: number[] = [];
 	for (let c = 0; c < columnCount; c++) {

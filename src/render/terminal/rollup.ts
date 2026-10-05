@@ -1,5 +1,6 @@
 // R4 — terminal org rollup (SPEC-rollup §4). PURE: model in → text out, built
 // from the shared terminal primitives (renderTable + sparkline).
+
 import type { RollupModel } from "../../engines/rollup/rollup.js";
 import {
 	aggregateLines,
@@ -12,13 +13,14 @@ import {
 	TABLE_HEADERS,
 	WEIGHTS_NOTE,
 } from "../rollup-cells.js";
+import { terminalSafe } from "./sanitize.js";
 import { renderTable } from "./table.js";
 
 export function renderRollupTerm(model: RollupModel): string {
 	const lines = [headline(model), ""];
 	if (model.repos.length === 0) {
 		lines.push(EMPTY_TEXT);
-		return `${lines.join("\n")}\n`;
+		return terminalSafe(`${lines.join("\n")}\n`);
 	}
 	const pairs = aggregateLines(model.aggregate);
 	const width = Math.max(...pairs.map(([label]) => label.length));
@@ -71,5 +73,5 @@ export function renderRollupTerm(model: RollupModel): string {
 		lines.push("", "Notes", ...notes);
 	}
 	lines.push("", WEIGHTS_NOTE, DRIFT_LEGEND);
-	return `${lines.join("\n")}\n`;
+	return terminalSafe(`${lines.join("\n")}\n`);
 }

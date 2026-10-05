@@ -158,6 +158,29 @@ describe("renderManagerMarkdown", () => {
 		expect(md).toContain("- No checks recorded yet. Run `ds-bridge record`.");
 	});
 
+	it("keeps hostile project and frame names literal in headings, tables and lists", () => {
+		const evil = '<img src=x onerror="1"> [x](javascript:1) **b**\nnext';
+		const md = renderManagerMarkdown(
+			buildManagerReport({
+				project: evil,
+				generatedAt: "2026-10-05T00:00:00.000Z",
+				windowDays: 30,
+				readinessThreshold: 80,
+				frames: [
+					{ key: "f:1", frameName: evil, latest: 40, runs: 1, passRate: 0 },
+				],
+			}),
+		);
+		const escaped =
+			'\\<img src=x onerror="1"\\> \\[x\\](javascript:1) \\*\\*b\\*\\* next';
+		expect(md).toContain(`# Design system report: ${escaped}\n`);
+		expect(md).toContain(`| ${escaped} | 40 | 0% | 1 |`);
+		expect(md).toContain(`(lowest: "${escaped}" at 40)`);
+		// Nothing active survives unescaped.
+		expect(md).not.toMatch(/(?<!\\)<img/);
+		expect(md).not.toMatch(/(?<!\\)\]\(javascript/);
+	});
+
 	it("labels a nameless frame by its key and pluralises a one-day window", () => {
 		const md = renderManagerMarkdown(
 			buildManagerReport({

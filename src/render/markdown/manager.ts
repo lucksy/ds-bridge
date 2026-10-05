@@ -16,17 +16,13 @@ import {
 } from "../../engines/report/manager-report.js";
 import type { TargetVerdict } from "../../engines/report/types.js";
 import { sparkline } from "../terminal/sparkline.js";
+import { mdText } from "./text.js";
 
 const NOT_MEASURED = "not measured";
 const NO_CHANGE = "—";
 
-/** Escape a table cell: pipes break GFM tables; newlines break rows. */
-function cell(text: string): string {
-	return text.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
-}
-
 function row(cells: readonly string[]): string {
-	return `| ${cells.map(cell).join(" | ")} |`;
+	return `| ${cells.map(mdText).join(" | ")} |`;
 }
 
 function table(header: readonly string[], rows: readonly string[][]): string[] {
@@ -91,7 +87,7 @@ const STATUS: Record<TargetVerdict["band"], string> = {
 
 function numbered(items: readonly string[], empty: string): string[] {
 	if (items.length === 0) return [empty];
-	return items.map((text, i) => `${i + 1}. ${text.replace(/\r?\n/g, " ")}`);
+	return items.map((text, i) => `${i + 1}. ${mdText(text)}`);
 }
 
 function age(n: number | undefined): string {
@@ -105,7 +101,7 @@ const FRAMES_SHOWN = 10;
 /** Render the manager report as paste-ready Markdown. Pure. */
 export function renderManagerMarkdown(report: ManagerReport): string {
 	const out: string[] = [
-		`# Design system report: ${report.project}`,
+		`# Design system report: ${mdText(report.project)}`,
 		"",
 		`Report date ${report.generatedAt.slice(0, 10)} · changes over the last ${days(report.windowDays)}`,
 		"",
