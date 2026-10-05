@@ -216,7 +216,10 @@ function buildHeadline(input: ManagerReportInput): ManagerHeadline {
 						firstPoint !== undefined &&
 						lastPoint !== undefined
 					? {
-							delta: lastPoint.score - firstPoint.score,
+							// Against "Now" itself, so the row can never read "Now 72 ·
+							// ±0 pts" when the stored points were scored with other
+							// weights (a per-view profile) or before a newer run.
+							delta: score.current - firstPoint.score,
 							since: firstPoint.date,
 						}
 					: {}),
@@ -241,7 +244,10 @@ function buildHeadline(input: ManagerReportInput): ManagerHeadline {
 		headline.importCoverage = {
 			imported: coverage.imported,
 			total: coverage.total,
-			pct: Math.round((100 * coverage.imported) / coverage.total),
+			pct: Math.min(
+				100,
+				Math.max(0, Math.round((100 * coverage.imported) / coverage.total)),
+			),
 		};
 	}
 

@@ -1075,7 +1075,9 @@ function storedScorePoints(
 		if (typeof r.at !== "string") continue;
 		if (typeof r.score !== "number" || !Number.isFinite(r.score)) continue;
 		const atMs = Date.parse(r.at);
-		if (Number.isNaN(atMs) || atMs < startMs) continue;
+		// Inside [now − window, now]: a point after the render instant (e.g. a
+		// SOURCE_DATE_EPOCH-pinned render) is not "since" anything.
+		if (Number.isNaN(atMs) || atMs < startMs || atMs > nowMs) continue;
 		out.push({ date: r.at.slice(0, 10), score: r.score });
 	}
 	return out;

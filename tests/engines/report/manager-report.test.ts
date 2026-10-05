@@ -632,6 +632,30 @@ describe("buildManagerReport — score change without velocity (X10)", () => {
 		);
 	});
 
+	it("measures the change against Now, even when stored points used other weights", () => {
+		// Stored points 68 → 68, but Now (re-scored with a per-view profile) is 72.
+		const report = buildManagerReport({
+			...BASE,
+			systemScore: { current: 72, components: [], trend: [] },
+			scorePoints: [
+				{ date: "2026-10-01", score: 68 },
+				{ date: "2026-10-04", score: 68 },
+			],
+		});
+		expect(report.headline.score?.delta).toBe(4);
+		expect(scoreChangeText(report.headline, 30)).toBe(
+			"+4 pts since 2026-10-01",
+		);
+	});
+
+	it("caps import coverage at 100% for a malformed adoption line", () => {
+		const report = buildManagerReport({
+			...BASE,
+			importCoverage: { imported: 12, total: 10, uncovered: [] } as never,
+		});
+		expect(report.headline.importCoverage?.pct).toBe(100);
+	});
+
 	it("a single score point stays without a change; velocity always wins", () => {
 		const one = buildManagerReport({
 			...BASE,

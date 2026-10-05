@@ -408,8 +408,15 @@ describe("report --format exec — failing contrast and token gaps (X9, X10)", (
 		expect(md).toContain(
 			"Add the 13 missing tokens to the code output (run ds-bridge tokens check)",
 		);
-		expect(md).toMatch(
-			/\| System score \| \d+\/100 \| ±0 pts since 2026-10-04 \|/,
-		);
+		// The change is measured against "Now" itself (stored first point 35),
+		// so the row can never read "Now N · ±0" while N ≠ 35.
+		const row =
+			/\| System score \| (\d+)\/100 \| ([+−-]?\d+|±0) pts since 2026-10-04 \|/.exec(
+				md,
+			);
+		expect(row).not.toBeNull();
+		const now = Number(row?.[1]);
+		const change = row?.[2] === "±0" ? 0 : Number(row?.[2]?.replace("−", "-"));
+		expect(change).toBe(now - 35);
 	});
 });
