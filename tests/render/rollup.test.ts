@@ -200,3 +200,39 @@ describe("renderRollupTerm — alignment with a missing source", () => {
 		}
 	});
 });
+
+describe("renderRollupHtml — many repos", () => {
+	it("charts the 5 highest-ranked trends, each in its own colour, and says how many more", () => {
+		const many = buildRollup(
+			Array.from({ length: 8 }, (_, i) => ({
+				name: `repo-${i}`,
+				source: `/r/${i}`,
+				load: {
+					kind: "ok" as const,
+					text: hist(
+						[1, 2].map((d) => ({
+							at: `2026-10-0${d}T00:00:00Z`,
+							kind: "handoff",
+							score: 50 + i * 5 + d,
+						})),
+					),
+				},
+			})),
+			{ nowIso: NOW },
+		);
+		const html = renderRollupHtml(many);
+		const chart = html.slice(html.indexOf("<h2>Score trends</h2>"));
+		const svg = chart.slice(0, chart.indexOf("</svg>"));
+		const strokes = [...svg.matchAll(/<polyline[^>]*stroke="([^"]+)"/g)].map(
+			(m) => m[1],
+		);
+		expect(strokes).toHaveLength(5);
+		expect(new Set(strokes).size).toBe(5);
+		// Highest-ranked first: repo-7 (best score) is drawn, repo-0 is not.
+		expect(svg).toContain("repo-7");
+		expect(svg).not.toContain("repo-0");
+		expect(chart).toContain(
+			"Showing the 5 highest-ranked repos; 3 more in the Repos table.",
+		);
+	});
+});

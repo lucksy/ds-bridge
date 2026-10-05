@@ -106,7 +106,7 @@ render a dashboard from a checkout of that branch.
 | `digest-since` | `30d` | The digest window |
 | `pr-comment` | `"false"` | Opt in: post/update **one** scorecard comment on the PR |
 | `gate` | `"false"` | `report --gate`: fail the PR when a `metric_targets` verdict is red |
-| `cli` | action's `dist/cli.mjs` | Path to the CLI bundle |
+| `cli` | action's `dist/cli.mjs` | Path to the CLI bundle, relative to the workspace. Only the CLI changes: the data-branch, mode and comment scripts always come from the action's own ref |
 | `github-token` | `github.token` | Token used for the PR comment; only a scorecard comment written by this token's account is ever updated |
 | `allow-any-ref` | `"false"` | `"true"`: let `record` record a ref other than the default branch |
 

@@ -52,30 +52,36 @@ function kpi(
 	return kpiTile(label, value, tone, sub);
 }
 
+/**
+ * Most repos drawn on the trend chart: its one-line legend fits about five
+ * names at 520px, and each line keeps its own palette colour. The rest are in
+ * the Repos table (a note under the chart says how many).
+ */
+const TREND_SERIES_MAX = 5;
+
 function trendSeries(model: RollupModel): {
 	series: LineSeries[];
+	hidden: number;
 	xLabels?: [string, string];
 } {
+	// A one-point series draws nothing visible; trends need two runs. Repos
+	// arrive ranked, so the chart shows the highest-ranked ones.
+	const trended = model.repos.filter((r) => r.trend.length >= 2);
+	const shown = trended.slice(0, TREND_SERIES_MAX);
+	const hidden = trended.length - shown.length;
 	const dates = [
-		...new Set(
-			model.repos
-				.filter((r) => r.trend.length >= 2)
-				.flatMap((r) => r.trend.map((p) => p.date)),
-		),
+		...new Set(shown.flatMap((r) => r.trend.map((p) => p.date))),
 	].sort();
 	const index = new Map(dates.map((d, i) => [d, i]));
-	const series = model.repos
-		// A one-point series draws nothing visible; trends need two runs.
-		.filter((r) => r.trend.length >= 2)
-		.map((r) => ({
-			label: r.name,
-			points: r.trend.map((p) => ({ x: index.get(p.date) ?? 0, y: p.score })),
-		}));
+	const series = shown.map((r) => ({
+		label: r.name,
+		points: r.trend.map((p) => ({ x: index.get(p.date) ?? 0, y: p.score })),
+	}));
 	const first = dates[0];
 	const last = dates[dates.length - 1];
 	return first !== undefined && last !== undefined
-		? { series, xLabels: [first, last] }
-		: { series };
+		? { series, hidden, xLabels: [first, last] }
+		: { series, hidden };
 }
 
 export function renderRollupHtml(model: RollupModel): string {
@@ -121,7 +127,11 @@ export function renderRollupHtml(model: RollupModel): string {
 			})),
 			{ width: 520, max: 100 },
 		);
-		const { series, xLabels } = trendSeries(model);
+		const { series, hidden, xLabels } = trendSeries(model);
+		const moreNote =
+			hidden > 0
+				? `<div class="meta">Showing the ${series.length} highest-ranked repos; ${hidden} more in the Repos table.</div>`
+				: "";
 		parts.push(
 			'<div class="grid">',
 			panel("Ranked System Score", `<div class="chart">${bars}</div>`),
@@ -129,7 +139,7 @@ export function renderRollupHtml(model: RollupModel): string {
 				"Score trends",
 				series.length === 0
 					? `<p class="empty-line">${escapeHtml(NO_TRENDS_TEXT)}</p>`
-					: `<div class="chart">${lineChart(series, { width: 520, height: 220, ...(xLabels !== undefined ? { xLabels } : {}) })}</div>`,
+					: `<div class="chart">${lineChart(series, { width: 520, height: 220, ...(xLabels !== undefined ? { xLabels } : {}) })}</div>${moreNote}`,
 			),
 			"</div>",
 			panel("Repos", tableHtml(TABLE_HEADERS, model.repos.map(repoCells))),
