@@ -15,15 +15,21 @@ run with `node`, `--format=json`); your job is the executive framing on top.
 ## Procedure
 
 1. Collect the domain inputs (passed to you, or run the missing ones via the CLI:
-   `report`, `library-health`, `parity`, `adoption`, `lint`, `tokens check`,
+   `analytics`, `library-health`, `parity`, `adoption`, `lint`, `tokens check`,
    `a11y`, `changelog` — all `--format=json`).
-2. Compute the four executive headline numbers, each labelled with source + caveat:
-   - **Health** — composite system score (`report`), with trend direction.
-   - **Adoption** — import coverage `imported/total` (a `.tsx` floor).
-   - **Consistency** — a blend of on-system token % · component-match ratio ·
-     override cleanliness (state it is a blend, not one ratio).
-   - **Debt** — deprecated + detached (heuristic) + off-system literals, folded
-     worst-first with directed fixes.
+2. Take the four executive headline numbers from
+   `analytics --format=json` (its `executive` block: `health`, `adoption`,
+   `consistency`, `debt`, `trend`) — the engines compute them deterministically
+   from history, so quote them and label each with its caveat; never re-blend:
+   - **Health** — composite system score, with the `trend` direction.
+   - **Import coverage** (`adoption` key) — import coverage % (a `.tsx` floor;
+     not the on-system %).
+   - **Consistency** — on-system tokens · component matches · override
+     cleanliness, weighted over what was measured.
+   - **Design debt** — `N/100 (level)` index (lower is better): deprecated + detached (heuristic) +
+     off-system, weighted and capped at 100; list its worst items from the
+     domain results, each with a directed fix.
+   A missing key is "not measured", never 0.
 
 ## Output
 

@@ -117,28 +117,19 @@ function makeServer(): Server {
 let server: Server;
 let baseUrl: string;
 
+/**
+ * A throwaway cwd for runs that do not care where history lands. handoff
+ * appends to <cwd>/.ds-bridge/history.jsonl, so the default must never be the
+ * repo root (H11 — SPEC-history-v2 §8.2; the globalSetup guard enforces it).
+ */
+let sandboxCwd: string;
+
 /** Run the CLI; resolve with code/stdout/stderr whether it exits 0 or not. */
 async function runCli(
 	args: string[],
 	extraEnv?: NodeJS.ProcessEnv,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
-	const env: NodeJS.ProcessEnv = {
-		...process.env,
-		FIGMA_API_BASE: baseUrl,
-		FIGMA_TOKEN: TOKEN,
-		...extraEnv,
-	};
-	try {
-		const { stdout, stderr } = await execFileAsync(
-			process.execPath,
-			[cliPath, ...args],
-			{ encoding: "utf8", env },
-		);
-		return { code: 0, stdout, stderr };
-	} catch (error) {
-		if (!isExecError(error)) throw error;
-		return { code: error.code, stdout: error.stdout, stderr: error.stderr };
-	}
+	return runCliIn(sandboxCwd, args, extraEnv);
 }
 
 /** Run the CLI with an explicit working directory (for cwd-relative history). */
@@ -227,6 +218,7 @@ describe("ds-bridge handoff (built dist/cli.mjs)", () => {
 		});
 		const address = server.address() as AddressInfo;
 		baseUrl = `http://127.0.0.1:${address.port}`;
+		sandboxCwd = await freshTmp("ds-handoff-cwd-");
 	}, 120_000);
 
 	afterAll(async () => {
@@ -397,6 +389,33 @@ describe("ds-bridge handoff (built dist/cli.mjs)", () => {
 		const records = await readHandoffHistory(dir);
 		expect(records.length).toBe(1);
 		expect(records[0]?.frameName).toBe("Card / Primary");
+	});
+
+	it("H7: the handoff line carries the frame identity (fileKey + nodeId)", async () => {
+		const dir = await freshTmp("ds-handoff-hist-id-");
+		await runCliIn(dir, [
+			"handoff",
+			fileUrl(FILE_KEY, "1-2"),
+			"--threshold",
+			"0",
+		]);
+		const text = await readFile(
+			join(dir, ".ds-bridge", "history.jsonl"),
+			"utf8",
+		);
+		const record = JSON.parse(text.trim()) as Record<string, unknown>;
+		expect(record.fileKey).toBe(FILE_KEY);
+		expect(record.nodeId).toBe("1:2");
+
+		const whole = await freshTmp("ds-handoff-hist-id-file-");
+		await runCliIn(whole, ["handoff", fileUrl(FILE_KEY), "--threshold", "0"]);
+		const fileRecord = JSON.parse(
+			(
+				await readFile(join(whole, ".ds-bridge", "history.jsonl"), "utf8")
+			).trim(),
+		) as Record<string, unknown>;
+		expect(fileRecord.fileKey).toBe(FILE_KEY);
+		expect(fileRecord).not.toHaveProperty("nodeId");
 	});
 
 	it("T5.5b: --no-history suppresses the history append", async () => {

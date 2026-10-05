@@ -1,0 +1,524 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "ds-bridge analytics (analytics --format json / --emit)",
+	"description": "Output of `ds-bridge analytics` (SPEC-analytics-export §3): the merged document (schema ds-bridge/analytics) or one per-domain artifact (schema ds-bridge/analytics/<domain>). Additive changes keep schemaVersion 1; a removal or type change bumps it. Objects are open (no additionalProperties: false) so newer additive output still validates; ds-bridge's tests check every emitted key is declared.",
+	"anyOf": [
+		{
+			"$ref": "#/$defs/Merged"
+		},
+		{
+			"$ref": "#/$defs/Domain_figma"
+		},
+		{
+			"$ref": "#/$defs/Domain_code"
+		},
+		{
+			"$ref": "#/$defs/Domain_token"
+		},
+		{
+			"$ref": "#/$defs/Domain_git"
+		},
+		{
+			"$ref": "#/$defs/Domain_score"
+		}
+	],
+	"$defs": {
+		"Metrics_figma": {
+			"type": "object",
+			"description": "The figma domain's present ReportData sections (an absent or empty section is omitted). Values are documented by schemas/report.v1.schema.json.",
+			"properties": {
+				"libraryHealth": {
+					"description": "ReportData.libraryHealth — the same shape as data.libraryHealth in schemas/report.v1.schema.json."
+				},
+				"libraryHealthTrend": {
+					"description": "ReportData.libraryHealthTrend — the same shape as data.libraryHealthTrend in schemas/report.v1.schema.json."
+				},
+				"libraryHotspotsTrend": {
+					"description": "ReportData.libraryHotspotsTrend — the same shape as data.libraryHotspotsTrend in schemas/report.v1.schema.json."
+				},
+				"frameReadinessTrend": {
+					"description": "ReportData.frameReadinessTrend — the same shape as data.frameReadinessTrend in schemas/report.v1.schema.json."
+				},
+				"handoffPassRate": {
+					"description": "ReportData.handoffPassRate — the same shape as data.handoffPassRate in schemas/report.v1.schema.json."
+				},
+				"readiness": {
+					"description": "ReportData.readiness — the same shape as data.readiness in schemas/report.v1.schema.json."
+				},
+				"frameImplementability": {
+					"description": "ReportData.frameImplementability — the same shape as data.frameImplementability in schemas/report.v1.schema.json."
+				}
+			}
+		},
+		"Metrics_code": {
+			"type": "object",
+			"description": "The code domain's present ReportData sections (an absent or empty section is omitted). Values are documented by schemas/report.v1.schema.json.",
+			"properties": {
+				"lintSummary": {
+					"description": "ReportData.lintSummary — the same shape as data.lintSummary in schemas/report.v1.schema.json."
+				},
+				"leaderboard": {
+					"description": "ReportData.leaderboard — the same shape as data.leaderboard in schemas/report.v1.schema.json."
+				},
+				"adoptionTrend": {
+					"description": "ReportData.adoptionTrend — the same shape as data.adoptionTrend in schemas/report.v1.schema.json."
+				},
+				"importCoverage": {
+					"description": "ReportData.importCoverage — the same shape as data.importCoverage in schemas/report.v1.schema.json."
+				},
+				"parity": {
+					"description": "ReportData.parity — the same shape as data.parity in schemas/report.v1.schema.json."
+				},
+				"parityTrend": {
+					"description": "ReportData.parityTrend — the same shape as data.parityTrend in schemas/report.v1.schema.json."
+				},
+				"componentHealth": {
+					"description": "ReportData.componentHealth — the same shape as data.componentHealth in schemas/report.v1.schema.json."
+				},
+				"impact": {
+					"description": "ReportData.impact — the same shape as data.impact in schemas/report.v1.schema.json."
+				},
+				"migrationChecklist": {
+					"description": "ReportData.migrationChecklist — the same shape as data.migrationChecklist in schemas/report.v1.schema.json."
+				}
+			}
+		},
+		"Metrics_token": {
+			"type": "object",
+			"description": "The token domain's present ReportData sections (an absent or empty section is omitted). Values are documented by schemas/report.v1.schema.json.",
+			"properties": {
+				"driftTrend": {
+					"description": "ReportData.driftTrend — the same shape as data.driftTrend in schemas/report.v1.schema.json."
+				},
+				"a11y": {
+					"description": "ReportData.a11y — the same shape as data.a11y in schemas/report.v1.schema.json."
+				},
+				"breakingCalendar": {
+					"description": "ReportData.breakingCalendar — the same shape as data.breakingCalendar in schemas/report.v1.schema.json."
+				}
+			}
+		},
+		"Metrics_git": {
+			"type": "object",
+			"description": "The git domain's present ReportData sections (an absent or empty section is omitted). Values are documented by schemas/report.v1.schema.json.",
+			"properties": {
+				"changeFrequency": {
+					"description": "ReportData.changeFrequency — the same shape as data.changeFrequency in schemas/report.v1.schema.json."
+				},
+				"audienceChangelog": {
+					"description": "ReportData.audienceChangelog — the same shape as data.audienceChangelog in schemas/report.v1.schema.json."
+				},
+				"ownershipLeaderboard": {
+					"description": "ReportData.ownershipLeaderboard — the same shape as data.ownershipLeaderboard in schemas/report.v1.schema.json."
+				},
+				"scoreVelocity": {
+					"description": "ReportData.scoreVelocity — the same shape as data.scoreVelocity in schemas/report.v1.schema.json."
+				}
+			}
+		},
+		"Metrics_score": {
+			"type": "object",
+			"description": "The score domain's present ReportData sections (an absent or empty section is omitted). Values are documented by schemas/report.v1.schema.json.",
+			"properties": {
+				"systemScore": {
+					"description": "ReportData.systemScore — the same shape as data.systemScore in schemas/report.v1.schema.json."
+				},
+				"consistency": {
+					"description": "ReportData.consistency — the same shape as data.consistency in schemas/report.v1.schema.json."
+				},
+				"debt": {
+					"description": "ReportData.debt — the same shape as data.debt in schemas/report.v1.schema.json."
+				},
+				"executive": {
+					"description": "ReportData.executive — the same shape as data.executive in schemas/report.v1.schema.json."
+				},
+				"targets": {
+					"description": "ReportData.targets — the same shape as data.targets in schemas/report.v1.schema.json."
+				},
+				"dataFreshness": {
+					"description": "ReportData.dataFreshness — the same shape as data.dataFreshness in schemas/report.v1.schema.json."
+				},
+				"releaseReadiness": {
+					"description": "ReportData.releaseReadiness — the same shape as data.releaseReadiness in schemas/report.v1.schema.json."
+				}
+			}
+		},
+		"Executive": {
+			"type": "object",
+			"description": "The AN3 executive rollup. Every headline is optional: absent means not measured, never 0.",
+			"properties": {
+				"health": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100,
+					"description": "System health = the system score (0–100)."
+				},
+				"adoption": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100,
+					"description": "Component import coverage % (registry; labelled 'Import coverage' in every surface — not the on-system %)."
+				},
+				"consistency": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100,
+					"description": "AN1 consistency score."
+				},
+				"debt": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100,
+					"description": "AN2 design-debt index (0–100, a capped weighted sum; shown as N/100 (level))."
+				},
+				"trend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/ScorePoint"
+					}
+				}
+			}
+		},
+		"ScorePoint": {
+			"type": "object",
+			"required": ["date", "score"],
+			"properties": {
+				"date": {
+					"type": "string"
+				},
+				"score": {
+					"type": "number"
+				}
+			}
+		},
+		"Slice_figma": {
+			"type": "object",
+			"required": ["status", "metrics"],
+			"properties": {
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_figma"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Slice_code": {
+			"type": "object",
+			"required": ["status", "metrics"],
+			"properties": {
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_code"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Slice_token": {
+			"type": "object",
+			"required": ["status", "metrics"],
+			"properties": {
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_token"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Slice_git": {
+			"type": "object",
+			"required": ["status", "metrics"],
+			"properties": {
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_git"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Slice_score": {
+			"type": "object",
+			"required": ["status", "metrics"],
+			"properties": {
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_score"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Merged": {
+			"type": "object",
+			"description": "analytics.json / `analytics --format json`.",
+			"required": [
+				"schema",
+				"schemaVersion",
+				"generatedAt",
+				"project",
+				"domains"
+			],
+			"properties": {
+				"schema": {
+					"const": "ds-bridge/analytics"
+				},
+				"schemaVersion": {
+					"const": 1
+				},
+				"generatedAt": {
+					"type": "string"
+				},
+				"project": {
+					"type": "string"
+				},
+				"executive": {
+					"$ref": "#/$defs/Executive"
+				},
+				"domains": {
+					"type": "object",
+					"required": ["figma", "code", "token", "git", "score"],
+					"properties": {
+						"figma": {
+							"$ref": "#/$defs/Slice_figma"
+						},
+						"code": {
+							"$ref": "#/$defs/Slice_code"
+						},
+						"token": {
+							"$ref": "#/$defs/Slice_token"
+						},
+						"git": {
+							"$ref": "#/$defs/Slice_git"
+						},
+						"score": {
+							"$ref": "#/$defs/Slice_score"
+						}
+					}
+				}
+			}
+		},
+		"Domain_figma": {
+			"type": "object",
+			"description": "The per-domain artifact `analytics --emit figma`.",
+			"required": [
+				"schema",
+				"schemaVersion",
+				"domain",
+				"generatedAt",
+				"project",
+				"status",
+				"metrics"
+			],
+			"properties": {
+				"schema": {
+					"const": "ds-bridge/analytics/figma"
+				},
+				"schemaVersion": {
+					"const": 1
+				},
+				"domain": {
+					"const": "figma"
+				},
+				"generatedAt": {
+					"type": "string"
+				},
+				"project": {
+					"type": "string"
+				},
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_figma"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Domain_code": {
+			"type": "object",
+			"description": "The per-domain artifact `analytics --emit code`.",
+			"required": [
+				"schema",
+				"schemaVersion",
+				"domain",
+				"generatedAt",
+				"project",
+				"status",
+				"metrics"
+			],
+			"properties": {
+				"schema": {
+					"const": "ds-bridge/analytics/code"
+				},
+				"schemaVersion": {
+					"const": 1
+				},
+				"domain": {
+					"const": "code"
+				},
+				"generatedAt": {
+					"type": "string"
+				},
+				"project": {
+					"type": "string"
+				},
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_code"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Domain_token": {
+			"type": "object",
+			"description": "The per-domain artifact `analytics --emit token`.",
+			"required": [
+				"schema",
+				"schemaVersion",
+				"domain",
+				"generatedAt",
+				"project",
+				"status",
+				"metrics"
+			],
+			"properties": {
+				"schema": {
+					"const": "ds-bridge/analytics/token"
+				},
+				"schemaVersion": {
+					"const": 1
+				},
+				"domain": {
+					"const": "token"
+				},
+				"generatedAt": {
+					"type": "string"
+				},
+				"project": {
+					"type": "string"
+				},
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_token"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Domain_git": {
+			"type": "object",
+			"description": "The per-domain artifact `analytics --emit git`.",
+			"required": [
+				"schema",
+				"schemaVersion",
+				"domain",
+				"generatedAt",
+				"project",
+				"status",
+				"metrics"
+			],
+			"properties": {
+				"schema": {
+					"const": "ds-bridge/analytics/git"
+				},
+				"schemaVersion": {
+					"const": 1
+				},
+				"domain": {
+					"const": "git"
+				},
+				"generatedAt": {
+					"type": "string"
+				},
+				"project": {
+					"type": "string"
+				},
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_git"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		},
+		"Domain_score": {
+			"type": "object",
+			"description": "The per-domain artifact `analytics --emit score`.",
+			"required": [
+				"schema",
+				"schemaVersion",
+				"domain",
+				"generatedAt",
+				"project",
+				"status",
+				"metrics"
+			],
+			"properties": {
+				"schema": {
+					"const": "ds-bridge/analytics/score"
+				},
+				"schemaVersion": {
+					"const": 1
+				},
+				"domain": {
+					"const": "score"
+				},
+				"generatedAt": {
+					"type": "string"
+				},
+				"project": {
+					"type": "string"
+				},
+				"status": {
+					"enum": ["ok", "no-data"]
+				},
+				"metrics": {
+					"$ref": "#/$defs/Metrics_score"
+				},
+				"hint": {
+					"type": "string",
+					"description": "The command that produces this domain's data (no-data only)."
+				}
+			}
+		}
+	}
+}

@@ -1,7 +1,7 @@
 {
 	"name": "ds-bridge",
-	"version": "1.11.0",
-	"description": "Connect your design system's Figma library to your codebase: token drift detection, DS-aware linting, design-to-code, and pre-handoff QA.",
+	"version": "1.12.0",
+	"description": "Design-system analytics in Claude Code: measure adoption and health over time (recorded in CI, rolled up across repos, exported for BI), then find and fix what is off-system with token drift detection, DS-aware linting, design-to-code, and pre-handoff QA.",
 	"author": {
 		"name": "lucksy"
 	},

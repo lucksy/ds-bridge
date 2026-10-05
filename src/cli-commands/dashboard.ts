@@ -156,6 +156,8 @@ interface ListPreset {
 	name: string;
 	description: string;
 	artifacts: string[];
+	/** True for the six persona views the setup wizard offers; false for `everything` / `exec`. */
+	persona: boolean;
 }
 
 interface ListJson {
@@ -164,12 +166,20 @@ interface ListJson {
 	view: { source: string; viewName?: string };
 }
 
-/** The seven presets with descriptions + member ids, in PRESET_NAMES order. */
+/** The non-persona views: the `everything` escape and the curated `exec` view. */
+const NON_PERSONA_VIEWS: ReadonlySet<string> = new Set([
+	"everything",
+	"exec",
+	"org",
+]);
+
+/** The nine presets (six personas + everything + exec + org), in PRESET_NAMES order. */
 function listPresets(): ListPreset[] {
 	return PRESET_NAMES.map((name) => ({
 		name,
 		description: PRESET_DESCRIPTIONS[name],
 		artifacts: [...PRESETS[name]],
+		persona: !NON_PERSONA_VIEWS.has(name),
 	}));
 }
 

@@ -17,13 +17,7 @@
 // Exit codes (lint convention, SPEC §11.7):
 //   0  success (coverage gaps are informational, not a failure)
 //   2  operational error (bad path, missing/corrupt registry, unknown flag)
-import {
-	appendFileSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	statSync,
-} from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
@@ -31,6 +25,7 @@ import type { ComponentUsage } from "../engines/impact/usage.js";
 import type { CoverageResult } from "../engines/registry/coverage.js";
 import { computeCoverage } from "../engines/registry/coverage.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderBarChart,
 	severityColor,
@@ -132,12 +127,7 @@ function appendAdoptionHistory(
 		total: coverage.total,
 		uncovered: coverage.uncovered,
 	};
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Render the human-readable term report: a donut-ish summary line + bar + gaps. */

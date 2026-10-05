@@ -15,7 +15,6 @@
 //
 // Exit codes: 0 success · 2 operational error (bad --format/--audience, git
 // unavailable). It is a generator, not a gate — clean and "has changes" are both 0.
-import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { cwd as processCwd } from "node:process";
 import type { Command } from "commander";
@@ -35,6 +34,7 @@ import {
 	type FigmaVersion,
 } from "../io/figma/client.js";
 import { type GitExec, readGitLog, spawnGitExec } from "../io/git-log.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	type Severity,
 	severityColor,
@@ -302,12 +302,7 @@ function appendChangelogHistory(
 	record: ChangelogHistoryRecord,
 ): void {
 	const stateDir = join(deps.cwd, ".ds-bridge");
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Execute the changelog command with injected dependencies. */

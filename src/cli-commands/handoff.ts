@@ -16,7 +16,6 @@
 // --comment posts the top deductions as ONE Figma comment, but only with the
 // explicit --comment flag AND --yes (a non-interactive confirmation). Without
 // --yes we refuse and still report — never write to Figma on a guess.
-import { appendFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { cwd } from "node:process";
 import type { Command } from "commander";
@@ -33,6 +32,7 @@ import {
 	type FigmaNode,
 	type FigmaResult,
 } from "../io/figma/client.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderTable,
 	type Severity,
@@ -78,6 +78,9 @@ interface HandoffHistoryRecord {
 	kind: "handoff";
 	score: number;
 	frameName: string;
+	/** H7: the frame identity, so readiness can be trended per frame. */
+	fileKey: string;
+	nodeId?: string;
 	deductions: { rule: RuleId; points: number }[];
 }
 
@@ -92,6 +95,7 @@ interface HandoffHistoryRecord {
 function appendHandoffHistory(
 	report: ReadinessReport,
 	frameName: string,
+	frame: { fileKey: string; nodeId?: string },
 ): void {
 	const stateDir = join(cwd(), ".ds-bridge");
 	const record: HandoffHistoryRecord = {
@@ -99,16 +103,13 @@ function appendHandoffHistory(
 		kind: "handoff",
 		score: report.score,
 		frameName,
+		fileKey: frame.fileKey,
+		...(frame.nodeId !== undefined ? { nodeId: frame.nodeId } : {}),
 		deductions: report.deductions
 			.slice(0, HISTORY_DEDUCTION_LIMIT)
 			.map((d) => ({ rule: d.rule, points: d.points })),
 	};
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Print a fatal operational error and set exit code 2. */
@@ -347,7 +348,10 @@ async function runHandoff(url: string, options: HandoffOptions): Promise<void> {
 	// History: record the score for the dashboard readiness gauge (suppressible
 	// with --no-history). The frame name is the scored root node's name.
 	if (options.history) {
-		appendHandoffHistory(report, fetched.root.name);
+		appendHandoffHistory(report, fetched.root.name, {
+			fileKey: parsed.fileKey,
+			...(parsed.nodeId !== undefined ? { nodeId: parsed.nodeId } : {}),
+		});
 	}
 
 	if (format === "json") {

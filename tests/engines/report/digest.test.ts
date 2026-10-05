@@ -400,7 +400,7 @@ describe("buildDigest — action rules (fixed priority, max 3)", () => {
 		});
 		const model = buildDigest(text, since, "both", 80);
 		if (model.kind !== "ok") throw new Error("expected ok");
-		expect(model.actions[0]?.command).toBe("/ds-bridge:token-check");
+		expect(model.actions[0]?.command).toBe("ds-bridge tokens check");
 		expect(model.actions[0]?.audience).toBe("both");
 	});
 
@@ -412,9 +412,12 @@ describe("buildDigest — action rules (fixed priority, max 3)", () => {
 		});
 		const model = buildDigest(text, since, "both", 80);
 		if (model.kind !== "ok") throw new Error("expected ok");
-		expect(model.actions.map((a) => a.command)).toContain(
-			"/ds-bridge:ds-lint --fix",
-		);
+		expect(model.actions.map((a) => a.command)).toContain("ds-bridge lint");
+		// D6 — the action carries the off-system count for its sentence.
+		expect(
+			model.actions.find((a) => a.command === "ds-bridge lint")?.count,
+		).toBe(4);
+		expect(JSON.stringify(model.actions)).not.toContain("/ds-bridge:");
 	});
 
 	it("readiness below the CONFIGURED threshold fires handoff-qa (param, not hardcoded 80)", () => {
@@ -430,10 +433,10 @@ describe("buildDigest — action rules (fixed priority, max 3)", () => {
 		const raised = buildDigest(text, since, "both", 90);
 		if (raised.kind !== "ok") throw new Error("expected ok");
 		expect(raised.actions.map((a) => a.command)).toContain(
-			"/ds-bridge:handoff-qa",
+			"ds-bridge handoff <frame-url>",
 		);
 		expect(
-			raised.actions.find((a) => a.command === "/ds-bridge:handoff-qa")
+			raised.actions.find((a) => a.command === "ds-bridge handoff <frame-url>")
 				?.audience,
 		).toBe("designer");
 	});
@@ -446,9 +449,7 @@ describe("buildDigest — action rules (fixed priority, max 3)", () => {
 		});
 		const model = buildDigest(text, since, "both", 80);
 		if (model.kind !== "ok") throw new Error("expected ok");
-		expect(model.actions.map((a) => a.command)).toContain(
-			"/ds-bridge:a11y-check",
-		);
+		expect(model.actions.map((a) => a.command)).toContain("ds-bridge a11y");
 	});
 
 	it("coverage below 100% fires the adoption action", () => {
@@ -494,9 +495,9 @@ describe("buildDigest — action rules (fixed priority, max 3)", () => {
 		if (model.kind !== "ok") throw new Error("expected ok");
 		expect(model.actions).toHaveLength(3);
 		expect(model.actions.map((a) => a.command)).toEqual([
-			"/ds-bridge:token-check",
-			"/ds-bridge:ds-lint --fix",
-			"/ds-bridge:handoff-qa",
+			"ds-bridge tokens check",
+			"ds-bridge lint",
+			"ds-bridge handoff <frame-url>",
 		]);
 	});
 
@@ -516,8 +517,8 @@ describe("buildDigest — action rules (fixed priority, max 3)", () => {
 		const model = buildDigest(text, since, "developer", 80);
 		if (model.kind !== "ok") throw new Error("expected ok");
 		const cmds = model.actions.map((a) => a.command);
-		expect(cmds).toContain("/ds-bridge:ds-lint --fix");
-		expect(cmds).not.toContain("/ds-bridge:a11y-check");
+		expect(cmds).toContain("ds-bridge lint");
+		expect(cmds).not.toContain("ds-bridge a11y");
 	});
 });
 

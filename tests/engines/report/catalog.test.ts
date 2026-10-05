@@ -1,4 +1,6 @@
-// M0.1 — Artifact catalog (fresh product: 24 artifacts, 6 clean personas).
+// M0.1 — Artifact catalog (fresh product: 24 artifacts, 6 clean personas;
+// X3 / AN5 appends the executive layer → 27; F5 appends the Figma/frame
+// trends → 30).
 // Test-first: the ArtifactId contract, completeness against ReportData's
 // optional sections, the six-persona tagging, and nearest-match lookup are
 // spec'd here before implementation.
@@ -14,7 +16,7 @@ import {
 } from "../../../src/engines/report/catalog.js";
 import type { ReportData } from "../../../src/engines/report/types.js";
 
-/** The optional section keys of ReportData — the set CATALOG must cover (24). */
+/** The optional section keys of ReportData — the set CATALOG must cover (30). */
 type SectionKey = Exclude<keyof ReportData, "generatedAt" | "project">;
 const SECTION_KEYS: readonly SectionKey[] = [
 	"systemScore",
@@ -41,6 +43,12 @@ const SECTION_KEYS: readonly SectionKey[] = [
 	"frameImplementability",
 	"releaseReadiness",
 	"dataFreshness",
+	"consistency",
+	"debt",
+	"executive",
+	"libraryHotspotsTrend",
+	"frameReadinessTrend",
+	"handoffPassRate",
 ];
 
 const PERSONAS: readonly Persona[] = [
@@ -77,13 +85,19 @@ const EXPECTED_ORDER: readonly ArtifactId[] = [
 	"frame-implementability",
 	"release-readiness",
 	"data-freshness",
+	"consistency",
+	"design-debt",
+	"executive",
+	"library-hotspots-trend",
+	"frame-readiness-trend",
+	"handoff-pass-rate",
 ];
 
-describe("CATALOG (24-artifact fresh catalog)", () => {
-	it("has exactly 24 artifacts in the authored order (13 base + 11 metric artifacts)", () => {
+describe("CATALOG (30-artifact catalog)", () => {
+	it("has exactly 30 artifacts in the authored order (13 base + 11 metric + 3 executive-layer + 3 Figma/frame-trend artifacts)", () => {
 		expect(CATALOG.map((a) => a.id)).toEqual([...EXPECTED_ORDER]);
 		expect(ALL_ARTIFACT_IDS).toEqual([...EXPECTED_ORDER]);
-		expect(ALL_ARTIFACT_IDS).toHaveLength(24);
+		expect(ALL_ARTIFACT_IDS).toHaveLength(30);
 	});
 
 	it("covers every optional ReportData section exactly once via reportDataKey", () => {
@@ -127,6 +141,49 @@ describe("CATALOG (24-artifact fresh catalog)", () => {
 		expectKey("frame-implementability", "frameImplementability");
 		expectKey("release-readiness", "releaseReadiness");
 		expectKey("data-freshness", "dataFreshness");
+	});
+
+	it("appends the executive layer (AN5) with its keys, titles and persona tags", () => {
+		const entry = (id: ArtifactId) => CATALOG.find((a) => a.id === id);
+		expect(entry("consistency")).toMatchObject({
+			title: "Consistency",
+			reportDataKey: "consistency",
+			personas: ["ds-designer", "ds-manager", "ds-engineer", "product-manager"],
+		});
+		expect(entry("design-debt")).toMatchObject({
+			title: "Design debt",
+			reportDataKey: "debt",
+			personas: ["ds-designer", "ds-manager", "ds-engineer"],
+		});
+		expect(entry("executive")).toMatchObject({
+			title: "Executive summary",
+			reportDataKey: "executive",
+			personas: ["ds-manager", "product-manager"],
+		});
+	});
+
+	it("appends the Figma/frame trends (F5) with their keys, titles and persona tags", () => {
+		const entry = (id: ArtifactId) => CATALOG.find((a) => a.id === id);
+		expect(entry("library-hotspots-trend")).toMatchObject({
+			title: "Library hotspots trend",
+			reportDataKey: "libraryHotspotsTrend",
+			personas: ["ds-designer", "ds-manager"],
+		});
+		expect(entry("frame-readiness-trend")).toMatchObject({
+			title: "Frame readiness trend",
+			reportDataKey: "frameReadinessTrend",
+			personas: ["ds-designer", "product-designer", "product-manager"],
+		});
+		expect(entry("handoff-pass-rate")).toMatchObject({
+			title: "Handoff pass rate",
+			reportDataKey: "handoffPassRate",
+			personas: [
+				"ds-designer",
+				"ds-manager",
+				"product-designer",
+				"product-manager",
+			],
+		});
 	});
 
 	it("gives every entry a non-empty title", () => {

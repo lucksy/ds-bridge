@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Command } from "commander";
 import { registerA11yCommand } from "./cli-commands/a11y.js";
 import { registerAdoptionCommand } from "./cli-commands/adoption.js";
+import { registerAnalyticsCommand } from "./cli-commands/analytics.js";
 import { registerBadgeCommand } from "./cli-commands/badge.js";
 import { registerChangelogCommand } from "./cli-commands/changelog.js";
 import { registerConfigCommand } from "./cli-commands/config.js";
@@ -12,13 +13,16 @@ import { registerDigestCommand } from "./cli-commands/digest.js";
 import { registerDocsCommand } from "./cli-commands/docs.js";
 import { registerFrameImplCommand } from "./cli-commands/frame-impl.js";
 import { registerHandoffCommand } from "./cli-commands/handoff.js";
+import { registerHistoryCommand } from "./cli-commands/history.js";
 import { registerImpactCommand } from "./cli-commands/impact.js";
 import { registerLibraryHealthCommand } from "./cli-commands/library-health.js";
 import { registerLintCommand } from "./cli-commands/lint.js";
 import { registerParityCommand } from "./cli-commands/parity.js";
+import { registerRecordCommand } from "./cli-commands/record.js";
 import { registerRegistryCommand } from "./cli-commands/registry.js";
 import { registerReleaseCheckCommand } from "./cli-commands/release-check.js";
 import { registerReportCommand } from "./cli-commands/report.js";
+import { registerRollupCommand } from "./cli-commands/rollup.js";
 import { registerTokensCommand } from "./cli-commands/tokens.js";
 import { loadDotenvInto } from "./io/dotenv.js";
 
@@ -52,6 +56,10 @@ export function buildProgram(): Command {
 	registerDigestCommand(program);
 	registerConfigCommand(program);
 	registerReleaseCheckCommand(program);
+	registerRecordCommand(program);
+	registerHistoryCommand(program);
+	registerAnalyticsCommand(program);
+	registerRollupCommand(program);
 
 	return program;
 }

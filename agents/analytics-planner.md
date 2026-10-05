@@ -40,21 +40,29 @@ Run them with Bash, e.g.
 through any `--file-key <alias>` the caller gave. Exit `1` is expected (findings);
 exit `2` means a missing precondition — record the domain as skipped and continue.
 
-### 2. Derive the executive headline
+### 2. Take the executive headline from the CLI
 
-From the gathered JSON, assemble the four leadership numbers (the vision doc's
-executive overview), each labelled with its source and caveats:
+The four leadership numbers are computed deterministically by
+`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs analytics --format=json` (replayed from
+`.ds-bridge/history.jsonl`) — read its `executive` block and **quote it, never
+re-blend it**:
 
-- **Health** — the composite system score from `report --format=json` (or note
-  "no history yet").
-- **Adoption** — import coverage `imported/total` from `adoption` (floor — `.tsx`
-  imports only).
-- **Consistency** — blend on-system token % (`adoption`) · component-match ratio
-  (`parity`/registry) · override cleanliness (`library-health`). State it is a
-  blend, not a single ratio.
-- **Debt** — fold deprecated usage + detached candidates (heuristic) + off-system
-  literals into a single "design-debt" view, worst-first, each with a directed
-  fix ("replace deprecated X", "tokenize N values").
+- **Health** — `executive.health`, the composite system score (0–100), with
+  `executive.trend` for its direction.
+- **Import coverage** — `executive.adoption`, import coverage % (a floor —
+  `.tsx` imports only; not the on-system %). Absent → "not measured" (needs `registry build` + `record`).
+- **Consistency** — `executive.consistency` (0–100): on-system tokens ·
+  component matches · override cleanliness, weighted over what was measured.
+- **Design debt** — `executive.debt` as `N/100 (level)` (an index, lower is
+  better): deprecated + detached
+  (heuristic) + off-system, weighted and capped at 100. Use the domain rows you
+  gathered for the worst-first items, each with a directed fix ("replace
+  deprecated X", "tokenize N values").
+
+A missing key means never measured — say so, never 0. If the history is empty
+(every domain `no-data`), suggest `ds-bridge record` first. For a manager
+one-pager the user can paste, `report --format exec` already renders score,
+trend, targets, top risks and next actions.
 
 ### 3. Output the report
 

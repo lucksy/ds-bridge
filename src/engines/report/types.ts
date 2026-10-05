@@ -12,6 +12,12 @@ import type {
 	LibraryHealthTotals,
 	OverrideHotspot,
 } from "../figma/library-health.js";
+import type { ConsistencySub } from "./consistency.js";
+import type { DebtRollup } from "./debt.js";
+import type { ExecutiveRollup } from "./executive.js";
+import type { FrameReadinessTrend } from "./frame-readiness-trend.js";
+import type { HandoffPassRate } from "./handoff-pass-rate.js";
+import type { LibraryHotspotsTrend } from "./library-hotspots-trend.js";
 
 /** One day's drift counts, bucketed by change severity. */
 export interface DriftTrendPoint {
@@ -347,6 +353,17 @@ export interface FreshnessRow {
 }
 
 /**
+ * AN5 — the AN1 consistency score as a ReportData section: the engine's ok-shape
+ * minus its `kind` discriminator (a no-data outcome leaves the section absent).
+ */
+export interface ConsistencySection {
+	/** Weighted 0–100 consistency composite. */
+	score: number;
+	/** The present sub-signals (tokens · components · overrides). */
+	components: ConsistencySub[];
+}
+
+/**
  * The complete, self-contained input to {@link renderDashboard}. Sections are
  * independently optional so partial reports render gracefully.
  */
@@ -395,4 +412,16 @@ export interface ReportData {
 	releaseReadiness?: ReleaseReadiness;
 	/** C4 — measurement freshness per check-kind. */
 	dataFreshness?: FreshnessRow[];
+	/** AN5 — consistency score (AN1), present only for an ok outcome. */
+	consistency?: ConsistencySection;
+	/** AN5 — design-debt rollup (AN2), present when a debt signal was recorded. */
+	debt?: DebtRollup;
+	/** AN5 — executive rollup (AN3), present when ≥1 headline exists. */
+	executive?: ExecutiveRollup;
+	/** F3 — per-component library hygiene series (top-N lists over time). */
+	libraryHotspotsTrend?: LibraryHotspotsTrend;
+	/** F4 — per-frame handoff readiness series. */
+	frameReadinessTrend?: FrameReadinessTrend;
+	/** F4 — share of frames at/above the readiness gate (latest per frame). */
+	handoffPassRate?: HandoffPassRate;
 }

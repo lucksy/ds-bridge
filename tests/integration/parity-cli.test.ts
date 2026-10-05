@@ -10,7 +10,7 @@
 //   2  operational error (missing registry, bad path)
 import { execFile } from "node:child_process";
 import { mkdtempSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -222,5 +222,68 @@ describe("ds-bridge parity (built dist/cli.mjs)", () => {
 		const result = await runCli(["parity", dir]);
 		expect(result.code).toBe(2);
 		expect(result.stderr.toLowerCase()).toContain("registry build");
+	});
+
+	// H7 (SPEC-history-v2 §1.6) — `parity` writes its own parity record, deduped
+	// per registry snapshot so `registry build` + `parity` never double up.
+	describe("parity history line (H7)", () => {
+		async function parityRecords(
+			dir: string,
+		): Promise<Record<string, unknown>[]> {
+			let text = "";
+			try {
+				text = await readFile(join(dir, ".ds-bridge", "history.jsonl"), "utf8");
+			} catch {
+				return [];
+			}
+			return text
+				.split("\n")
+				.filter((l) => l.trim() !== "")
+				.map((l) => JSON.parse(l) as Record<string, unknown>)
+				.filter((r) => r.kind === "parity");
+		}
+
+		it("an unfiltered run appends one parity line with counts + registryAt", async () => {
+			const dir = await projectWith(MIXED_REGISTRY);
+			await runCli(["parity", dir]);
+			const records = await parityRecords(dir);
+			expect(records).toHaveLength(1);
+			expect(records[0]).toMatchObject({
+				v: 2,
+				kind: "parity",
+				total: 4,
+				ok: 1,
+				missingInCode: 1,
+				missingInFigma: 1,
+				propMismatch: 1,
+				score: 25,
+				registryAt: "2026-06-05T00:00:00.000Z",
+			});
+		});
+
+		it("a second run over the SAME registry snapshot appends nothing", async () => {
+			const dir = await projectWith(MIXED_REGISTRY);
+			await runCli(["parity", dir]);
+			await runCli(["parity", dir, "--format=json"]);
+			expect(await parityRecords(dir)).toHaveLength(1);
+		});
+
+		it("skips when registry build already recorded this snapshot (at === generatedAt)", async () => {
+			const dir = await projectWith(MIXED_REGISTRY);
+			await writeFile(
+				join(dir, ".ds-bridge", "history.jsonl"),
+				`${JSON.stringify({ at: "2026-06-05T00:00:00.000Z", kind: "parity", total: 4, ok: 1, score: 25 })}\n`,
+				"utf8",
+			);
+			await runCli(["parity", dir]);
+			expect(await parityRecords(dir)).toHaveLength(1);
+		});
+
+		it("a filtered run and --no-history append nothing", async () => {
+			const dir = await projectWith(MIXED_REGISTRY);
+			await runCli(["parity", "button", dir]);
+			await runCli(["parity", dir, "--no-history"]);
+			expect(await parityRecords(dir)).toHaveLength(0);
+		});
 	});
 });

@@ -21,6 +21,7 @@ describe("commands/library-health.md (C12, M13.1)", () => {
 		expect(md).toMatch(/^---\n[\s\S]*description:/);
 		expect(md).toContain("argument-hint:");
 		// Invokes the built CLI via the plugin root, in --format=json.
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal plugin-root placeholder in the command markdown
 		expect(md).toContain("${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs library-health");
 		expect(md).toContain("--format=json");
 	});

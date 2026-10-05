@@ -33,7 +33,15 @@ export type ArtifactId =
 	| "audience-changelog"
 	| "frame-implementability"
 	| "release-readiness"
-	| "data-freshness";
+	| "data-freshness"
+	// Executive layer (AN5, SPEC-exec-report §2):
+	| "consistency"
+	| "design-debt"
+	| "executive"
+	// Figma + per-frame trends (F5, SPEC-figma-trends §3):
+	| "library-hotspots-trend"
+	| "frame-readiness-trend"
+	| "handoff-pass-rate";
 
 /**
  * Persona tags used by presets and `dashboard list` — the six clean roles
@@ -236,6 +244,49 @@ export const CATALOG = [
 		title: "Data freshness",
 		personas: ALL_PERSONAS,
 		reportDataKey: "dataFreshness",
+	},
+	// ─── Executive layer (AN5) — appended so `everything` keeps catalog order ──
+	{
+		id: "consistency",
+		title: "Consistency",
+		personas: ["ds-designer", "ds-manager", "ds-engineer", "product-manager"],
+		reportDataKey: "consistency",
+	},
+	{
+		id: "design-debt",
+		title: "Design debt",
+		personas: ["ds-designer", "ds-manager", "ds-engineer"],
+		reportDataKey: "debt",
+	},
+	{
+		id: "executive",
+		title: "Executive summary",
+		personas: ["ds-manager", "product-manager"],
+		reportDataKey: "executive",
+	},
+	// ─── Figma + per-frame trends (F5) — appended (everything keeps catalog order) ──
+	{
+		id: "library-hotspots-trend",
+		title: "Library hotspots trend",
+		personas: ["ds-designer", "ds-manager"],
+		reportDataKey: "libraryHotspotsTrend",
+	},
+	{
+		id: "frame-readiness-trend",
+		title: "Frame readiness trend",
+		personas: ["ds-designer", "product-designer", "product-manager"],
+		reportDataKey: "frameReadinessTrend",
+	},
+	{
+		id: "handoff-pass-rate",
+		title: "Handoff pass rate",
+		personas: [
+			"ds-designer",
+			"ds-manager",
+			"product-designer",
+			"product-manager",
+		],
+		reportDataKey: "handoffPassRate",
 	},
 ] as const satisfies readonly ArtifactMeta[];
 

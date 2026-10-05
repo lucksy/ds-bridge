@@ -7,6 +7,8 @@
 //
 // Output is the C4 generator convention: markdown to stdout (pipe-clean, no path
 // line) so it drops straight into a Slack/Confluence paste or $GITHUB_STEP_SUMMARY;
+// `--format html` renders the same digest as one offline page (F7), and
+// `--audience managers` lays every movement out as one section;
 // `--out <file>` redirects the markdown to a file and prints that path instead.
 //
 // Absent/empty history is NOT an error — `buildDigest` returns the typed `quiet`
@@ -26,12 +28,17 @@ import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import type { ChangelogAudience } from "../engines/changelog/aggregate.js";
 import { buildDigest, parseSince } from "../engines/report/digest.js";
-import { renderDigestMarkdown } from "../engines/report/digest-md.js";
+import {
+	type DigestView,
+	renderDigestMarkdown,
+} from "../engines/report/digest-md.js";
+import { renderDigestHtml } from "../render/html/digest.js";
 
 interface DigestOptions {
 	since: string | undefined;
 	audience: string;
 	out: string | undefined;
+	format?: string | undefined;
 }
 
 /** Injectable dependencies so the command is testable end-to-end. */
@@ -52,11 +59,20 @@ function defaultDeps(): DigestDeps {
 	};
 }
 
-/** Normalize the --audience flag (plural CLI form) to the engine's audience. */
+/**
+ * Normalize the --audience flag (plural CLI form) to the engine's audience plus
+ * the render view. `manager(s)` keeps every movement (engine `both`) and lays it
+ * out as ONE section (F7, SPEC-figma-trends §4).
+ */
 function parseAudience(
 	flag: string,
-): { kind: "ok"; value: ChangelogAudience } | { kind: "error" } {
+):
+	| { kind: "ok"; value: ChangelogAudience; view?: DigestView }
+	| { kind: "error" } {
 	switch (flag) {
+		case "managers":
+		case "manager":
+			return { kind: "ok", value: "both", view: "manager" };
 		case "designers":
 		case "designer":
 			return { kind: "ok", value: "designer" };
@@ -120,7 +136,15 @@ export function runDigest(
 	const audience = parseAudience(options.audience);
 	if (audience.kind !== "ok") {
 		deps.stderr(
-			`Unknown --audience "${options.audience}". Expected "designers", "developers", or "both".\n`,
+			`Unknown --audience "${options.audience}". Expected "designers", "developers", "managers", or "both".\n`,
+		);
+		process.exitCode = 2;
+		return;
+	}
+	const format = options.format ?? "md";
+	if (format !== "md" && format !== "html") {
+		deps.stderr(
+			`Unknown --format "${options.format}". Expected "md" or "html".\n`,
 		);
 		process.exitCode = 2;
 		return;
@@ -156,7 +180,10 @@ export function runDigest(
 		audience.value,
 		threshold.value,
 	);
-	const markdown = renderDigestMarkdown(model);
+	const markdown =
+		format === "html"
+			? renderDigestHtml(model, audience.view)
+			: renderDigestMarkdown(model, audience.view);
 
 	// --out redirects to a file (and prints the path); otherwise the markdown goes
 	// to stdout with NO trailing path line (pipe-cleanliness, the C4 convention).
@@ -191,7 +218,15 @@ export function registerDigestCommand(program: Command): void {
 			"--since <window>",
 			'window start: an ISO date "YYYY-MM-DD" or a relative "<N>d" / "<N>w" (default 7d)',
 		)
-		.option("--audience <who>", "designers | developers | both", "both")
+		.option(
+			"--audience <who>",
+			"designers | developers | managers (one section, every movement) | both",
+			"both",
+		)
+		.option(
+			"--format <format>",
+			"md | html (a self-contained page, e.g. for a Pages site; default md)",
+		)
 		.option(
 			"--out <file>",
 			"redirect the digest markdown to a file (and print the path) instead of stdout",

@@ -87,7 +87,7 @@ describe("renderScorecardMarkdown — full delta golden", () => {
 				"| --- | --- | --- |",
 				"| Drift | 70 | 25 |",
 				"| Lint | 90 | 25 |",
-				"| Adoption | 80 | 20 |",
+				"| On-system | 80 | 20 |",
 				"",
 			].join("\n"),
 		);
@@ -130,7 +130,7 @@ describe("renderScorecardMarkdown — current-only golden", () => {
 				"| Component | Score | Weight |",
 				"| --- | --- | --- |",
 				"| Lint | 90 | 25 |",
-				"| Adoption | 68 | 20 |",
+				"| On-system | 68 | 20 |",
 				"",
 			].join("\n"),
 		);

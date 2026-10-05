@@ -29,8 +29,24 @@ function commandWords(hint: string): string[] {
 		.filter((w) => !w.startsWith("-") && !w.startsWith("<"));
 }
 
+/**
+ * Memoized per argument list: the same group's `--help` is spawned once, not
+ * once per hint (27 hints spawned sequentially brushed the 20s test timeout
+ * under full-suite load once the executive layer added three sections).
+ */
+const listedCache = new Map<string, Promise<Set<string>>>();
+
 /** The commands `ds-bridge --help` (or `ds-bridge <group> --help`) lists. */
-async function listed(args: string[]): Promise<Set<string>> {
+function listed(args: string[]): Promise<Set<string>> {
+	const key = args.join(" ");
+	const cached = listedCache.get(key);
+	if (cached !== undefined) return cached;
+	const pending = listedUncached(args);
+	listedCache.set(key, pending);
+	return pending;
+}
+
+async function listedUncached(args: string[]): Promise<Set<string>> {
 	const { stdout } = await execFileAsync(
 		process.execPath,
 		[cliPath, ...args, "--help"],

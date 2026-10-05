@@ -109,10 +109,15 @@ export interface MovementRow {
 	direction: MovementDirection;
 }
 
-/** One recommended action: a command to run, plus its audience tag. */
+/**
+ * One recommended action: a CLI command to run, plus its audience tag
+ * (SPEC-digest §1 rule 4, D6 — CLI commands, never slash commands). `count`
+ * carries the off-system total for the `ds-bridge lint` sentence.
+ */
 export interface DigestAction {
 	command: string;
 	audience: ChangelogAudience;
+	count?: number;
 }
 
 /** The digest model: the movement+actions report, or a typed quiet outcome. */
@@ -363,7 +368,7 @@ export function buildDigest(
 
 	const driftStale = driftMetric(inWindow.tokensCheck);
 	if (driftStale !== undefined && driftStale > 0) {
-		candidates.push({ command: "/ds-bridge:token-check", audience: "both" });
+		candidates.push({ command: "ds-bridge tokens check", audience: "both" });
 	}
 
 	const offSystem =
@@ -372,14 +377,18 @@ export function buildDigest(
 			: asNumber(asRecord(inWindow.lint.byKind)?.offSystem);
 	if (offSystem !== undefined && offSystem > 0) {
 		candidates.push({
-			command: "/ds-bridge:ds-lint --fix",
+			command: "ds-bridge lint",
 			audience: "developer",
+			count: offSystem,
 		});
 	}
 
 	const readiness = readinessMetric(inWindow.handoff);
 	if (readiness !== undefined && readiness < readinessThreshold) {
-		candidates.push({ command: "/ds-bridge:handoff-qa", audience: "designer" });
+		candidates.push({
+			command: "ds-bridge handoff <frame-url>",
+			audience: "designer",
+		});
 	}
 
 	const a11yFailing = (() => {
@@ -388,7 +397,7 @@ export function buildDigest(
 		return modes.some((m) => asNumber(asRecord(m)?.failed) > 0);
 	})();
 	if (a11yFailing) {
-		candidates.push({ command: "/ds-bridge:a11y-check", audience: "designer" });
+		candidates.push({ command: "ds-bridge a11y", audience: "designer" });
 	}
 
 	const coverage = coverageMetric(inWindow.adoptionLine);

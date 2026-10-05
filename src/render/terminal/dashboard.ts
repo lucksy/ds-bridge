@@ -13,6 +13,17 @@ import type {
 	ParityStatus,
 	ReportData,
 } from "../../engines/report/types.js";
+import {
+	belowGateMeta,
+	dateSpan,
+	frameDetail,
+	frameOverflow,
+	hotspotDetail,
+	passRateSub,
+	passRateTrendLine,
+	SIGNAL_LABEL,
+	SIGNAL_ORDER,
+} from "../figma-trend-format.js";
 import { renderBarChart } from "./bar-chart.js";
 import { renderGauge } from "./gauge.js";
 import { renderMatrix } from "./matrix.js";
@@ -42,7 +53,7 @@ function systemScoreTerminalSection(data: ReportData, color: boolean): string {
 		lint: "lint",
 		readiness: "readiness",
 		a11y: "a11y",
-		adoption: "adoption",
+		adoption: "on-system",
 		parity: "parity",
 	};
 
@@ -418,7 +429,7 @@ function targetsTerminalSection(data: ReportData, color: boolean): string {
 		lint: "lint",
 		readiness: "readiness",
 		a11y: "a11y",
-		adoption: "adoption",
+		adoption: "on-system",
 		parity: "parity",
 	};
 
@@ -779,6 +790,149 @@ function dataFreshnessTerminalSection(
 	);
 }
 
+// ─── Executive layer (AN7, SPEC-exec-report §4) — terminal twins ────────────
+
+function executiveTerminalSection(data: ReportData, _color: boolean): string {
+	const exec = data.executive;
+	if (exec === undefined) {
+		return panel("Executive summary", emptyState("record"));
+	}
+	const row = (label: string, value: string | undefined): string =>
+		`${label.padEnd(17)}${value ?? "—"}`;
+	const lines = [
+		row(
+			"System score",
+			exec.health === undefined ? undefined : String(exec.health),
+		),
+		row(
+			"Import coverage",
+			exec.adoption === undefined ? undefined : `${exec.adoption}%`,
+		),
+		row(
+			"Consistency",
+			exec.consistency === undefined ? undefined : String(exec.consistency),
+		),
+		row("Design debt", exec.debt === undefined ? undefined : `${exec.debt}%`),
+	];
+	const trend = exec.trend ?? [];
+	if (trend.length >= 2) {
+		lines.push(`${"Trend".padEnd(17)}${sparkline(trend.map((p) => p.score))}`);
+	}
+	return panel("Executive summary", lines.join("\n"));
+}
+
+function consistencyTerminalSection(data: ReportData, color: boolean): string {
+	const consistency = data.consistency;
+	if (consistency === undefined) {
+		return panel("Consistency", emptyState("lint <dir>"));
+	}
+	const gauge = renderGauge(consistency.score, {
+		label: "Consistency",
+		width: 24,
+		color,
+	});
+	const table = renderTable(
+		["Signal", "Score", "Weight"],
+		consistency.components.map((c) => [
+			c.kind,
+			String(c.score),
+			String(c.weight),
+		]),
+		{ color },
+	);
+	return panel(
+		"Consistency",
+		[
+			gauge,
+			table,
+			"overrides is a documented-opinion penalty (8 per hotspot)",
+		].join("\n"),
+	);
+}
+
+function designDebtTerminalSection(data: ReportData, color: boolean): string {
+	const debt = data.debt;
+	if (debt === undefined) {
+		return panel("Design debt", emptyState("lint <dir>"));
+	}
+	const LEVEL_SEVERITY: Record<
+		"low" | "medium" | "high",
+		"ok" | "warn" | "error"
+	> = { low: "ok", medium: "warn", high: "error" };
+	const headline = `${debt.pct}% · ${severityColor(LEVEL_SEVERITY[debt.level], debt.level, { color })}`;
+	if (debt.items.length === 0) return panel("Design debt", headline);
+	const shown = debt.items.slice(0, 8);
+	const table = renderTable(
+		["Subject", "Kind", "Count", "Recommendation"],
+		shown.map((i) => [i.subject, i.kind, String(i.count), i.recommendation]),
+		{ color },
+	);
+	const more =
+		debt.items.length > shown.length
+			? [`… and ${debt.items.length - shown.length} more`]
+			: [];
+	return panel("Design debt", [headline, table, ...more].join("\n"));
+}
+
+function libraryHotspotsTrendTerminalSection(
+	data: ReportData,
+	_color: boolean,
+): string {
+	const trend = data.libraryHotspotsTrend;
+	if (trend === undefined || trend.rows.length === 0) {
+		return panel("Library hotspots trend", emptyState("library-health"));
+	}
+	const lines = [`Top components per signal · ${dateSpan(trend.dates)}`];
+	for (const signal of SIGNAL_ORDER) {
+		const rows = trend.rows.filter((r) => r.signal === signal);
+		if (rows.length === 0) continue;
+		const width = Math.max(...rows.map((r) => [...r.name].length));
+		lines.push("", SIGNAL_LABEL[signal]);
+		for (const row of rows) {
+			lines.push(`  ${row.name.padEnd(width)}  ${hotspotDetail(row)}`);
+		}
+	}
+	return panel("Library hotspots trend", lines.join("\n"));
+}
+
+function frameReadinessTrendTerminalSection(
+	data: ReportData,
+	_color: boolean,
+): string {
+	const trend = data.frameReadinessTrend;
+	if (trend === undefined || trend.frames.length === 0) {
+		return panel("Frame readiness trend", emptyState("handoff <frame-url>"));
+	}
+	const names = trend.frames.map((f) =>
+		f.frameName === "" ? f.key : f.frameName,
+	);
+	const width = Math.max(...names.map((n) => [...n].length));
+	const lines = [
+		belowGateMeta(trend),
+		...trend.frames.map(
+			(frame, i) =>
+				`  ${(names[i] ?? "").padEnd(width)}  ${frameDetail(frame)}`,
+		),
+	];
+	const more = frameOverflow(trend);
+	if (more !== undefined) lines.push(more);
+	return panel("Frame readiness trend", lines.join("\n"));
+}
+
+function handoffPassRateTerminalSection(
+	data: ReportData,
+	_color: boolean,
+): string {
+	const rate = data.handoffPassRate;
+	if (rate === undefined || rate.frames === 0) {
+		return panel("Handoff pass rate", emptyState("handoff <frame-url>"));
+	}
+	const lines = [`${rate.pct}% · ${passRateSub(rate)}`];
+	const line = passRateTrendLine(rate);
+	if (line !== undefined) lines.push(line);
+	return panel("Handoff pass rate", lines.join("\n"));
+}
+
 /** Every artifact's terminal twin, keyed by id (the SECTION_RENDERERS analog). */
 const SECTION_RENDERERS_TERMINAL: Record<
 	ArtifactId,
@@ -808,6 +962,12 @@ const SECTION_RENDERERS_TERMINAL: Record<
 	"frame-implementability": frameImplementabilityTerminalSection,
 	"release-readiness": releaseReadinessTerminalSection,
 	"data-freshness": dataFreshnessTerminalSection,
+	consistency: consistencyTerminalSection,
+	"design-debt": designDebtTerminalSection,
+	executive: executiveTerminalSection,
+	"library-hotspots-trend": libraryHotspotsTrendTerminalSection,
+	"frame-readiness-trend": frameReadinessTrendTerminalSection,
+	"handoff-pass-rate": handoffPassRateTerminalSection,
 };
 
 /** Options for the terminal composer: the injected render instant + color + label. */

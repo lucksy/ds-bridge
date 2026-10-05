@@ -17,14 +17,7 @@
 //      API error)
 //
 // SPEC-personas §5 C11: figma-impl.md step 5 invokes this to persist the artifact.
-import {
-	appendFileSync,
-	type Dirent,
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-} from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { isAbsolute, join, resolve, sep } from "node:path";
 import { cwd } from "node:process";
 import type { Command } from "commander";
@@ -54,6 +47,7 @@ import {
 	type FigmaResult,
 } from "../io/figma/client.js";
 import { resolveFileKey } from "../io/figma/file-key.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderTable,
 	severityColor,
@@ -518,12 +512,7 @@ function renderTerm(impl: Implementability, color: boolean): string {
 /** Append ONE frame-impl history line to <cwd>/.ds-bridge/history.jsonl. */
 function appendFrameImplHistory(record: FrameImplHistoryRecord): void {
 	const stateDir = join(cwd(), ".ds-bridge");
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Execute the `frame-impl` command. */

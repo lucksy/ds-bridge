@@ -1,0 +1,85 @@
+# Sample workflow: record ds-bridge design-system health on every push to the
+# default branch, into the `ds-bridge-data` branch (main stays clean), and check
+# pull requests. Scheduled runs add the Figma side (library hygiene + its top-N
+# component trends) and, monthly, publish the dashboard site plus a manager
+# digest to GitHub Pages. Copy to .github/workflows/ds-bridge-record.yml in YOUR
+# repo. Docs: docs/ci-recording.md
+name: ds-bridge record
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1" # weekly (Mon 06:00 UTC): record incl. Figma checks
+    - cron: "0 7 1 * *" # monthly (1st, 07:00 UTC): record + Pages site + manager digest
+  workflow_dispatch:
+
+permissions:
+  contents: write # publish history to the ds-bridge-data branch
+  pull-requests: write # only used when pr-comment: "true"
+
+# One recorder at a time on the data branch, so data-branch pushes queue instead
+# of racing (the publisher also retries with an append-only merge).
+concurrency:
+  group: ds-bridge-record-${{ github.event_name != 'pull_request' && 'data' || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Pin a release tag: tags commit dist/, which the action runs by default.
+      - uses: lucksy/ds-bridge/.github/actions/ds-bridge-record@v1.12.0
+        with:
+          data-branch: ds-bridge-data
+          pr-comment: "false" # opt in to one scorecard comment per PR
+          gate: "false" # "true" fails PRs whose metric_targets verdict is red
+          # Scheduled/manual runs add registry build + library-health when the
+          # FIGMA_TOKEN secret exists (figma: auto); pushes and PRs stay offline.
+          figma: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'auto' || 'false' }}
+          library-top: "10" # components per hygiene signal kept for trends
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+
+  # Monthly (and on demand): the dashboard site + the manager digest on Pages.
+  # Enable once: Settings → Pages → Source: "GitHub Actions".
+  pages:
+    if: github.event.schedule == '0 7 1 * *' || github.event_name == 'workflow_dispatch'
+    needs: record
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Seed from ds-bridge-data and render only (no new record, no publish):
+      # site/index.html + dashboards, site/digest.html + site/digest.md.
+      - uses: lucksy/ds-bridge/.github/actions/ds-bridge-record@v1.12.0
+        with:
+          mode: site
+          site-dir: site
+          digest: "true"
+          digest-since: 30d
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

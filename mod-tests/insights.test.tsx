@@ -98,6 +98,15 @@ describe("reading ds-bridge", () => {
 		);
 	});
 
+	test("labels the stored system score (H4 `score` records)", async () => {
+		const entries = parseHistory(
+			'{"v":2,"at":"2026-10-04T00:00:00Z","kind":"score","source":"ci","score":76}',
+		);
+		expect(historySection(entries).stats).toEqual([
+			{ label: "System score", value: "76" },
+		]);
+	});
+
 	test("charts library health and flags detaches as a heuristic", async () => {
 		const section = libraryHealthSection(LIBRARY);
 		expect(section.stats[1]).toEqual({ label: "Deprecated uses", value: "4" });

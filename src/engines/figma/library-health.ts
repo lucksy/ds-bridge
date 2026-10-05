@@ -58,6 +58,11 @@ export interface LibraryHealthReport {
 export interface AssessLibraryHealthOptions {
 	/** Overrides the default deprecation name pattern. */
 	deprecatedPattern?: RegExp;
+	/**
+	 * Display cap per list (default 20). `Number.POSITIVE_INFINITY` returns every
+	 * entry — the top-N history lists (SPEC-figma-trends §1.2) group from that.
+	 */
+	cap?: number;
 }
 
 // Default deprecation pattern: deprecated/deprecation, legacy, [old], do not use
@@ -108,6 +113,7 @@ export function assessLibraryHealth(
 ): LibraryHealthReport {
 	const deprecatedPattern =
 		opts?.deprecatedPattern ?? DEFAULT_DEPRECATED_PATTERN;
+	const cap = opts?.cap ?? CAP;
 	const hasComponents = file.components !== undefined;
 
 	// The set of component names — for the detached heuristic's exact-name match.
@@ -186,15 +192,15 @@ export function assessLibraryHealth(
 	]
 		.map(([componentName, count]) => ({ componentName, count }))
 		.sort((a, b) => compareStrings(a.componentName, b.componentName))
-		.slice(0, CAP);
+		.slice(0, cap);
 
 	// detached-candidates: deterministic node-id order; cap 20.
 	const detachedCandidates = [...detached]
 		.sort((a, b) => compareStrings(a.nodeId, b.nodeId))
-		.slice(0, CAP);
+		.slice(0, cap);
 
 	return {
-		overrideHotspots: hotspots.slice(0, CAP),
+		overrideHotspots: hotspots.slice(0, cap),
 		deprecatedUsage,
 		detachedCandidates,
 		totals,

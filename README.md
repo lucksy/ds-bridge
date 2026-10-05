@@ -1,9 +1,27 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/github/readme-hero-dark.png">
+    <img src="brand/github/readme-hero-light.png" alt="ds-bridge — Catch design token drift before it ships. Lint, Drift, Handoff, Measure." width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://ds-bridge.com">Website</a> ·
+  <a href="https://ds-bridge.com/install">Install</a> ·
+  <a href="https://ds-bridge.com/docs">Docs</a> ·
+  <a href="https://ds-bridge.com/example/dashboard.html">Example dashboard</a> ·
+  <a href="https://github.com/lucksy/ds-bridge/releases">Releases</a>
+</p>
+
 # DS Bridge
 
-A Claude Code plugin that connects your design system's Figma library to your
-codebase: **token drift detection**, **design-system-aware linting**,
-**system-first design-to-code**, and **pre-handoff QA** — with rich terminal
-output and a self-contained HTML dashboard.
+**Design-system analytics inside Claude Code.** DS Bridge measures how much of
+your product really uses the design system, tracks its health over time —
+recorded automatically in CI, rolled up across repos, exported to your
+spreadsheet — and finds and fixes what's off-system: **token drift detection**,
+**design-system-aware linting**, **system-first design-to-code**, and
+**pre-handoff QA**, with rich terminal output and a self-contained HTML
+dashboard.
 
 The brain is a standalone CLI (`ds-bridge`, bundled to a single
 `dist/cli.mjs`). Slash commands are thin wrappers over it, so the same engine
@@ -15,7 +33,7 @@ Professional+** (the remote Figma MCP server is available on all plans).
 > Spec-driven, strict TDD. See [`SPEC.md`](./SPEC.md)
 > (contract), [`PLAN.md`](./PLAN.md) (build strategy), [`TASKS.md`](./TASKS.md)
 > (live task tracker). The marketing site under [`website/`](./website) is built
-> and live at **<https://ds-bridge.pages.dev>** (Cloudflare Pages).
+> and live at **<https://ds-bridge.com>** (Cloudflare Pages).
 
 ## Who it serves
 
@@ -23,13 +41,72 @@ Professional+** (the remote Figma MCP server is available on all plans).
   off-system code at the door, before it lands in a PR.
 - **DS designers** — validate that designs are machine-readable before handoff;
   see the code impact of token changes.
-- **DS managers** — track drift, adoption, and handoff readiness as real metrics
-  with offline HTML reports.
+- **DS managers** — track the system score, adoption, drift and handoff
+  readiness as real metrics: history recorded by CI, a one-page manager report,
+  an org rollup across repos, and CSV/JSON export for Sheets or BI.
 
 The architecture treats **the repo as the source of truth** (W3C / Tokens
 Studio / Style Dictionary token files) and uses Figma to *validate designs
 against it* — no Enterprise Variables API, Library Analytics, or Code Connect
 required.
+
+## Design-system analytics
+
+The checks are the sensors; the analytics are the product. Every check run is
+saved to your repo's history, and the analytics replay it into trends.
+
+**What is measured**
+
+| Metric | From | Shown in |
+|---|---|---|
+| **System score** (0–100, weighted: drift, lint, readiness, contrast, adoption, parity) — stored with its weights on every `record` run | all checks | dashboard, badge, manager report, rollup |
+| **On-system %** (styling that uses tokens) and its trend, by directory | `lint` | dashboard, digest, manager report |
+| **Import coverage** (registry components your code imports) | `adoption` | dashboard, manager report |
+| **Token drift** (stale / missing / orphan) and **contrast** (WCAG AA over token pairs) | `tokens check`, `a11y` | dashboard, rollup |
+| **Handoff readiness** per Figma frame, the **pass rate**, and each frame's trend | `handoff` | dashboard, manager report |
+| **Parity** (Figma ↔ code) and **library health** (overrides, deprecated use, detached candidates) with per-component **hotspot trends** | `registry build`, `library-health` | dashboard |
+| **Consistency** (0–100) and the **design-debt index** (0–100, weighted, capped) | derived | dashboard, `analytics`, manager report |
+
+Anything never recorded reads "not measured", never 0.
+
+**How the series is built**
+
+- **History v2.** Each record in `.ds-bridge/history.jsonl` carries an envelope —
+  `source` (local / ci / hook), git `sha`/`branch`/`dirty`, `tool.version`,
+  `runId` — written by one locked writer. v1 lines still read;
+  `ds-bridge history migrate` upgrades them, `history stats|compact` keep the
+  file healthy, `history init` opts into `merge=union`.
+- **`ds-bridge record`** (`/ds-bridge:record`) runs every configured check as
+  one batch with a shared `runId` (`--figma` adds registry build, parity and
+  library health) and stores the composite score with the weights used.
+- **CI recording.** The composite action
+  [`.github/actions/ds-bridge-record`](./.github/actions/ds-bridge-record) runs
+  `record --source ci` on every push to the default branch and publishes the
+  series to a separate **`ds-bridge-data`** branch (no bot commits on `main`).
+  The sample workflow adds a weekly Figma run and a monthly Pages site with the
+  manager digest. On pull requests, a **scorecard comment** (`report --format md
+  --delta`) is **opt-in** (`pr-comment: "true"`), and `gate: "true"` fails a red
+  target. Setup: [`docs/ci-recording.md`](./docs/ci-recording.md).
+
+**What you get out**
+
+- **Manager report** — `ds-bridge report --format exec` (paste-ready Markdown)
+  or `--format exec-html` (one offline page): score + trend, on-system %,
+  import coverage, consistency, debt, per-frame readiness, targets RAG, top 3
+  risks, top 3 actions, data coverage. `report --view exec` is the leadership
+  dashboard. In Claude Code: `/ds-bridge:analytics`, option (c).
+- **Analytics and export** — `ds-bridge analytics` prints the headline (health ·
+  adoption · consistency · debt) and per-domain status; `--emit all` writes
+  byte-stable JSON artifacts to `.ds-bridge/analytics/`. `report --format json`
+  is the full dashboard data (schema `schemas/report.v1.schema.json`);
+  `history export --format csv|jsonl` gives one row per metric per run for
+  Sheets, Looker or BigQuery.
+- **Org rollup** — `ds-bridge rollup` (`/ds-bridge:rollup`) ranks several repos'
+  recorded history (dirs, files, or `<path>@origin/ds-bridge-data`) by system
+  score, with a mean, a size-weighted aggregate and a per-team breakdown. Local
+  only: nothing is fetched or hosted. See [Org rollup](#org-rollup).
+- **Digest** — `ds-bridge digest --audience managers --since 30d [--format html]`:
+  what moved, then up to three actions.
 
 ## Install
 
@@ -175,11 +252,14 @@ that runs the CLI and interprets its `--format=json` output. The CLI exits
 | `/ds-bridge:connect` | `ds-bridge config persist-token` | Save your Figma token from the session into a gitignored `.ds-bridge.env` (`0600`) so it survives restarts — the durable fix for [#62442](https://github.com/anthropics/claude-code/issues/62442). Run it once after setting the token. | 0 saved · 2 no token in env |
 | `/ds-bridge:ds-lint [--fix] [path]` | `ds-bridge lint [path] [--fix] [--format] [--tokens] [--changed]` | Find hardcoded values that should be design tokens; `--fix` rewrites **exact** matches only (never near-misses). | 0 clean · 1 violations · 2 error |
 | `/ds-bridge:token-check [--report] [path]` | `ds-bridge tokens check [path] [--report] [--tokens] [--outputs] [--format]` | Detect drift between the token source and built outputs (stale / missing / orphan); `--report` writes the dashboard. | 0 in-sync · 1 drift · 2 error |
-| `/ds-bridge:dashboard [path]` | `ds-bridge report [path] [--open] [--out]` | Render the offline HTML dashboard from `.ds-bridge/history.jsonl`; `--open` launches the browser. | 0 ok · 2 error |
+| `/ds-bridge:dashboard [--setup] [path]` | `ds-bridge report [path] [--view] [--open] [--out]` | Render the offline HTML dashboard from `.ds-bridge/history.jsonl`; `--open` launches the browser; `--setup` composes a persona view (`--view exec` is the leadership view). | 0 ok · 2 error |
+| `/ds-bridge:record [--figma] [path]` | `ds-bridge record [path] [--figma] [--library-top <n>] [--source] [--format]` | Run every configured check as one batch (shared `runId`) and store the system score; skipped checks name the command that un-skips them. | 0 recorded · 2 internal error |
+| `/ds-bridge:analytics` | `ds-bridge analytics [path] [--format]` | The analytics headline (health · adoption · consistency · debt + per-domain status), then the full fan-out report, prioritized fixes, the manager one-pager (`report --format exec`) or the JSON artifacts (`analytics --emit all`). | 0 ok · 2 error |
+| `/ds-bridge:rollup [sources...]` | `ds-bridge rollup [sources...] [--config] --format md` | The local org view: repos ranked by system score from their recorded history (`.ds-bridge/rollup.json` when no sources are given). | 0 ok · 2 no sources / bad config |
 | `/ds-bridge:handoff-qa <url> [--threshold N]` | `ds-bridge handoff <url> [--threshold] [--comment --yes] [--format]` | Score a Figma frame's handoff readiness (0–100); `--comment --yes` posts one Figma comment after confirmation. | 0 ≥ threshold · 1 below · 2 error |
 | `/ds-bridge:parity-audit [component]` | `ds-bridge parity [component] [path] [--markdown] [--format]` | Figma ↔ code component parity matrix (missing-in-code / missing-in-figma / prop-mismatch); `--markdown` for a PR table. | 0 all ok · 1 gaps · 2 no registry |
 
-Supporting CLI commands (no slash wrapper of their own):
+Supporting CLI commands and flags (the full reference — `record`, `analytics` and `rollup` also have the slash wrappers above):
 
 | CLI command | What it does | Exit codes |
 |---|---|---|
@@ -192,6 +272,15 @@ Supporting CLI commands (no slash wrapper of their own):
 | `ds-bridge config set-library <url-or-key> [path]` | Write the design-system library file key (a pasted URL collapses to the bare key) to the **committed** `.ds-bridge.json` (`figma_file_key`) — the non-secret key the whole team shares. | 0 saved · 2 write error |
 | `ds-bridge config add-product <alias> <url-or-key> [path]` | Register a product/consumer Figma file under an alias in `.ds-bridge.json` (`product_file_keys`), merging with any existing aliases. Target it later with `--file-key <alias>` on `impact` / `library-health` / `frame-impl`. | 0 saved · 2 write error |
 | `ds-bridge config list [path]` | List the targetable file keys: the library default and every product alias (env-merged), each with its source. | 0 ok · 2 invalid project file |
+| `ds-bridge record [path] [--source local\|ci\|hook] [--figma\|--no-figma] [--library-top <n>] [--format]` | Run every configured check as **one batch** sharing a `runId` (lint, tokens check, a11y, adoption when a registry exists; `registry build` → parity and `library-health` only with `--figma` and a Figma config; with `--figma` and a token, `handoff` for each URL in the project file's `tracked_frames` array), then store the composite **system score** with the weights used. Findings never fail it. CI: see [`docs/ci-recording.md`](./docs/ci-recording.md). | 0 recorded · 2 internal error |
+| `ds-bridge library-health [--top <n>]` | Besides the three hygiene totals, each run stores the **top N components per signal** in history (override hotspots by main component, deprecated components with usage counts, detached candidates by name; default 10, `0` = totals only, max 100) so the dashboard trends specific components. `record --library-top <n>` forwards it. | invalid `--top` → 2 |
+| `ds-bridge digest [path] --audience managers [--format md\|html] [--since 30d] [--out <file>]` | The digest for managers: every movement in one *For managers* section, then up to three actions (`manager` also accepted). `--format html` writes the same digest as one offline page, e.g. `digest.html` on your Pages site (the CI recorder does this monthly — see [`docs/ci-recording.md`](./docs/ci-recording.md)). `md` stays the default. | 0 ok · 2 bad flag |
+| `ds-bridge report [path] --format exec\|exec-html [--out] [--velocity-window] [--open]` | The **design-system manager report**: one page with the system score + trend + change over the window, on-system %, import coverage, consistency, the design-debt index (0–100, weighted and capped), handoff readiness per frame (latest score + pass rate), targets RAG, the top 3 risks and top 3 next actions (deterministic rules), and which checks are fresh, stale or never run. `exec` prints paste-ready Markdown for a monthly update (or writes `--out`); `exec-html` writes one offline page (default `.ds-bridge/reports/exec.html`). Numbers never recorded read "not measured", never 0. `report --view exec` renders the curated leadership dashboard; `--view ds-manager` now includes the consistency, design-debt and executive-summary sections. | 0 ok · 2 error |
+| `ds-bridge history stats\|compact\|migrate\|init [path]` | `stats`: counts per kind, v1/v2 split, sources, runs, date range, size, per-frame readiness. `compact [--keep-per-day] [--dry-run]`: drop identical consecutive records (latest kept). `migrate [--dry-run]`: upgrade v1 lines to the v2 envelope. Rewrites are atomic and locked. `init [--dry-run]`: opt-in — add `.ds-bridge/history.jsonl merge=union` to the project's `.gitattributes` (idempotent; appends when a later line overrides it). `status` describes the change; with `--dry-run` nothing is written (check `dryRun`). | 0 ok · 2 locked / error |
+| `ds-bridge history export [path] [--format csv\|jsonl] [--kind <kinds>] [--since <when>] [--until <when>] [--out <file>]` | Tidy rows for Sheets, Looker or BigQuery: one row per metric per record, columns `at, date, runId, sha, branch, source, kind, subject, metric, value`. `date` is the UTC day (pastes as a date), `subject` names the frame for per-frame records (`handoff`, `frame-impl`), and per-mode / per-directory arrays flatten into metrics such as `modes.default.failed` or `adoption.byDirectory.src.refs`. `--since`/`--until` take `YYYY-MM-DD` or `<N>d`/`<N>w` (`--until` with a date covers the whole day). CSV text cells that start with `= + - @` are prefixed with `'` so they never run as formulas. | 0 ok · 2 error |
+| `ds-bridge report [path] --format json [--out]` | The full dashboard data (`ReportData`) as a versioned JSON document `{schema: "ds-bridge/report", schemaVersion: 1, view, artifacts, data}`, documented by [`schemas/report.v1.schema.json`](./schemas/report.v1.schema.json). | 0 ok · 2 error |
+| `ds-bridge rollup [sources...] [--config <file>] [--format term\|md\|json\|html] [--out <file>]` | The **org view across repos**, local only (nothing hosted, no checks run, nothing written into a source): each source is a repo dir, a `history.jsonl` file, or `<path>@<git-ref>` (e.g. `../web@origin/ds-bridge-data`, the CI recorder's branch — a ref is only as fresh as your last fetch, so run `git fetch origin ds-bridge-data` in each clone first). Ranks repos by System Score (default weights for every repo, so the ranking is like-for-like) with on-system %, drift, contrast, readiness, freshness and a score-trend sparkline, plus a mean and a size-weighted aggregate (size = style values measured) and a per-team breakdown. With no sources it reads `.ds-bridge/rollup.json` (`[{"name", "source", "team"?}]`). Missing, corrupt or v1 histories become notes, never failures. `--format json` is documented by [`schemas/rollup.v1.schema.json`](./schemas/rollup.v1.schema.json). Drill into one repo with `report <repo> --view org` (uses that repo's own score weights and working-tree history, so its score can differ from the default-weight rollup). See [Org rollup](#org-rollup). | 0 ok · 2 error |
+| `ds-bridge analytics [path] [--emit figma\|code\|token\|git\|score\|all] [--out <dir>] [--format term\|json]` | Design-system analytics from the recorded history: the executive headline (health · import coverage · consistency · design debt `N/100 (level)`) and one status line per domain. `--emit` writes byte-stable, schema-versioned JSON artifacts to `.ds-bridge/analytics/` (`figma-metrics.json`, `code-metrics.json`, `token-metrics.json`, `git-metrics.json`, `design-system-score.json`; `all` adds `analytics.json`; schema [`schemas/analytics.v1.schema.json`](./schemas/analytics.v1.schema.json)). A domain with no data says which command produces it. Replays history only — run `ds-bridge record` to refresh. | 0 ok · 2 error |
 
 Every command supports `--format=json` (machine-readable, used by skills and
 tests), `--format=term` (default; colors, unicode bars), and where applicable
@@ -199,7 +288,33 @@ tests), `--format=term` (default; colors, unicode bars), and where applicable
 
 The `parity-audit` command can hand off to the **`parity-auditor`** agent
 (`model: sonnet`, read-only tools) for a full reconciliation plan, and
-`/ds-bridge:analytics` fans out to the analytics subagents in `agents/`.
+`/ds-bridge:analytics` shows the `ds-bridge analytics` headline, then fans out to the analytics subagents in `agents/`.
+
+### Org rollup
+
+`ds-bridge rollup` ranks several repos from their **already-recorded** history —
+local only: it runs no checks, fetches nothing and hosts nothing. List the repos
+once in `.ds-bridge/rollup.json` (relative sources resolve against the project
+that owns the file):
+
+```json
+[
+  { "name": "web", "source": "../web" },
+  { "name": "ios", "source": "../ios@origin/ds-bridge-data", "team": "Mobile" }
+]
+```
+
+```sh
+git -C ../ios fetch origin ds-bridge-data   # a <path>@<ref> source reads what was last fetched
+ds-bridge rollup --format md                # paste-ready for a PR comment or step summary
+ds-bridge rollup --format html --out org.html
+```
+
+Every repo is scored with the default weights so the ranking is like-for-like;
+tied scores share a rank. Drill into one repo with
+`ds-bridge report <repo> --view org` — it uses that repo's own score weights and
+working-tree history, so its score can differ from the rollup row. Notes name
+each source as you wrote it, never as an absolute path.
 
 ## Insights pane (Claude Code mod)
 
@@ -263,13 +378,26 @@ plugin data:
 ```
 <project>/.ds-bridge/
 ├── registry.json            # component registry (schema-versioned, stable diff order)
-├── history.jsonl            # one record per lint/drift run — feeds the dashboard trends
+├── history.jsonl            # one record per check run (v2 envelope) — feeds the dashboard trends
+├── analytics/               # `analytics --emit` JSON artifacts (byte-stable, schema-versioned)
+├── rollup.json              # optional: the repos `ds-bridge rollup` reads when given no sources
 └── reports/
-    └── dashboard.html       # latest self-contained HTML report (offline, no CDN)
+    ├── dashboard.html       # latest self-contained HTML report (offline, no CDN)
+    └── exec.html            # `report --format exec-html` manager one-pager
 ```
 
 - `.ds-bridge/` is **committed** — registry and run history are reviewable in
   PRs.
+- Each history record carries a **v2 envelope** (`v`, `at`, `kind`, `source`
+  local/ci/hook — `hook` is reserved, no shipped hook records — `git` {sha,
+  branch, dirty}, `tool` {version}, optional `runId`) ahead of its payload
+  (schema [`schemas/history-record.v2.schema.json`](./schemas/history-record.v2.schema.json)); v1 lines (no `v`) are still read. Writes go through one
+  locked writer. If you commit history from several machines, add
+  `.ds-bridge/history.jsonl merge=union` to `.gitattributes` and
+  `.ds-bridge/*.lock` to `.gitignore` (ds-bridge never edits either unasked;
+  `ds-bridge history init` adds the `.gitattributes` line when you opt in).
+  To record from CI into a `ds-bridge-data` branch instead, see
+  [`docs/ci-recording.md`](./docs/ci-recording.md).
 - Rebuildable caches (Figma version cursor, REST cache) live under
   `CLAUDE_PLUGIN_DATA` (`~/.claude/plugins/data/<id>/`), which survives plugin
   updates.
@@ -293,7 +421,7 @@ npm run check          # typecheck + lint + test + validate + test:mod (pre-comm
 ```
 
 The marketing site is its own package under [`website/`](./website) (Next.js
-static export), live at <https://ds-bridge.pages.dev> — tutorials: <https://ds-bridge.pages.dev/tutorials/>.
+static export), live at <https://ds-bridge.com> — tutorials: <https://ds-bridge.com/tutorials/>.
 
 ## Live Figma smoke test
 
@@ -338,10 +466,11 @@ never failed.
 
 Released and free. Each version's changes are on the
 [releases page](https://github.com/lucksy/ds-bridge/releases); the shipped
-surface is thirteen slash commands over a fully tested CLI, the analytics and
+surface is fifteen slash commands over a fully tested CLI, the analytics and
 parity subagents, three fail-quiet settings hooks, the insights pane (a Claude
-Code mod), the offline HTML dashboard, and a Figma REST client with a nightly
-live smoke test. The website is live at <https://ds-bridge.pages.dev>, deployed
+Code mod), the offline HTML dashboard and manager report, the CI recorder
+(composite action + sample workflow), and a Figma REST client with a nightly
+live smoke test. The website is live at <https://ds-bridge.com>, deployed
 from `website/` via Cloudflare Pages. Planned work lives in
 [`TASKS.md`](./TASKS.md).
 

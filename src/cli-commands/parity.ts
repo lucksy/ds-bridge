@@ -21,7 +21,9 @@ import {
 	type ParityRow,
 } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
+import { replayHistory } from "../engines/report/history-lines.js";
 import type { ParityStatus } from "../engines/report/types.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderBarChart,
 	type Severity,
@@ -34,6 +36,8 @@ type ParityFormat = "json" | "term";
 interface ParityOptions {
 	format: string;
 	markdown: boolean;
+	/** Commander maps the negatable `--no-history` flag to `history: false`. */
+	history: boolean;
 }
 
 /** Print a fatal operational error and set exit code 2. */
@@ -223,6 +227,59 @@ function disambiguate(
 	return { component, path };
 }
 
+/**
+ * Append ONE parity history line for this registry snapshot (H7, G5) — unless
+ * the latest parity line already describes the same snapshot (`registry build`
+ * stamps its line with the registry's `generatedAt`; ours carry `registryAt`).
+ * One parity point per registry snapshot, never a double. Counts and the pass
+ * `score` follow registry.ts's parityRecordFrom exactly. Fail-quiet: the report
+ * already printed; a history hiccup must not change the gate.
+ */
+function appendParityHistory(
+	targetDir: string,
+	registry: RegistryFile,
+	report: ParityReport,
+): void {
+	try {
+		const stateDir = join(targetDir, ".ds-bridge");
+		const snapshot =
+			typeof registry.generatedAt === "string"
+				? registry.generatedAt
+				: undefined;
+		let text = "";
+		try {
+			text = readFileSync(join(stateDir, "history.jsonl"), "utf8");
+		} catch {
+			text = "";
+		}
+		const latest = replayHistory(text)
+			.filter((r) => r.kind === "parity")
+			.at(-1);
+		if (
+			snapshot !== undefined &&
+			latest !== undefined &&
+			(latest.at === snapshot || latest.record.registryAt === snapshot)
+		) {
+			return;
+		}
+		const { ok, missingInCode, missingInFigma, propMismatch } = report.summary;
+		const total = ok + missingInCode + missingInFigma + propMismatch;
+		appendHistoryRecord(stateDir, {
+			at: new Date().toISOString(),
+			kind: "parity",
+			total,
+			ok,
+			missingInCode,
+			missingInFigma,
+			propMismatch,
+			score: total > 0 ? Math.round((100 * ok) / total) : 0,
+			...(snapshot !== undefined ? { registryAt: snapshot } : {}),
+		});
+	} catch {
+		// Non-fatal: the parity report itself is the command's product.
+	}
+}
+
 /** Execute the `parity` command. */
 function runParity(
 	rawComponent: string | undefined,
@@ -259,6 +316,12 @@ function runParity(
 		process.stdout.write(`${renderTerm(report, color)}\n`);
 	}
 
+	// H7 (SPEC-history-v2 §1.6): an UNFILTERED run records parity (a filtered
+	// run is a partial view and must not enter the trend).
+	if (options.history && (component === undefined || component === "")) {
+		appendParityHistory(targetDir, registry, full);
+	}
+
 	// CI gate semantics: exit 1 when any (filtered) row is non-ok, else 0.
 	const allOk = report.rows.every((row) => row.status === "ok");
 	process.exitCode = allOk ? 0 : 1;
@@ -282,6 +345,10 @@ export function registerParityCommand(program: Command): void {
 			"--markdown",
 			"emit a GitHub-flavored markdown table to stdout",
 			false,
+		)
+		.option(
+			"--no-history",
+			"do not append a parity record to .ds-bridge/history.jsonl (filtered runs never do)",
 		)
 		.action(
 			(component: string | undefined, path: string, options: ParityOptions) => {

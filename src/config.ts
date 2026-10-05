@@ -4,6 +4,7 @@
 // the sanctioned, atomic, order-preserving writer for the project file.
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseFigmaUrl } from "./engines/handoff/parse-url.js";
 import { type ArtifactId, lookupArtifact } from "./engines/report/catalog.js";
 import { validateWeights, type Weights } from "./engines/report/score.js";
 import { extractFigmaFileKey } from "./io/figma/file-key.js";
@@ -300,6 +301,11 @@ export interface ResolvedConfig {
 	migrationSitesCap: number;
 	/** Score-velocity window in days (C8). Defaults to 30 when absent. */
 	scoreVelocityWindow: number;
+	/**
+	 * Figma frame URLs `record --figma` scores with `handoff` (H14,
+	 * SPEC-history-v2 §9.1). Project-file only; `undefined` when absent.
+	 */
+	trackedFrames: string[] | undefined;
 }
 
 export interface ConfigFlags {
@@ -347,6 +353,7 @@ interface ProjectFileValues {
 	componentAliases?: ComponentAliases;
 	migrationSitesCap?: number;
 	scoreVelocityWindow?: number;
+	trackedFrames?: string[];
 	hadFigmaToken: boolean;
 }
 
@@ -478,6 +485,36 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 			names.push(entry);
 		}
 		values.publish = names;
+	}
+
+	// tracked_frames (H14): Figma frame URLs `record --figma` scores with handoff.
+	// Every entry must parse as a Figma URL (the handoff parser) — a typo fails
+	// loudly here rather than as a skipped check on every CI run.
+	if (obj.tracked_frames !== undefined) {
+		if (!Array.isArray(obj.tracked_frames)) {
+			return {
+				kind: "invalid",
+				message: "tracked_frames must be an array of Figma frame URLs",
+			};
+		}
+		const frames: string[] = [];
+		for (const entry of obj.tracked_frames) {
+			if (typeof entry !== "string" || entry.trim() === "") {
+				return {
+					kind: "invalid",
+					message: `tracked_frames must contain only Figma frame URLs, got ${JSON.stringify(entry)}`,
+				};
+			}
+			const parsed = parseFigmaUrl(entry);
+			if (parsed.kind !== "ok") {
+				return {
+					kind: "invalid",
+					message: `tracked_frames has an invalid Figma URL ${JSON.stringify(entry)}: ${parsed.message}`,
+				};
+			}
+			frames.push(entry);
+		}
+		values.trackedFrames = frames;
 	}
 
 	// System-score weights (SPEC-score §2). Validation is delegated entirely to
@@ -960,6 +997,7 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 		migrationSitesCap: project.migrationSitesCap ?? DEFAULT_MIGRATION_SITES_CAP,
 		scoreVelocityWindow:
 			project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW,
+		trackedFrames: project.trackedFrames,
 	};
 
 	return { kind: "ok", config, warnings };

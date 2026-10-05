@@ -15,14 +15,17 @@ import type {
 	ChangelogAudience,
 	// (type-only) — verbatim reuse of the changelog audience vocabulary.
 } from "../changelog/aggregate.js";
-import type { DigestModel, MovementKind, MovementRow } from "./digest.js";
-
-const TITLE = "# Design-system digest";
+import type {
+	DigestAction,
+	DigestModel,
+	MovementKind,
+	MovementRow,
+} from "./digest.js";
 
 /** The two rendered sections, in order, with their heading + section audience. */
 const SECTIONS: { heading: string; audience: "designer" | "developer" }[] = [
-	{ heading: "## For designers", audience: "designer" },
-	{ heading: "## For developers", audience: "developer" },
+	{ heading: "For designers", audience: "designer" },
+	{ heading: "For developers", audience: "developer" },
 ];
 
 /** Human label per movement kind (the line's leading noun). */
@@ -44,10 +47,9 @@ const PERCENT_KINDS: ReadonlySet<MovementKind> = new Set<MovementKind>([
 
 /** A fixed human reason per action command (the trailing "— …" clause). */
 const ACTION_REASON: Record<string, string> = {
-	"/ds-bridge:token-check": "review breaking token drift",
-	"/ds-bridge:ds-lint --fix": "clear off-system lint violations",
-	"/ds-bridge:handoff-qa": "readiness is below the gate",
-	"/ds-bridge:a11y-check": "failing contrast pairs need a look",
+	"ds-bridge tokens check": "review breaking token drift",
+	"ds-bridge handoff <frame-url>": "readiness is below the gate",
+	"ds-bridge a11y": "failing contrast pairs need a look",
 	"ds-bridge adoption": "import coverage is below 100%",
 };
 
@@ -77,67 +79,135 @@ function inSection(
 	return rowAudience === sectionAudience || rowAudience === "both";
 }
 
-/** Render one movement row: `- Label ▲ <base> → <current>` (or "— new <current>"). */
-function renderMovement(row: MovementRow): string {
+/** Render one movement row: `Label ▲ <base> → <current>` (or "— new <current>"). */
+function movementText(row: MovementRow): string {
 	const label = MOVEMENT_LABEL[row.kind];
 	const current = value(row.kind, row.current);
 	if (row.isNew) {
-		return `- ${label} ${arrow(row)} new ${current}`;
+		return `${label} ${arrow(row)} new ${current}`;
 	}
 	const baseline = value(row.kind, row.baseline ?? 0);
-	return `- ${label} ${arrow(row)} ${baseline} → ${current}`;
-}
-
-/** Render one section's body (heading + movement lines), or undefined when empty. */
-function renderSection(
-	heading: string,
-	sectionAudience: "designer" | "developer",
-	movements: MovementRow[],
-): string | undefined {
-	const lines = movements.filter((m) => inSection(m.audience, sectionAudience));
-	if (lines.length === 0) return undefined;
-	return [heading, "", ...lines.map(renderMovement)].join("\n");
-}
-
-/** Render one action: `N. Run \`<command>\` — <reason>`. */
-function renderAction(command: string, index: number): string {
-	const reason = ACTION_REASON[command] ?? "see the docs";
-	return `${index + 1}. Run \`${command}\` — ${reason}`;
+	return `${label} ${arrow(row)} ${baseline} → ${current}`;
 }
 
 /**
- * Render the digest model to audience-segmented markdown. The model is assumed
- * already audience-filtered by the engine; this renderer only splits the rows it
- * is given into the relevant section(s).
+ * Render one action (unnumbered). Off-system lint reads as what to do with an
+ * accurate verb (`lint --fix` never touches off-system values — D6); every
+ * other action is `Run \`<command>\` — <reason>`.
  */
-export function renderDigestMarkdown(model: DigestModel): string {
+function actionText(action: DigestAction): string {
+	if (action.command === "ds-bridge lint") {
+		const n = action.count ?? 0;
+		const values = n === 1 ? "value" : "values";
+		const count = n > 0 ? `${n} ` : "";
+		return `Replace ${count}off-system ${values} with design tokens (run \`ds-bridge lint\` to list them)`;
+	}
+	const reason = ACTION_REASON[action.command] ?? "see the docs";
+	return `Run \`${action.command}\` — ${reason}`;
+}
+
+/** D6 — the window boundary as a date (YYYY-MM-DD), not a raw instant. */
+function sinceDate(sinceIso: string): string {
+	return /^\d{4}-\d{2}-\d{2}/.test(sinceIso) ? sinceIso.slice(0, 10) : sinceIso;
+}
+
+/**
+ * F7 — which digest to lay out. `undefined` is the audience-segmented digest
+ * (D2, unchanged); `"manager"` is ONE section listing every movement once
+ * (SPEC-figma-trends §4 — the engine model is the `both` audience).
+ */
+export type DigestView = "manager" | undefined;
+
+/** The renderer-neutral digest: both the markdown and the HTML page read this. */
+export interface DigestDocument {
+	title: string;
+	/** "Window: changes since …." (absent for a quiet digest). */
+	window?: string;
+	/** The quiet one-liner (only for a quiet digest). */
+	quiet?: string;
+	sections: { heading: string; lines: string[] }[];
+	/** Action sentences, in order (inline code in backticks). */
+	actions: string[];
+}
+
+/**
+ * Lay the model out as a structured document. The model is assumed already
+ * audience-filtered by the engine; the default view splits its rows into the
+ * relevant designer/developer section(s), the manager view keeps one section.
+ */
+export function digestDocument(
+	model: DigestModel,
+	view?: DigestView,
+): DigestDocument {
+	const title = "Design-system digest";
 	if (model.kind === "quiet") {
-		return `${TITLE}\n\n_Quiet week — no design-system movement since ${model.sinceIso}._\n`;
+		return {
+			title,
+			// The manager view backs a monthly (any-window) digest: window-neutral.
+			quiet: `${view === "manager" ? "Quiet period" : "Quiet week"} — no design-system movement since ${sinceDate(model.sinceIso)}.`,
+			sections: [],
+			actions: [],
+		};
 	}
-
-	const blocks: string[] = [
-		TITLE,
-		`_Window: changes since ${model.sinceIso}._`,
-	];
-
-	for (const section of SECTIONS) {
-		// A single-audience model renders only its own section (the render-md.ts
-		// filter rule): skip a section the chosen audience excludes.
-		if (model.audience !== "both" && model.audience !== section.audience) {
-			continue;
+	const sections: DigestDocument["sections"] = [];
+	if (view === "manager") {
+		if (model.movements.length > 0) {
+			sections.push({
+				heading: "For managers",
+				lines: model.movements.map(movementText),
+			});
 		}
-		const block = renderSection(
-			section.heading,
-			section.audience,
-			model.movements,
+	} else {
+		for (const section of SECTIONS) {
+			// A single-audience model renders only its own section (the
+			// render-md.ts filter rule): skip a section the chosen audience excludes.
+			if (model.audience !== "both" && model.audience !== section.audience) {
+				continue;
+			}
+			const lines = model.movements.filter((m) =>
+				inSection(m.audience, section.audience),
+			);
+			if (lines.length === 0) continue;
+			sections.push({
+				heading: section.heading,
+				lines: lines.map(movementText),
+			});
+		}
+	}
+	return {
+		title,
+		window: `Window: changes since ${sinceDate(model.sinceIso)}.`,
+		sections,
+		actions: model.actions.map(actionText),
+	};
+}
+
+/**
+ * Render the digest model to markdown (audience-segmented by default; one
+ * `## For managers` section with `view = "manager"`).
+ */
+export function renderDigestMarkdown(
+	model: DigestModel,
+	view?: DigestView,
+): string {
+	const doc = digestDocument(model, view);
+	if (doc.quiet !== undefined) {
+		return `# ${doc.title}\n\n_${doc.quiet}_\n`;
+	}
+	const blocks: string[] = [`# ${doc.title}`, `_${doc.window ?? ""}_`];
+	for (const section of doc.sections) {
+		blocks.push(
+			[`## ${section.heading}`, "", ...section.lines.map((l) => `- ${l}`)].join(
+				"\n",
+			),
 		);
-		if (block !== undefined) blocks.push(block);
 	}
-
-	if (model.actions.length > 0) {
-		const actionLines = model.actions.map((a, i) => renderAction(a.command, i));
-		blocks.push(["## Actions", "", ...actionLines].join("\n"));
+	if (doc.actions.length > 0) {
+		blocks.push(
+			["## Actions", "", ...doc.actions.map((a, i) => `${i + 1}. ${a}`)].join(
+				"\n",
+			),
+		);
 	}
-
 	return `${blocks.join("\n\n")}\n`;
 }
