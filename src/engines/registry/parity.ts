@@ -175,3 +175,39 @@ export function toParitySection(report: ParityReport): ParitySection {
 		})),
 	};
 }
+
+/**
+ * One `parity` history line (C3, M2.1): the four counts verbatim from a
+ * {@link ParitySummary} plus the persisted pass `score` (100·ok/total,
+ * half-up, 0 when total=0), so the scorecard and dashboard read it without
+ * re-deriving. THE one builder — `registry build` and `parity` both append it.
+ */
+export interface ParityHistoryRecord {
+	at: string;
+	kind: "parity";
+	total: number;
+	ok: number;
+	missingInCode: number;
+	missingInFigma: number;
+	propMismatch: number;
+	/** Pass percentage, 0–100, half-up rounded (0 when total=0). */
+	score: number;
+}
+
+export function parityHistoryRecord(
+	summary: ParitySummary,
+	at: string,
+): ParityHistoryRecord {
+	const { ok, missingInCode, missingInFigma, propMismatch } = summary;
+	const total = ok + missingInCode + missingInFigma + propMismatch;
+	return {
+		at,
+		kind: "parity",
+		total,
+		ok,
+		missingInCode,
+		missingInFigma,
+		propMismatch,
+		score: total > 0 ? Math.round((100 * ok) / total) : 0,
+	};
+}

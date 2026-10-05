@@ -3,7 +3,7 @@
 // sits before the header and the state bodies, the timeline's <label>s select a
 // radio, and generated `:checked ~` rules show that state's body and "as of"
 // text. Keyboard: Tab to the group, arrow keys move between days. PURE.
-import { escapeHtml } from "./dashboard.js";
+import { escapeHtml } from "./base.js";
 
 /** One state on the timeline, oldest first; the last one is "Now". */
 export interface TimelineStop {

@@ -4,7 +4,7 @@
 // (`./<name>.html`) so the site works at any URL with no basePath, and there is
 // NO live timestamp — the index is snapshot-stable (identical entries → identical
 // bytes), which is what makes a committed site diff reviewable.
-import { escapeHtml, STYLE } from "./dashboard.js";
+import { escapeHtml, STYLE } from "./base.js";
 
 /** One published dashboard: its display name + the relative href of its page. */
 export interface IndexEntry {

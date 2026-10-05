@@ -8,7 +8,7 @@ import {
 	type DigestView,
 	digestDocument,
 } from "../../engines/report/digest-md.js";
-import { escapeHtml } from "./dashboard.js";
+import { escapeHtml } from "./base.js";
 
 const STYLE = `
 :root { --bg: #f6f5f1; --surface: #ffffff; --text: #1f1e1b; --text-subtle: #6b6a63; --border: #e6e3da; --accent: #a3384b; }

@@ -14,7 +14,7 @@
 // `keepPerDay` then keeps the last surviving record per subject per UTC day (dated
 // records only). Corrupt, kindless and dateless lines are never dropped — data
 // the tool cannot read is not the tool's to delete.
-import { RESERVED_ENVELOPE_KEYS } from "./envelope.js";
+import { payloadOf } from "./envelope.js";
 import { frameKeyOf } from "./readiness-frames.js";
 
 export interface CompactOptions {
@@ -48,11 +48,7 @@ function canonical(value: unknown): string {
 
 /** The payload identity of a record: canonical JSON minus the envelope keys. */
 function payloadIdentity(record: Record<string, unknown>): string {
-	const payload: Record<string, unknown> = {};
-	for (const [key, value] of Object.entries(record)) {
-		if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value;
-	}
-	return canonical(payload);
+	return canonical(payloadOf(record));
 }
 
 interface Entry {

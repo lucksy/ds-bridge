@@ -27,6 +27,14 @@ import {
 	SIGNAL_LABEL,
 	SIGNAL_ORDER,
 } from "../figma-trend-format.js";
+import {
+	debtTone,
+	escapeHtml,
+	kpiTile,
+	panel,
+	readableInstant,
+	STYLE,
+} from "./base.js";
 import type { LineSeries } from "./charts.js";
 import {
 	bandColor,
@@ -66,203 +74,6 @@ function dayOf(value: string): string {
 	return /^\d{4}-\d{2}-\d{2}T/.test(value) ? value.slice(0, 10) : value;
 }
 
-/** Escape the five XML-significant characters for safe HTML text/attributes. */
-export function escapeHtml(value: string): string {
-	return value
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
-}
-
-// Harvest palette + tokens shared with the website and the insights pane.
-// System font stacks keep the document fully offline — no web-font requests.
-export const STYLE = `
-:root {
-	--bg: #f6f5f1;
-	--surface: #ffffff;
-	--text: #1f1e1b;
-	--text-subtle: #6b6a63;
-	--border: #e6e3da;
-	--track: #eceae4;
-	--accent: #a3384b;
-	--accent-soft: #f6e9ec;
-	--ok: #6f8a2e;
-	--warn: #c98a1e;
-	--error: #b83f4f;
-	--radius: 14px;
-	--bar: #2a2622;
-	--bar-text: #f6f5f1;
-	--bar-subtle: #b9b3a6;
-	--bar-accent: #e3a73b;
-	--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-}
-* { box-sizing: border-box; }
-body {
-	margin: 0;
-	background: var(--bg);
-	color: var(--text);
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	font-size: 14px;
-	line-height: 1.5;
-	-webkit-font-smoothing: antialiased;
-}
-.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 72px; }
-header.dash { background: var(--bar); color: var(--bar-text); }
-header.dash .bar {
-	max-width: 1200px;
-	margin: 0 auto;
-	padding: 18px 24px;
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: 6px 16px;
-}
-header.dash h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; flex: 1 1 auto; }
-header.dash .project { color: var(--bar-accent); }
-header.dash .view {
-	font-size: 12px;
-	font-weight: 600;
-	color: var(--bar-text);
-	border: 1px solid rgba(255, 255, 255, 0.22);
-	background: rgba(255, 255, 255, 0.08);
-	border-radius: 999px;
-	padding: 2px 10px;
-}
-header.dash .generated { color: var(--bar-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
-.kpis {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-	gap: 12px;
-	margin-bottom: 16px;
-}
-.kpi {
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	padding: 14px 16px 12px;
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	min-width: 0;
-}
-.kpi.ok { --tone: var(--ok); }
-.kpi.warn { --tone: var(--warn); }
-.kpi.error { --tone: var(--error); }
-.kpi-label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
-.kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--tone, var(--text)); font-variant-numeric: tabular-nums; }
-.kpi-sub { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-	grid-auto-flow: row dense;
-	align-items: start;
-	gap: 16px;
-}
-section.panel {
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	padding: 18px 20px 20px;
-	min-width: 0;
-}
-section.panel.wide { grid-column: span 2; }
-@media (max-width: 780px) { section.panel.wide { grid-column: auto; } }
-section.panel h2 {
-	font-size: 15px;
-	font-weight: 650;
-	margin: 0 0 12px;
-	color: var(--text);
-	letter-spacing: -0.005em;
-}
-.chart { overflow-x: auto; margin: 4px 0; }
-.chart svg { max-width: 100%; height: auto; display: block; }
-.chart.center svg { margin: 0 auto; }
-.split { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: center; }
-@media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
-.empty {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	align-items: flex-start;
-	justify-content: center;
-	min-height: 96px;
-	padding: 14px 16px;
-	border: 1px dashed var(--border);
-	border-radius: 10px;
-	background: var(--bg);
-	color: var(--text-subtle);
-	font-size: 13px;
-}
-.empty .empty-title { font-weight: 600; color: var(--text); }
-.empty code, .meta code {
-	font-family: var(--mono);
-	font-size: 12px;
-	background: var(--accent-soft);
-	color: var(--accent);
-	padding: 1px 6px;
-	border-radius: 6px;
-}
-table.parity-key, .meta {
-	width: 100%;
-	margin: 8px 0 0;
-	font-size: 12px;
-	color: var(--text-subtle);
-	border-collapse: collapse;
-}
-.meta:first-of-type { margin-top: 0; }
-.cols { margin-top: 8px; font-size: 12px; color: var(--text-subtle); }
-.cols b { color: var(--text); font-weight: 600; }
-.cols:has(.audience-col) { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; margin-top: 0; }
-.audience-col .cols b { font-size: 13px; text-transform: capitalize; }
-.stat { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
-.stat-value { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.stat-value.ok { color: var(--ok); }
-.stat-value.error { color: var(--error); }
-.stat-sub { color: var(--text-subtle); font-size: 13px; }
-table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
-table.weights th, table.weights td { padding: 5px 8px; border-top: 1px solid var(--border); text-align: left; }
-table.weights th { color: var(--text-subtle); font-weight: 600; border-top: 0; }
-table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
-ul.offenders, ul.deductions, ul.calendar { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.offenders li, ul.calendar li {
-	display: flex;
-	justify-content: space-between;
-	align-items: baseline;
-	gap: 12px;
-	padding: 6px 0;
-	border-top: 1px solid var(--border);
-}
-ul.offenders code, ul.calendar code {
-	font-family: var(--mono);
-	color: var(--text);
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-ul.offenders .count { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
-ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
-ul.deductions .pts { color: var(--error); font-variant-numeric: tabular-nums; font-weight: 600; }
-.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 6px; text-align: center; }
-ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; white-space: nowrap; }
-ul.calendar .detail { color: var(--text-subtle); text-align: right; }
-ul.calendar.stack li { flex-direction: column; align-items: flex-start; gap: 1px; }
-ul.calendar.stack .detail { text-align: left; }
-.badge {
-	display: inline-block;
-	font-family: var(--mono);
-	font-size: 11px;
-	background: var(--accent-soft);
-	color: var(--accent);
-	padding: 1px 7px;
-	border-radius: 999px;
-	margin-right: 4px;
-	white-space: nowrap;
-}
-`.trim();
-
 /** A styled "no data yet" panel body shown when a section is absent. */
 function emptyState(command: string): string {
 	return [
@@ -270,21 +81,6 @@ function emptyState(command: string): string {
 		'<span class="empty-title">No data yet</span>',
 		`<span>Run <code>ds-bridge ${escapeHtml(command)}</code> to populate this section.</span>`,
 		"</div>",
-	].join("");
-}
-
-/**
- * Wrap section content in a titled panel. A `wide` panel spans two grid columns
- * (trends, tables, long lists); its charts are drawn at {@link WIDE_W}.
- */
-function panel(title: string, body: string, size?: "wide"): string {
-	return [
-		size === "wide"
-			? '<section class="panel wide">'
-			: '<section class="panel">',
-		`<h2>${escapeHtml(title)}</h2>`,
-		body,
-		"</section>",
 	].join("");
 }
 
@@ -1287,29 +1083,6 @@ function dataFreshnessSection(data: ReportData): string {
 
 // ─── Executive layer (AN7, SPEC-exec-report §4) ─────────────────────────────
 
-/** Design-debt % → tone: ok < 25 · warn < 60 · error (the AN2 level bands). */
-function debtTone(pct: number): "ok" | "warn" | "error" {
-	if (pct < 25) return "ok";
-	if (pct < 60) return "warn";
-	return "error";
-}
-
-/** One headline tile (reuses the KPI tile markup); "—" when not measured. */
-function headlineTile(
-	label: string,
-	value: string | undefined,
-	tone: "ok" | "warn" | "error" | undefined,
-	sub?: string,
-): string {
-	return [
-		`<div class="kpi${value !== undefined && tone !== undefined ? ` ${tone}` : ""}">`,
-		`<span class="kpi-label">${escapeHtml(label)}</span>`,
-		`<span class="kpi-value">${escapeHtml(value ?? "—")}</span>`,
-		`<span class="kpi-sub">${escapeHtml(value === undefined ? "not measured" : (sub ?? ""))}</span>`,
-		"</div>",
-	].join("");
-}
-
 /**
  * Executive summary → the four leadership headlines (system score · import
  * coverage · consistency · debt — the one-pager's names) as tiles + the score trend line when it has ≥ 2 points.
@@ -1322,25 +1095,25 @@ function executiveSection(data: ReportData): string {
 		return panel("Executive summary", emptyState("record"));
 	}
 	const tiles = [
-		headlineTile(
+		kpiTile(
 			"System score",
 			exec.health === undefined ? undefined : String(exec.health),
 			exec.health === undefined ? undefined : toneFor(exec.health),
 			"out of 100",
 		),
-		headlineTile(
+		kpiTile(
 			"Import coverage",
 			exec.adoption === undefined ? undefined : `${exec.adoption}%`,
 			exec.adoption === undefined ? undefined : toneFor(exec.adoption),
 			"components imported",
 		),
-		headlineTile(
+		kpiTile(
 			"Consistency",
 			exec.consistency === undefined ? undefined : String(exec.consistency),
 			exec.consistency === undefined ? undefined : toneFor(exec.consistency),
 			"on-system blend",
 		),
-		headlineTile(
+		kpiTile(
 			"Design debt",
 			exec.debt === undefined ? undefined : `${exec.debt}%`,
 			exec.debt === undefined ? undefined : debtTone(exec.debt),
@@ -1704,33 +1477,6 @@ function kpiStrip(items: readonly Kpi[]): string {
 		].join(""),
 	);
 	return `<div class="kpis">${cards.join("")}</div>`;
-}
-
-const MONTHS = [
-	"Jan",
-	"Feb",
-	"Mar",
-	"Apr",
-	"May",
-	"Jun",
-	"Jul",
-	"Aug",
-	"Sep",
-	"Oct",
-	"Nov",
-	"Dec",
-];
-
-/**
- * "2026-10-04T16:00:00.000Z" → "4 Oct 2026, 16:00 UTC". Always UTC, so the
- * output is the same on every machine; text that isn't a date passes through.
- */
-export function readableInstant(iso: string): string {
-	const at = new Date(iso);
-	if (Number.isNaN(at.getTime())) return iso;
-	const hh = String(at.getUTCHours()).padStart(2, "0");
-	const mm = String(at.getUTCMinutes()).padStart(2, "0");
-	return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
 }
 
 /** Optional rendering controls that do not affect which sections appear. */

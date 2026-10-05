@@ -12,7 +12,7 @@
 
 import { historyStats } from "../history/stats.js";
 import { buildFreshness } from "../report/freshness.js";
-import { replayHistory } from "../report/history-lines.js";
+import { type HistoryRecord, replayHistory } from "../report/history-lines.js";
 import {
 	DEFAULT_WEIGHTS,
 	scoreFromHistory,
@@ -146,10 +146,10 @@ function pooledOnSystem(repos: readonly RollupRepo[]): number | undefined {
 
 /** The latest adoption-bearing lint record's counts (parallel last-wins). */
 function latestAdoption(
-	text: string,
+	records: readonly HistoryRecord[],
 ): { refs: number; literals: number } | undefined {
 	let latest: { refs: number; literals: number } | undefined;
-	for (const { kind, record } of replayHistory(text)) {
+	for (const { kind, record } of records) {
 		if (kind !== "lint") continue;
 		const adoption = asRecord(record.adoption);
 		if (adoption === undefined) continue;
@@ -161,8 +161,10 @@ function latestAdoption(
 	return latest;
 }
 
-function freshnessOf(text: string, nowIso: string): RollupFreshness {
-	const records = replayHistory(text);
+function freshnessOf(
+	records: HistoryRecord[],
+	nowIso: string,
+): RollupFreshness {
 	let lastAt: string | undefined;
 	for (const r of records) {
 		if (r.at !== undefined && (lastAt === undefined || r.at > lastAt)) {
@@ -190,9 +192,11 @@ function freshnessOf(text: string, nowIso: string): RollupFreshness {
 	return out;
 }
 
-function latestEnvelope(text: string): Pick<RollupRepo, "git" | "toolVersion"> {
+function latestEnvelope(
+	records: readonly HistoryRecord[],
+): Pick<RollupRepo, "git" | "toolVersion"> {
 	const out: Pick<RollupRepo, "git" | "toolVersion"> = {};
-	for (const { envelope } of replayHistory(text)) {
+	for (const { envelope } of records) {
 		if (envelope === undefined) continue;
 		if (envelope.git != null) {
 			out.git = { branch: envelope.git.branch, sha: envelope.git.sha };
@@ -238,8 +242,11 @@ function summarizeRepo(input: RollupRepoInput, nowIso: string): RollupRepo {
 			"v1 history (no envelope): commit/branch unknown — run ds-bridge history migrate.",
 		);
 	}
-	Object.assign(base, latestEnvelope(text));
-	base.freshness = freshnessOf(text, nowIso);
+	// One replay feeds the local folds (envelope, freshness, adoption); the
+	// score, scorecard and stats engines take the text and replay it themselves.
+	const records = replayHistory(text);
+	Object.assign(base, latestEnvelope(records));
+	base.freshness = freshnessOf(records, nowIso);
 
 	const score = scoreFromHistory(text, DEFAULT_WEIGHTS);
 	if (score.kind === "no-data") {
@@ -266,7 +273,7 @@ function summarizeRepo(input: RollupRepoInput, nowIso: string): RollupRepo {
 			}
 		}
 	}
-	const adoption = latestAdoption(text);
+	const adoption = latestAdoption(records);
 	if (adoption !== undefined) {
 		const size = adoption.refs + adoption.literals;
 		if (size > 0) {

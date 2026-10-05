@@ -19,6 +19,7 @@ import {
 	buildParity,
 	type ParityReport,
 	type ParityRow,
+	parityHistoryRecord,
 } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import { replayHistory } from "../engines/report/history-lines.js";
@@ -231,8 +232,8 @@ function disambiguate(
  * Append ONE parity history line for this registry snapshot (H7, G5) — unless
  * the latest parity line already describes the same snapshot (`registry build`
  * stamps its line with the registry's `generatedAt`; ours carry `registryAt`).
- * One parity point per registry snapshot, never a double. Counts and the pass
- * `score` follow registry.ts's parityRecordFrom exactly. Fail-quiet: the report
+ * One parity point per registry snapshot, never a double. Built by the shared
+ * `parityHistoryRecord`, like registry build's line. Fail-quiet: the report
  * already printed; a history hiccup must not change the gate.
  */
 function appendParityHistory(
@@ -262,17 +263,8 @@ function appendParityHistory(
 		) {
 			return;
 		}
-		const { ok, missingInCode, missingInFigma, propMismatch } = report.summary;
-		const total = ok + missingInCode + missingInFigma + propMismatch;
 		appendHistoryRecord(stateDir, {
-			at: new Date().toISOString(),
-			kind: "parity",
-			total,
-			ok,
-			missingInCode,
-			missingInFigma,
-			propMismatch,
-			score: total > 0 ? Math.round((100 * ok) / total) : 0,
+			...parityHistoryRecord(report.summary, new Date().toISOString()),
 			...(snapshot !== undefined ? { registryAt: snapshot } : {}),
 		});
 	} catch {

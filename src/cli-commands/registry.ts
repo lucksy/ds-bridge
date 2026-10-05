@@ -27,7 +27,11 @@ import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import { matchComponents } from "../engines/registry/match.js";
-import { buildParity } from "../engines/registry/parity.js";
+import {
+	buildParity,
+	type ParityHistoryRecord,
+	parityHistoryRecord,
+} from "../engines/registry/parity.js";
 import {
 	type RegistryFile,
 	resolveEntry,
@@ -217,43 +221,12 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 	process.exitCode = 0;
 }
 
-/**
- * One appended `parity` history line (C3, M2.1). Carries the four parity counts
- * verbatim from `buildParity().summary` plus the persisted pass `pct` (`score` =
- * 100·ok/total, 0 when total=0) so the scorecard/dashboard read it without
- * re-deriving. Read back by `report` for the parity sub-score + parity-trend.
- */
-interface ParityHistoryRecord {
-	at: string;
-	kind: "parity";
-	total: number;
-	ok: number;
-	missingInCode: number;
-	missingInFigma: number;
-	propMismatch: number;
-	/** Pass percentage, 0–100, half-up rounded (0 when total=0). */
-	score: number;
-}
-
 /** Project a registry into the parity counts + persisted pass pct (C3). */
 function parityRecordFrom(
 	registry: RegistryFile,
 	generatedAt: string,
 ): ParityHistoryRecord {
-	const { ok, missingInCode, missingInFigma, propMismatch } =
-		buildParity(registry).summary;
-	const total = ok + missingInCode + missingInFigma + propMismatch;
-	const score = total > 0 ? Math.round((100 * ok) / total) : 0;
-	return {
-		at: generatedAt,
-		kind: "parity",
-		total,
-		ok,
-		missingInCode,
-		missingInFigma,
-		propMismatch,
-		score,
-	};
+	return parityHistoryRecord(buildParity(registry).summary, generatedAt);
 }
 
 /**

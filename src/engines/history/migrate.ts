@@ -8,7 +8,7 @@
 // requires `at`, so a line that cannot satisfy it must not claim to be v2.
 // Blank lines are dropped.
 // Idempotent: a migrated file migrates to itself.
-import { envelopeOf, RESERVED_ENVELOPE_KEYS } from "./envelope.js";
+import { envelopeOf, payloadOf } from "./envelope.js";
 
 export interface MigrateResult {
 	text: string;
@@ -40,9 +40,7 @@ function migrateLine(raw: string): string | undefined {
 	out.source = "local";
 	out.git = null;
 	out.tool = null;
-	for (const [key, value] of Object.entries(record)) {
-		if (!RESERVED_ENVELOPE_KEYS.has(key)) out[key] = value;
-	}
+	Object.assign(out, payloadOf(record));
 	return JSON.stringify(out);
 }
 

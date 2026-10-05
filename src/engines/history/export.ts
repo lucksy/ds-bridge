@@ -9,7 +9,7 @@
 // day one.
 import { parseSince } from "../report/digest.js";
 import { replayHistory } from "../report/history-lines.js";
-import { RESERVED_ENVELOPE_KEYS } from "./envelope.js";
+import { payloadOf } from "./envelope.js";
 
 /** The fixed column order (CSV header and JSONL key order). */
 export const EXPORT_COLUMNS = [
@@ -60,7 +60,7 @@ function asObject(value: unknown): Record<string, unknown> | undefined {
 		: undefined;
 }
 
-function str(value: unknown): string | null {
+function stringOrNull(value: unknown): string | null {
 	return typeof value === "string" ? value : null;
 }
 
@@ -104,9 +104,9 @@ function numericLeaves(
 
 /** Per-frame subject: `frameName` (+ ` (nodeId)`), else null. */
 function subjectOf(record: Record<string, unknown>): string | null {
-	const frameName = str(record.frameName);
+	const frameName = stringOrNull(record.frameName);
 	if (frameName === null) return null;
-	const nodeId = str(record.nodeId);
+	const nodeId = stringOrNull(record.nodeId);
 	return nodeId === null ? frameName : `${frameName} (${nodeId})`;
 }
 
@@ -129,10 +129,7 @@ export function exportRows(text: string, filter: ExportFilter): ExportRow[] {
 		const record = entry.record;
 		const v2 = entry.envelope !== undefined;
 		const git = v2 ? asObject(record.git) : undefined;
-		const payload: Record<string, unknown> = {};
-		for (const [key, value] of Object.entries(record)) {
-			if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value;
-		}
+		const payload = payloadOf(record);
 		const subject = subjectOf(record);
 		const leaves: [string, number][] = [];
 		numericLeaves(payload, "", leaves);
@@ -141,10 +138,10 @@ export function exportRows(text: string, filter: ExportFilter): ExportRow[] {
 			rows.push({
 				at: entry.at,
 				date: entry.at.slice(0, 10),
-				runId: v2 ? str(record.runId) : null,
-				sha: git !== undefined ? str(git.sha) : null,
-				branch: git !== undefined ? str(git.branch) : null,
-				source: v2 ? str(record.source) : null,
+				runId: v2 ? stringOrNull(record.runId) : null,
+				sha: git !== undefined ? stringOrNull(git.sha) : null,
+				branch: git !== undefined ? stringOrNull(git.branch) : null,
+				source: v2 ? stringOrNull(record.source) : null,
 				kind: entry.kind,
 				subject,
 				metric,

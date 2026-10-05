@@ -14,8 +14,17 @@ import {
 	targetValue,
 } from "../../engines/report/manager-report.js";
 import type { TargetVerdict } from "../../engines/report/types.js";
+import {
+	debtTone,
+	escapeHtml,
+	kpiTile,
+	panel,
+	type RawHtml,
+	readableInstant,
+	STYLE,
+	tableHtml,
+} from "./base.js";
 import { TONE, toneFor } from "./charts.js";
-import { escapeHtml, readableInstant, STYLE } from "./dashboard.js";
 
 /** One-pager additions on top of the dashboard STYLE (print-friendly). */
 const PAGE_STYLE = `
@@ -32,36 +41,6 @@ ol.ranked li { padding: 4px 0; }
 }
 `.trim();
 
-const NOT_MEASURED = "not measured";
-
-type Tone = "ok" | "warn" | "error";
-
-function tile(
-	label: string,
-	value: string | undefined,
-	tone: Tone | undefined,
-	sub: string | undefined,
-): string {
-	const measured = value !== undefined;
-	return [
-		`<div class="kpi${measured && tone !== undefined ? ` ${tone}` : ""}">`,
-		`<span class="kpi-label">${escapeHtml(label)}</span>`,
-		`<span class="kpi-value">${escapeHtml(value ?? "—")}</span>`,
-		`<span class="kpi-sub">${escapeHtml(measured ? (sub ?? "") : NOT_MEASURED)}</span>`,
-		"</div>",
-	].join("");
-}
-
-function debtTone(pct: number): Tone {
-	if (pct < 25) return "ok";
-	if (pct < 60) return "warn";
-	return "error";
-}
-
-function panel(title: string, body: string): string {
-	return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
-}
-
 function emptyLine(text: string): string {
 	return `<p class="empty-line">${escapeHtml(text)}</p>`;
 }
@@ -77,17 +56,6 @@ const STATUS: Record<TargetVerdict["band"], { text: string; fill: string }> = {
 	red: { text: "Off track", fill: TONE.error },
 	unknown: { text: "Not measured", fill: TONE.neutral },
 };
-
-function tableHtml(
-	header: readonly string[],
-	rows: readonly string[][],
-): string {
-	const head = header.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
-	const body = rows
-		.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`)
-		.join("");
-	return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
-}
 
 function days(n: number): string {
 	return `${n} ${n === 1 ? "day" : "days"}`;
@@ -106,19 +74,19 @@ export function renderManagerHtml(report: ManagerReport): string {
 	const project = escapeHtml(report.project);
 
 	const tiles = [
-		tile(
+		kpiTile(
 			"System score",
 			h.score === undefined ? undefined : String(h.score.current),
 			h.score === undefined ? undefined : toneFor(h.score.current),
 			scoreChangeText(h, report.windowDays) ?? "out of 100",
 		),
-		tile(
+		kpiTile(
 			"On-system usage",
 			h.onSystem === undefined ? undefined : `${h.onSystem.pct}%`,
 			h.onSystem === undefined ? undefined : toneFor(h.onSystem.pct),
 			onSystemChangeText(h) ?? "tokens vs literals",
 		),
-		tile(
+		kpiTile(
 			"Component import coverage",
 			h.importCoverage === undefined ? undefined : `${h.importCoverage.pct}%`,
 			h.importCoverage === undefined
@@ -128,19 +96,19 @@ export function renderManagerHtml(report: ManagerReport): string {
 				? undefined
 				: `${h.importCoverage.imported} of ${h.importCoverage.total} components`,
 		),
-		tile(
+		kpiTile(
 			"Consistency",
 			h.consistency === undefined ? undefined : String(h.consistency),
 			h.consistency === undefined ? undefined : toneFor(h.consistency),
 			"out of 100",
 		),
-		tile(
+		kpiTile(
 			"Design debt",
 			h.debt === undefined ? undefined : `${h.debt.pct}/100`,
 			h.debt === undefined ? undefined : debtTone(h.debt.pct),
 			h.debt === undefined ? undefined : `${h.debt.level} · lower is better`,
 		),
-		tile(
+		kpiTile(
 			"Handoff readiness",
 			h.handoff === undefined
 				? undefined
@@ -161,13 +129,14 @@ export function renderManagerHtml(report: ManagerReport): string {
 					["Target", "Now", "Goal", "Status"],
 					report.targets.map((t) => {
 						const status = STATUS[t.band];
+						const badge: RawHtml = {
+							html: `<span class="badge" style="background:${status.fill};color:#ffffff">${escapeHtml(status.text)}</span>`,
+						};
 						return [
-							escapeHtml(targetLabel(t.metric)),
-							escapeHtml(targetValue(t.metric, t.measured)),
-							escapeHtml(
-								`${targetOp(t.op)} ${targetValue(t.metric, t.target)}`,
-							),
-							`<span class="badge" style="background:${status.fill};color:#ffffff">${escapeHtml(status.text)}</span>`,
+							targetLabel(t.metric),
+							targetValue(t.metric, t.measured),
+							`${targetOp(t.op)} ${targetValue(t.metric, t.target)}`,
+							badge,
 						];
 					}),
 				);
@@ -182,10 +151,10 @@ export function renderManagerHtml(report: ManagerReport): string {
 					tableHtml(
 						["Frame", "Readiness", "Pass rate", "Runs"],
 						shownFrames.map((f) => [
-							escapeHtml(frameLabel(f)),
-							escapeHtml(String(f.latest)),
-							escapeHtml(`${f.passRate}%`),
-							escapeHtml(String(f.runs)),
+							frameLabel(f),
+							String(f.latest),
+							`${f.passRate}%`,
+							String(f.runs),
 						]),
 					),
 					report.frames.length > shownFrames.length

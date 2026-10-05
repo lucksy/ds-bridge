@@ -13,13 +13,20 @@ import {
 	WEIGHTS_NOTE,
 } from "../rollup-cells.js";
 import {
+	escapeHtml,
+	kpiTile,
+	panel,
+	readableInstant,
+	STYLE,
+	tableHtml,
+} from "./base.js";
+import {
 	barChart,
 	type LineSeries,
 	lineChart,
 	TONE,
 	toneFor,
 } from "./charts.js";
-import { escapeHtml, readableInstant, STYLE } from "./dashboard.js";
 
 const PAGE_STYLE = `
 .page { max-width: 1100px; }
@@ -31,10 +38,7 @@ ul.notes { margin: 0; padding-left: 20px; font-size: 13px; }
 }
 `.trim();
 
-function panel(title: string, body: string): string {
-	return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
-}
-
+/** A KPI tile toned by its leading score (0–100), unless `toned` is false. */
 function kpi(
 	label: string,
 	value: string | undefined,
@@ -43,25 +47,9 @@ function kpi(
 ): string {
 	const tone =
 		toned && value !== undefined && /^\d+/.test(value)
-			? ` ${toneFor(Number.parseInt(value, 10))}`
-			: "";
-	return [
-		`<div class="kpi${tone}">`,
-		`<span class="kpi-label">${escapeHtml(label)}</span>`,
-		`<span class="kpi-value">${escapeHtml(value ?? "—")}</span>`,
-		`<span class="kpi-sub">${escapeHtml(value === undefined ? "not measured" : sub)}</span>`,
-		"</div>",
-	].join("");
-}
-
-function tableHtml(headers: readonly string[], rows: string[][]): string {
-	const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
-	const body = rows
-		.map(
-			(r) => `<tr>${r.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`,
-		)
-		.join("");
-	return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+			? toneFor(Number.parseInt(value, 10))
+			: undefined;
+	return kpiTile(label, value, tone, sub);
 }
 
 function trendSeries(model: RollupModel): {

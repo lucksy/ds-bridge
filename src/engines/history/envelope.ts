@@ -84,11 +84,22 @@ export function buildEnvelope(
 		tool: meta.tool,
 	};
 	if (meta.runId !== undefined) record.runId = meta.runId;
-	for (const [key, value] of Object.entries(payload)) {
-		if (RESERVED_ENVELOPE_KEYS.has(key)) continue;
-		record[key] = value;
-	}
+	Object.assign(record, payloadOf(payload));
 	return record;
+}
+
+/**
+ * A record's payload: every key except the envelope's ({@link
+ * RESERVED_ENVELOPE_KEYS}), in source order. THE one way to strip an envelope.
+ */
+export function payloadOf(
+	record: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+	const payload: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(record)) {
+		if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value;
+	}
+	return payload;
 }
 
 /** Parse a raw source string, or undefined when it is not one of the three. */
