@@ -32,6 +32,7 @@ import { terminalSafe } from "./sanitize.js";
 import { severityColor } from "./severity.js";
 import { sparkline } from "./sparkline.js";
 import { renderTable } from "./table.js";
+import { displayWidth, padToWidth } from "./width.js";
 
 /** A "no data yet" body — the command hint mirrors the HTML emptyState verbatim. */
 function emptyState(command: string): string {
@@ -888,10 +889,10 @@ function libraryHotspotsTrendTerminalSection(
 	for (const signal of SIGNAL_ORDER) {
 		const rows = trend.rows.filter((r) => r.signal === signal);
 		if (rows.length === 0) continue;
-		const width = Math.max(...rows.map((r) => [...r.name].length));
+		const width = Math.max(...rows.map((r) => displayWidth(r.name)));
 		lines.push("", SIGNAL_LABEL[signal]);
 		for (const row of rows) {
-			lines.push(`  ${row.name.padEnd(width)}  ${hotspotDetail(row)}`);
+			lines.push(`  ${padToWidth(row.name, width)}  ${hotspotDetail(row)}`);
 		}
 	}
 	return panel("Library hotspots trend", lines.join("\n"));
@@ -908,12 +909,12 @@ function frameReadinessTrendTerminalSection(
 	const names = trend.frames.map((f) =>
 		f.frameName === "" ? f.key : f.frameName,
 	);
-	const width = Math.max(...names.map((n) => [...n].length));
+	const width = Math.max(...names.map((n) => displayWidth(n)));
 	const lines = [
 		belowGateMeta(trend),
 		...trend.frames.map(
 			(frame, i) =>
-				`  ${(names[i] ?? "").padEnd(width)}  ${frameDetail(frame)}`,
+				`  ${padToWidth(names[i] ?? "", width)}  ${frameDetail(frame)}`,
 		),
 	];
 	const more = frameOverflow(trend);

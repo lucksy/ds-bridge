@@ -156,7 +156,7 @@ interface ListPreset {
 	name: string;
 	description: string;
 	artifacts: string[];
-	/** True for the six persona views the setup wizard offers; false for `everything` / `exec`. */
+	/** True for the six persona views the setup wizard offers; false for `everything` / `exec` / `org`. */
 	persona: boolean;
 }
 

@@ -1,25 +1,16 @@
 // T1.7 — aligned unicode box-drawing table. PURE string building.
 import { terminalCell } from "./sanitize.js";
 import type { ColorOptions } from "./severity.js";
+import { displayWidth, padToWidth } from "./width.js";
 
 function isNumericCell(value: string): boolean {
 	const trimmed = value.trim();
 	return trimmed !== "" && !Number.isNaN(Number(trimmed));
 }
 
-// SGR colour codes (`\x1b[31m` … `\x1b[39m`) take no columns on screen; a cell
-// that callers coloured must still pad to its visible width.
-const ANSI_SGR = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
-
-function displayWidth(value: string): number {
-	return [...value.replace(ANSI_SGR, "")].length;
-}
-
-function pad(value: string, width: number, alignRight: boolean): string {
-	const gap = Math.max(0, width - displayWidth(value));
-	const filler = " ".repeat(gap);
-	return alignRight ? filler + value : value + filler;
-}
+// Cells pad to their visible width: SGR colour takes no columns, CJK and
+// emoji take two (./width.ts).
+const pad = padToWidth;
 
 /**
  * Render a table with aligned columns (padded to the widest cell), unicode

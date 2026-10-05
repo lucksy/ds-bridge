@@ -88,17 +88,26 @@ function prepare(
 	return { format, targetDir, stateDir: join(targetDir, ".ds-bridge") };
 }
 
-function readText(file: string): string | undefined {
+/**
+ * A file's text; `undefined` only when it does not exist. Any other read error
+ * (EACCES, EISDIR…) is reported (exit 2) and returns `null`, so an unreadable
+ * history is never shown as "no history yet" or exported as an empty file.
+ */
+function readText(file: string): string | undefined | null {
 	try {
 		return readFileSync(file, "utf8");
-	} catch {
-		return undefined;
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+		const detail = error instanceof Error ? error.message : String(error);
+		fail(`Could not read ${file}: ${detail}`);
+		return null;
 	}
 }
 
 /** The configured readiness threshold (default when no/blank project config). */
 function readinessThreshold(targetDir: string): number | undefined {
 	const projectFileText = readText(join(targetDir, ".ds-bridge.json"));
+	if (projectFileText === null) return undefined;
 	const resolved = resolveConfig({
 		env: process.env,
 		...(projectFileText !== undefined ? { projectFileText } : {}),
@@ -124,6 +133,7 @@ function runStats(path: string, options: BaseOptions): void {
 
 	const file = historyFilePath(ctx.stateDir);
 	const text = readText(file);
+	if (text === null) return;
 	const bytes = text === undefined ? 0 : statSync(file).size;
 	const stats = historyStats(text ?? "", bytes);
 	const frames: FrameReadiness[] = readinessByFrame(
@@ -366,7 +376,9 @@ function runExport(path: string, options: ExportCliOptions): void {
 		filter.untilMs = until.untilMs;
 		filter.untilExclusive = until.exclusive;
 	}
-	const text = readText(historyFilePath(join(targetDir, ".ds-bridge"))) ?? "";
+	const read = readText(historyFilePath(join(targetDir, ".ds-bridge")));
+	if (read === null) return;
+	const text = read ?? "";
 	const rows = exportRows(text, filter);
 	const output = format === "csv" ? toCsv(rows) : toJsonl(rows);
 	if (options.out !== undefined) {

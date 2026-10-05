@@ -86,6 +86,21 @@ describe("ds-bridge history stats", () => {
 		expect(out.records).toBe(0);
 	});
 
+	it("an unreadable history is an error (exit 2), never 'no history yet'", async () => {
+		const dir = await freshTmp("ds-hist-unreadable-");
+		// A directory where the file should be: present but unreadable as text.
+		await mkdir(join(dir, ".ds-bridge", "history.jsonl"), { recursive: true });
+		for (const args of [
+			["history", "stats", dir, "--format", "json"],
+			["history", "export", dir],
+		]) {
+			const { code, stdout, stderr } = await runCli(args);
+			expect(code).toBe(2);
+			expect(stdout).toBe("");
+			expect(stderr).toContain("Could not read");
+		}
+	});
+
 	it("reports kinds, v1/v2 split, size, date range and per-frame readiness", async () => {
 		const dir = await freshTmp("ds-hist-stats-");
 		await seed(dir, DUPES);

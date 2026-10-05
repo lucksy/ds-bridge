@@ -229,7 +229,7 @@ export function registerDigestCommand(program: Command): void {
 		)
 		.option(
 			"--out <file>",
-			"redirect the digest markdown to a file (and print the path) instead of stdout",
+			"write the digest (markdown, or html with --format html) to a file and print the path, instead of stdout",
 		)
 		.action((path: string, options: DigestOptions) => {
 			runDigest(path, options, defaultDeps());

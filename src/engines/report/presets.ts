@@ -1,6 +1,6 @@
-// M6.1 — Persona presets + view resolution. Pure: the eight views — the SIX
-// clean persona names (`Persona == PresetName`) plus the default `everything` —
-// and `resolveView`, which collapses the flags > project > default-`everything`
+// M6.1 — Persona presets + view resolution. Pure: the nine views — the SIX
+// clean persona names (`Persona == PresetName`), the default `everything`, and
+// the curated `exec` (leadership) and `org` views — and `resolveView`, which collapses the flags > project > default-`everything`
 // precedence chain into one ordered ArtifactId selection or a typed error. No
 // I/O, no throws — every domain outcome (conflict, unknown view, unknown
 // artifact) is a discriminated union, and a deduped custom list reports its
@@ -151,7 +151,7 @@ function editDistance(a: string, b: string): number {
  * Nearest preset names for a user-supplied view string: prefix matches rank
  * first, then ascending edit distance (PRESET_NAMES order breaks ties).
  * Case-insensitive; nothing within distance 4 → no suggestions. Scoped to the
- * eight view names — catalog's `suggestArtifactIds` is for artifact ids only.
+ * nine view names — catalog's `suggestArtifactIds` is for artifact ids only.
  */
 function suggestViewNames(input: string, limit = 3): PresetName[] {
 	const needle = input.toLowerCase();
