@@ -36,7 +36,7 @@ jobs:
           node-version: 22
 
       # Pin a release tag: tags commit dist/, which the action runs by default.
-      - uses: lucksy/ds-bridge/.github/actions/ds-bridge-record@v1.14.0
+      - uses: lucksy/ds-bridge/.github/actions/ds-bridge-record@v1.14.1
         with:
           data-branch: ds-bridge-data
           pr-comment: "false" # opt in to one scorecard comment per PR
@@ -70,7 +70,7 @@ jobs:
 
       # Seed from ds-bridge-data and render only (no new record, no publish):
       # site/index.html + dashboards, site/digest.html + site/digest.md.
-      - uses: lucksy/ds-bridge/.github/actions/ds-bridge-record@v1.14.0
+      - uses: lucksy/ds-bridge/.github/actions/ds-bridge-record@v1.14.1
         with:
           mode: site
           site-dir: site
