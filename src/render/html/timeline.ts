@@ -100,7 +100,7 @@ header.dash .bar.top {
 }
 header.dash .brand { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: start; }
 header.dash .brand .logo { flex: none; border-radius: 7px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16); }
-header.dash .brand h1 { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.dash .brand h1 { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header.dash .bar-meta { display: flex; align-items: center; gap: 12px; justify-self: end; white-space: nowrap; }
 @media (max-width: 780px) {
 	header.dash .bar.top { grid-template-columns: minmax(0, 1fr); gap: 8px; }
@@ -188,6 +188,12 @@ header.dash .tl-asof { display: none; color: var(--bar-accent); font-size: 13px;
 	background: var(--accent-soft);
 	color: var(--text);
 	font-size: 13px;
+}
+/* Too narrow for title + timeline + time on one row: the timeline takes its
+   own row under them (the title would otherwise run into it). */
+@media (max-width: 1100px) {
+	header.dash .bar.top { grid-template-columns: minmax(0, 1fr) auto; }
+	.timeline { grid-column: 1 / -1; grid-row: 2; }
 }
 @media (max-width: 780px) {
 	.timeline { justify-self: stretch; max-width: 100%; }
