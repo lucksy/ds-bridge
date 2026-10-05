@@ -7818,6 +7818,7 @@ async function discoverTokenSources(rootDir, options) {
 }
 
 // src/io/history-writer.ts
+import { randomUUID } from "crypto";
 import {
   appendFileSync,
   closeSync,
@@ -7825,6 +7826,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -8042,18 +8044,27 @@ function readGitContext(projectDir, exec = spawnGitExec, env = process.env) {
     return null;
   }
 }
+function readLockOwner(lockPath) {
+  try {
+    return readFileSync(lockPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
 function acquireHistoryLock(stateDir, options = {}) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
   const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
   const lockPath = join2(stateDir, LOCK_FILE);
+  const token = `${process.pid}:${randomUUID()}
+`;
   const deadline = Date.now() + timeoutMs;
   for (; ; ) {
     try {
       const fd = openSync(lockPath, "wx");
-      writeFileSync(fd, `${process.pid}
-`);
+      writeFileSync(fd, token);
       closeSync(fd);
       return () => {
+        if (readLockOwner(lockPath) !== token) return;
         try {
           unlinkSync(lockPath);
         } catch {
@@ -8064,8 +8075,9 @@ function acquireHistoryLock(stateDir, options = {}) {
       if (code !== "EEXIST") return void 0;
     }
     try {
+      const owner = readLockOwner(lockPath);
       if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
-        unlinkSync(lockPath);
+        if (readLockOwner(lockPath) === owner) unlinkSync(lockPath);
         continue;
       }
     } catch {
@@ -8104,11 +8116,12 @@ function appendHistoryRecord(stateDir, payload, options = {}) {
   }
   return record;
 }
-function rewriteHistoryAtomic(stateDir, text2) {
+function rewriteHistoryAtomic(stateDir, text2, readBytes) {
   const target = historyFilePath(stateDir);
   const temp = join2(stateDir, `.${HISTORY_FILE}.tmp-${process.pid}`);
   try {
     writeFileSync(temp, text2, "utf8");
+    if (readBytes !== void 0) carryAppendedTail(target, temp, readBytes);
     renameSync(temp, target);
   } catch (error) {
     try {
@@ -8116,6 +8129,27 @@ function rewriteHistoryAtomic(stateDir, text2) {
     } catch {
     }
     throw error;
+  }
+}
+function carryAppendedTail(target, temp, from) {
+  let offset = from;
+  for (; ; ) {
+    const size = statSync(target).size;
+    if (size < offset) {
+      throw new Error(
+        "history changed underneath the rewrite (file shrank) \u2014 not replaced"
+      );
+    }
+    if (size === offset) return;
+    const tail = Buffer.alloc(size - offset);
+    const fd = openSync(target, "r");
+    try {
+      readSync(fd, tail, 0, tail.length, offset);
+    } finally {
+      closeSync(fd);
+    }
+    appendFileSync(temp, tail);
+    offset = size;
   }
 }
 
@@ -12723,6 +12757,46 @@ function evaluateTargets(latest, targets) {
   return verdicts;
 }
 
+// src/engines/report/timeline.ts
+var DEFAULT_TIMELINE_STOPS = 12;
+function utcDay(at) {
+  const ms = Date.parse(at);
+  if (Number.isNaN(ms)) return void 0;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+function timelineDays(text2, maxStops = DEFAULT_TIMELINE_STOPS) {
+  const days3 = /* @__PURE__ */ new Set();
+  for (const { at } of replayHistory(text2)) {
+    const day = at !== void 0 ? utcDay(at) : void 0;
+    if (day !== void 0) days3.add(day);
+  }
+  const keep = Math.max(maxStops - 1, 0);
+  if (keep === 0) return [];
+  return [...days3].sort().slice(0, -1).slice(-keep).map((day) => ({ day, endOfDay: `${day}T23:59:59.999Z` }));
+}
+function historyAsOf(text2, endOfDay) {
+  const cutoff = Date.parse(endOfDay);
+  if (Number.isNaN(cutoff)) return "";
+  const kept = [];
+  for (const line of text2.split("\n")) {
+    const raw = line.trim();
+    if (raw === "") continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    if (typeof parsed !== "object" || parsed === null) continue;
+    const at = parsed.at;
+    if (typeof at !== "string") continue;
+    const ms = Date.parse(at);
+    if (!Number.isNaN(ms) && ms <= cutoff) kept.push(raw);
+  }
+  return kept.length > 0 ? `${kept.join("\n")}
+` : "";
+}
+
 // src/engines/report/velocity.ts
 var MS_PER_DAY2 = 24 * 60 * 60 * 1e3;
 function computeVelocity(trend, nowIso, windowDays) {
@@ -13300,6 +13374,137 @@ function heatGrid(rows, opts = {}) {
   parts.push("</svg>");
   return parts.join("");
 }
+
+// src/render/html/logo.ts
+var LOGO_DATA_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23141414'/%3E%3Cpath fill='%23ffffff' d='M135.11 344.03Q120.15 344.03 108.05 336.25Q95.95 328.48 88.93 313.46Q81.92 298.44 81.92 276.69Q81.92 254.36 89.17 239.40Q96.42 224.44 108.46 216.95Q120.50 209.47 134.99 209.47Q146.10 209.47 153.46 213.21Q160.83 216.95 165.39 222.45Q169.95 227.94 172.17 233.09L173.34 233.09L173.34 167.62L208.41 167.62L208.41 341.81L173.92 341.81L173.92 320.88L172.17 320.88Q169.83 326.14 165.21 331.46Q160.60 336.78 153.23 340.40Q145.87 344.03 135.11 344.03M145.98 315.85Q154.87 315.85 161.18 310.94Q167.49 306.03 170.77 297.21Q174.04 288.38 174.04 276.58Q174.04 264.65 170.83 255.94Q167.61 247.23 161.30 242.38Q154.98 237.53 145.98 237.53Q136.75 237.53 130.49 242.56Q124.24 247.58 121.08 256.35Q117.93 265.12 117.93 276.58Q117.93 288.03 121.14 296.92Q124.36 305.80 130.61 310.83Q136.86 315.85 145.98 315.85M279.47 344.38Q263.69 344.38 251.53 339.88Q239.37 335.38 231.65 326.79Q223.94 318.19 221.72 306.03L254.33 300.42Q256.91 309.54 263.34 314.10Q269.77 318.66 280.52 318.66Q290.57 318.66 296.36 314.86Q302.15 311.06 302.15 305.22Q302.15 300.07 298 296.80Q293.85 293.53 285.31 291.77L262.75 287.10Q243.81 283.24 234.46 273.94Q225.11 264.65 225.11 250.04Q225.11 237.41 232.01 228.35Q238.90 219.29 251.18 214.38Q263.45 209.47 280.05 209.47Q295.48 209.47 306.82 213.74Q318.16 218.01 325.18 225.84Q332.19 233.67 334.53 244.31L303.43 249.80Q301.45 243.14 295.78 238.87Q290.11 234.61 280.52 234.61Q271.87 234.61 266.02 238.23Q260.18 241.85 260.18 247.93Q260.18 252.84 263.98 256.23Q267.78 259.62 277.01 261.49L300.51 266.17Q319.45 270.03 328.68 278.74Q337.92 287.45 337.92 301.48Q337.92 314.33 330.44 323.98Q322.96 333.62 309.80 339Q296.65 344.38 279.47 344.38'/%3E%3Crect x='362.25' y='255.53' width='149.75' height='31.45' fill='%23e2625a'/%3E%3C/svg%3E";
+var LOGO_IMG = `<img class="logo" src="${LOGO_DATA_URI}" width="28" height="28" alt="" />`;
+
+// src/render/html/timeline.ts
+var MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
+function dayLabels(day) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  const month = match !== null ? MONTHS[Number(match[2]) - 1] : void 0;
+  if (match === null || month === void 0) return { short: day, long: day };
+  const date = Number(match[3]);
+  return { short: `${date} ${month}`, long: `${date} ${month} ${match[1]}` };
+}
+function timelineRadios(stops) {
+  const last = stops.length - 1;
+  return stops.map(
+    (stop, i) => `<input type="radio" name="tl" class="tl-radio" id="${stop.id}"${i === last ? " checked" : ""} />`
+  ).join("");
+}
+function timelineNav(stops) {
+  const items = stops.map(
+    (stop) => `<li><label for="${stop.id}" title="${escapeHtml(stop.title)}"><span class="dot"></span><span class="tl-label">${escapeHtml(stop.label)}</span><span class="sr">${escapeHtml(stop.title)}</span></label></li>`
+  ).join("");
+  return `<nav class="timeline" aria-label="Dashboard history"><ol>${items}</ol></nav>`;
+}
+function timelineStyle(stops) {
+  const rules = stops.map(
+    (stop, i) => `#${stop.id}:checked ~ .tl-s${i}{display:block}#${stop.id}:checked ~ header .tl-g${i}{display:inline}#${stop.id}:checked ~ header label[for="${stop.id}"]{color:var(--bar-text)}#${stop.id}:checked ~ header label[for="${stop.id}"] .dot{background:var(--bar-accent);border-color:var(--bar-accent);transform:scale(1.3)}#${stop.id}:focus-visible ~ header label[for="${stop.id}"]{outline:2px solid var(--bar-accent);outline-offset:2px}`
+  );
+  const past = stops.slice(0, -1).map((stop) => `#${stop.id}:checked ~ header .generated`);
+  if (past.length > 0) rules.push(`${past.join(",")}{display:none}`);
+  return rules.join("\n");
+}
+var HEADER_STYLE = `
+header.dash .bar.top {
+	display: grid;
+	/* Equal side columns keep the timeline centred and still while the right
+	   side's text changes with the selected state. */
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: center;
+	gap: 10px 24px;
+	/* Full window width: the logo sits at the far left, Generated at the far
+	   right, whatever the content column's width. */
+	max-width: none;
+	padding: 14px 24px;
+}
+header.dash .brand { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: start; }
+header.dash .brand .logo { flex: none; border-radius: 7px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16); }
+header.dash .brand h1 { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.dash .bar-meta { display: flex; align-items: center; gap: 12px; justify-self: end; white-space: nowrap; }
+@media (max-width: 780px) {
+	header.dash .bar.top { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+	header.dash .brand h1 { flex: 0 1 auto; min-width: 0; font-size: 18px; }
+	header.dash .bar-meta { justify-self: start; flex-wrap: wrap; white-space: normal; }
+}
+`;
+var TIMELINE_STYLE = `
+header.dash .tl-asof { display: none; color: var(--bar-accent); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* rtl scroll container: when the stops overflow, it opens scrolled to the
+   newest end ("Now"); the list itself reads left-to-right. */
+.timeline { justify-self: center; max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; direction: rtl; }
+.timeline::-webkit-scrollbar { display: none; }
+.timeline ol { list-style: none; margin: 0; padding: 0; display: flex; position: relative; direction: ltr; }
+.timeline ol::before {
+	content: "";
+	position: absolute;
+	left: 24px;
+	right: 24px;
+	top: 10px;
+	height: 2px;
+	background: rgba(255, 255, 255, 0.16);
+}
+.timeline label {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+	min-width: 48px;
+	padding: 2px 4px;
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--bar-subtle);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.2;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.timeline label:hover { color: var(--bar-text); }
+.timeline .dot {
+	width: 12px;
+	height: 12px;
+	margin-top: 3px;
+	border-radius: 50%;
+	background: var(--bar);
+	border: 2px solid var(--bar-subtle);
+	transition: transform 120ms ease;
+}
+.timeline label:hover .dot { border-color: var(--bar-text); }
+.tl-radio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tl-state { display: none; }
+.tl-note {
+	margin: 0 0 16px;
+	padding: 10px 14px;
+	border-radius: 10px;
+	background: var(--accent-soft);
+	color: var(--text);
+	font-size: 13px;
+}
+@media (max-width: 780px) {
+	.timeline { justify-self: stretch; }
+	.timeline ol { width: max-content; margin: 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) { .timeline .dot { transition: none; } }
+`;
 
 // src/render/html/dashboard.ts
 var CARD_W = 332;
@@ -14457,7 +14662,7 @@ function kpiStrip(items) {
   );
   return `<div class="kpis">${cards.join("")}</div>`;
 }
-var MONTHS = [
+var MONTHS2 = [
   "Jan",
   "Feb",
   "Mar",
@@ -14476,27 +14681,57 @@ function readableInstant(iso) {
   if (Number.isNaN(at.getTime())) return iso;
   const hh = String(at.getUTCHours()).padStart(2, "0");
   const mm = String(at.getUTCMinutes()).padStart(2, "0");
-  return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
+  return `${at.getUTCDate()} ${MONTHS2[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
 }
 function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
   const project = escapeHtml(data.project);
   const generatedAt = escapeHtml(readableInstant(data.generatedAt));
   const viewLabel = options.viewLabel === void 0 ? "" : `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
-  const sections = selection.map(
-    (id) => id === "system-score" ? systemScoreSection(data, options.weightProfile) : SECTION_RENDERERS[id](data)
-  );
-  const body = [
-    '<header class="dash"><div class="bar">',
-    `<h1>ds-bridge report \xB7 <span class="project">${project}</span></h1>`,
-    viewLabel,
-    `<span class="generated">Generated ${generatedAt}</span>`,
-    "</div></header>",
-    '<div class="wrap">',
-    kpiStrip(kpis(data, selection)),
+  const stateBody = (state) => [
+    kpiStrip(kpis(state, selection)),
     '<div class="grid">',
-    ...sections,
-    "</div>",
+    ...selection.map(
+      (id) => id === "system-score" ? systemScoreSection(state, options.weightProfile) : SECTION_RENDERERS[id](state)
+    ),
     "</div>"
+  ].join("");
+  const past = options.timeline ?? [];
+  const stops = [
+    ...past.map((state, i) => {
+      const labels = dayLabels(state.day);
+      return {
+        id: `tl-${i}`,
+        label: labels.short,
+        title: `End of ${labels.long}`
+      };
+    }),
+    {
+      id: "tl-now",
+      label: "Now",
+      title: `Now \xB7 generated ${readableInstant(data.generatedAt)}`
+    }
+  ];
+  const hasTimeline = past.length > 0;
+  const asOf = past.map(
+    (state, i) => `<span class="tl-asof tl-g${i}">As of ${escapeHtml(dayLabels(state.day).long)}</span>`
+  ).join("");
+  const header = [
+    '<header class="dash"><div class="bar top">',
+    `<div class="brand">${LOGO_IMG}<h1>ds-bridge report \xB7 <span class="project">${project}</span></h1></div>`,
+    hasTimeline ? timelineNav(stops) : "<div></div>",
+    `<div class="bar-meta">${viewLabel}${asOf}<span class="generated">Generated ${generatedAt}</span></div>`,
+    "</div></header>"
+  ].join("");
+  const bodies = hasTimeline ? [
+    ...past.map(
+      (state, i) => `<div class="wrap tl-state tl-s${i}"><p class="tl-note">You are viewing this dashboard as it was at the end of <strong>${escapeHtml(dayLabels(state.day).long)}</strong>. The parity grid and component health come from the current registry, not from history.</p>${stateBody(state.data)}</div>`
+    ),
+    `<div class="wrap tl-state tl-s${past.length}">${stateBody(data)}</div>`
+  ] : [`<div class="wrap">${stateBody(data)}</div>`];
+  const body = [
+    hasTimeline ? timelineRadios(stops) : "",
+    header,
+    ...bodies
   ].join("");
   return [
     "<!DOCTYPE html>",
@@ -14505,7 +14740,7 @@ function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
     '<meta charset="utf-8" />',
     '<meta name="viewport" content="width=device-width, initial-scale=1" />',
     `<title>ds-bridge report \xB7 ${project}</title>`,
-    `<style>${STYLE}</style>`,
+    `<style>${STYLE}${HEADER_STYLE}${hasTimeline ? `${TIMELINE_STYLE}${timelineStyle(stops)}` : ""}</style>`,
     "</head>",
     "<body>",
     body,
@@ -15580,24 +15815,7 @@ function onSystemPct3(refs, literals) {
   const total = refs + literals;
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
-function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join7(stateDir, "history.jsonl");
-  let text2;
-  try {
-    text2 = readFileSync6(historyPath, "utf8");
-  } catch {
-    return {
-      driftTrend: [],
-      lintSummary: void 0,
-      readiness: void 0,
-      a11y: void 0,
-      impact: void 0,
-      adoptionTrend: [],
-      leaderboard: void 0,
-      importCoverage: void 0,
-      libraryHealth: void 0
-    };
-  }
+function aggregateHistory(text2, historyPath, onWarning) {
   const driftTrend = [];
   let lint;
   let readiness;
@@ -15736,14 +15954,7 @@ function aggregateHistory(stateDir, onWarning) {
     libraryHealth
   };
 }
-function computeSystemScore(stateDir, weights) {
-  const historyPath = join7(stateDir, "history.jsonl");
-  let text2;
-  try {
-    text2 = readFileSync6(historyPath, "utf8");
-  } catch {
-    return void 0;
-  }
+function computeSystemScore(text2, weights) {
   const outcome = scoreFromHistory(text2, weights);
   if (outcome.kind === "no-data") return void 0;
   return {
@@ -15752,18 +15963,16 @@ function computeSystemScore(stateDir, weights) {
     trend: outcome.trend
   };
 }
-function computeConsumerArtifacts(stateDir) {
-  const records = replayHistory(readHistoryText(stateDir));
+function computeConsumerArtifacts(records) {
   return {
     breakingCalendar: buildBreakingCalendar(records),
     changeFrequency: buildChangeFrequency(records)
   };
 }
-function computeParityTrend(stateDir) {
-  return buildParityTrend(replayHistory(readHistoryText(stateDir)));
+function computeParityTrend(records) {
+  return buildParityTrend(records);
 }
-function computeFigmaTrends(stateDir, readinessThreshold2) {
-  const records = replayHistory(readHistoryText(stateDir));
+function computeFigmaTrends(records, readinessThreshold2) {
   const libraryHotspotsTrend = buildLibraryHotspotsTrend(records);
   const frameReadinessTrend = buildFrameReadinessTrend(
     records,
@@ -15776,8 +15985,8 @@ function computeFigmaTrends(stateDir, readinessThreshold2) {
     ...handoffPassRate !== void 0 ? { handoffPassRate } : {}
   };
 }
-function computeLibraryHealthTrend(stateDir) {
-  return buildLibraryHealthTrend(replayHistory(readHistoryText(stateDir)));
+function computeLibraryHealthTrend(records) {
+  return buildLibraryHealthTrend(records);
 }
 var VELOCITY_WINDOW = /^(\d+)([dw])$/;
 function parseVelocityWindow(raw) {
@@ -15801,24 +16010,21 @@ function parseVelocityWindow(raw) {
 function computeScoreVelocity(trend, nowIso, windowDays) {
   return computeVelocity(trend, nowIso, windowDays);
 }
-function computeMigrationChecklist(stateDir, cap) {
-  const records = replayHistory(readHistoryText(stateDir));
+function computeMigrationChecklist(records, cap) {
   let latestImpact;
   for (const entry of records) {
     if (entry.kind === "impact") latestImpact = entry.record;
   }
   return buildMigrationChecklist(latestImpact, cap);
 }
-function computeAudienceChangelog(stateDir) {
-  const records = replayHistory(readHistoryText(stateDir));
+function computeAudienceChangelog(records) {
   let latestChangelog;
   for (const entry of records) {
     if (entry.kind === "changelog") latestChangelog = entry.record;
   }
   return buildAudienceChangelog(latestChangelog);
 }
-function computeFrameImplementability(stateDir) {
-  const records = replayHistory(readHistoryText(stateDir));
+function computeFrameImplementability(records) {
   let latestFrameImpl;
   for (const entry of records) {
     if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
@@ -15854,26 +16060,19 @@ function byDirectoryFromRecords(records) {
   }
   return byDirectory;
 }
-function computeOwnershipLeaderboard(stateDir, ownership) {
+function computeOwnershipLeaderboard(records, ownership) {
   if (ownership === void 0) return [];
-  const records = replayHistory(readHistoryText(stateDir));
   return rollupByOwner(byDirectoryFromRecords(records), ownership);
 }
-function computeReleaseReadiness(stateDir) {
-  const signals = extractReleaseSignals(
-    replayHistory(readHistoryText(stateDir))
-  );
+function computeReleaseReadiness(records) {
+  const signals = extractReleaseSignals(records);
   if (signals.impact === void 0 && signals.drift === void 0 && signals.parity === void 0) {
     return { go: false, checks: [] };
   }
   return evaluateReleaseReadiness(signals);
 }
-function computeDataFreshness(stateDir, nowIso, thresholds) {
-  return buildFreshness(
-    replayHistory(readHistoryText(stateDir)),
-    nowIso,
-    thresholds
-  );
+function computeDataFreshness(records, nowIso, thresholds) {
+  return buildFreshness(records, nowIso, thresholds);
 }
 function readParityRows(stateDir) {
   const registryPath = join7(stateDir, "registry.json");
@@ -15911,8 +16110,7 @@ function safePct(part, whole) {
   if (whole <= 0) return void 0;
   return Math.round(100 * part / whole);
 }
-function latestTargetScalars(stateDir, systemScore) {
-  const records = replayHistory(readHistoryText(stateDir));
+function latestTargetScalars(records, systemScore) {
   let adoptionLint;
   let tokensCheck;
   let parity;
@@ -15975,9 +16173,9 @@ function latestTargetScalars(stateDir, systemScore) {
   if (systemScore !== void 0) scalars["system-score"] = systemScore;
   return scalars;
 }
-function computeTargets(stateDir, targets, systemScore) {
+function computeTargets(records, targets, systemScore) {
   if (targets === void 0) return [];
-  return evaluateTargets(latestTargetScalars(stateDir, systemScore), targets);
+  return evaluateTargets(latestTargetScalars(records, systemScore), targets);
 }
 function readParity(stateDir, onWarning) {
   const registryPath = join7(stateDir, "registry.json");
@@ -16007,11 +16205,8 @@ function readRegistryFile(stateDir) {
     return void 0;
   }
 }
-function computeExecutiveLayer(stateDir, systemScore, importCoverage) {
-  const inputs = executiveInputs(
-    replayHistory(readHistoryText(stateDir)),
-    readRegistryFile(stateDir)
-  );
+function computeExecutiveLayer(stateDir, records, systemScore, importCoverage) {
+  const inputs = executiveInputs(records, readRegistryFile(stateDir));
   const outcome = buildConsistency(inputs.consistency);
   const debt = inputs.debt !== void 0 ? buildDebt(inputs.debt) : void 0;
   const executive = buildExecutive({
@@ -16366,6 +16561,7 @@ function runMarkdownReport(targetDir, options, selection) {
   );
   const stateDir = join7(targetDir, ".ds-bridge");
   const currentText = readHistoryText(stateDir);
+  const currentRecords = replayHistory(currentText);
   let baseText;
   let noBaseline = false;
   const baseLabel = options.delta;
@@ -16395,7 +16591,7 @@ function runMarkdownReport(targetDir, options, selection) {
     return;
   }
   const generatedAt = renderInstant();
-  const systemScore = computeSystemScore(stateDir, effectiveWeights);
+  const systemScore = computeSystemScore(currentText, effectiveWeights);
   const parsedWindow = parseVelocityWindow(options.velocityWindow);
   const velocityWindowDays = (parsedWindow.kind === "ok" ? parsedWindow.days : void 0) ?? selection.scoreVelocityWindow;
   const ownership = resolveOwnership(
@@ -16405,34 +16601,37 @@ function runMarkdownReport(targetDir, options, selection) {
   );
   const blocks = {};
   const targets = computeTargets(
-    stateDir,
+    currentRecords,
     selection.metricTargets,
     systemScore?.current
   );
   if (targets.length > 0) blocks.targets = targets;
   const dataFreshness = computeDataFreshness(
-    stateDir,
+    currentRecords,
     generatedAt,
     selection.freshnessThresholds
   );
   if (dataFreshness.length > 0) blocks.dataFreshness = dataFreshness;
   const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
   if (scoreVelocity !== void 0) blocks.scoreVelocity = scoreVelocity;
-  const ownershipLeaderboard = computeOwnershipLeaderboard(stateDir, ownership);
+  const ownershipLeaderboard = computeOwnershipLeaderboard(
+    currentRecords,
+    ownership
+  );
   if (ownershipLeaderboard.length > 0) {
     blocks.ownershipLeaderboard = ownershipLeaderboard;
   }
   const migrationChecklist = computeMigrationChecklist(
-    stateDir,
+    currentRecords,
     selection.migrationSitesCap
   );
   if (migrationChecklist.sites.length > 0) {
     blocks.migrationChecklist = migrationChecklist;
   }
-  const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+  const libraryHealthTrend = computeLibraryHealthTrend(currentRecords);
   if (libraryHealthTrend.length > 0)
     blocks.libraryHealthTrend = libraryHealthTrend;
-  const audienceChangelog = computeAudienceChangelog(stateDir);
+  const audienceChangelog = computeAudienceChangelog(currentRecords);
   if (audienceChangelog.slices.length > 0) {
     blocks.audienceChangelog = audienceChangelog;
   }
@@ -16479,7 +16678,7 @@ function runMarkdownReport(targetDir, options, selection) {
   if (options.gate) {
     const score = scoreFromHistory(currentText, effectiveWeights);
     const verdicts = computeTargets(
-      stateDir,
+      currentRecords,
       selection.metricTargets,
       score.kind === "ok" ? score.current : void 0
     );
@@ -16510,7 +16709,7 @@ function resolvePublishNames(targetDir, options) {
   }
   return readPublishConfig(targetDir) ?? [];
 }
-function runSiteReport(targetDir, options, selection, data, weightProfile, mode) {
+function runSiteReport(targetDir, options, selection, data, weightProfile, mode, timeline = []) {
   const stateDir = join7(targetDir, ".ds-bridge");
   const snapshot = mode === "snapshot";
   const suffix = snapshot ? ".snapshot.html" : ".html";
@@ -16537,7 +16736,8 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode)
       weightProfile: {
         source: weightProfile.source,
         ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
-      }
+      },
+      timeline
     });
     if (!writePage(name, html)) return;
   } else {
@@ -16561,7 +16761,8 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode)
         return;
       }
       const html = renderDashboard(data, outcome.artifacts, {
-        viewLabel: name
+        viewLabel: name,
+        timeline
       });
       if (!writePage(name, html)) return;
     }
@@ -16579,43 +16780,46 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode)
 `);
   process.exitCode = 0;
 }
-function assembleReportData(targetDir, selection, velocityWindowFlagDays) {
+function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) {
   const stateDir = join7(targetDir, ".ds-bridge");
   const warn = (message) => {
-    process.stderr.write(`${message}
+    if (asOf === void 0) process.stderr.write(`${message}
 `);
   };
-  const aggregation = aggregateHistory(stateDir, warn);
+  const historyText = asOf?.historyText ?? readHistoryText(stateDir);
+  const records = replayHistory(historyText);
+  const aggregation = aggregateHistory(
+    historyText,
+    join7(stateDir, "history.jsonl"),
+    warn
+  );
   const parity = readParity(stateDir, warn);
   const weightProfile = resolveWeightProfile(
     selection.viewName,
     selection.scoreWeights,
     selection.scoreWeightsByView
   );
-  const systemScore = computeSystemScore(stateDir, weightProfile.weights);
-  const consumer = computeConsumerArtifacts(stateDir);
-  const parityTrend = computeParityTrend(stateDir);
+  const systemScore = computeSystemScore(historyText, weightProfile.weights);
+  const consumer = computeConsumerArtifacts(records);
+  const parityTrend = computeParityTrend(records);
   const migrationChecklist = computeMigrationChecklist(
-    stateDir,
+    records,
     selection.migrationSitesCap
   );
-  const audienceChangelog = computeAudienceChangelog(stateDir);
-  const frameImplementability = computeFrameImplementability(stateDir);
+  const audienceChangelog = computeAudienceChangelog(records);
+  const frameImplementability = computeFrameImplementability(records);
   const targets = computeTargets(
-    stateDir,
+    records,
     selection.metricTargets,
     systemScore?.current
   );
-  const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
-  const figmaTrends = computeFigmaTrends(
-    stateDir,
-    selection.readinessThreshold
-  );
-  const generatedAt = renderInstant();
+  const libraryHealthTrend = computeLibraryHealthTrend(records);
+  const figmaTrends = computeFigmaTrends(records, selection.readinessThreshold);
+  const generatedAt = asOf?.generatedAt ?? renderInstant();
   const velocityWindowDays = velocityWindowFlagDays ?? selection.scoreVelocityWindow;
   const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
   const dataFreshness = computeDataFreshness(
-    stateDir,
+    records,
     generatedAt,
     selection.freshnessThresholds
   );
@@ -16626,12 +16830,13 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays) {
     selection.componentAliases
   );
   const ownershipLeaderboard = computeOwnershipLeaderboard(
-    stateDir,
+    records,
     resolveOwnership(targetDir, selection.ownership, selection.ownershipFile)
   );
-  const releaseReadiness = computeReleaseReadiness(stateDir);
+  const releaseReadiness = computeReleaseReadiness(records);
   const executiveLayer = computeExecutiveLayer(
     stateDir,
+    records,
     systemScore,
     aggregation.importCoverage
   );
@@ -16666,6 +16871,16 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays) {
     ...figmaTrends
   };
   return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
+}
+function assemblePastStates(targetDir, selection, velocityWindowFlagDays) {
+  const text2 = readHistoryText(join7(targetDir, ".ds-bridge"));
+  return timelineDays(text2).map(({ day, endOfDay }) => ({
+    day,
+    data: assembleReportData(targetDir, selection, velocityWindowFlagDays, {
+      historyText: historyAsOf(text2, endOfDay),
+      generatedAt: endOfDay
+    }).data
+  }));
 }
 function loadReportData(targetDir) {
   const selection = resolveSelection(targetDir, {
@@ -16790,8 +17005,17 @@ function runReport(path, options) {
     );
     return;
   }
+  const pastStates = () => options.timeline === false ? [] : assemblePastStates(targetDir, selection, velocityWindowFlag.days);
   if (format === "site") {
-    runSiteReport(targetDir, options, selection, data, weightProfile, "live");
+    runSiteReport(
+      targetDir,
+      options,
+      selection,
+      data,
+      weightProfile,
+      "live",
+      pastStates()
+    );
     return;
   }
   if (format === "terminal") {
@@ -16818,6 +17042,7 @@ function runReport(path, options) {
     return;
   }
   const html = renderDashboard(data, selection.artifacts, {
+    timeline: pastStates(),
     ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {},
     // Caption the system-score section ONLY for a `view`-source profile; the
     // renderer renders nothing for project/default (golden-neutral).
@@ -16873,6 +17098,9 @@ function registerReportCommand(program2) {
     "--snapshot",
     "write normalized committed HTML snapshots to .ds-bridge/snapshots/ (M12.1)",
     false
+  ).option(
+    "--no-timeline",
+    "html/site: leave out the header timeline of earlier days (smaller file)"
   ).option(
     "--out <file>",
     "output file (default <path>/.ds-bridge/reports/dashboard.html; exec-html \u2192 .ds-bridge/reports/exec.html; with --format md|exec|json, writes to the file instead of stdout)"
@@ -21242,7 +21470,7 @@ function parseEntry(raw) {
   if (typeof record.kind !== "string") return { raw };
   return {
     raw,
-    kind: record.kind,
+    subject: `${record.kind}\0${frameKeyOf(record)}`,
     ...typeof record.at === "string" ? { at: record.at } : {},
     identity: payloadIdentity(record)
   };
@@ -21250,22 +21478,22 @@ function parseEntry(raw) {
 function compactHistory(text2, options = {}) {
   const entries = text2.split("\n").map((l) => l.trim()).filter((l) => l !== "").map(parseEntry);
   const keep = entries.map(() => true);
-  const lastByKind = /* @__PURE__ */ new Map();
+  const lastBySubject = /* @__PURE__ */ new Map();
   entries.forEach((entry, index) => {
-    if (entry.kind === void 0) return;
-    const prev = lastByKind.get(entry.kind);
+    if (entry.subject === void 0) return;
+    const prev = lastBySubject.get(entry.subject);
     if (prev !== void 0 && entries[prev]?.identity === entry.identity) {
       keep[prev] = false;
     }
-    lastByKind.set(entry.kind, index);
+    lastBySubject.set(entry.subject, index);
   });
   if (options.keepPerDay === true) {
     const lastByDay = /* @__PURE__ */ new Map();
     entries.forEach((entry, index) => {
-      if (!keep[index] || entry.kind === void 0 || entry.at === void 0) {
+      if (!keep[index] || entry.subject === void 0 || entry.at === void 0) {
         return;
       }
-      const key = `${entry.kind}\0${entry.at.slice(0, 10)}`;
+      const key = `${entry.subject}\0${entry.at.slice(0, 10)}`;
       const prev = lastByDay.get(key);
       if (prev !== void 0) keep[prev] = false;
       lastByDay.set(key, index);
@@ -21538,9 +21766,10 @@ function migrateLine(raw) {
   }
   const record = parsed;
   if (typeof record.kind !== "string") return void 0;
+  if (typeof record.at !== "string") return void 0;
   if (envelopeOf(record) !== void 0) return void 0;
   const out = { v: 2 };
-  if ("at" in record) out.at = record.at;
+  out.at = record.at;
   out.kind = record.kind;
   out.source = "local";
   out.git = null;
@@ -21728,10 +21957,11 @@ function rewriteUnderLock(stateDir, dryRun, transform) {
     return { ok: false };
   }
   try {
-    const text2 = readFileSync15(file, "utf8");
+    const bytes = readFileSync15(file);
+    const text2 = bytes.toString("utf8");
     const next = transform(text2);
     if (!dryRun && next.text !== text2)
-      rewriteHistoryAtomic(stateDir, next.text);
+      rewriteHistoryAtomic(stateDir, next.text, bytes.length);
     return { ok: true, existed: true };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -24402,7 +24632,7 @@ function registerParityCommand(program2) {
 
 // src/cli-commands/record.ts
 import { spawnSync as spawnSync3 } from "child_process";
-import { randomUUID } from "crypto";
+import { randomUUID as randomUUID2 } from "crypto";
 import { existsSync as existsSync19, readFileSync as readFileSync20, statSync as statSync12 } from "fs";
 import { join as join24, resolve as resolve13 } from "path";
 
@@ -24721,7 +24951,7 @@ function registerRecordCommand(program2) {
     process.exitCode = runRecord(path, options, {
       runStep: spawnSelf,
       env: process.env,
-      newRunId: randomUUID
+      newRunId: randomUUID2
     });
   });
 }
