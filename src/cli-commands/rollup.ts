@@ -19,11 +19,11 @@ import {
 	uniqueNames,
 } from "../engines/rollup/sources.js";
 import { spawnGitExec } from "../io/git-log.js";
+import { renderInstant } from "../io/report-data.js";
 import { loadRollupSource } from "../io/rollup-sources.js";
 import { renderRollupHtml } from "../render/html/rollup.js";
 import { renderRollupMarkdown } from "../render/markdown/rollup.js";
 import { renderRollupTerm } from "../render/terminal/rollup.js";
-import { renderInstant } from "./report.js";
 
 type RollupFormat = "term" | "md" | "json" | "html";
 const FORMATS: readonly RollupFormat[] = ["term", "md", "json", "html"];

@@ -1,7 +1,7 @@
 // renderInstant — the report's single clock read, pinnable by SOURCE_DATE_EPOCH so
 // a report built from fixed history is byte-identical on any day.
 import { describe, expect, it } from "vitest";
-import { renderInstant } from "../../src/cli-commands/report.js";
+import { renderInstant } from "../../src/io/report-data.js";
 
 describe("renderInstant", () => {
 	it("uses SOURCE_DATE_EPOCH (whole seconds) when it holds one", () => {

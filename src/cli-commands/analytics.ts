@@ -19,7 +19,7 @@ import {
 	renderAnalyticsTerm,
 	stableStringify,
 } from "../engines/report/analytics-artifacts.js";
-import { loadReportData } from "./report.js";
+import { loadReportData } from "../io/report-data.js";
 
 interface AnalyticsOptions {
 	emit: string | undefined;

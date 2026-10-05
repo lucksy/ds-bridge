@@ -44,7 +44,7 @@ import {
 	historyFilePath,
 	rewriteHistoryAtomic,
 } from "../io/history-writer.js";
-import { renderInstant } from "./report.js";
+import { renderInstant } from "../io/report-data.js";
 
 type HistoryFormat = "term" | "json";
 
