@@ -12,6 +12,7 @@ import type {
 	ReportData,
 } from "../../../src/engines/report/types.js";
 import { renderDashboard } from "../../../src/render/html/dashboard.js";
+import { LOGO_IMG } from "../../../src/render/html/logo.js";
 
 function countMatches(haystack: string, pattern: RegExp): number {
 	return (haystack.match(pattern) ?? []).length;
@@ -763,7 +764,8 @@ describe("renderDashboard — escaping untrusted strings", () => {
 
 	it("escapes the hostile generatedAt string", () => {
 		expect(html).toContain("&lt;img");
-		expect(html).not.toMatch(/<img\b/i);
+		// The only real <img> is the header logo; the hostile one stays text.
+		expect(html.replace(LOGO_IMG, "")).not.toMatch(/<img\b/i);
 	});
 
 	it("escapes parity column and component labels", () => {

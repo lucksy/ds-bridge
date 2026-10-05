@@ -48,7 +48,10 @@ import { buildFrameImplementability } from "../engines/report/frame-implementabi
 import { buildFrameReadinessTrend } from "../engines/report/frame-readiness-trend.js";
 import { buildFreshness } from "../engines/report/freshness.js";
 import { buildHandoffPassRate } from "../engines/report/handoff-pass-rate.js";
-import { replayHistory } from "../engines/report/history-lines.js";
+import {
+	type HistoryRecord,
+	replayHistory,
+} from "../engines/report/history-lines.js";
 import { buildLibraryHealthTrend } from "../engines/report/library-health-trend.js";
 import { buildLibraryHotspotsTrend } from "../engines/report/library-hotspots-trend.js";
 import { buildManagerReport } from "../engines/report/manager-report.js";
@@ -80,6 +83,7 @@ import {
 	evaluateTargets,
 	type LatestScalars,
 } from "../engines/report/targets.js";
+import { historyAsOf, timelineDays } from "../engines/report/timeline.js";
 import type {
 	A11ySummary,
 	AdoptionTrendPoint,
@@ -115,7 +119,10 @@ import {
 	readDashboardFile,
 } from "../io/dashboards.js";
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
-import { renderDashboard } from "../render/html/dashboard.js";
+import {
+	type DashboardPastState,
+	renderDashboard,
+} from "../render/html/dashboard.js";
 import { type IndexEntry, renderIndex } from "../render/html/index.js";
 import { renderManagerHtml } from "../render/html/manager.js";
 import { normalizeSnapshot } from "../render/html/snapshot.js";
@@ -279,27 +286,10 @@ function onSystemPct(refs: number, literals: number): number {
  * Unknown `kind` values are skipped silently for forward compatibility.
  */
 function aggregateHistory(
-	stateDir: string,
+	text: string,
+	historyPath: string,
 	onWarning: (message: string) => void,
 ): Aggregation {
-	const historyPath = join(stateDir, "history.jsonl");
-	let text: string;
-	try {
-		text = readFileSync(historyPath, "utf8");
-	} catch {
-		return {
-			driftTrend: [],
-			lintSummary: undefined,
-			readiness: undefined,
-			a11y: undefined,
-			impact: undefined,
-			adoptionTrend: [],
-			leaderboard: undefined,
-			importCoverage: undefined,
-			libraryHealth: undefined,
-		};
-	}
-
 	const driftTrend: DriftTrendPoint[] = [];
 	let lint: LintSummary | undefined;
 	let readiness: Readiness | undefined;
@@ -488,16 +478,9 @@ function aggregateHistory(
  * outcome → undefined, so the section degrades to its empty state.
  */
 function computeSystemScore(
-	stateDir: string,
+	text: string,
 	weights: Weights | undefined,
 ): SystemScore | undefined {
-	const historyPath = join(stateDir, "history.jsonl");
-	let text: string;
-	try {
-		text = readFileSync(historyPath, "utf8");
-	} catch {
-		return undefined;
-	}
 	const outcome = scoreFromHistory(text, weights);
 	if (outcome.kind === "no-data") return undefined;
 	return {
@@ -517,11 +500,10 @@ function computeSystemScore(
  * renderer degrades to empty states. Threaded through selection like every
  * other artifact.
  */
-function computeConsumerArtifacts(stateDir: string): {
+function computeConsumerArtifacts(records: HistoryRecord[]): {
 	breakingCalendar: BreakingCalendar;
 	changeFrequency: ChangeFrequency;
 } {
-	const records = replayHistory(readHistoryText(stateDir));
 	return {
 		breakingCalendar: buildBreakingCalendar(records),
 		changeFrequency: buildChangeFrequency(records),
@@ -536,8 +518,8 @@ function computeConsumerArtifacts(stateDir: string): {
  * NON-empty series into ReportData, so an absent parity history leaves the section
  * in its empty state rather than the populated stub).
  */
-function computeParityTrend(stateDir: string): ParityTrendPoint[] {
-	return buildParityTrend(replayHistory(readHistoryText(stateDir)));
+function computeParityTrend(records: HistoryRecord[]): ParityTrendPoint[] {
+	return buildParityTrend(records);
 }
 
 /**
@@ -546,13 +528,12 @@ function computeParityTrend(stateDir: string): ParityTrendPoint[] {
  * rate (F4). Each key is present only when its engine found source lines.
  */
 function computeFigmaTrends(
-	stateDir: string,
+	records: HistoryRecord[],
 	readinessThreshold: number,
 ): Pick<
 	ReportData,
 	"libraryHotspotsTrend" | "frameReadinessTrend" | "handoffPassRate"
 > {
-	const records = replayHistory(readHistoryText(stateDir));
 	const libraryHotspotsTrend = buildLibraryHotspotsTrend(records);
 	const frameReadinessTrend = buildFrameReadinessTrend(
 		records,
@@ -575,9 +556,9 @@ function computeFigmaTrends(
  * section in its empty state rather than the populated stub).
  */
 function computeLibraryHealthTrend(
-	stateDir: string,
+	records: HistoryRecord[],
 ): LibraryHealthTrendPoint[] {
-	return buildLibraryHealthTrend(replayHistory(readHistoryText(stateDir)));
+	return buildLibraryHealthTrend(records);
 }
 
 /** The `--velocity-window` grammar: a positive integer count, then `d` or `w`. */
@@ -635,10 +616,9 @@ function computeScoreVelocity(
  * keeps the section's empty state (and the no-config render byte-identical).
  */
 function computeMigrationChecklist(
-	stateDir: string,
+	records: HistoryRecord[],
 	cap: number,
 ): MigrationChecklist {
-	const records = replayHistory(readHistoryText(stateDir));
 	let latestImpact: Record<string, unknown> | undefined;
 	for (const entry of records) {
 		if (entry.kind === "impact") latestImpact = entry.record;
@@ -655,8 +635,7 @@ function computeMigrationChecklist(
  * changelog history keeps the section's empty state (and the no-config render
  * byte-identical).
  */
-function computeAudienceChangelog(stateDir: string): AudienceChangelog {
-	const records = replayHistory(readHistoryText(stateDir));
+function computeAudienceChangelog(records: HistoryRecord[]): AudienceChangelog {
 	let latestChangelog: Record<string, unknown> | undefined;
 	for (const entry of records) {
 		if (entry.kind === "changelog") latestChangelog = entry.record;
@@ -672,8 +651,9 @@ function computeAudienceChangelog(stateDir: string): AudienceChangelog {
  * a rollup with measured requirements into ReportData so an absent frame-impl
  * history keeps the section's empty state (and the no-config render byte-identical).
  */
-function computeFrameImplementability(stateDir: string): FrameImplementability {
-	const records = replayHistory(readHistoryText(stateDir));
+function computeFrameImplementability(
+	records: HistoryRecord[],
+): FrameImplementability {
 	let latestFrameImpl: Record<string, unknown> | undefined;
 	for (const entry of records) {
 		if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
@@ -744,11 +724,10 @@ function byDirectoryFromRecords(
 }
 
 function computeOwnershipLeaderboard(
-	stateDir: string,
+	records: HistoryRecord[],
 	ownership: OwnershipMap | undefined,
 ): OwnershipRow[] {
 	if (ownership === undefined) return [];
-	const records = replayHistory(readHistoryText(stateDir));
 	return rollupByOwner(byDirectoryFromRecords(records), ownership);
 }
 
@@ -765,10 +744,8 @@ function computeOwnershipLeaderboard(
  * (its CI gate must report no-go even on an empty history). The caller spreads
  * this into ReportData only when it HAS checks (i.e. at least one signal present).
  */
-function computeReleaseReadiness(stateDir: string): ReleaseReadiness {
-	const signals = extractReleaseSignals(
-		replayHistory(readHistoryText(stateDir)),
-	);
+function computeReleaseReadiness(records: HistoryRecord[]): ReleaseReadiness {
+	const signals = extractReleaseSignals(records);
 	// No release signal at all → keep the section's empty state (golden-neutral on
 	// a project with no impact/drift/parity history).
 	if (
@@ -794,15 +771,11 @@ function computeReleaseReadiness(stateDir: string): ReleaseReadiness {
  * present" (the empty array only arises if the tracked list itself were empty).
  */
 function computeDataFreshness(
-	stateDir: string,
+	records: HistoryRecord[],
 	nowIso: string,
 	thresholds: FreshnessThresholds | undefined,
 ): FreshnessRow[] {
-	return buildFreshness(
-		replayHistory(readHistoryText(stateDir)),
-		nowIso,
-		thresholds,
-	);
+	return buildFreshness(records, nowIso, thresholds);
 }
 
 /**
@@ -892,10 +865,9 @@ function safePct(part: number, whole: number): number | undefined {
  * never a misleading red.
  */
 function latestTargetScalars(
-	stateDir: string,
+	records: HistoryRecord[],
 	systemScore: number | undefined,
 ): LatestScalars {
-	const records = replayHistory(readHistoryText(stateDir));
 	let adoptionLint: Record<string, unknown> | undefined;
 	let tokensCheck: Record<string, unknown> | undefined;
 	let parity: Record<string, unknown> | undefined;
@@ -980,12 +952,12 @@ function latestTargetScalars(
  * over history — writes nothing.
  */
 function computeTargets(
-	stateDir: string,
+	records: HistoryRecord[],
 	targets: MetricTargets | undefined,
 	systemScore: number | undefined,
 ): TargetVerdict[] {
 	if (targets === undefined) return [];
-	return evaluateTargets(latestTargetScalars(stateDir, systemScore), targets);
+	return evaluateTargets(latestTargetScalars(records, systemScore), targets);
 }
 
 /**
@@ -1040,13 +1012,11 @@ function readRegistryFile(stateDir: string): RegistryFile | undefined {
  */
 function computeExecutiveLayer(
 	stateDir: string,
+	records: HistoryRecord[],
 	systemScore: SystemScore | undefined,
 	importCoverage: ImportCoverage | undefined,
 ): Partial<Pick<ReportData, "consistency" | "debt" | "executive">> {
-	const inputs = executiveInputs(
-		replayHistory(readHistoryText(stateDir)),
-		readRegistryFile(stateDir),
-	);
+	const inputs = executiveInputs(records, readRegistryFile(stateDir));
 	const outcome = buildConsistency(inputs.consistency);
 	const debt = inputs.debt !== undefined ? buildDebt(inputs.debt) : undefined;
 	const executive = buildExecutive({
@@ -1271,6 +1241,8 @@ interface ReportOptions {
 	allDashboards: boolean | undefined;
 	/** `--snapshot`: write normalized committed HTML snapshots (M12.1). */
 	snapshot: boolean | undefined;
+	/** Commander maps `--no-timeline` to `timeline: false` (html/site only). */
+	timeline?: boolean;
 }
 
 function failReport(message: string): void {
@@ -1657,6 +1629,7 @@ function runMarkdownReport(
 	);
 	const stateDir = join(targetDir, ".ds-bridge");
 	const currentText = readHistoryText(stateDir);
+	const currentRecords = replayHistory(currentText);
 
 	// Optional base: read the ref's committed history through git (cwd = the
 	// resolved targetDir, not process.cwd()). The render options carry the labels.
@@ -1698,7 +1671,7 @@ function runMarkdownReport(
 	// read (injected → reproducible ages/velocity). Each section is computed
 	// unconditionally; the renderer gates on `selection.artifacts` + presence.
 	const generatedAt = renderInstant();
-	const systemScore = computeSystemScore(stateDir, effectiveWeights);
+	const systemScore = computeSystemScore(currentText, effectiveWeights);
 	// runReport already validated this flag (exit 2 on a bad value) before
 	// dispatching here; re-parse for the day count and fall back to config/default.
 	const parsedWindow = parseVelocityWindow(options.velocityWindow);
@@ -1712,13 +1685,13 @@ function runMarkdownReport(
 	);
 	const blocks: ScorecardBlocks = {};
 	const targets = computeTargets(
-		stateDir,
+		currentRecords,
 		selection.metricTargets,
 		systemScore?.current,
 	);
 	if (targets.length > 0) blocks.targets = targets;
 	const dataFreshness = computeDataFreshness(
-		stateDir,
+		currentRecords,
 		generatedAt,
 		selection.freshnessThresholds,
 	);
@@ -1728,21 +1701,24 @@ function runMarkdownReport(
 			? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays)
 			: undefined;
 	if (scoreVelocity !== undefined) blocks.scoreVelocity = scoreVelocity;
-	const ownershipLeaderboard = computeOwnershipLeaderboard(stateDir, ownership);
+	const ownershipLeaderboard = computeOwnershipLeaderboard(
+		currentRecords,
+		ownership,
+	);
 	if (ownershipLeaderboard.length > 0) {
 		blocks.ownershipLeaderboard = ownershipLeaderboard;
 	}
 	const migrationChecklist = computeMigrationChecklist(
-		stateDir,
+		currentRecords,
 		selection.migrationSitesCap,
 	);
 	if (migrationChecklist.sites.length > 0) {
 		blocks.migrationChecklist = migrationChecklist;
 	}
-	const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+	const libraryHealthTrend = computeLibraryHealthTrend(currentRecords);
 	if (libraryHealthTrend.length > 0)
 		blocks.libraryHealthTrend = libraryHealthTrend;
-	const audienceChangelog = computeAudienceChangelog(stateDir);
+	const audienceChangelog = computeAudienceChangelog(currentRecords);
 	if (audienceChangelog.slices.length > 0) {
 		blocks.audienceChangelog = audienceChangelog;
 	}
@@ -1800,7 +1776,7 @@ function runMarkdownReport(
 	if (options.gate) {
 		const score = scoreFromHistory(currentText, effectiveWeights);
 		const verdicts = computeTargets(
-			stateDir,
+			currentRecords,
 			selection.metricTargets,
 			score.kind === "ok" ? score.current : undefined,
 		);
@@ -1864,6 +1840,7 @@ function runSiteReport(
 	data: Parameters<typeof renderDashboard>[0],
 	weightProfile: ReturnType<typeof resolveWeightProfile>,
 	mode: "live" | "snapshot",
+	timeline: readonly DashboardPastState[] = [],
 ): void {
 	const stateDir = join(targetDir, ".ds-bridge");
 	// Snapshots (M12.1): normalized HTML committed to .ds-bridge/snapshots/ with a
@@ -1905,6 +1882,7 @@ function runSiteReport(
 					? { name: weightProfile.name }
 					: {}),
 			},
+			timeline,
 		});
 		if (!writePage(name, html)) return;
 	} else {
@@ -1929,6 +1907,7 @@ function runSiteReport(
 			}
 			const html = renderDashboard(data, outcome.artifacts, {
 				viewLabel: name,
+				timeline,
 			});
 			if (!writePage(name, html)) return;
 		}
@@ -1962,16 +1941,34 @@ interface AssembledReport {
  * `analytics` command share (SPEC-analytics-export §1.1). Extracted verbatim
  * from runReport; warnings go to stderr.
  */
+/**
+ * Assemble a past state instead of the current one (the dashboard timeline):
+ * the history as it stood then, and the instant it is "as of". Warnings are
+ * not repeated for past states — the current render already reported them.
+ */
+interface AsOfState {
+	historyText: string;
+	generatedAt: string;
+}
+
 function assembleReportData(
 	targetDir: string,
 	selection: ResolvedSelection,
 	velocityWindowFlagDays: number | undefined,
+	asOf?: AsOfState,
 ): AssembledReport {
 	const stateDir = join(targetDir, ".ds-bridge");
 	const warn = (message: string): void => {
-		process.stderr.write(`${message}\n`);
+		if (asOf === undefined) process.stderr.write(`${message}\n`);
 	};
-	const aggregation = aggregateHistory(stateDir, warn);
+	// ONE read + replay of history.jsonl feeds every section below.
+	const historyText = asOf?.historyText ?? readHistoryText(stateDir);
+	const records = replayHistory(historyText);
+	const aggregation = aggregateHistory(
+		historyText,
+		join(stateDir, "history.jsonl"),
+		warn,
+	);
 	const parity = readParity(stateDir, warn);
 	// Resolve the effective system-score weights for THIS render (C2): the active
 	// view's by-view override > the global score_weights > the engine defaults
@@ -1986,58 +1983,55 @@ function assembleReportData(
 	// Replay the SAME history.jsonl into the weighted system score (S4b). The
 	// engine owns its parse (tolerance-mirrored); the resolved C2 weights drive
 	// it. no-data → leave systemScore undefined (empty state).
-	const systemScore = computeSystemScore(stateDir, weightProfile.weights);
+	const systemScore = computeSystemScore(historyText, weightProfile.weights);
 	// Replay the SAME history into the two consumer VIEWS (B6) via the shared
 	// `replayHistory` iterator — pure functions, no new parser. Always present
 	// (their empty shapes degrade to the renderer's empty state).
-	const consumer = computeConsumerArtifacts(stateDir);
+	const consumer = computeConsumerArtifacts(records);
 	// Parity-trend (C3, M2.1): the dated `parity` lines as a pass-% series. Only
 	// spread in when NON-empty so an absent parity history keeps the section's
 	// empty state (and the no-config golden byte-identical).
-	const parityTrend = computeParityTrend(stateDir);
+	const parityTrend = computeParityTrend(records);
 	// Migration checklist (C7, M2.2): the latest impact line's per-call-site
 	// sites[], capped. Only spread in when NON-empty so an impact line without
 	// sites (or no impact line) keeps the section's empty state (golden-neutral).
 	const migrationChecklist = computeMigrationChecklist(
-		stateDir,
+		records,
 		selection.migrationSitesCap,
 	);
 	// Audience changelog (C10, M2.3): the latest changelog line's recent[] folded
 	// into designer/developer slices. Only spread in when NON-empty so a line
 	// without sliceable entries (or no changelog line) keeps the section's empty
 	// state (golden-neutral).
-	const audienceChangelog = computeAudienceChangelog(stateDir);
+	const audienceChangelog = computeAudienceChangelog(records);
 	// Frame implementability (C11, M2.4): the latest frame-impl line's on-system %
 	// + gaps-by-reason. Only spread in when it measured requirements (total > 0) so
 	// an absent frame-impl line keeps the section's empty state (golden-neutral).
-	const frameImplementability = computeFrameImplementability(stateDir);
+	const frameImplementability = computeFrameImplementability(records);
 	// Targets RAG (C1, M3.1): the configured metric_targets banded against the
 	// latest measured scalars (incl. the composite system score). Only spread in
 	// when NON-empty so an unconfigured project keeps the section's empty state
 	// (and the no-config golden byte-identical).
 	const targets = computeTargets(
-		stateDir,
+		records,
 		selection.metricTargets,
 		systemScore?.current,
 	);
 	// Library-health trend (C6, M3.4): the dated `library-health` lines folded into
 	// a hygiene-count series. Only spread in when NON-empty so an absent (or only
 	// dateless) library-health history keeps the section's empty state.
-	const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+	const libraryHealthTrend = computeLibraryHealthTrend(records);
 	// Figma + per-frame trends (F6, SPEC-figma-trends §3): the stored top-N
 	// lists as per-component series, and per-frame readiness + the handoff pass
 	// rate against the CONFIGURED gate. Each is undefined without its source
 	// lines, so a history without them keeps the empty states (golden-neutral).
-	const figmaTrends = computeFigmaTrends(
-		stateDir,
-		selection.readinessThreshold,
-	);
+	const figmaTrends = computeFigmaTrends(records, selection.readinessThreshold);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
 	// `exactOptionalPropertyTypes` keeps an absent section a genuine "not
 	// provided" rather than an explicit `undefined`.
-	const generatedAt = renderInstant();
+	const generatedAt = asOf?.generatedAt ?? renderInstant();
 	// Score velocity (C8, M3.5): the windowed delta of the composite over the
 	// system-score trend, evaluated at `generatedAt` (injected → reproducible).
 	// Window precedence: --velocity-window flag > score_velocity_window config > 30.
@@ -2054,7 +2048,7 @@ function assembleReportData(
 	// buildFreshness returns the full tracked-kind list (never-run kinds banded
 	// `unknown`), so the section populates whenever the tracked list is non-empty.
 	const dataFreshness = computeDataFreshness(
-		stateDir,
+		records,
 		generatedAt,
 		selection.freshnessThresholds,
 	);
@@ -2074,7 +2068,7 @@ function assembleReportData(
 	// project keeps the section's empty state (and the no-config golden
 	// byte-identical — the golden seed has byDirectory but no ownership config).
 	const ownershipLeaderboard = computeOwnershipLeaderboard(
-		stateDir,
+		records,
 		resolveOwnership(targetDir, selection.ownership, selection.ownershipFile),
 	);
 	// Release readiness (C13, M3.7): the impact/drift/parity gates composed into a
@@ -2082,11 +2076,12 @@ function assembleReportData(
 	// checks (the engine returns three for any history; an empty/absent history
 	// still yields three insufficient-data checks → no-go), so any project with a
 	// history populates the section (flipping it out of its empty state).
-	const releaseReadiness = computeReleaseReadiness(stateDir);
+	const releaseReadiness = computeReleaseReadiness(records);
 	// Executive layer (AN5, SPEC-exec-report §3): consistency (AN1), debt (AN2)
 	// and the rollup (AN3), each spread in only when present (absent-not-zero).
 	const executiveLayer = computeExecutiveLayer(
 		stateDir,
+		records,
 		systemScore,
 		aggregation.importCoverage,
 	);
@@ -2131,6 +2126,26 @@ function assembleReportData(
 		...figmaTrends,
 	};
 	return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
+}
+
+/**
+ * The dashboard timeline's earlier states (html/site): one per earlier UTC day
+ * with records, newest 11, each assembled from the history as it stood at the
+ * end of that day and "as of" that instant. Empty when history covers < 2 days.
+ */
+function assemblePastStates(
+	targetDir: string,
+	selection: ResolvedSelection,
+	velocityWindowFlagDays: number | undefined,
+): DashboardPastState[] {
+	const text = readHistoryText(join(targetDir, ".ds-bridge"));
+	return timelineDays(text).map(({ day, endOfDay }) => ({
+		day,
+		data: assembleReportData(targetDir, selection, velocityWindowFlagDays, {
+			historyText: historyAsOf(text, endOfDay),
+			generatedAt: endOfDay,
+		}).data,
+	}));
 }
 
 /**
@@ -2315,8 +2330,22 @@ function runReport(path: string, options: ReportOptions): void {
 	// Static site (M11.1): render the explicit publish set — each dashboard to
 	// reports/<name>.html + a generated reports/index.html. Returns before the
 	// single-page html/terminal tails.
+	// Timeline (html/site): the dashboard's earlier states, unless --no-timeline.
+	const pastStates = (): DashboardPastState[] =>
+		options.timeline === false
+			? []
+			: assemblePastStates(targetDir, selection, velocityWindowFlag.days);
+
 	if (format === "site") {
-		runSiteReport(targetDir, options, selection, data, weightProfile, "live");
+		runSiteReport(
+			targetDir,
+			options,
+			selection,
+			data,
+			weightProfile,
+			"live",
+			pastStates(),
+		);
 		return;
 	}
 
@@ -2349,6 +2378,7 @@ function runReport(path: string, options: ReportOptions): void {
 
 	// HTML (default): the offline self-contained dashboard, written to a file.
 	const html = renderDashboard(data, selection.artifacts, {
+		timeline: pastStates(),
 		...(selection.viewLabel !== undefined
 			? { viewLabel: selection.viewLabel }
 			: {}),
@@ -2428,6 +2458,10 @@ export function registerReportCommand(program: Command): void {
 			"--snapshot",
 			"write normalized committed HTML snapshots to .ds-bridge/snapshots/ (M12.1)",
 			false,
+		)
+		.option(
+			"--no-timeline",
+			"html/site: leave out the header timeline of earlier days (smaller file)",
 		)
 		.option(
 			"--out <file>",

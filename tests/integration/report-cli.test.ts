@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
+import { currentState } from "../helpers/dashboard-state.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -237,7 +238,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("<!DOCTYPE html>");
 		expect(html).toContain("No data yet");
 	});
@@ -253,7 +254,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("<!DOCTYPE html>");
 		// Two trend points → a real line chart is drawn.
 		expect(html).toContain("<svg");
@@ -291,7 +292,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The lint section renders its bar chart rather than the empty state.
 		expect(html).toContain("Off-system");
 		expect(html).toContain("<svg");
@@ -310,7 +311,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.stderr.toLowerCase()).toContain("warning");
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The two good lines still produce a trend chart.
 		expect(html).toContain("<svg");
 	});
@@ -328,7 +329,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.stderr.toLowerCase()).not.toContain("warning");
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("<svg");
 	});
 
@@ -344,7 +345,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("<!DOCTYPE html>");
 	});
 
@@ -361,7 +362,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.stderr.toLowerCase()).toContain("warning");
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("<!DOCTYPE html>");
 	});
 
@@ -403,7 +404,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The readiness gauge is drawn (an SVG) and the frame name is rendered.
 		expect(html).toContain("<svg");
 		expect(html).toContain("Card / Primary");
@@ -422,7 +423,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// Scoped to the readiness section: since F6 the frame-readiness-trend
 		// section deliberately lists EVERY frame (Old Frame included), so the
 		// last-wins contract is asserted on the readiness panel itself.
@@ -443,7 +444,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The parity matrix renders its heat grid (an SVG) listing the components.
 		expect(html).toContain("<svg");
 		expect(html).toContain("Button");
@@ -463,7 +464,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The parity-trend section is present (titled) and NOT in its empty state
 		// (the real renderer draws a line chart once parityTrend is populated).
 		expect(html).toContain("Parity trend");
@@ -481,7 +482,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Parity trend");
 		// No parity line → the section stays empty-state, which is what keeps the
 		// no-config golden byte-identical.
@@ -496,7 +497,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The score legend lists the parity component (a single present component →
 		// the composite equals its sub-score, 80).
 		expect(html).toContain("parity");
@@ -534,7 +535,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The migration-checklist section is present and NOT empty: the real
 		// renderer lists the call site(s) to migrate.
 		expect(html).toContain("Migration checklist");
@@ -562,7 +563,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Migration checklist");
 		// No sites → the checklist is count-only/empty, keeping the no-config golden
 		// byte-identical.
@@ -602,7 +603,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The audience-changelog section is present and NOT empty: the real renderer
 		// draws an audience column per slice.
 		expect(html).toContain("Changelog by audience");
@@ -629,7 +630,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Changelog by audience");
 		// No sliceable entries → the section stays empty-state, keeping the no-config
 		// golden byte-identical.
@@ -660,7 +661,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The frame-implementability section is present and NOT empty: the real
 		// renderer draws a donut gauge + the resolved/total caption.
 		expect(html).toContain("Frame implementability");
@@ -682,7 +683,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Frame implementability");
 		// No frame-impl line → the section stays empty-state, keeping the no-config
 		// golden byte-identical.
@@ -704,7 +705,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The data-freshness section is present and NOT empty: the real renderer
 		// draws a per-kind freshness list. buildFreshness ALWAYS returns one row per
 		// tracked kind, so any tracked-kind run populates it.
@@ -728,7 +729,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The component-health section is present and NOT empty: the real renderer
 		// draws a worst-first bar chart + offenders list.
 		expect(html).toContain("Component health");
@@ -750,7 +751,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Component health");
 		// No registry + no handoff/a11y → no joinable signal → the section stays
 		// empty-state, keeping the no-config golden neutral.
@@ -777,7 +778,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The leaderboard is present and NOT empty: the real renderer draws a
 		// worst-first bar chart with the per-owner refs/literals split.
 		expect(html).toContain("Ownership leaderboard");
@@ -803,7 +804,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Ownership leaderboard");
 		expect(html).toContain("On-system % by owner, worst-first");
 	});
@@ -821,7 +822,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Ownership leaderboard");
 		// byDirectory present but no ownership rules → rollup is [] → empty-state,
 		// keeping the no-config golden byte-identical.
@@ -848,7 +849,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// The section populates (releaseReadiness has checks — here impact passes,
 		// drift/parity insufficient → no-go). The real renderer draws a go/no-go
 		// badge + a checklist.
@@ -871,7 +872,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		expect(html).toContain("Release readiness");
 		// No release signal → empty-checks rollup → empty-state, keeping a
 		// signal-free project's section neutral.
@@ -910,7 +911,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// Drift, lint, readiness, parity, contrast, impact: one chart each (6);
 		// plus the system-score section's gauge + trend (2); plus the three owner
 		// sections (adoption-trend line, coverage donut, leaderboard bar) → 11 (B3);
@@ -952,9 +953,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const result = await runCli(["report", dir]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("5 passed");
 		expect(html).toContain("3 failed");
@@ -975,9 +978,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const result = await runCli(["report", dir]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("9 passed");
 		expect(html).not.toContain("9 failed");
@@ -996,9 +1001,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const result = await runCli(["report", dir]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Touches 7 call sites");
 		expect(html).not.toContain("ds-bridge impact</code>");
@@ -1014,7 +1021,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
-		const html = await readFile(reportPath, "utf8");
+		const html = currentState(await readFile(reportPath, "utf8"));
 		// Readiness + parity still show their empty-state panels.
 		expect(html).toContain("No data yet");
 		// Drift section is populated (1 svg); the single tokens-check line also
@@ -1153,9 +1160,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// system-score · adoption-trend · import-coverage · leaderboard · drift-trend
 		// · parity · a11y → the score section's gauge + trend (2) plus one chart each
@@ -1187,9 +1196,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// import-coverage: 1/3 imported → 33% centred numeral; the uncovered names list.
 		expect(html).toMatch(/<text[^>]*>33<\/text>/);
@@ -1216,9 +1227,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// The donut gauge renders the current composite as a centered numeral.
 		// seedSixArtifacts → drift 75 · lint 74 · readiness 72 · a11y 85 · adoption
@@ -1244,9 +1257,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// design = system-score · readiness · a11y · parity · library-health → the
 		// score's gauge + trend (2) plus one chart each for readiness/a11y/parity +
@@ -1280,9 +1295,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// consumer = system-score · parity · impact · breaking-calendar ·
 		// change-frequency → the score's gauge + trend (2) plus one chart each for
@@ -1312,9 +1329,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		const result = await runCli(["report", dir, "--artifacts", "parity,a11y"]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(countSvgs(html)).toBe(2);
 		expect(html).toContain("Parity matrix");
@@ -1331,9 +1350,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		const result = await runCli(["report", dir]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// ds-engineer includes lint-summary · impact · drift-trend (and parity),
 		// but NOT readiness or adoption-trend — the named config view resolved.
@@ -1355,9 +1376,11 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		const result = await runCli(["report", dir, "--view", "product-manager"]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// product-manager includes parity but NOT lint-summary; the flag view won
 		// over the config's ds-engineer (whose lint section is therefore absent).
@@ -1436,9 +1459,11 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 
 		const result = await runCli(["report", dir, "--view", "ds-manager"]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// owner's by-view a11y:1000 lifts the composite 76 → 84 (the donut numeral).
 		expect(html).toMatch(/<text[^>]*>84<\/text>/);
@@ -1456,9 +1481,11 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 		// and renders NO weight-profile caption.
 		const result = await runCli(["report", dir, "--view", "ds-engineer"]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toMatch(/<text[^>]*>76<\/text>/);
 		expect(html).not.toContain("weights:");
@@ -1478,9 +1505,11 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 			"system-score,a11y",
 		]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toMatch(/<text[^>]*>76<\/text>/);
 		expect(html).not.toContain("weights:");
@@ -1495,9 +1524,11 @@ describe("ds-bridge report — per-view re-weighting (C2 / M4.3)", () => {
 
 		const result = await runCli(["report", dir, "--view", "ds-manager"]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toMatch(/<text[^>]*>84<\/text>/);
 		expect(html).not.toContain("weights:");
@@ -1799,9 +1830,11 @@ describe("ds-bridge report — targets RAG + --gate (C1)", () => {
 		const result = await runCli(["report", dir, "--artifacts", "targets"]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Targets");
 		// The targets section is populated: the real renderer draws a RAG status
@@ -1817,9 +1850,11 @@ describe("ds-bridge report — targets RAG + --gate (C1)", () => {
 		const result = await runCli(["report", dir, "--artifacts", "targets"]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Targets");
 		// No config → empty state, keeping the golden neutral.
@@ -1910,9 +1945,11 @@ describe("ds-bridge report — library-health trend (C6)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Library health trend");
 		// Two dated points → the section is populated: the real renderer draws a
@@ -1936,9 +1973,11 @@ describe("ds-bridge report — library-health trend (C6)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Library health trend");
 		expect(html).toContain("No data yet");
@@ -1964,9 +2003,11 @@ describe("ds-bridge report — score velocity (C8)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Score velocity");
 		// Two trend points → the section is populated: the real renderer draws the
@@ -1988,9 +2029,11 @@ describe("ds-bridge report — score velocity (C8)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Score velocity");
 		expect(html).toContain("No data yet");
@@ -2013,9 +2056,11 @@ describe("ds-bridge report — score velocity (C8)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Score velocity");
 		expect(html).toContain("regression streak");
@@ -2037,9 +2082,11 @@ describe("ds-bridge report — score velocity (C8)", () => {
 		]);
 		expect(result.code).toBe(0);
 
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Score velocity");
 		expect(html).toContain("regression streak");
@@ -2158,9 +2205,11 @@ describe("ds-bridge report — saved dashboards (M8.3)", () => {
 
 		const result = await runCli(["report", dir, "--dashboard", "exec"]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		// ds-manager includes parity but not lint-summary; the header names "exec".
 		expect(html).toContain("Parity matrix");
@@ -2179,9 +2228,11 @@ describe("ds-bridge report — saved dashboards (M8.3)", () => {
 
 		const result = await runCli(["report", dir]);
 		expect(result.code).toBe(0);
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Parity matrix");
 		expect(html).not.toContain("Drift trend");
@@ -2272,9 +2323,11 @@ describe("ds-bridge report — dashboard report_type default (M9.3)", () => {
 		expect(result.code).toBe(0);
 		// HTML path: a dashboard.html is written (no markdown scorecard on stdout).
 		expect(result.stdout).not.toContain("### Design-system scorecard");
-		const html = await readFile(
-			join(dir, ".ds-bridge", "reports", "dashboard.html"),
-			"utf8",
+		const html = currentState(
+			await readFile(
+				join(dir, ".ds-bridge", "reports", "dashboard.html"),
+				"utf8",
+			),
 		);
 		expect(html).toContain("Parity matrix");
 	});

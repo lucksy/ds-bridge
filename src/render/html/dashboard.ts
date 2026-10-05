@@ -39,6 +39,16 @@ import {
 	TONE,
 	toneFor,
 } from "./charts.js";
+import { LOGO_IMG } from "./logo.js";
+import {
+	dayLabels,
+	HEADER_STYLE,
+	TIMELINE_STYLE,
+	type TimelineStop,
+	timelineNav,
+	timelineRadios,
+	timelineStyle,
+} from "./timeline.js";
 
 // Chart widths that match the cards they sit in (a 1200px page, 3 columns), so
 // the SVG draws at 1:1 and its 11–12px labels stay 11–12px. Narrower screens
@@ -1734,6 +1744,18 @@ export interface RenderDashboardOptions {
 	 * render stays byte-identical.
 	 */
 	weightProfile?: WeightProfileMeta;
+	/**
+	 * Earlier states for the header timeline, oldest first (the dashboard as it
+	 * stood at the end of each `day`, `YYYY-MM-DD`). `data` is the current state
+	 * ("Now"). Absent or empty → no timeline, a single state.
+	 */
+	timeline?: readonly DashboardPastState[];
+}
+
+/** One earlier dashboard state on the timeline. */
+export interface DashboardPastState {
+	day: string;
+	data: ReportData;
 }
 
 /**
@@ -1769,24 +1791,66 @@ export function renderDashboard(
 	// The system-score section alone takes the C2 weight profile (a second arg);
 	// every other section is a plain `(data) => string`. Special-cased here rather
 	// than widening the whole SECTION_RENDERERS signature.
-	const sections = selection.map((id) =>
-		id === "system-score"
-			? systemScoreSection(data, options.weightProfile)
-			: SECTION_RENDERERS[id](data),
-	);
+	const stateBody = (state: ReportData): string =>
+		[
+			kpiStrip(kpis(state, selection)),
+			'<div class="grid">',
+			...selection.map((id) =>
+				id === "system-score"
+					? systemScoreSection(state, options.weightProfile)
+					: SECTION_RENDERERS[id](state),
+			),
+			"</div>",
+		].join("");
+
+	// Timeline: one state per earlier day, then "Now". Each state renders the
+	// whole dashboard; CSS shows the checked one (see ./timeline.ts).
+	const past = options.timeline ?? [];
+	const stops: TimelineStop[] = [
+		...past.map((state, i) => {
+			const labels = dayLabels(state.day);
+			return {
+				id: `tl-${i}`,
+				label: labels.short,
+				title: `End of ${labels.long}`,
+			};
+		}),
+		{
+			id: "tl-now",
+			label: "Now",
+			title: `Now · generated ${readableInstant(data.generatedAt)}`,
+		},
+	];
+	const hasTimeline = past.length > 0;
+
+	const asOf = past
+		.map(
+			(state, i) =>
+				`<span class="tl-asof tl-g${i}">As of ${escapeHtml(dayLabels(state.day).long)}</span>`,
+		)
+		.join("");
+	const header = [
+		'<header class="dash"><div class="bar top">',
+		`<div class="brand">${LOGO_IMG}<h1>ds-bridge report · <span class="project">${project}</span></h1></div>`,
+		hasTimeline ? timelineNav(stops) : "<div></div>",
+		`<div class="bar-meta">${viewLabel}${asOf}<span class="generated">Generated ${generatedAt}</span></div>`,
+		"</div></header>",
+	].join("");
+
+	const bodies = hasTimeline
+		? [
+				...past.map(
+					(state, i) =>
+						`<div class="wrap tl-state tl-s${i}"><p class="tl-note">You are viewing this dashboard as it was at the end of <strong>${escapeHtml(dayLabels(state.day).long)}</strong>. The parity grid and component health come from the current registry, not from history.</p>${stateBody(state.data)}</div>`,
+				),
+				`<div class="wrap tl-state tl-s${past.length}">${stateBody(data)}</div>`,
+			]
+		: [`<div class="wrap">${stateBody(data)}</div>`];
 
 	const body = [
-		'<header class="dash"><div class="bar">',
-		`<h1>ds-bridge report · <span class="project">${project}</span></h1>`,
-		viewLabel,
-		`<span class="generated">Generated ${generatedAt}</span>`,
-		"</div></header>",
-		'<div class="wrap">',
-		kpiStrip(kpis(data, selection)),
-		'<div class="grid">',
-		...sections,
-		"</div>",
-		"</div>",
+		hasTimeline ? timelineRadios(stops) : "",
+		header,
+		...bodies,
 	].join("");
 
 	return [
@@ -1796,7 +1860,7 @@ export function renderDashboard(
 		'<meta charset="utf-8" />',
 		'<meta name="viewport" content="width=device-width, initial-scale=1" />',
 		`<title>ds-bridge report · ${project}</title>`,
-		`<style>${STYLE}</style>`,
+		`<style>${STYLE}${HEADER_STYLE}${hasTimeline ? `${TIMELINE_STYLE}${timelineStyle(stops)}` : ""}</style>`,
 		"</head>",
 		"<body>",
 		body,

@@ -116,5 +116,8 @@ catalog is the only vocabulary — never invent ids.
   diff minimal). Never hand-edit or fabricate the dashboard HTML either.
 - Unknown artifact/preset errors from the CLI carry nearest-match suggestions —
   relay them verbatim rather than guessing.
+- The header timeline (logo left, days in the middle, generated time right)
+  lets the user click back through earlier days; every number and chart shows
+  that day's state. `--no-timeline` drops it for a smaller file.
 - The report is offline and self-contained; the user can reopen the printed
   path at any time.

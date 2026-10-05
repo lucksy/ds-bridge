@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterAll, describe, expect, it } from "vitest";
+import { currentState } from "../helpers/dashboard-state.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = join(import.meta.dirname, "..", "..");
@@ -348,7 +349,7 @@ describe("ds-bridge report — executive layer in the dashboard (AN5/AN7)", () =
 			out,
 		]);
 		expect(result.code).toBe(0);
-		const html = await readFile(out, "utf8");
+		const html = currentState(await readFile(out, "utf8"));
 		expect(html.match(/<section class="panel/g)?.length).toBe(5);
 		expect(html).toContain("<h2>Executive summary</h2>");
 	});
