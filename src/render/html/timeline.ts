@@ -112,16 +112,40 @@ header.dash .bar-meta { display: flex; align-items: center; gap: 12px; justify-s
 /** The timeline control and state switching; only on a page with a timeline. */
 export const TIMELINE_STYLE = `
 header.dash .tl-asof { display: none; color: var(--bar-accent); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-/* rtl scroll container: when the stops overflow, it opens scrolled to the
-   newest end ("Now"); the list itself reads left-to-right. */
-.timeline { justify-self: center; max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; direction: rtl; }
+/* A fixed-width strip that scrolls when the stops overflow:
+   - rtl scroll container, so it opens scrolled to the newest end ("Now");
+     the list itself reads left-to-right;
+   - both ends fade to transparent (mask). The list is padded by the fade
+     width, so a stop scrolled fully to either end is never faded — only
+     stops that continue off-strip are. */
+.timeline {
+	--tl-fade: 32px;
+	justify-self: center;
+	width: max-content;
+	max-width: min(560px, 100%);
+	min-width: 0;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scrollbar-width: none;
+	direction: rtl;
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 var(--tl-fade), #000 calc(100% - var(--tl-fade)), transparent);
+	mask-image: linear-gradient(to right, transparent, #000 var(--tl-fade), #000 calc(100% - var(--tl-fade)), transparent);
+}
 .timeline::-webkit-scrollbar { display: none; }
-.timeline ol { list-style: none; margin: 0; padding: 0; display: flex; position: relative; direction: ltr; }
+.timeline ol {
+	list-style: none;
+	margin: 0;
+	padding: 0 var(--tl-fade);
+	display: flex;
+	position: relative;
+	direction: ltr;
+	width: max-content;
+}
 .timeline ol::before {
 	content: "";
 	position: absolute;
-	left: 24px;
-	right: 24px;
+	left: calc(var(--tl-fade) + 24px);
+	right: calc(var(--tl-fade) + 24px);
 	top: 10px;
 	height: 2px;
 	background: rgba(255, 255, 255, 0.16);
@@ -166,8 +190,8 @@ header.dash .tl-asof { display: none; color: var(--bar-accent); font-size: 13px;
 	font-size: 13px;
 }
 @media (max-width: 780px) {
-	.timeline { justify-self: stretch; }
-	.timeline ol { width: max-content; margin: 0 auto; }
+	.timeline { justify-self: stretch; max-width: 100%; }
+	.timeline ol { margin: 0 auto; }
 }
 @media (prefers-reduced-motion: reduce) { .timeline .dot { transition: none; } }
 `;
