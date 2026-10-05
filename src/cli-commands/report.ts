@@ -31,7 +31,11 @@ import {
 	type ScoreWeightsByView,
 } from "../config.js";
 import { readinessByFrame } from "../engines/history/readiness-frames.js";
-import { buildParity, toParitySection } from "../engines/registry/parity.js";
+import {
+	buildParity,
+	type ParityReport,
+	toParitySection,
+} from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import { buildAudienceChangelog } from "../engines/report/audience-changelog.js";
 import type { ArtifactId } from "../engines/report/catalog.js";
@@ -779,32 +783,6 @@ function computeDataFreshness(
 }
 
 /**
- * Read <stateDir>/registry.json and project it into the raw parity rows (C5,
- * M3.3) — the per-component match/gap statuses the component-health join folds.
- * Absent/unreadable/non-JSON registry → [] (the join simply has no parity signal).
- * Mirrors `readParity`'s tolerant read but returns `buildParity().rows` rather than
- * the heat-grid section.
- */
-function readParityRows(
-	stateDir: string,
-): ReturnType<typeof buildParity>["rows"] {
-	const registryPath = join(stateDir, "registry.json");
-	let text: string;
-	try {
-		text = readFileSync(registryPath, "utf8");
-	} catch {
-		return [];
-	}
-	let registry: RegistryFile;
-	try {
-		registry = JSON.parse(text) as RegistryFile;
-	} catch {
-		return [];
-	}
-	return buildParity(registry).rows;
-}
-
-/**
  * Build the component-health rollup (C5, M3.3) — a cross-engine JOIN over the
  * already-aggregated signals via the pure `buildComponentHealth` engine: the
  * registry parity rows ⋈ the latest readiness/a11y (name-heuristic, raised to an
@@ -815,13 +793,13 @@ function readParityRows(
  * an unconfigured project keeps the section's empty state (golden-neutral).
  */
 function computeComponentHealth(
-	stateDir: string,
+	parityRows: ParityReport["rows"],
 	readiness: Readiness | undefined,
 	a11y: A11ySummary | undefined,
 	aliases: ComponentAliases | undefined,
 ): ComponentHealthRow[] {
 	return buildComponentHealth({
-		parityRows: readParityRows(stateDir),
+		parityRows,
 		...(readiness !== undefined
 			? {
 					readiness: {
@@ -961,43 +939,36 @@ function computeTargets(
 }
 
 /**
- * Read <stateDir>/registry.json and project it into the dashboard's Parity
- * section. Absent file → undefined (the renderer shows the empty state).
- * Unreadable / non-JSON registry → undefined with one stderr warning (a
+ * The dashboard's Parity section from the parity report (absent registry or
+ * no rows → undefined, the renderer's empty state). buildParity /
+ * toParitySection never throw on a malformed registry; they degrade.
+ */
+function paritySection(report: ParityReport | undefined): Parity | undefined {
+	if (report === undefined) return undefined;
+	const section = toParitySection(report);
+	return section.rows.length > 0 ? section : undefined;
+}
+
+/**
+ * Read + parse <stateDir>/registry.json ONCE per render. Absent → undefined
+ * (empty states); unreadable / non-JSON → undefined with one stderr warning (a
  * corrupt registry never crashes the report).
  */
-function readParity(
+function loadRegistry(
 	stateDir: string,
 	onWarning: (message: string) => void,
-): Parity | undefined {
+): RegistryFile | undefined {
 	const registryPath = join(stateDir, "registry.json");
 	let text: string;
 	try {
 		text = readFileSync(registryPath, "utf8");
 	} catch {
-		return undefined; // absent registry → empty-state, as before
-	}
-	let registry: RegistryFile;
-	try {
-		registry = JSON.parse(text) as RegistryFile;
-	} catch {
-		onWarning(`warning: skipping unreadable registry ${registryPath}`);
 		return undefined;
 	}
-	// buildParity/toParitySection are pure and never throw on a malformed
-	// registry; they degrade to empty buckets.
-	const section = toParitySection(buildParity(registry));
-	if (section.rows.length === 0) return undefined;
-	return section;
-}
-
-/** Read <stateDir>/registry.json silently (absent / unreadable → undefined). */
-function readRegistryFile(stateDir: string): RegistryFile | undefined {
 	try {
-		return JSON.parse(
-			readFileSync(join(stateDir, "registry.json"), "utf8"),
-		) as RegistryFile;
+		return JSON.parse(text) as RegistryFile;
 	} catch {
+		onWarning(`warning: skipping unreadable registry ${registryPath}`);
 		return undefined;
 	}
 }
@@ -1011,12 +982,12 @@ function readRegistryFile(stateDir: string): RegistryFile | undefined {
  * carries ≥ 1 headline.
  */
 function computeExecutiveLayer(
-	stateDir: string,
+	registry: RegistryFile | undefined,
 	records: HistoryRecord[],
 	systemScore: SystemScore | undefined,
 	importCoverage: ImportCoverage | undefined,
 ): Partial<Pick<ReportData, "consistency" | "debt" | "executive">> {
-	const inputs = executiveInputs(records, readRegistryFile(stateDir));
+	const inputs = executiveInputs(records, registry);
 	const outcome = buildConsistency(inputs.consistency);
 	const debt = inputs.debt !== undefined ? buildDebt(inputs.debt) : undefined;
 	const executive = buildExecutive({
@@ -1971,7 +1942,12 @@ function assembleReportData(
 		join(stateDir, "history.jsonl"),
 		warn,
 	);
-	const parity = readParity(stateDir, warn);
+	// ONE read + parse of registry.json, ONE parity report, for parity, component
+	// health and the executive layer.
+	const registry = loadRegistry(stateDir, warn);
+	const parityReport =
+		registry !== undefined ? buildParity(registry) : undefined;
+	const parity = paritySection(parityReport);
 	// Resolve the effective system-score weights for THIS render (C2): the active
 	// view's by-view override > the global score_weights > the engine defaults
 	// (render-scoped, never written back). The SAME table drives the html score,
@@ -2059,7 +2035,7 @@ function assembleReportData(
 	// spread in when NON-empty so a project with no joinable signals keeps the
 	// section's empty state (and the no-config golden byte-identical).
 	const componentHealth = computeComponentHealth(
-		stateDir,
+		parityReport?.rows ?? [],
 		aggregation.readiness,
 		aggregation.a11y,
 		selection.componentAliases,
@@ -2082,7 +2058,7 @@ function assembleReportData(
 	// Executive layer (AN5, SPEC-exec-report §3): consistency (AN1), debt (AN2)
 	// and the rollup (AN3), each spread in only when present (absent-not-zero).
 	const executiveLayer = computeExecutiveLayer(
-		stateDir,
+		registry,
 		records,
 		systemScore,
 		aggregation.importCoverage,

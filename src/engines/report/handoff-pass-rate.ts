@@ -59,13 +59,27 @@ export function buildHandoffPassRate(
 	}
 	if (latest.size === 0) return undefined;
 
-	const days = [...new Set(dated.map((d) => d.date))].sort();
-	const trend = days.map((date) => {
-		const upTo = new Map<string, number>();
-		for (const entry of dated) {
-			if (entry.date <= date) upTo.set(entry.key, entry.score);
+	// Day by day, ONE pass: for each frame keep the file-latest entry dated on
+	// or before the day — exactly what re-folding every earlier entry per day
+	// gave (O(days × records)), also when a merged history is out of date order.
+	const byDate = dated
+		.map((entry, index) => ({ ...entry, index }))
+		.sort((a, b) =>
+			a.date < b.date ? -1 : a.date > b.date ? 1 : a.index - b.index,
+		);
+	const upTo = new Map<string, { score: number; index: number }>();
+	const trend: HandoffPassRate["trend"] = [];
+	for (let i = 0; i < byDate.length; i += 1) {
+		const entry = byDate[i];
+		if (entry === undefined) continue;
+		const held = upTo.get(entry.key);
+		if (held === undefined || entry.index > held.index) {
+			upTo.set(entry.key, { score: entry.score, index: entry.index });
 		}
-		return { date, ...tally(upTo, threshold) };
-	});
+		if (byDate[i + 1]?.date !== entry.date) {
+			const scores = new Map([...upTo].map(([key, v]) => [key, v.score]));
+			trend.push({ date: entry.date, ...tally(scores, threshold) });
+		}
+	}
 	return { threshold, ...tally(latest, threshold), trend };
 }

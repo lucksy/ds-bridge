@@ -815,7 +815,10 @@ function executiveTerminalSection(data: ReportData, _color: boolean): string {
 			"Consistency",
 			exec.consistency === undefined ? undefined : String(exec.consistency),
 		),
-		row("Design debt", exec.debt === undefined ? undefined : `${exec.debt}%`),
+		row(
+			"Design debt",
+			exec.debt === undefined ? undefined : `${exec.debt}/100`,
+		),
 	];
 	const trend = exec.trend ?? [];
 	if (trend.length >= 2) {
@@ -862,7 +865,7 @@ function designDebtTerminalSection(data: ReportData, color: boolean): string {
 		"low" | "medium" | "high",
 		"ok" | "warn" | "error"
 	> = { low: "ok", medium: "warn", high: "error" };
-	const headline = `${debt.pct}% · ${severityColor(LEVEL_SEVERITY[debt.level], debt.level, { color })}`;
+	const headline = `${debt.pct}/100 · ${severityColor(LEVEL_SEVERITY[debt.level], debt.level, { color })}`;
 	if (debt.items.length === 0) return panel("Design debt", headline);
 	const shown = debt.items.slice(0, 8);
 	const table = renderTable(

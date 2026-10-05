@@ -197,7 +197,7 @@ overrides is a documented-opinion penalty (8 per hotspot)
 
 Design debt
 ───────────
-41% · medium
+41/100 · medium
 ┌───────────────────────┬────────────┬───────┬───────────────────────────────────────────────────────────────────────────────────────┐
 │ Subject               │ Kind       │ Count │ Recommendation                                                                        │
 ├───────────────────────┼────────────┼───────┼───────────────────────────────────────────────────────────────────────────────────────┤
@@ -211,7 +211,7 @@ Executive summary
 System score     76
 Import coverage  33%
 Consistency      65
-Design debt      41%
+Design debt      41/100
 Trend            ▁▇▇▇█
 
 Library hotspots trend

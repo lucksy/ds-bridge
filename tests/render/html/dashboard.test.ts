@@ -414,7 +414,7 @@ describe("renderDashboard — full data", () => {
 		expect(section).not.toContain('<span class="kpi-label">Health</span>');
 		expect(section).toContain("78");
 		expect(section).toContain("60%");
-		expect(section).toContain("30%");
+		expect(section).toContain("30/100"); // debt is an index, not a %
 	});
 
 	it("renders consistency as a gauge + sub-signal legend with the override caveat", () => {
@@ -432,7 +432,7 @@ describe("renderDashboard — full data", () => {
 		const start = html.indexOf("<h2>Design debt</h2>");
 		expect(start).toBeGreaterThan(-1);
 		const section = html.slice(start, html.indexOf("</section>", start));
-		expect(section).toContain("30%");
+		expect(section).toContain("30/100");
 		expect(section).toContain("medium");
 		expect(section).toContain("LegacyButton");
 		expect(section).toContain("Tokenize 7 off-system values");

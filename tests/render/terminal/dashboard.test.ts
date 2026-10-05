@@ -89,7 +89,7 @@ describe("renderTerminalDashboard", () => {
 		expect(out).toMatch(/Consistency\s+—/);
 		expect(out).toContain("84%");
 		expect(out).toContain("tokens");
-		expect(out).toContain("30% · medium");
+		expect(out).toContain("30/100 · medium");
 		expect(out).toContain("LegacyButton");
 		expect(out.indexOf("Executive summary")).toBeLessThan(
 			out.indexOf("Design debt"),

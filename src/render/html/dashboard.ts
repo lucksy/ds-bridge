@@ -1115,7 +1115,7 @@ function executiveSection(data: ReportData): string {
 		),
 		kpiTile(
 			"Design debt",
-			exec.debt === undefined ? undefined : `${exec.debt}%`,
+			exec.debt === undefined ? undefined : `${exec.debt}/100`,
 			exec.debt === undefined ? undefined : debtTone(exec.debt),
 			"lower is better",
 		),
@@ -1200,7 +1200,7 @@ function designDebtSection(data: ReportData): string {
 	return panel(
 		"Design debt",
 		[
-			`<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(debt.pct))}%</span><span class="stat-sub">${escapeHtml(debt.level)} · ${escapeHtml(String(debt.items.length))} item${debt.items.length === 1 ? "" : "s"}</span></div>`,
+			`<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(debt.pct))}/100</span><span class="stat-sub">${escapeHtml(debt.level)} · ${escapeHtml(String(debt.items.length))} item${debt.items.length === 1 ? "" : "s"}</span></div>`,
 			items === "" ? "" : `<ul class="calendar stack">${items}</ul>`,
 			more,
 		].join(""),
@@ -1453,7 +1453,8 @@ function kpis(data: ReportData, selection: readonly ArtifactId[]): Kpi[] {
 	if (on.has("design-debt") && data.debt !== undefined) {
 		out.push({
 			label: "Design debt",
-			value: `${data.debt.pct}%`,
+			// A weighted 0–100 index, not a percentage (same as the manager page).
+			value: `${data.debt.pct}/100`,
 			tone: debtTone(data.debt.pct),
 			sub: `${data.debt.level} · ${data.debt.items.length} item${data.debt.items.length === 1 ? "" : "s"}`,
 		});

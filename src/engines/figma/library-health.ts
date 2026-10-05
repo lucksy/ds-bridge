@@ -206,3 +206,20 @@ export function assessLibraryHealth(
 		totals,
 	};
 }
+
+/**
+ * The display view of an assessment: each list cut to `cap` (default 20),
+ * totals untouched (they are pre-cap). Equal to assessing with `{ cap }`, so a
+ * caller that needs the full lists AND the display report walks the file once.
+ */
+export function capLibraryHealth(
+	report: LibraryHealthReport,
+	cap: number = CAP,
+): LibraryHealthReport {
+	return {
+		overrideHotspots: report.overrideHotspots.slice(0, cap),
+		deprecatedUsage: report.deprecatedUsage.slice(0, cap),
+		detachedCandidates: report.detachedCandidates.slice(0, cap),
+		totals: report.totals,
+	};
+}

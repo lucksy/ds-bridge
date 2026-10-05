@@ -19,7 +19,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { assessLibraryHealth } from "../../../src/engines/figma/library-health.js";
+import {
+	assessLibraryHealth,
+	capLibraryHealth,
+} from "../../../src/engines/figma/library-health.js";
 import type { FigmaFile, FigmaNode } from "../../../src/io/figma/client.js";
 
 // ── Tiny synthetic builders ──
@@ -114,6 +117,22 @@ describe("assessLibraryHealth — override hotspots", () => {
 		const r = assessLibraryHealth(file(doc(kids)));
 		expect(r.overrideHotspots).toHaveLength(20);
 		expect(r.totals.overrideHotspots).toBe(25);
+	});
+
+	it("capLibraryHealth of an uncapped pass equals the capped assessment", () => {
+		const kids: FigmaNode[] = [];
+		for (let i = 0; i < 25; i += 1) {
+			kids.push(
+				instance({ id: `1:${i}`, overrides: [{ id: "a" }, { id: "b" }] }),
+			);
+		}
+		const f = file(doc(kids));
+		const full = assessLibraryHealth(f, { cap: Number.POSITIVE_INFINITY });
+		expect(full.overrideHotspots).toHaveLength(25);
+		expect(capLibraryHealth(full)).toEqual(assessLibraryHealth(f));
+		expect(capLibraryHealth(full, 5)).toEqual(
+			assessLibraryHealth(f, { cap: 5 }),
+		);
 	});
 });
 

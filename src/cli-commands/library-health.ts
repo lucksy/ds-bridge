@@ -29,7 +29,10 @@ import { join } from "node:path";
 import { cwd, env as processEnv } from "node:process";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
-import { assessLibraryHealth } from "../engines/figma/library-health.js";
+import {
+	assessLibraryHealth,
+	capLibraryHealth,
+} from "../engines/figma/library-health.js";
 import {
 	DEFAULT_TOP_N,
 	type LibraryHealthTopLists,
@@ -380,18 +383,15 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 		}
 	}
 
-	// 3) Assess the (fetched or cached) file — pure, never throws.
-	const report = assessLibraryHealth(file);
+	// 3) Assess the (fetched or cached) file ONCE, uncapped — pure, never throws.
+	//    The printed report is its capped view; the history lists group from the
+	//    full one (one walk of a large library document instead of two).
+	const full = assessLibraryHealth(file, { cap: Number.POSITIVE_INFINITY });
+	const report = capLibraryHealth(full);
 
 	// 4) Append the history line for the dashboard trends: the counts (L6) plus,
-	//    unless --top 0, the per-component top-N lists from an UNCAPPED pass (F2).
-	const lists =
-		topN > 0
-			? libraryHealthTopLists(
-					assessLibraryHealth(file, { cap: Number.POSITIVE_INFINITY }),
-					topN,
-				)
-			: undefined;
+	//    unless --top 0, the per-component top-N lists (F2).
+	const lists = topN > 0 ? libraryHealthTopLists(full, topN) : undefined;
 	appendLibraryHealthHistory(report.totals, lists, fileKey);
 
 	// 5) Emit the report.
