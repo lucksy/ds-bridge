@@ -165,6 +165,12 @@ function classifyGitFailure(run: GitExecResult): {
  */
 export function readFileAtRef(input: ReadFileAtRefInput): ReadFileAtRefResult {
 	const { ref, path, cwd, exec } = input;
+	// The ref comes from the CLI or a committed rollup.json. A leading "-"
+	// would make `git show` read it as an OPTION (e.g. `--output=<file>` writes
+	// a file); whitespace, ":" or control characters are never part of a ref.
+	if (!isSafeRef(ref)) {
+		return { kind: "git-error", message: `"${ref}" is not a valid git ref` };
+	}
 
 	const prefixRun = exec(["rev-parse", "--show-prefix"], cwd);
 	if (prefixRun.error !== undefined || prefixRun.status !== 0) {
@@ -182,10 +188,20 @@ export function readFileAtRef(input: ReadFileAtRefInput): ReadFileAtRefResult {
 	return { kind: "ok", text: showRun.stdout };
 }
 
-/** Default real-git exec for the CLI edge — wraps spawnSync. */
+/**
+ * A ref safe to pass to git as a revision: non-empty, not option-like (no
+ * leading "-"), and free of whitespace, ":" and control characters.
+ */
+export function isSafeRef(ref: string): boolean {
+	return (
+		ref !== "" && !ref.startsWith("-") && !/[\s:\u0000-\u001f\u007f]/.test(ref)
+	);
+}
+
 /** stdout cap for one git run (256 MiB) — well above any realistic history. */
 export const GIT_MAX_BUFFER = 256 * 1024 * 1024;
 
+/** Default real-git exec for the CLI edge — wraps spawnSync. */
 export function spawnGitExec(args: string[], cwd: string): GitExecResult {
 	// Node's spawnSync default maxBuffer is 1 MiB; a CI history on a data branch
 	// passes that after a few thousand records (`git show <ref>:history.jsonl`).

@@ -12,6 +12,7 @@ import {
 	GIT_LOG_FIELD_SEP,
 	GIT_LOG_RECORD_SEP,
 	type GitExec,
+	isSafeRef,
 	readFileAtRef,
 	readGitLog,
 } from "../../src/io/git-log.js";
@@ -271,6 +272,43 @@ describe("readFileAtRef — invocation (the injectable git seam)", () => {
 			"show",
 			"abc123:web/.ds-bridge/history.jsonl",
 		]);
+	});
+});
+
+describe("readFileAtRef — refuses option-like or malformed refs", () => {
+	it("never runs git for a ref git would read as an option", () => {
+		for (const ref of [
+			"--output=o",
+			"-p",
+			"main extra",
+			"main:other",
+			"bad\u001b[2Aref",
+			"",
+		]) {
+			const { exec, calls } = fakeShowExec({
+				revParse: { stdout: "" },
+				show: { stdout: "x" },
+			});
+			const result = readFileAtRef({
+				ref,
+				path: ".ds-bridge/history.jsonl",
+				cwd: "/r",
+				exec,
+			});
+			expect(result.kind).toBe("git-error");
+			expect(calls).toHaveLength(0);
+		}
+	});
+
+	it("accepts ordinary refs", () => {
+		for (const ref of [
+			"origin/ds-bridge-data",
+			"v1.13.0",
+			"HEAD~3",
+			"a1b2c3d",
+		]) {
+			expect(isSafeRef(ref)).toBe(true);
+		}
 	});
 });
 

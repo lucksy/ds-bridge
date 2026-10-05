@@ -93,6 +93,52 @@ describe("readinessByFrame", () => {
 		]);
 	});
 
+	it("skips a line without a finite score and keeps the frame's name", () => {
+		const text = [
+			j({
+				at: "2026-10-01T00:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+				frameName: "Checkout",
+				score: 92,
+			}),
+			j({
+				at: "2026-10-02T00:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+			}),
+			j({
+				at: "2026-10-03T00:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+				score: "n/a",
+			}),
+			j({
+				at: "2026-10-04T00:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+				score: 95,
+			}),
+		].join("\n");
+		const [row] = readinessByFrame(replayHistory(text), 80);
+		expect(row).toMatchObject({
+			key: "F:1:1",
+			frameName: "Checkout",
+			latest: 95,
+			runs: 2,
+			passRate: 100,
+		});
+	});
+
+	it("a frame with only scoreless lines has no row", () => {
+		const text = j({ kind: "handoff", fileKey: "F", frameName: "X" });
+		expect(readinessByFrame(replayHistory(text), 80)).toEqual([]);
+	});
+
 	it("is empty without handoff records", () => {
 		expect(readinessByFrame([], 80)).toEqual([]);
 	});

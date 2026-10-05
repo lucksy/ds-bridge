@@ -220,7 +220,26 @@ export type StepRunner = (
 	options: { cwd: string; env: NodeJS.ProcessEnv },
 ) => StepRun;
 
-/** The real runner: the SAME bundle (or tsx entry), stdout discarded. */
+/** A check that runs longer than this is stopped (a stalled Figma call). */
+const STEP_TIMEOUT_MS = 5 * 60 * 1000;
+/** stderr kept per check; a noisy check must not fail with ENOBUFS. */
+const STEP_STDERR_MAX = 16 * 1024 * 1024;
+
+/**
+ * The per-check timeout: `DS_BRIDGE_RECORD_STEP_TIMEOUT_MS` (a positive
+ * integer) or 5 minutes.
+ */
+export function stepTimeoutMs(env: NodeJS.ProcessEnv): number {
+	const raw = env.DS_BRIDGE_RECORD_STEP_TIMEOUT_MS;
+	const parsed = raw !== undefined && /^\d+$/.test(raw) ? Number(raw) : 0;
+	return parsed > 0 ? parsed : STEP_TIMEOUT_MS;
+}
+
+/**
+ * The real runner: the SAME bundle (or tsx entry), stdout discarded. Bounded:
+ * a check is stopped after {@link stepTimeoutMs} so a stalled network call
+ * cannot hang a CI job, and its stderr buffer is large enough not to fail.
+ */
 function spawnSelf(
 	args: string[],
 	options: { cwd: string; env: NodeJS.ProcessEnv },
@@ -237,10 +256,18 @@ function spawnSelf(
 			env: options.env,
 			encoding: "utf8",
 			stdio: ["ignore", "ignore", "pipe"],
+			timeout: stepTimeoutMs(options.env),
+			killSignal: "SIGTERM",
+			maxBuffer: STEP_STDERR_MAX,
 		},
 	);
 	if (run.error !== undefined) {
-		return { status: null, stderr: "", error: run.error.message };
+		const code = (run.error as NodeJS.ErrnoException).code;
+		const error =
+			code === "ETIMEDOUT"
+				? `timed out after ${Math.round(stepTimeoutMs(options.env) / 1000)}s`
+				: run.error.message;
+		return { status: null, stderr: "", error };
 	}
 	return { status: run.status, stderr: run.stderr ?? "" };
 }
@@ -480,12 +507,15 @@ export function runRecord(
 		return 2;
 	}
 
-	// The stored composite (G3): one score record per batch, only with data.
+	// The stored composite (G3): one score record per batch, only with data —
+	// and only when this batch measured something. A batch whose checks were
+	// all skipped would otherwise store a fresh, "now"-dated score made of old
+	// measurements, and the trend would show a measurement that never happened.
 	let score: RecordResult["score"] = null;
-	const payload = scoreRecordPayload(
-		readHistoryText(stateDir),
-		settings.profile,
-	);
+	const payload =
+		batchRecords.length > 0
+			? scoreRecordPayload(readHistoryText(stateDir), settings.profile)
+			: undefined;
 	if (payload !== undefined) {
 		try {
 			appendHistoryRecord(stateDir, payload, { env: childEnv, source });

@@ -27,8 +27,10 @@ function str(value: unknown): string | undefined {
 	return typeof value === "string" && value !== "" ? value : undefined;
 }
 
-function num(value: unknown): number {
-	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+function finite(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value)
+		? value
+		: undefined;
 }
 
 /**
@@ -73,7 +75,12 @@ export function frameKeyResolver(
 	};
 }
 
-/** Fold handoff records into per-frame readiness rows, sorted by key. */
+/**
+ * Fold handoff records into per-frame readiness rows, sorted by key. A line
+ * without a finite `score` is skipped (like the frame-readiness trend and the
+ * pass rate do): it is not a run, and never reads as a score of 0. A line
+ * without a `frameName` keeps the name already seen.
+ */
 export function readinessByFrame(
 	records: readonly HistoryRecord[],
 	threshold: number,
@@ -87,8 +94,9 @@ export function readinessByFrame(
 		// An aliased v1 line keeps the v2 identity fields already seen.
 		const fileKey = str(record.fileKey) ?? prev?.fileKey;
 		const nodeId = str(record.nodeId) ?? prev?.nodeId;
-		const frameName = str(record.frameName) ?? "";
-		const score = num(record.score);
+		const score = finite(record.score);
+		if (score === undefined) continue;
+		const frameName = str(record.frameName) ?? prev?.frameName ?? "";
 		const row: FrameReadiness & { passes: number } = {
 			key,
 			frameName,
