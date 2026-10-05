@@ -17338,14 +17338,16 @@ function parseEntry(raw) {
 function compactHistory(text2, options = {}) {
   const entries = text2.split("\n").map((l) => l.trim()).filter((l) => l !== "").map(parseEntry);
   const keep = entries.map(() => true);
-  const lastBySubject = /* @__PURE__ */ new Map();
+  const runBySubject = /* @__PURE__ */ new Map();
   entries.forEach((entry, index) => {
     if (entry.subject === void 0) return;
-    const prev = lastBySubject.get(entry.subject);
-    if (prev !== void 0 && entries[prev]?.identity === entry.identity) {
-      keep[prev] = false;
+    const run = runBySubject.get(entry.subject);
+    if (run !== void 0 && entries[run.last]?.identity === entry.identity) {
+      if (run.last !== run.first) keep[run.last] = false;
+      run.last = index;
+      return;
     }
-    lastBySubject.set(entry.subject, index);
+    runBySubject.set(entry.subject, { first: index, last: index });
   });
   if (options.keepPerDay === true) {
     const lastByDay = /* @__PURE__ */ new Map();
@@ -18010,7 +18012,7 @@ function registerHistoryCommand(program2) {
     runStats(path, options);
   });
   history.command("compact").description(
-    "Drop identical consecutive same-kind records (latest kept); atomic, locked"
+    "Drop the copies inside a run of identical consecutive records (first and last kept); atomic, locked"
   ).argument("[path]", "project directory", ".").option(
     "--keep-per-day",
     "also keep only the last record per kind per UTC day",
