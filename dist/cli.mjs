@@ -606,8 +606,8 @@ var require_help = __commonJS({
        * @param {string} str
        * @returns {number}
        */
-      displayWidth(str4) {
-        return stripColor(str4).length;
+      displayWidth(str3) {
+        return stripColor(str3).length;
       }
       /**
        * Style the title for displaying in the help. Called with 'Usage:', 'Options:', etc.
@@ -615,11 +615,11 @@ var require_help = __commonJS({
        * @param {string} str
        * @returns {string}
        */
-      styleTitle(str4) {
-        return str4;
+      styleTitle(str3) {
+        return str3;
       }
-      styleUsage(str4) {
-        return str4.split(" ").map((word) => {
+      styleUsage(str3) {
+        return str3.split(" ").map((word) => {
           if (word === "[options]") return this.styleOptionText(word);
           if (word === "[command]") return this.styleSubcommandText(word);
           if (word[0] === "[" || word[0] === "<")
@@ -627,46 +627,46 @@ var require_help = __commonJS({
           return this.styleCommandText(word);
         }).join(" ");
       }
-      styleCommandDescription(str4) {
-        return this.styleDescriptionText(str4);
+      styleCommandDescription(str3) {
+        return this.styleDescriptionText(str3);
       }
-      styleOptionDescription(str4) {
-        return this.styleDescriptionText(str4);
+      styleOptionDescription(str3) {
+        return this.styleDescriptionText(str3);
       }
-      styleSubcommandDescription(str4) {
-        return this.styleDescriptionText(str4);
+      styleSubcommandDescription(str3) {
+        return this.styleDescriptionText(str3);
       }
-      styleArgumentDescription(str4) {
-        return this.styleDescriptionText(str4);
+      styleArgumentDescription(str3) {
+        return this.styleDescriptionText(str3);
       }
-      styleDescriptionText(str4) {
-        return str4;
+      styleDescriptionText(str3) {
+        return str3;
       }
-      styleOptionTerm(str4) {
-        return this.styleOptionText(str4);
+      styleOptionTerm(str3) {
+        return this.styleOptionText(str3);
       }
-      styleSubcommandTerm(str4) {
-        return str4.split(" ").map((word) => {
+      styleSubcommandTerm(str3) {
+        return str3.split(" ").map((word) => {
           if (word === "[options]") return this.styleOptionText(word);
           if (word[0] === "[" || word[0] === "<")
             return this.styleArgumentText(word);
           return this.styleSubcommandText(word);
         }).join(" ");
       }
-      styleArgumentTerm(str4) {
-        return this.styleArgumentText(str4);
+      styleArgumentTerm(str3) {
+        return this.styleArgumentText(str3);
       }
-      styleOptionText(str4) {
-        return str4;
+      styleOptionText(str3) {
+        return str3;
       }
-      styleArgumentText(str4) {
-        return str4;
+      styleArgumentText(str3) {
+        return str3;
       }
-      styleSubcommandText(str4) {
-        return str4;
+      styleSubcommandText(str3) {
+        return str3;
       }
-      styleCommandText(str4) {
-        return str4;
+      styleCommandText(str3) {
+        return str3;
       }
       /**
        * Calculate the pad width from the maximum term length.
@@ -689,8 +689,8 @@ var require_help = __commonJS({
        * @param {string} str
        * @returns {boolean}
        */
-      preformatted(str4) {
-        return /\n[^\S\r\n]/.test(str4);
+      preformatted(str3) {
+        return /\n[^\S\r\n]/.test(str3);
       }
       /**
        * Format the "item", which consists of a term and description. Pad the term and wrap the description, indenting the following lines.
@@ -736,9 +736,9 @@ ${itemIndentStr}`);
        * @param {number} width
        * @returns {string}
        */
-      boxWrap(str4, width) {
-        if (width < this.minWidthToWrap) return str4;
-        const rawLines = str4.split(/\r\n|\n/);
+      boxWrap(str3, width) {
+        if (width < this.minWidthToWrap) return str3;
+        const rawLines = str3.split(/\r\n|\n/);
         const chunkPattern = /[\s]*[^\s]+/g;
         const wrappedLines = [];
         rawLines.forEach((line) => {
@@ -766,9 +766,9 @@ ${itemIndentStr}`);
         return wrappedLines.join("\n");
       }
     };
-    function stripColor(str4) {
+    function stripColor(str3) {
       const sgrPattern = /\x1b\[\d*(;\d*)*m/g;
-      return str4.replace(sgrPattern, "");
+      return str3.replace(sgrPattern, "");
     }
     exports.Help = Help2;
     exports.stripColor = stripColor;
@@ -1040,9 +1040,9 @@ var require_option = __commonJS({
         return option.negate === (negativeValue === value2);
       }
     };
-    function camelcase(str4) {
-      return str4.split("-").reduce((str5, word) => {
-        return str5 + word[0].toUpperCase() + word.slice(1);
+    function camelcase(str3) {
+      return str3.split("-").reduce((str4, word) => {
+        return str4 + word[0].toUpperCase() + word.slice(1);
       });
     }
     function splitOptionFlags(flags) {
@@ -1225,14 +1225,14 @@ var require_command = __commonJS({
         this._showSuggestionAfterError = true;
         this._savedState = null;
         this._outputConfiguration = {
-          writeOut: (str4) => process2.stdout.write(str4),
-          writeErr: (str4) => process2.stderr.write(str4),
-          outputError: (str4, write) => write(str4),
+          writeOut: (str3) => process2.stdout.write(str3),
+          writeErr: (str3) => process2.stderr.write(str3),
+          outputError: (str3, write) => write(str3),
           getOutHelpWidth: () => process2.stdout.isTTY ? process2.stdout.columns : void 0,
           getErrHelpWidth: () => process2.stderr.isTTY ? process2.stderr.columns : void 0,
           getOutHasColors: () => useColor() ?? (process2.stdout.isTTY && process2.stdout.hasColors?.()),
           getErrHasColors: () => useColor() ?? (process2.stderr.isTTY && process2.stderr.hasColors?.()),
-          stripColor: (str4) => stripColor(str4)
+          stripColor: (str3) => stripColor(str3)
         };
         this._hidden = false;
         this._helpOption = void 0;
@@ -2956,18 +2956,18 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [description]
        * @return {(this | string | undefined)} `this` command for chaining, or version string if no arguments
        */
-      version(str4, flags, description) {
-        if (str4 === void 0) return this._version;
-        this._version = str4;
+      version(str3, flags, description) {
+        if (str3 === void 0) return this._version;
+        this._version = str3;
         flags = flags || "-V, --version";
         description = description || "output the version number";
         const versionOption = this.createOption(flags, description);
         this._versionOptionName = versionOption.attributeName();
         this._registerOption(versionOption);
         this.on("option:" + versionOption.name(), () => {
-          this._outputConfiguration.writeOut(`${str4}
+          this._outputConfiguration.writeOut(`${str3}
 `);
-          this._exit(0, "commander.version", str4);
+          this._exit(0, "commander.version", str3);
         });
         return this;
       }
@@ -2978,10 +2978,10 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {object} [argsDescription]
        * @return {(string|Command)}
        */
-      description(str4, argsDescription) {
-        if (str4 === void 0 && argsDescription === void 0)
+      description(str3, argsDescription) {
+        if (str3 === void 0 && argsDescription === void 0)
           return this._description;
-        this._description = str4;
+        this._description = str3;
         if (argsDescription) {
           this._argsDescription = argsDescription;
         }
@@ -2993,9 +2993,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [str]
        * @return {(string|Command)}
        */
-      summary(str4) {
-        if (str4 === void 0) return this._summary;
-        this._summary = str4;
+      summary(str3) {
+        if (str3 === void 0) return this._summary;
+        this._summary = str3;
         return this;
       }
       /**
@@ -3043,8 +3043,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [str]
        * @return {(string|Command)}
        */
-      usage(str4) {
-        if (str4 === void 0) {
+      usage(str3) {
+        if (str3 === void 0) {
           if (this._usage) return this._usage;
           const args = this.registeredArguments.map((arg) => {
             return humanReadableArgName(arg);
@@ -3055,7 +3055,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
             this.registeredArguments.length ? args : []
           ).join(" ");
         }
-        this._usage = str4;
+        this._usage = str3;
         return this;
       }
       /**
@@ -3064,9 +3064,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [str]
        * @return {(string|Command)}
        */
-      name(str4) {
-        if (str4 === void 0) return this._name;
-        this._name = str4;
+      name(str3) {
+        if (str3 === void 0) return this._name;
+        this._name = str3;
         return this;
       }
       /**
@@ -3200,17 +3200,17 @@ Expecting one of '${allowedValues.join("', '")}'`);
         let hasColors;
         let helpWidth;
         if (error) {
-          baseWrite = (str4) => this._outputConfiguration.writeErr(str4);
+          baseWrite = (str3) => this._outputConfiguration.writeErr(str3);
           hasColors = this._outputConfiguration.getErrHasColors();
           helpWidth = this._outputConfiguration.getErrHelpWidth();
         } else {
-          baseWrite = (str4) => this._outputConfiguration.writeOut(str4);
+          baseWrite = (str3) => this._outputConfiguration.writeOut(str3);
           hasColors = this._outputConfiguration.getOutHasColors();
           helpWidth = this._outputConfiguration.getOutHelpWidth();
         }
-        const write = (str4) => {
-          if (!hasColors) str4 = this._outputConfiguration.stripColor(str4);
-          return baseWrite(str4);
+        const write = (str3) => {
+          if (!hasColors) str3 = this._outputConfiguration.stripColor(str3);
+          return baseWrite(str3);
         };
         return { error, write, hasColors, helpWidth };
       }
@@ -3515,7 +3515,7 @@ var require_picocolors = __commonJS({
 
 // src/cli.ts
 import { createRequire } from "module";
-import { join as join30 } from "path";
+import { join as join32 } from "path";
 
 // node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
@@ -3996,8 +3996,8 @@ function identlike(chars) {
   }
   return { type: Tok.Ident, value: v };
 }
-function tokenize(str4 = "") {
-  let chars = str4.trim();
+function tokenize(str3 = "") {
+  let chars = str3.trim();
   let tokens = [];
   let ch;
   _i = 0;
@@ -7516,7 +7516,7 @@ function parseTokensStudio(source) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve17 = (name, seen) => {
+  const resolve18 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -7542,7 +7542,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve17(target, new Set(seen).add(target));
+    const downstream = resolve18(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -7550,7 +7550,7 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve17(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve18(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
     const token = {
       name,
@@ -7856,11 +7856,15 @@ function buildEnvelope(payload, meta) {
     tool: meta.tool
   };
   if (meta.runId !== void 0) record.runId = meta.runId;
-  for (const [key, value2] of Object.entries(payload)) {
-    if (RESERVED_ENVELOPE_KEYS.has(key)) continue;
-    record[key] = value2;
-  }
+  Object.assign(record, payloadOf(payload));
   return record;
+}
+function payloadOf(record) {
+  const payload = {};
+  for (const [key, value2] of Object.entries(record)) {
+    if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
+  }
+  return payload;
 }
 function parseSource(raw) {
   return raw === "local" || raw === "ci" || raw === "hook" ? raw : void 0;
@@ -7952,6 +7956,9 @@ function classifyGitFailure(run) {
 }
 function readFileAtRef(input) {
   const { ref, path, cwd: cwd5, exec } = input;
+  if (!isSafeRef(ref)) {
+    return { kind: "git-error", message: `"${ref}" is not a valid git ref` };
+  }
   const prefixRun = exec(["rev-parse", "--show-prefix"], cwd5);
   if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
     const { kind, message } = classifyGitFailure(prefixRun);
@@ -7964,6 +7971,10 @@ function readFileAtRef(input) {
     return kind === "missing" ? { kind: "missing" } : { kind, message };
   }
   return { kind: "ok", text: showRun.stdout };
+}
+var UNSAFE_REF_CHAR = /[\s:\u0000-\u001f\u007f]/;
+function isSafeRef(ref) {
+  return ref !== "" && !ref.startsWith("-") && !UNSAFE_REF_CHAR.test(ref);
 }
 var GIT_MAX_BUFFER = 256 * 1024 * 1024;
 function spawnGitExec(args, cwd5) {
@@ -8229,23 +8240,56 @@ function shouldColor(env, isTTY) {
   return isTTY;
 }
 
+// src/render/terminal/sanitize.ts
+var CONTROL = new RegExp(
+  // SGR colour (kept) | newline/tab | any other C0, DEL or C1 control (dropped)
+  `${String.fromCharCode(27)}\\[[0-9;]*m|[\\n\\t]|[\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f]`,
+  "g"
+);
+function terminalSafe(text2) {
+  return text2.replace(
+    CONTROL,
+    (match) => match.length > 1 || match === "\n" || match === "	" ? match : ""
+  );
+}
+function terminalCell(text2) {
+  return text2.replace(
+    CONTROL,
+    (match) => match.length > 1 ? match : match === "\n" || match === "	" ? " " : ""
+  );
+}
+
+// src/render/terminal/width.ts
+var ANSI_SGR = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+var ZERO_WIDTH = new RegExp("\\p{Mn}|\\p{Me}|[\\u200b-\\u200d]|\\u2060|[\\ufe00-\\ufe0f]", "u");
+var EMOJI = new RegExp("\\p{Emoji_Presentation}", "u");
+function isWide(cp) {
+  return cp >= 4352 && cp <= 4447 || cp >= 11904 && cp <= 42191 && cp !== 12351 || cp >= 44032 && cp <= 55203 || cp >= 63744 && cp <= 64255 || cp >= 65072 && cp <= 65103 || cp >= 65280 && cp <= 65376 || cp >= 65504 && cp <= 65510 || cp >= 131072 && cp <= 262141;
+}
+function displayWidth2(value2) {
+  let width = 0;
+  for (const ch of value2.replace(ANSI_SGR, "")) {
+    const cp = ch.codePointAt(0) ?? 0;
+    if (ZERO_WIDTH.test(ch)) continue;
+    width += isWide(cp) || EMOJI.test(ch) ? 2 : 1;
+  }
+  return width;
+}
+function padToWidth(value2, width, alignRight = false) {
+  const filler = " ".repeat(Math.max(0, width - displayWidth2(value2)));
+  return alignRight ? filler + value2 : value2 + filler;
+}
+
 // src/render/terminal/table.ts
 function isNumericCell(value2) {
   const trimmed = value2.trim();
   return trimmed !== "" && !Number.isNaN(Number(trimmed));
 }
-var ANSI_SGR = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
-function displayWidth2(value2) {
-  return [...value2.replace(ANSI_SGR, "")].length;
-}
-function pad(value2, width, alignRight) {
-  const gap = Math.max(0, width - displayWidth2(value2));
-  const filler = " ".repeat(gap);
-  return alignRight ? filler + value2 : value2 + filler;
-}
+var pad = padToWidth;
 function renderTable(headers, rows, opts) {
   const columnCount = headers.length;
-  const cellAt = (row2, column) => row2[column] ?? "";
+  const cellAt = (row2, column) => terminalCell(row2[column] ?? "");
+  headers = headers.map((header) => terminalCell(header));
   const widths = [];
   for (let c2 = 0; c2 < columnCount; c2++) {
     let width = displayWidth2(headers[c2] ?? "");
@@ -8262,9 +8306,9 @@ function renderTable(headers, rows, opts) {
     );
   }
   const border = (left, mid, right) => left + widths.map((w) => "\u2500".repeat(w + 2)).join(mid) + right;
-  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell3, c2) => {
+  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell, c2) => {
     const right = alignNumeric && (numericColumn[c2] ?? false);
-    return ` ${pad(cell3, widths[c2] ?? 0, right)} `;
+    return ` ${pad(cell, widths[c2] ?? 0, right)} `;
   }).join("\u2502")}\u2502`;
   const lines = [];
   lines.push(border("\u250C", "\u252C", "\u2510"));
@@ -8303,7 +8347,7 @@ function renderMatrix(rows, columns, opts) {
   const headers = ["", ...columns];
   const tableRows = rows.map((row2) => [
     row2.label,
-    ...row2.cells.map((cell3) => glyphFor(cell3, opts.color))
+    ...row2.cells.map((cell) => glyphFor(cell, opts.color))
   ]);
   return renderTable(headers, tableRows, { color: opts.color });
 }
@@ -8759,8 +8803,8 @@ function registerAdoptionCommand(program2) {
 }
 
 // src/cli-commands/analytics.ts
-import { existsSync as existsSync7, mkdirSync as mkdirSync4, statSync as statSync5, writeFileSync as writeFileSync4 } from "fs";
-import { join as join8, resolve as resolve7 } from "path";
+import { existsSync as existsSync7, mkdirSync as mkdirSync3, statSync as statSync4, writeFileSync as writeFileSync3 } from "fs";
+import { join as join9, resolve as resolve7 } from "path";
 
 // src/engines/report/debt.ts
 var WEIGHT = {
@@ -9052,17 +9096,726 @@ function renderAnalyticsTerm(doc) {
 `;
 }
 
-// src/cli-commands/report.ts
-import { spawn } from "child_process";
-import {
-  existsSync as existsSync6,
-  mkdirSync as mkdirSync3,
-  readFileSync as readFileSync6,
-  statSync as statSync4,
-  writeFileSync as writeFileSync3
-} from "fs";
-import { basename, dirname as dirname3, join as join7, resolve as resolve6 } from "path";
-import { platform } from "process";
+// src/io/report-data.ts
+import { readFileSync as readFileSync7 } from "fs";
+import { basename, join as join8, resolve as resolve6 } from "path";
+
+// src/engines/registry/parity.ts
+var OK_THRESHOLD = 0.85;
+var SEVERITY_ORDER = {
+  "missing-in-code": 0,
+  "missing-in-figma": 1,
+  "prop-mismatch": 2,
+  ok: 3
+};
+function byNameAsc2(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function show(score) {
+  if (!Number.isFinite(score)) return "0";
+  return String(Math.round(score * 1e3) / 1e3);
+}
+function buildParity(registry) {
+  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
+  const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
+  const rows = [];
+  for (const match of matches) {
+    const score = typeof match.score === "number" ? match.score : 0;
+    if (score >= OK_THRESHOLD) {
+      rows.push({
+        component: match.codeName,
+        status: "ok",
+        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`
+      });
+    } else {
+      rows.push({
+        component: match.codeName,
+        status: "prop-mismatch",
+        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`
+      });
+    }
+  }
+  for (const entry of unmatchedFigma) {
+    const top2 = entry.candidates?.[0];
+    const detail = top2 !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top2.codeName} @ ${show(top2.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
+    rows.push({
+      component: entry.name,
+      status: "missing-in-code",
+      detail
+    });
+  }
+  for (const entry of unmatchedCode) {
+    const top2 = entry.candidates?.[0];
+    const detail = top2 !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top2.figmaName} (${top2.nodeId}) @ ${show(top2.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
+    rows.push({
+      component: entry.name,
+      status: "missing-in-figma",
+      detail
+    });
+  }
+  rows.sort((a, b) => {
+    const bySeverity = SEVERITY_ORDER[a.status] - SEVERITY_ORDER[b.status];
+    return bySeverity !== 0 ? bySeverity : byNameAsc2(a.component, b.component);
+  });
+  const summary = {
+    ok: 0,
+    missingInCode: 0,
+    missingInFigma: 0,
+    propMismatch: 0
+  };
+  for (const row2 of rows) {
+    switch (row2.status) {
+      case "ok":
+        summary.ok += 1;
+        break;
+      case "missing-in-code":
+        summary.missingInCode += 1;
+        break;
+      case "missing-in-figma":
+        summary.missingInFigma += 1;
+        break;
+      case "prop-mismatch":
+        summary.propMismatch += 1;
+        break;
+    }
+  }
+  return { rows, summary };
+}
+function toParitySection(report) {
+  return {
+    columns: ["Status"],
+    rows: report.rows.map((row2) => ({
+      component: row2.component,
+      cells: [{ status: row2.status }]
+    }))
+  };
+}
+function parityHistoryRecord(summary, at) {
+  const { ok, missingInCode, missingInFigma, propMismatch } = summary;
+  const total = ok + missingInCode + missingInFigma + propMismatch;
+  return {
+    at,
+    kind: "parity",
+    total,
+    ok,
+    missingInCode,
+    missingInFigma,
+    propMismatch,
+    score: total > 0 ? Math.round(100 * ok / total) : 0
+  };
+}
+
+// src/engines/report/audience-changelog.ts
+var RECENT_CAP = 12;
+function breakingRank(severity) {
+  return severity === "breaking" ? 0 : 1;
+}
+var SEVERITY_FIELD = {
+  breaking: "breaking",
+  notable: "additive",
+  minor: "cosmetic"
+};
+function asObject(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function asAudience(value2) {
+  return value2 === "designer" || value2 === "developer" || value2 === "both" ? value2 : void 0;
+}
+function asSeverity(value2) {
+  return value2 === "breaking" || value2 === "notable" || value2 === "minor" ? value2 : void 0;
+}
+function toEntry(raw, order) {
+  const obj = asObject(raw);
+  if (obj === void 0) return void 0;
+  const audience = asAudience(obj.audience);
+  const severity = asSeverity(obj.severity);
+  if (audience === void 0 || severity === void 0) return void 0;
+  const title = typeof obj.title === "string" ? obj.title : "";
+  return { audience, severity, title, order };
+}
+function inAudience(entry, audience) {
+  return entry.audience === audience || entry.audience === "both";
+}
+function buildSlice(label, audience, entries) {
+  const scoped = entries.filter((e4) => inAudience(e4, audience));
+  if (scoped.length === 0) return void 0;
+  const counts = { breaking: 0, additive: 0, cosmetic: 0 };
+  for (const entry of scoped) {
+    counts[SEVERITY_FIELD[entry.severity]] += 1;
+  }
+  const recent = scoped.slice().sort(
+    (a, b) => breakingRank(a.severity) - breakingRank(b.severity) || a.order - b.order
+  ).slice(0, RECENT_CAP).map((e4) => e4.title);
+  return { audience: label, ...counts, recent };
+}
+function buildAudienceChangelog(latest) {
+  if (latest === void 0) return { slices: [] };
+  const rawRecent = Array.isArray(latest.recent) ? latest.recent : [];
+  const entries = [];
+  for (let i = 0; i < rawRecent.length; i += 1) {
+    const entry = toEntry(rawRecent[i], i);
+    if (entry !== void 0) entries.push(entry);
+  }
+  const slices = [];
+  const designers = buildSlice("designers", "designer", entries);
+  if (designers !== void 0) slices.push(designers);
+  const developers = buildSlice("developers", "developer", entries);
+  if (developers !== void 0) slices.push(developers);
+  return { slices };
+}
+
+// src/engines/report/component-health.ts
+var PARITY_DEDUCTION = {
+  ok: 0,
+  "prop-mismatch": 15,
+  "missing-in-code": 30,
+  "missing-in-figma": 30
+};
+var OVERRIDE_PER_HOTSPOT = 10;
+var OVERRIDE_CAP = 20;
+var DEPRECATED_DEDUCTION = 20;
+var DETACHED_DEDUCTION = 10;
+var READINESS_WEIGHT = 0.3;
+var CONTRAST_PER_FAIL = 5;
+var CONTRAST_CAP = 20;
+function normalizeName(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function isFiniteNumber(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2);
+}
+function clampScore(value2) {
+  return Math.min(100, Math.max(0, Math.round(value2)));
+}
+function buildComponentHealth(input) {
+  const byComponent = /* @__PURE__ */ new Map();
+  const get = (component) => {
+    let acc = byComponent.get(component);
+    if (acc === void 0) {
+      acc = { component, deduction: 0, issues: [] };
+      byComponent.set(component, acc);
+    }
+    return acc;
+  };
+  for (const parityRow of input.parityRows ?? []) {
+    if (parityRow === null || typeof parityRow !== "object") continue;
+    const component = parityRow.component;
+    if (typeof component !== "string" || component === "") continue;
+    const status = parityRow.status;
+    const deduction = PARITY_DEDUCTION[status];
+    if (deduction === void 0) continue;
+    const acc = get(component);
+    if (deduction > 0) {
+      acc.deduction += deduction;
+      acc.issues.push(`parity: ${status}`);
+    }
+  }
+  const lh = input.libraryHealth;
+  if (lh !== void 0) {
+    const overrideCounts = /* @__PURE__ */ new Map();
+    for (const hotspot of lh.overrideHotspots ?? []) {
+      if (hotspot === null || typeof hotspot !== "object") continue;
+      const name = hotspot.componentName;
+      if (typeof name !== "string" || name === "") continue;
+      overrideCounts.set(name, (overrideCounts.get(name) ?? 0) + 1);
+    }
+    for (const [name, count] of overrideCounts) {
+      const acc = get(name);
+      const deduction = Math.min(OVERRIDE_CAP, count * OVERRIDE_PER_HOTSPOT);
+      acc.deduction += deduction;
+      acc.issues.push(`${count} override hotspot${count === 1 ? "" : "s"}`);
+    }
+    for (const group of lh.deprecatedUsage ?? []) {
+      if (group === null || typeof group !== "object") continue;
+      const name = group.componentName;
+      if (typeof name !== "string" || name === "") continue;
+      const acc = get(name);
+      acc.deduction += DEPRECATED_DEDUCTION;
+      const count = isFiniteNumber(group.count) ? group.count : 0;
+      acc.issues.push(`deprecated usage${count > 0 ? ` (${count})` : ""}`);
+    }
+    for (const candidate of lh.detachedCandidates ?? []) {
+      if (candidate === null || typeof candidate !== "object") continue;
+      const name = candidate.name;
+      if (typeof name !== "string" || name === "") continue;
+      const acc = get(name);
+      acc.deduction += DETACHED_DEDUCTION;
+      acc.issues.push("detached candidate (heuristic)");
+    }
+  }
+  const readiness = input.readiness;
+  if (readiness !== void 0 && typeof readiness.frameName === "string" && isFiniteNumber(readiness.score)) {
+    const target = matchByKeyOrName(
+      [...byComponent.keys()],
+      input.aliases,
+      "frameName",
+      readiness.frameName
+    );
+    if (target !== void 0 && readiness.score < 100) {
+      const acc = get(target);
+      acc.deduction += Math.round((100 - readiness.score) * READINESS_WEIGHT);
+      acc.issues.push(`readiness ${readiness.score}`);
+    }
+  }
+  const a11y = input.a11y;
+  if (a11y !== void 0 && Array.isArray(a11y.modes)) {
+    for (const mode of a11y.modes) {
+      if (mode === null || typeof mode !== "object") continue;
+      if (typeof mode.mode !== "string") continue;
+      const failed = isFiniteNumber(mode.failed) ? mode.failed : 0;
+      if (failed <= 0) continue;
+      const target = matchByKeyOrName(
+        [...byComponent.keys()],
+        input.aliases,
+        "contrastMode",
+        mode.mode
+      );
+      if (target === void 0) continue;
+      const acc = get(target);
+      acc.deduction += Math.min(CONTRAST_CAP, failed * CONTRAST_PER_FAIL);
+      acc.issues.push(`contrast: ${failed} failing`);
+    }
+  }
+  return [...byComponent.values()].map(
+    (acc) => ({
+      component: acc.component,
+      healthScore: clampScore(100 - acc.deduction),
+      issues: acc.issues
+    })
+  ).sort(
+    (a, b) => a.healthScore - b.healthScore || (a.component < b.component ? -1 : a.component > b.component ? 1 : 0)
+  );
+}
+function matchByKeyOrName(components, aliases, key, signalValue) {
+  if (aliases !== void 0) {
+    for (const component of components) {
+      if (aliases[component]?.[key] === signalValue) return component;
+    }
+  }
+  const needle = normalizeName(signalValue);
+  if (needle === "") return void 0;
+  for (const component of components) {
+    if (normalizeName(component) === needle) return component;
+  }
+  return void 0;
+}
+
+// src/engines/report/consistency.ts
+var DEFAULT_CONSISTENCY_WEIGHTS = {
+  tokens: 40,
+  components: 40,
+  overrides: 20
+};
+var OVERRIDE_PENALTY_PER_HOTSPOT = 8;
+var SUB_ORDER = [
+  "tokens",
+  "components",
+  "overrides"
+];
+function asNumber2(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp01(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function roundHalfUp(value2) {
+  return Math.round(value2);
+}
+function ratioScore(numerator, denominator) {
+  if (denominator <= 0) return void 0;
+  return clamp01(100 * numerator / denominator);
+}
+function subScore(kind, input) {
+  switch (kind) {
+    case "tokens": {
+      if (input.tokens === void 0) return void 0;
+      const refs = asNumber2(input.tokens.refs);
+      const literals = asNumber2(input.tokens.literals);
+      return ratioScore(refs, refs + literals);
+    }
+    case "components": {
+      if (input.components === void 0) return void 0;
+      const matched = asNumber2(input.components.matched);
+      const custom = asNumber2(input.components.custom);
+      return ratioScore(matched, matched + custom);
+    }
+    case "overrides": {
+      if (input.overrides === void 0) return void 0;
+      const hotspots = asNumber2(input.overrides.hotspots);
+      return clamp01(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots);
+    }
+  }
+}
+function buildConsistency(input) {
+  const weights = input.weights ?? DEFAULT_CONSISTENCY_WEIGHTS;
+  const present = [];
+  for (const kind of SUB_ORDER) {
+    const score2 = subScore(kind, input);
+    if (score2 === void 0) continue;
+    present.push({ kind, score: score2, weight: weights[kind] });
+  }
+  if (present.length === 0) return { kind: "no-data" };
+  const totalWeight = present.reduce((sum, c2) => sum + c2.weight, 0);
+  const weightedSum = present.reduce((sum, c2) => sum + c2.score * c2.weight, 0);
+  const score = roundHalfUp(weightedSum / totalWeight);
+  const components = present.map((c2) => ({
+    kind: c2.kind,
+    score: roundHalfUp(c2.score),
+    weight: c2.weight
+  }));
+  return { kind: "ok", score, components };
+}
+
+// src/engines/report/consumer.ts
+var SOURCE_RANK = { tokens: 0, figma: 1 };
+function finiteNumber(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : void 0;
+}
+function tokensDetail(count) {
+  return `${count} stale output${count === 1 ? "" : "s"}`;
+}
+function figmaDetail(count) {
+  return `${count} breaking component change${count === 1 ? "" : "s"}`;
+}
+function buildBreakingCalendar(records) {
+  const entries = [];
+  for (const { kind, at, record } of records) {
+    if (at === void 0) continue;
+    const date = at.slice(0, 10);
+    if (kind === "tokens-check") {
+      const stale = finiteNumber(record.stale);
+      if (stale !== void 0 && stale > 0) {
+        entries.push({
+          date,
+          source: "tokens",
+          count: stale,
+          detail: tokensDetail(stale)
+        });
+      }
+    }
+    if (kind === "impact") {
+      const breaking = finiteNumber(record.breaking);
+      if (breaking !== void 0 && breaking > 0) {
+        entries.push({
+          date,
+          source: "figma",
+          count: breaking,
+          detail: figmaDetail(breaking)
+        });
+      }
+    }
+  }
+  entries.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    const bySource = SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
+    if (bySource !== 0) return bySource;
+    return a.detail < b.detail ? -1 : a.detail > b.detail ? 1 : 0;
+  });
+  const total = entries.reduce((sum, e4) => sum + e4.count, 0);
+  return { entries, total };
+}
+var FREQUENCY_ORDER = [
+  "tokens-check",
+  "lint",
+  "handoff",
+  "a11y",
+  "impact",
+  "adoption",
+  "library-health"
+];
+var FREQUENCY_KINDS = new Set(FREQUENCY_ORDER);
+function buildChangeFrequency(records) {
+  const counts = /* @__PURE__ */ new Map();
+  let windowFirst;
+  let windowLast;
+  for (const { kind, at } of records) {
+    if (FREQUENCY_KINDS.has(kind)) {
+      const k4 = kind;
+      counts.set(k4, (counts.get(k4) ?? 0) + 1);
+    }
+    if (at !== void 0) {
+      if (windowFirst === void 0 || at < windowFirst) windowFirst = at;
+      if (windowLast === void 0 || at > windowLast) windowLast = at;
+    }
+  }
+  const byKind = [];
+  for (const kind of FREQUENCY_ORDER) {
+    const count = counts.get(kind) ?? 0;
+    if (count > 0) byKind.push({ kind, count });
+  }
+  const result = { byKind };
+  if (windowFirst !== void 0) result.windowFirst = windowFirst;
+  if (windowLast !== void 0) result.windowLast = windowLast;
+  return result;
+}
+
+// src/engines/report/executive.ts
+function asNumber3(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp012(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function roundHalfUp2(value2) {
+  return Math.round(value2);
+}
+function adoptionPct(coverage) {
+  if (coverage === void 0) return void 0;
+  const total = asNumber3(coverage.total);
+  if (total <= 0) return void 0;
+  const imported = asNumber3(coverage.imported);
+  return roundHalfUp2(clamp012(100 * imported / total));
+}
+function buildExecutive(input) {
+  const rollup = {};
+  if (input.systemScore !== void 0) {
+    rollup.health = asNumber3(input.systemScore.current);
+    rollup.trend = Array.isArray(input.systemScore.trend) ? input.systemScore.trend : [];
+  }
+  const adoption = adoptionPct(input.coverage);
+  if (adoption !== void 0) {
+    rollup.adoption = adoption;
+  }
+  if (input.consistency !== void 0 && input.consistency.kind === "ok") {
+    rollup.consistency = asNumber3(input.consistency.score);
+  }
+  if (input.debt !== void 0) {
+    rollup.debt = asNumber3(input.debt.pct);
+  }
+  return rollup;
+}
+
+// src/engines/report/executive-inputs.ts
+function isFiniteNumber2(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2);
+}
+function asObject2(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2) ? value2 : void 0;
+}
+function num3(value2) {
+  return isFiniteNumber2(value2) ? value2 : 0;
+}
+function executiveInputs(records, registry) {
+  let lint;
+  let adoption;
+  let health;
+  for (const { kind, record } of records) {
+    if (kind === "lint") {
+      lint = record;
+      const block = asObject2(record.adoption);
+      if (block !== void 0) adoption = block;
+    } else if (kind === "library-health") {
+      health = record;
+    }
+  }
+  const consistency = {};
+  if (adoption !== void 0) {
+    consistency.tokens = {
+      refs: num3(adoption.refs),
+      literals: num3(adoption.literals)
+    };
+  }
+  if (registry !== void 0 && Array.isArray(registry.matches) && Array.isArray(registry.unmatchedCode)) {
+    consistency.components = {
+      matched: registry.matches.length,
+      custom: registry.unmatchedCode.length
+    };
+  }
+  if (health !== void 0) {
+    const hotspots = health.overrideHotspots;
+    if (Array.isArray(hotspots)) {
+      consistency.overrides = { hotspots: hotspots.length };
+    } else if (isFiniteNumber2(hotspots)) {
+      consistency.overrides = { hotspots };
+    }
+  }
+  if (lint === void 0 && health === void 0) {
+    return { consistency, debt: void 0 };
+  }
+  const debt = {};
+  if (lint !== void 0) {
+    debt.offSystem = num3(asObject2(lint.byKind)?.offSystem);
+  }
+  if (health !== void 0) {
+    const deprecated = health.deprecatedUsage;
+    if (Array.isArray(deprecated)) {
+      debt.deprecatedUsage = deprecated;
+    } else if (isFiniteNumber2(deprecated)) {
+      debt.deprecatedCount = deprecated;
+    }
+    const detached = health.detachedCandidates;
+    if (Array.isArray(detached)) {
+      debt.detachedCandidates = detached;
+    } else if (isFiniteNumber2(detached)) {
+      debt.detachedCount = detached;
+    }
+  }
+  return { consistency, debt };
+}
+
+// src/engines/report/frame-implementability.ts
+var TOP_GAPS_CAP = 5;
+var EMPTY = {
+  pct: 0,
+  resolved: 0,
+  total: 0,
+  gaps: []
+};
+function asObject3(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function asNumber4(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp013(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function bucketsFromByReason(byReason) {
+  if (byReason === void 0) return [];
+  const buckets = [];
+  for (const [reason, raw] of Object.entries(byReason)) {
+    const count = asNumber4(raw);
+    if (count > 0) buckets.push({ reason, count });
+  }
+  return buckets.sort(
+    (a, b) => b.count - a.count || (a.reason < b.reason ? -1 : a.reason > b.reason ? 1 : 0)
+  );
+}
+function buildFrameImplementability(latest) {
+  if (latest === void 0) return EMPTY;
+  const byReason = asObject3(latest.byReason);
+  const buckets = bucketsFromByReason(byReason);
+  const gaps = buckets.slice(0, TOP_GAPS_CAP);
+  const resolved = asNumber4(latest.resolvedCount);
+  const byReasonSum = buckets.reduce((sum, g) => sum + g.count, 0);
+  const gapCount = byReasonSum > 0 ? byReasonSum : asNumber4(latest.gapCount);
+  const total = resolved + gapCount;
+  const recordedPct = typeof latest.pct === "number" && Number.isFinite(latest.pct) ? clamp013(latest.pct) : void 0;
+  const pct5 = recordedPct ?? (total <= 0 ? 0 : clamp013(Math.round(100 * resolved / total)));
+  return { pct: pct5, resolved, total, gaps };
+}
+
+// src/engines/history/readiness-frames.ts
+function str(value2) {
+  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
+}
+function finite(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : void 0;
+}
+function frameKeyOf(record) {
+  const fileKey = str(record.fileKey);
+  const nodeId = str(record.nodeId);
+  if (fileKey !== void 0) {
+    return nodeId !== void 0 ? `${fileKey}:${nodeId}` : fileKey;
+  }
+  return `name:${str(record.frameName) ?? ""}`;
+}
+function frameKeyResolver(records) {
+  const keysByName = /* @__PURE__ */ new Map();
+  for (const { kind, record } of records) {
+    if (kind !== "handoff" || str(record.fileKey) === void 0) continue;
+    const name = str(record.frameName);
+    if (name === void 0) continue;
+    const keys = keysByName.get(name) ?? /* @__PURE__ */ new Set();
+    keys.add(frameKeyOf(record));
+    keysByName.set(name, keys);
+  }
+  return (record) => {
+    const key = frameKeyOf(record);
+    if (str(record.fileKey) !== void 0) return key;
+    const keys = keysByName.get(str(record.frameName) ?? "");
+    return keys !== void 0 && keys.size === 1 ? keys.values().next().value ?? key : key;
+  };
+}
+function readinessByFrame(records, threshold) {
+  const keyOf = frameKeyResolver(records);
+  const rows = /* @__PURE__ */ new Map();
+  for (const { kind, at, record } of records) {
+    if (kind !== "handoff") continue;
+    const key = keyOf(record);
+    const prev = rows.get(key);
+    const fileKey = str(record.fileKey) ?? prev?.fileKey;
+    const nodeId = str(record.nodeId) ?? prev?.nodeId;
+    const score = finite(record.score);
+    if (score === void 0) continue;
+    const frameName = str(record.frameName) ?? prev?.frameName ?? "";
+    const row2 = {
+      key,
+      frameName,
+      ...fileKey !== void 0 ? { fileKey } : {},
+      ...nodeId !== void 0 ? { nodeId } : {},
+      latest: score,
+      ...at !== void 0 ? { at } : {},
+      runs: (prev?.runs ?? 0) + 1,
+      passes: (prev?.passes ?? 0) + (score >= threshold ? 1 : 0),
+      passRate: 0
+    };
+    rows.set(key, row2);
+  }
+  return [...rows.values()].sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0).map(({ passes, ...row2 }) => ({
+    ...row2,
+    passRate: Math.round(100 * passes / row2.runs)
+  }));
+}
+
+// src/engines/report/frame-readiness-trend.ts
+function str2(value2) {
+  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
+}
+function buildFrameReadinessTrend(records, threshold, opts = {}) {
+  const limit = opts.limit ?? 12;
+  const frames = /* @__PURE__ */ new Map();
+  const keyOf = frameKeyResolver(records);
+  for (const { kind, at, record } of records) {
+    if (kind !== "handoff") continue;
+    const score = record.score;
+    if (typeof score !== "number" || !Number.isFinite(score)) continue;
+    const key = keyOf(record);
+    const fileKey = str2(record.fileKey);
+    const nodeId = str2(record.nodeId);
+    const prev = frames.get(key);
+    const row2 = prev ?? {
+      key,
+      frameName: "",
+      latest: score,
+      first: score,
+      runs: 0,
+      byDate: /* @__PURE__ */ new Map()
+    };
+    row2.frameName = str2(record.frameName) ?? row2.frameName;
+    if (fileKey !== void 0) row2.fileKey = fileKey;
+    if (nodeId !== void 0) row2.nodeId = nodeId;
+    row2.latest = score;
+    row2.runs += 1;
+    if (at !== void 0) row2.byDate.set(at.slice(0, 10), score);
+    frames.set(key, row2);
+  }
+  if (frames.size === 0) return void 0;
+  const rows = [...frames.values()].map(
+    ({ byDate, ...row2 }) => ({
+      key: row2.key,
+      frameName: row2.frameName,
+      ...row2.fileKey !== void 0 ? { fileKey: row2.fileKey } : {},
+      ...row2.nodeId !== void 0 ? { nodeId: row2.nodeId } : {},
+      points: [...byDate.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([date, score]) => ({ date, score })),
+      latest: row2.latest,
+      first: row2.first,
+      delta: row2.latest - row2.first,
+      runs: row2.runs,
+      passing: row2.latest >= threshold
+    })
+  );
+  rows.sort(
+    (a, b) => Number(a.passing) - Number(b.passing) || a.latest - b.latest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  );
+  return {
+    threshold,
+    total: rows.length,
+    failing: rows.filter((r2) => !r2.passing).length,
+    frames: rows.slice(0, Math.max(0, limit))
+  };
+}
 
 // src/config.ts
 import { existsSync as existsSync4, readFileSync as readFileSync4, renameSync as renameSync2, writeFileSync as writeFileSync2 } from "fs";
@@ -9377,7 +10130,7 @@ function lookupArtifact(id) {
 }
 
 // src/engines/report/history-lines.ts
-function asObject(value2) {
+function asObject4(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
 function replayHistory(text2) {
@@ -9392,7 +10145,7 @@ function replayHistory(text2) {
     } catch {
       continue;
     }
-    const record = asObject(parsed);
+    const record = asObject4(parsed);
     if (record === void 0) continue;
     if (typeof record.kind !== "string") continue;
     const entry = { kind: record.kind, record };
@@ -9433,13 +10186,13 @@ var COMPONENT_ORDER = [
   "adoption",
   "parity"
 ];
-function asNumber2(value2) {
+function asNumber5(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function clamp01(value2) {
+function clamp014(value2) {
   return Math.min(100, Math.max(0, value2));
 }
-function roundHalfUp(value2) {
+function roundHalfUp3(value2) {
   return Math.round(value2);
 }
 function validateWeights(raw) {
@@ -9468,16 +10221,16 @@ function validateWeights(raw) {
   return { kind: "ok", weights };
 }
 function driftScore(r2) {
-  const penalty = 25 * asNumber2(r2.stale) + 10 * asNumber2(r2.missing) + 5 * asNumber2(r2.orphan);
+  const penalty = 25 * asNumber5(r2.stale) + 10 * asNumber5(r2.missing) + 5 * asNumber5(r2.orphan);
   return Math.max(0, 100 - penalty);
 }
 function lintScore(r2) {
   const byKind = typeof r2.byKind === "object" && r2.byKind !== null ? r2.byKind : {};
-  const penalty = 10 * asNumber2(byKind.offSystem) + 5 * asNumber2(byKind.near) + 2 * asNumber2(byKind.exact);
+  const penalty = 10 * asNumber5(byKind.offSystem) + 5 * asNumber5(byKind.near) + 2 * asNumber5(byKind.exact);
   return Math.max(0, 100 - penalty);
 }
 function readinessScore(r2) {
-  return clamp01(asNumber2(r2.score));
+  return clamp014(asNumber5(r2.score));
 }
 function a11yScore(r2) {
   const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
@@ -9486,8 +10239,8 @@ function a11yScore(r2) {
   for (const m of modes2) {
     if (typeof m === "object" && m !== null) {
       const mm = m;
-      passed += asNumber2(mm.passed);
-      failed += asNumber2(mm.failed);
+      passed += asNumber5(mm.passed);
+      failed += asNumber5(mm.failed);
     }
   }
   const total = passed + failed;
@@ -9497,20 +10250,20 @@ function a11yScore(r2) {
 function adoptionScore(record) {
   const adoption = typeof record.adoption === "object" && record.adoption !== null ? record.adoption : void 0;
   if (adoption === void 0) return void 0;
-  const refs = asNumber2(adoption.refs);
-  const literals = asNumber2(adoption.literals);
+  const refs = asNumber5(adoption.refs);
+  const literals = asNumber5(adoption.literals);
   const total = refs + literals;
   if (total <= 0) return void 0;
   return 100 * refs / total;
 }
 function parityScore(record) {
-  const total = asNumber2(record.total);
+  const total = asNumber5(record.total);
   if (total <= 0) return void 0;
   if (typeof record.score === "number" && Number.isFinite(record.score)) {
-    return clamp01(record.score);
+    return clamp014(record.score);
   }
-  const ok = asNumber2(record.ok);
-  return clamp01(100 * ok / total);
+  const ok = asNumber5(record.ok);
+  return clamp014(100 * ok / total);
 }
 function componentKindFor(historyKind) {
   switch (historyKind) {
@@ -9528,7 +10281,7 @@ function componentKindFor(historyKind) {
       return void 0;
   }
 }
-function subScore(kind, record) {
+function subScore2(kind, record) {
   switch (kind) {
     case "drift":
       return driftScore(record);
@@ -9549,7 +10302,7 @@ function combine(latest, weights) {
   for (const kind of COMPONENT_ORDER) {
     const record = latest[kind];
     if (record === void 0) continue;
-    const score = subScore(kind, record);
+    const score = subScore2(kind, record);
     if (score === void 0) continue;
     components.push({ kind, score, weight: weights[kind] });
   }
@@ -9559,10 +10312,10 @@ function combine(latest, weights) {
     (sum, c2) => sum + c2.score * c2.weight,
     0
   );
-  const current = roundHalfUp(weightedSum / totalWeight);
+  const current = roundHalfUp3(weightedSum / totalWeight);
   const display = components.map((c2) => ({
     ...c2,
-    score: roundHalfUp(c2.score)
+    score: roundHalfUp3(c2.score)
   }));
   return { current, components: display };
 }
@@ -10386,708 +11139,6 @@ function writeProjectConfig(dir, patch) {
   atomicWriteJson(filePath, merged);
 }
 
-// src/engines/history/readiness-frames.ts
-function str(value2) {
-  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
-}
-function num3(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function frameKeyOf(record) {
-  const fileKey = str(record.fileKey);
-  const nodeId = str(record.nodeId);
-  if (fileKey !== void 0) {
-    return nodeId !== void 0 ? `${fileKey}:${nodeId}` : fileKey;
-  }
-  return `name:${str(record.frameName) ?? ""}`;
-}
-function frameKeyResolver(records) {
-  const keysByName = /* @__PURE__ */ new Map();
-  for (const { kind, record } of records) {
-    if (kind !== "handoff" || str(record.fileKey) === void 0) continue;
-    const name = str(record.frameName);
-    if (name === void 0) continue;
-    const keys = keysByName.get(name) ?? /* @__PURE__ */ new Set();
-    keys.add(frameKeyOf(record));
-    keysByName.set(name, keys);
-  }
-  return (record) => {
-    const key = frameKeyOf(record);
-    if (str(record.fileKey) !== void 0) return key;
-    const keys = keysByName.get(str(record.frameName) ?? "");
-    return keys !== void 0 && keys.size === 1 ? keys.values().next().value ?? key : key;
-  };
-}
-function readinessByFrame(records, threshold) {
-  const keyOf = frameKeyResolver(records);
-  const rows = /* @__PURE__ */ new Map();
-  for (const { kind, at, record } of records) {
-    if (kind !== "handoff") continue;
-    const key = keyOf(record);
-    const prev = rows.get(key);
-    const fileKey = str(record.fileKey) ?? prev?.fileKey;
-    const nodeId = str(record.nodeId) ?? prev?.nodeId;
-    const frameName = str(record.frameName) ?? "";
-    const score = num3(record.score);
-    const row2 = {
-      key,
-      frameName,
-      ...fileKey !== void 0 ? { fileKey } : {},
-      ...nodeId !== void 0 ? { nodeId } : {},
-      latest: score,
-      ...at !== void 0 ? { at } : {},
-      runs: (prev?.runs ?? 0) + 1,
-      passes: (prev?.passes ?? 0) + (score >= threshold ? 1 : 0),
-      passRate: 0
-    };
-    rows.set(key, row2);
-  }
-  return [...rows.values()].sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0).map(({ passes, ...row2 }) => ({
-    ...row2,
-    passRate: Math.round(100 * passes / row2.runs)
-  }));
-}
-
-// src/engines/registry/parity.ts
-var OK_THRESHOLD = 0.85;
-var SEVERITY_ORDER = {
-  "missing-in-code": 0,
-  "missing-in-figma": 1,
-  "prop-mismatch": 2,
-  ok: 3
-};
-function byNameAsc2(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function show(score) {
-  if (!Number.isFinite(score)) return "0";
-  return String(Math.round(score * 1e3) / 1e3);
-}
-function buildParity(registry) {
-  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
-  const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
-  const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
-  const rows = [];
-  for (const match of matches) {
-    const score = typeof match.score === "number" ? match.score : 0;
-    if (score >= OK_THRESHOLD) {
-      rows.push({
-        component: match.codeName,
-        status: "ok",
-        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`
-      });
-    } else {
-      rows.push({
-        component: match.codeName,
-        status: "prop-mismatch",
-        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`
-      });
-    }
-  }
-  for (const entry of unmatchedFigma) {
-    const top2 = entry.candidates?.[0];
-    const detail = top2 !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top2.codeName} @ ${show(top2.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
-    rows.push({
-      component: entry.name,
-      status: "missing-in-code",
-      detail
-    });
-  }
-  for (const entry of unmatchedCode) {
-    const top2 = entry.candidates?.[0];
-    const detail = top2 !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top2.figmaName} (${top2.nodeId}) @ ${show(top2.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
-    rows.push({
-      component: entry.name,
-      status: "missing-in-figma",
-      detail
-    });
-  }
-  rows.sort((a, b) => {
-    const bySeverity = SEVERITY_ORDER[a.status] - SEVERITY_ORDER[b.status];
-    return bySeverity !== 0 ? bySeverity : byNameAsc2(a.component, b.component);
-  });
-  const summary = {
-    ok: 0,
-    missingInCode: 0,
-    missingInFigma: 0,
-    propMismatch: 0
-  };
-  for (const row2 of rows) {
-    switch (row2.status) {
-      case "ok":
-        summary.ok += 1;
-        break;
-      case "missing-in-code":
-        summary.missingInCode += 1;
-        break;
-      case "missing-in-figma":
-        summary.missingInFigma += 1;
-        break;
-      case "prop-mismatch":
-        summary.propMismatch += 1;
-        break;
-    }
-  }
-  return { rows, summary };
-}
-function toParitySection(report) {
-  return {
-    columns: ["Status"],
-    rows: report.rows.map((row2) => ({
-      component: row2.component,
-      cells: [{ status: row2.status }]
-    }))
-  };
-}
-
-// src/engines/report/audience-changelog.ts
-var RECENT_CAP = 12;
-function breakingRank(severity) {
-  return severity === "breaking" ? 0 : 1;
-}
-var SEVERITY_FIELD = {
-  breaking: "breaking",
-  notable: "additive",
-  minor: "cosmetic"
-};
-function asObject2(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function asAudience(value2) {
-  return value2 === "designer" || value2 === "developer" || value2 === "both" ? value2 : void 0;
-}
-function asSeverity(value2) {
-  return value2 === "breaking" || value2 === "notable" || value2 === "minor" ? value2 : void 0;
-}
-function toEntry(raw, order) {
-  const obj = asObject2(raw);
-  if (obj === void 0) return void 0;
-  const audience = asAudience(obj.audience);
-  const severity = asSeverity(obj.severity);
-  if (audience === void 0 || severity === void 0) return void 0;
-  const title = typeof obj.title === "string" ? obj.title : "";
-  return { audience, severity, title, order };
-}
-function inAudience(entry, audience) {
-  return entry.audience === audience || entry.audience === "both";
-}
-function buildSlice(label, audience, entries) {
-  const scoped = entries.filter((e4) => inAudience(e4, audience));
-  if (scoped.length === 0) return void 0;
-  const counts = { breaking: 0, additive: 0, cosmetic: 0 };
-  for (const entry of scoped) {
-    counts[SEVERITY_FIELD[entry.severity]] += 1;
-  }
-  const recent = scoped.slice().sort(
-    (a, b) => breakingRank(a.severity) - breakingRank(b.severity) || a.order - b.order
-  ).slice(0, RECENT_CAP).map((e4) => e4.title);
-  return { audience: label, ...counts, recent };
-}
-function buildAudienceChangelog(latest) {
-  if (latest === void 0) return { slices: [] };
-  const rawRecent = Array.isArray(latest.recent) ? latest.recent : [];
-  const entries = [];
-  for (let i = 0; i < rawRecent.length; i += 1) {
-    const entry = toEntry(rawRecent[i], i);
-    if (entry !== void 0) entries.push(entry);
-  }
-  const slices = [];
-  const designers = buildSlice("designers", "designer", entries);
-  if (designers !== void 0) slices.push(designers);
-  const developers = buildSlice("developers", "developer", entries);
-  if (developers !== void 0) slices.push(developers);
-  return { slices };
-}
-
-// src/engines/report/component-health.ts
-var PARITY_DEDUCTION = {
-  ok: 0,
-  "prop-mismatch": 15,
-  "missing-in-code": 30,
-  "missing-in-figma": 30
-};
-var OVERRIDE_PER_HOTSPOT = 10;
-var OVERRIDE_CAP = 20;
-var DEPRECATED_DEDUCTION = 20;
-var DETACHED_DEDUCTION = 10;
-var READINESS_WEIGHT = 0.3;
-var CONTRAST_PER_FAIL = 5;
-var CONTRAST_CAP = 20;
-function normalizeName(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-function isFiniteNumber(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2);
-}
-function clampScore(value2) {
-  return Math.min(100, Math.max(0, Math.round(value2)));
-}
-function buildComponentHealth(input) {
-  const byComponent = /* @__PURE__ */ new Map();
-  const get = (component) => {
-    let acc = byComponent.get(component);
-    if (acc === void 0) {
-      acc = { component, deduction: 0, issues: [] };
-      byComponent.set(component, acc);
-    }
-    return acc;
-  };
-  for (const parityRow of input.parityRows ?? []) {
-    if (parityRow === null || typeof parityRow !== "object") continue;
-    const component = parityRow.component;
-    if (typeof component !== "string" || component === "") continue;
-    const status = parityRow.status;
-    const deduction = PARITY_DEDUCTION[status];
-    if (deduction === void 0) continue;
-    const acc = get(component);
-    if (deduction > 0) {
-      acc.deduction += deduction;
-      acc.issues.push(`parity: ${status}`);
-    }
-  }
-  const lh = input.libraryHealth;
-  if (lh !== void 0) {
-    const overrideCounts = /* @__PURE__ */ new Map();
-    for (const hotspot of lh.overrideHotspots ?? []) {
-      if (hotspot === null || typeof hotspot !== "object") continue;
-      const name = hotspot.componentName;
-      if (typeof name !== "string" || name === "") continue;
-      overrideCounts.set(name, (overrideCounts.get(name) ?? 0) + 1);
-    }
-    for (const [name, count] of overrideCounts) {
-      const acc = get(name);
-      const deduction = Math.min(OVERRIDE_CAP, count * OVERRIDE_PER_HOTSPOT);
-      acc.deduction += deduction;
-      acc.issues.push(`${count} override hotspot${count === 1 ? "" : "s"}`);
-    }
-    for (const group of lh.deprecatedUsage ?? []) {
-      if (group === null || typeof group !== "object") continue;
-      const name = group.componentName;
-      if (typeof name !== "string" || name === "") continue;
-      const acc = get(name);
-      acc.deduction += DEPRECATED_DEDUCTION;
-      const count = isFiniteNumber(group.count) ? group.count : 0;
-      acc.issues.push(`deprecated usage${count > 0 ? ` (${count})` : ""}`);
-    }
-    for (const candidate of lh.detachedCandidates ?? []) {
-      if (candidate === null || typeof candidate !== "object") continue;
-      const name = candidate.name;
-      if (typeof name !== "string" || name === "") continue;
-      const acc = get(name);
-      acc.deduction += DETACHED_DEDUCTION;
-      acc.issues.push("detached candidate (heuristic)");
-    }
-  }
-  const readiness = input.readiness;
-  if (readiness !== void 0 && typeof readiness.frameName === "string" && isFiniteNumber(readiness.score)) {
-    const target = matchByKeyOrName(
-      [...byComponent.keys()],
-      input.aliases,
-      "frameName",
-      readiness.frameName
-    );
-    if (target !== void 0 && readiness.score < 100) {
-      const acc = get(target);
-      acc.deduction += Math.round((100 - readiness.score) * READINESS_WEIGHT);
-      acc.issues.push(`readiness ${readiness.score}`);
-    }
-  }
-  const a11y = input.a11y;
-  if (a11y !== void 0 && Array.isArray(a11y.modes)) {
-    for (const mode of a11y.modes) {
-      if (mode === null || typeof mode !== "object") continue;
-      if (typeof mode.mode !== "string") continue;
-      const failed = isFiniteNumber(mode.failed) ? mode.failed : 0;
-      if (failed <= 0) continue;
-      const target = matchByKeyOrName(
-        [...byComponent.keys()],
-        input.aliases,
-        "contrastMode",
-        mode.mode
-      );
-      if (target === void 0) continue;
-      const acc = get(target);
-      acc.deduction += Math.min(CONTRAST_CAP, failed * CONTRAST_PER_FAIL);
-      acc.issues.push(`contrast: ${failed} failing`);
-    }
-  }
-  return [...byComponent.values()].map(
-    (acc) => ({
-      component: acc.component,
-      healthScore: clampScore(100 - acc.deduction),
-      issues: acc.issues
-    })
-  ).sort(
-    (a, b) => a.healthScore - b.healthScore || (a.component < b.component ? -1 : a.component > b.component ? 1 : 0)
-  );
-}
-function matchByKeyOrName(components, aliases, key, signalValue) {
-  if (aliases !== void 0) {
-    for (const component of components) {
-      if (aliases[component]?.[key] === signalValue) return component;
-    }
-  }
-  const needle = normalizeName(signalValue);
-  if (needle === "") return void 0;
-  for (const component of components) {
-    if (normalizeName(component) === needle) return component;
-  }
-  return void 0;
-}
-
-// src/engines/report/consistency.ts
-var DEFAULT_CONSISTENCY_WEIGHTS = {
-  tokens: 40,
-  components: 40,
-  overrides: 20
-};
-var OVERRIDE_PENALTY_PER_HOTSPOT = 8;
-var SUB_ORDER = [
-  "tokens",
-  "components",
-  "overrides"
-];
-function asNumber3(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function clamp012(value2) {
-  return Math.min(100, Math.max(0, value2));
-}
-function roundHalfUp2(value2) {
-  return Math.round(value2);
-}
-function ratioScore(numerator, denominator) {
-  if (denominator <= 0) return void 0;
-  return clamp012(100 * numerator / denominator);
-}
-function subScore2(kind, input) {
-  switch (kind) {
-    case "tokens": {
-      if (input.tokens === void 0) return void 0;
-      const refs = asNumber3(input.tokens.refs);
-      const literals = asNumber3(input.tokens.literals);
-      return ratioScore(refs, refs + literals);
-    }
-    case "components": {
-      if (input.components === void 0) return void 0;
-      const matched = asNumber3(input.components.matched);
-      const custom = asNumber3(input.components.custom);
-      return ratioScore(matched, matched + custom);
-    }
-    case "overrides": {
-      if (input.overrides === void 0) return void 0;
-      const hotspots = asNumber3(input.overrides.hotspots);
-      return clamp012(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots);
-    }
-  }
-}
-function buildConsistency(input) {
-  const weights = input.weights ?? DEFAULT_CONSISTENCY_WEIGHTS;
-  const present = [];
-  for (const kind of SUB_ORDER) {
-    const score2 = subScore2(kind, input);
-    if (score2 === void 0) continue;
-    present.push({ kind, score: score2, weight: weights[kind] });
-  }
-  if (present.length === 0) return { kind: "no-data" };
-  const totalWeight = present.reduce((sum, c2) => sum + c2.weight, 0);
-  const weightedSum = present.reduce((sum, c2) => sum + c2.score * c2.weight, 0);
-  const score = roundHalfUp2(weightedSum / totalWeight);
-  const components = present.map((c2) => ({
-    kind: c2.kind,
-    score: roundHalfUp2(c2.score),
-    weight: c2.weight
-  }));
-  return { kind: "ok", score, components };
-}
-
-// src/engines/report/consumer.ts
-var SOURCE_RANK = { tokens: 0, figma: 1 };
-function finiteNumber(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : void 0;
-}
-function tokensDetail(count) {
-  return `${count} stale output${count === 1 ? "" : "s"}`;
-}
-function figmaDetail(count) {
-  return `${count} breaking component change${count === 1 ? "" : "s"}`;
-}
-function buildBreakingCalendar(records) {
-  const entries = [];
-  for (const { kind, at, record } of records) {
-    if (at === void 0) continue;
-    const date = at.slice(0, 10);
-    if (kind === "tokens-check") {
-      const stale = finiteNumber(record.stale);
-      if (stale !== void 0 && stale > 0) {
-        entries.push({
-          date,
-          source: "tokens",
-          count: stale,
-          detail: tokensDetail(stale)
-        });
-      }
-    }
-    if (kind === "impact") {
-      const breaking = finiteNumber(record.breaking);
-      if (breaking !== void 0 && breaking > 0) {
-        entries.push({
-          date,
-          source: "figma",
-          count: breaking,
-          detail: figmaDetail(breaking)
-        });
-      }
-    }
-  }
-  entries.sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    const bySource = SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
-    if (bySource !== 0) return bySource;
-    return a.detail < b.detail ? -1 : a.detail > b.detail ? 1 : 0;
-  });
-  const total = entries.reduce((sum, e4) => sum + e4.count, 0);
-  return { entries, total };
-}
-var FREQUENCY_ORDER = [
-  "tokens-check",
-  "lint",
-  "handoff",
-  "a11y",
-  "impact",
-  "adoption",
-  "library-health"
-];
-var FREQUENCY_KINDS = new Set(FREQUENCY_ORDER);
-function buildChangeFrequency(records) {
-  const counts = /* @__PURE__ */ new Map();
-  let windowFirst;
-  let windowLast;
-  for (const { kind, at } of records) {
-    if (FREQUENCY_KINDS.has(kind)) {
-      const k4 = kind;
-      counts.set(k4, (counts.get(k4) ?? 0) + 1);
-    }
-    if (at !== void 0) {
-      if (windowFirst === void 0 || at < windowFirst) windowFirst = at;
-      if (windowLast === void 0 || at > windowLast) windowLast = at;
-    }
-  }
-  const byKind = [];
-  for (const kind of FREQUENCY_ORDER) {
-    const count = counts.get(kind) ?? 0;
-    if (count > 0) byKind.push({ kind, count });
-  }
-  const result = { byKind };
-  if (windowFirst !== void 0) result.windowFirst = windowFirst;
-  if (windowLast !== void 0) result.windowLast = windowLast;
-  return result;
-}
-
-// src/engines/report/executive.ts
-function asNumber4(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function clamp013(value2) {
-  return Math.min(100, Math.max(0, value2));
-}
-function roundHalfUp3(value2) {
-  return Math.round(value2);
-}
-function adoptionPct(coverage) {
-  if (coverage === void 0) return void 0;
-  const total = asNumber4(coverage.total);
-  if (total <= 0) return void 0;
-  const imported = asNumber4(coverage.imported);
-  return roundHalfUp3(clamp013(100 * imported / total));
-}
-function buildExecutive(input) {
-  const rollup = {};
-  if (input.systemScore !== void 0) {
-    rollup.health = asNumber4(input.systemScore.current);
-    rollup.trend = Array.isArray(input.systemScore.trend) ? input.systemScore.trend : [];
-  }
-  const adoption = adoptionPct(input.coverage);
-  if (adoption !== void 0) {
-    rollup.adoption = adoption;
-  }
-  if (input.consistency !== void 0 && input.consistency.kind === "ok") {
-    rollup.consistency = asNumber4(input.consistency.score);
-  }
-  if (input.debt !== void 0) {
-    rollup.debt = asNumber4(input.debt.pct);
-  }
-  return rollup;
-}
-
-// src/engines/report/executive-inputs.ts
-function isFiniteNumber2(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2);
-}
-function asObject3(value2) {
-  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2) ? value2 : void 0;
-}
-function num4(value2) {
-  return isFiniteNumber2(value2) ? value2 : 0;
-}
-function executiveInputs(records, registry) {
-  let lint;
-  let adoption;
-  let health;
-  for (const { kind, record } of records) {
-    if (kind === "lint") {
-      lint = record;
-      const block = asObject3(record.adoption);
-      if (block !== void 0) adoption = block;
-    } else if (kind === "library-health") {
-      health = record;
-    }
-  }
-  const consistency = {};
-  if (adoption !== void 0) {
-    consistency.tokens = {
-      refs: num4(adoption.refs),
-      literals: num4(adoption.literals)
-    };
-  }
-  if (registry !== void 0 && Array.isArray(registry.matches) && Array.isArray(registry.unmatchedCode)) {
-    consistency.components = {
-      matched: registry.matches.length,
-      custom: registry.unmatchedCode.length
-    };
-  }
-  if (health !== void 0) {
-    const hotspots = health.overrideHotspots;
-    if (Array.isArray(hotspots)) {
-      consistency.overrides = { hotspots: hotspots.length };
-    } else if (isFiniteNumber2(hotspots)) {
-      consistency.overrides = { hotspots };
-    }
-  }
-  if (lint === void 0 && health === void 0) {
-    return { consistency, debt: void 0 };
-  }
-  const debt = {};
-  if (lint !== void 0) {
-    debt.offSystem = num4(asObject3(lint.byKind)?.offSystem);
-  }
-  if (health !== void 0) {
-    const deprecated = health.deprecatedUsage;
-    if (Array.isArray(deprecated)) {
-      debt.deprecatedUsage = deprecated;
-    } else if (isFiniteNumber2(deprecated)) {
-      debt.deprecatedCount = deprecated;
-    }
-    const detached = health.detachedCandidates;
-    if (Array.isArray(detached)) {
-      debt.detachedCandidates = detached;
-    } else if (isFiniteNumber2(detached)) {
-      debt.detachedCount = detached;
-    }
-  }
-  return { consistency, debt };
-}
-
-// src/engines/report/frame-implementability.ts
-var TOP_GAPS_CAP = 5;
-var EMPTY = {
-  pct: 0,
-  resolved: 0,
-  total: 0,
-  gaps: []
-};
-function asObject4(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function asNumber5(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function clamp014(value2) {
-  return Math.min(100, Math.max(0, value2));
-}
-function bucketsFromByReason(byReason) {
-  if (byReason === void 0) return [];
-  const buckets = [];
-  for (const [reason, raw] of Object.entries(byReason)) {
-    const count = asNumber5(raw);
-    if (count > 0) buckets.push({ reason, count });
-  }
-  return buckets.sort(
-    (a, b) => b.count - a.count || (a.reason < b.reason ? -1 : a.reason > b.reason ? 1 : 0)
-  );
-}
-function buildFrameImplementability(latest) {
-  if (latest === void 0) return EMPTY;
-  const byReason = asObject4(latest.byReason);
-  const buckets = bucketsFromByReason(byReason);
-  const gaps = buckets.slice(0, TOP_GAPS_CAP);
-  const resolved = asNumber5(latest.resolvedCount);
-  const byReasonSum = buckets.reduce((sum, g) => sum + g.count, 0);
-  const gapCount = byReasonSum > 0 ? byReasonSum : asNumber5(latest.gapCount);
-  const total = resolved + gapCount;
-  const recordedPct = typeof latest.pct === "number" && Number.isFinite(latest.pct) ? clamp014(latest.pct) : void 0;
-  const pct5 = recordedPct ?? (total <= 0 ? 0 : clamp014(Math.round(100 * resolved / total)));
-  return { pct: pct5, resolved, total, gaps };
-}
-
-// src/engines/report/frame-readiness-trend.ts
-function str2(value2) {
-  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
-}
-function buildFrameReadinessTrend(records, threshold, opts = {}) {
-  const limit = opts.limit ?? 12;
-  const frames = /* @__PURE__ */ new Map();
-  const keyOf = frameKeyResolver(records);
-  for (const { kind, at, record } of records) {
-    if (kind !== "handoff") continue;
-    const score = record.score;
-    if (typeof score !== "number" || !Number.isFinite(score)) continue;
-    const key = keyOf(record);
-    const fileKey = str2(record.fileKey);
-    const nodeId = str2(record.nodeId);
-    const prev = frames.get(key);
-    const row2 = prev ?? {
-      key,
-      frameName: "",
-      latest: score,
-      first: score,
-      runs: 0,
-      byDate: /* @__PURE__ */ new Map()
-    };
-    row2.frameName = str2(record.frameName) ?? row2.frameName;
-    if (fileKey !== void 0) row2.fileKey = fileKey;
-    if (nodeId !== void 0) row2.nodeId = nodeId;
-    row2.latest = score;
-    row2.runs += 1;
-    if (at !== void 0) row2.byDate.set(at.slice(0, 10), score);
-    frames.set(key, row2);
-  }
-  if (frames.size === 0) return void 0;
-  const rows = [...frames.values()].map(
-    ({ byDate, ...row2 }) => ({
-      key: row2.key,
-      frameName: row2.frameName,
-      ...row2.fileKey !== void 0 ? { fileKey: row2.fileKey } : {},
-      ...row2.nodeId !== void 0 ? { nodeId: row2.nodeId } : {},
-      points: [...byDate.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([date, score]) => ({ date, score })),
-      latest: row2.latest,
-      first: row2.first,
-      delta: row2.latest - row2.first,
-      runs: row2.runs,
-      passing: row2.latest >= threshold
-    })
-  );
-  rows.sort(
-    (a, b) => Number(a.passing) - Number(b.passing) || a.latest - b.latest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
-  );
-  return {
-    threshold,
-    total: rows.length,
-    failing: rows.filter((r2) => !r2.passing).length,
-    frames: rows.slice(0, Math.max(0, limit))
-  };
-}
-
 // src/engines/report/freshness.ts
 var MS_PER_DAY = 24 * 60 * 60 * 1e3;
 var FRESHNESS_TRACKED_KINDS = [
@@ -11189,14 +11240,23 @@ function buildHandoffPassRate(records, threshold) {
     if (at !== void 0) dated.push({ date: at.slice(0, 10), key, score });
   }
   if (latest.size === 0) return void 0;
-  const days3 = [...new Set(dated.map((d) => d.date))].sort();
-  const trend = days3.map((date) => {
-    const upTo = /* @__PURE__ */ new Map();
-    for (const entry of dated) {
-      if (entry.date <= date) upTo.set(entry.key, entry.score);
+  const byDate = dated.map((entry, index) => ({ ...entry, index })).sort(
+    (a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.index - b.index
+  );
+  const upTo = /* @__PURE__ */ new Map();
+  const trend = [];
+  for (let i = 0; i < byDate.length; i += 1) {
+    const entry = byDate[i];
+    if (entry === void 0) continue;
+    const held = upTo.get(entry.key);
+    if (held === void 0 || entry.index > held.index) {
+      upTo.set(entry.key, { score: entry.score, index: entry.index });
     }
-    return { date, ...tally(upTo, threshold) };
-  });
+    if (byDate[i + 1]?.date !== entry.date) {
+      const scores = new Map([...upTo].map(([key, v]) => [key, v.score]));
+      trend.push({ date: entry.date, ...tally(scores, threshold) });
+    }
+  }
   return { threshold, ...tally(latest, threshold), trend };
 }
 
@@ -11326,378 +11386,6 @@ function rowFor(signal, name, points) {
     latest,
     ...first !== void 0 && latest !== null ? { delta: latest - first } : {},
     status
-  };
-}
-
-// src/engines/report/manager-report.ts
-var TOP_N = 3;
-var LOW_CONSISTENCY = 50;
-var LOW_SCORE = 50;
-function top(candidates) {
-  return [...candidates].sort((a, b) => b.rank - a.rank).slice(0, TOP_N).map((c2) => c2.text);
-}
-function plural(n, one, many) {
-  return n === 1 ? one : many;
-}
-function finite(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2);
-}
-function frameLabel(f3) {
-  return f3.frameName !== "" ? f3.frameName : f3.key;
-}
-var KIND_LABEL = {
-  drift: "token drift",
-  readiness: "handoff readiness",
-  "frame-impl": "frame implementability",
-  "library-health": "library health"
-};
-function kindLabel(kind) {
-  return KIND_LABEL[kind] ?? kind;
-}
-var TARGET_LABEL = {
-  "system-score": "System score",
-  "on-system": "On-system usage",
-  drift: "Token drift",
-  parity: "Figma\u2194code parity",
-  contrast: "Contrast (WCAG)",
-  readiness: "Handoff readiness (latest run)"
-};
-function targetLabel(metric) {
-  return TARGET_LABEL[metric] ?? metric;
-}
-var TARGET_OP = {
-  ">=": "\u2265",
-  "<=": "\u2264",
-  "==": "="
-};
-function targetOp(op) {
-  return TARGET_OP[op] ?? op;
-}
-var PERCENT_METRICS = /* @__PURE__ */ new Set(["on-system", "parity"]);
-function targetValue(metric, value2) {
-  if (value2 === void 0) return "\u2014";
-  return PERCENT_METRICS.has(metric) ? `${value2}%` : String(value2);
-}
-var DEBT_INDEX_NOTE = "Design debt is a weighted index (deprecated \xD78, detached \xD75, off-system \xD72 per item), capped at 100.";
-var SCORE_KINDS = /* @__PURE__ */ new Set([
-  "drift",
-  "lint",
-  "readiness",
-  "a11y",
-  "adoption"
-]);
-var RECORD_KINDS = /* @__PURE__ */ new Set(["lint", "drift", "a11y"]);
-var START_COMMAND = {
-  readiness: "ds-bridge handoff <frame-url>",
-  parity: "ds-bridge record --figma",
-  "library-health": "ds-bridge record --figma",
-  impact: "ds-bridge impact",
-  changelog: "ds-bridge changelog",
-  "frame-impl": "ds-bridge frame-impl <frame-url>",
-  adoption: "ds-bridge registry build"
-};
-function joinAnd(items) {
-  if (items.length <= 1) return items.join("");
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
-}
-function buildHeadline(input) {
-  const headline2 = {};
-  const score = input.systemScore;
-  if (score !== void 0) {
-    const velocity = input.scoreVelocity;
-    const points = (input.scorePoints ?? []).filter((p4) => finite(p4.score));
-    const firstPoint = points[0];
-    const lastPoint = points[points.length - 1];
-    headline2.score = {
-      current: score.current,
-      ...velocity !== void 0 ? { delta: velocity.delta, direction: velocity.direction } : points.length >= 2 && firstPoint !== void 0 && lastPoint !== void 0 ? {
-        delta: lastPoint.score - firstPoint.score,
-        since: firstPoint.date
-      } : {},
-      trend: (Array.isArray(score.trend) ? score.trend : []).map(
-        (p4) => p4.score
-      )
-    };
-  }
-  const adoption = input.adoptionTrend ?? [];
-  const last = adoption[adoption.length - 1];
-  const first = adoption[0];
-  if (last !== void 0) {
-    headline2.onSystem = adoption.length >= 2 && first !== void 0 ? { pct: last.pct, delta: last.pct - first.pct, since: first.date } : { pct: last.pct };
-  }
-  const coverage = input.importCoverage;
-  if (coverage !== void 0 && finite(coverage.total) && coverage.total > 0) {
-    headline2.importCoverage = {
-      imported: coverage.imported,
-      total: coverage.total,
-      pct: Math.round(100 * coverage.imported / coverage.total)
-    };
-  }
-  if (input.consistency !== void 0) {
-    headline2.consistency = input.consistency.score;
-  }
-  if (input.debt !== void 0) {
-    headline2.debt = {
-      pct: input.debt.pct,
-      level: input.debt.level,
-      items: input.debt.items.length
-    };
-  }
-  const frames = input.frames ?? [];
-  if (frames.length > 0) {
-    headline2.handoff = {
-      ready: frames.filter((f3) => f3.latest >= input.readinessThreshold).length,
-      frames: frames.length
-    };
-  }
-  return headline2;
-}
-function worstFirst(frames) {
-  return [...frames].sort(
-    (a, b) => a.latest - b.latest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
-  );
-}
-function buildRisks(input, frames, stale, never) {
-  const out = [];
-  const targets = input.targets ?? [];
-  for (const t of targets) {
-    if (t.band !== "red") continue;
-    out.push({
-      rank: 3,
-      text: `${targetLabel(t.metric)} is off target: ${targetValue(t.metric, t.measured)} vs goal ${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
-    });
-  }
-  const velocity = input.scoreVelocity;
-  if (velocity !== void 0 && velocity.direction === "down") {
-    const fell = Math.abs(velocity.delta);
-    const streak = velocity.regressionStreak;
-    out.push({
-      rank: streak >= 2 ? 3 : 2,
-      text: `System score fell ${fell} ${plural(fell, "pt", "pts")} in ${velocity.windowDays} ${plural(velocity.windowDays, "day", "days")}${streak >= 2 ? ` (${streak} drops in a row)` : ""}`
-    });
-  }
-  const drift = input.breakingDrift;
-  if (finite(drift) && drift > 0) {
-    out.push({
-      rank: 3,
-      text: `${drift} breaking token ${plural(drift, "change", "changes")} in the latest drift check`
-    });
-  }
-  const debt = input.debt;
-  if (debt !== void 0 && debt.level !== "low") {
-    const largest = debt.items[0]?.subject;
-    out.push({
-      rank: debt.level === "high" ? 3 : 2,
-      text: `Design debt is ${debt.level} at ${debt.pct}/100${largest !== void 0 ? ` (largest: ${largest})` : ""}`
-    });
-  }
-  const below = frames.filter((f3) => f3.latest < input.readinessThreshold);
-  const lowest = below[0];
-  if (lowest !== void 0) {
-    out.push({
-      rank: 2,
-      text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`
-    });
-  }
-  const consistency = input.consistency;
-  if (consistency !== void 0 && consistency.score < LOW_CONSISTENCY) {
-    out.push({
-      rank: 2,
-      text: `Consistency is low at ${consistency.score}/100`
-    });
-  }
-  if (stale.length > 0) {
-    out.push({
-      rank: 2,
-      text: `Stale data: ${stale.map(kindLabel).join(", ")} not measured recently`
-    });
-  }
-  for (const t of targets) {
-    if (t.band !== "amber") continue;
-    out.push({
-      rank: 1,
-      text: `${targetLabel(t.metric)} is close to its goal: ${targetValue(t.metric, t.measured)} vs ${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
-    });
-  }
-  const neverScored = never.filter((k4) => SCORE_KINDS.has(k4));
-  if (neverScored.length > 0) {
-    out.push({
-      rank: 1,
-      text: `Never measured: ${neverScored.map(kindLabel).join(", ")}`
-    });
-  }
-  const contrast = input.contrast;
-  if (contrast !== void 0 && finite(contrast.failed) && contrast.failed > 0) {
-    const n = contrast.failed;
-    const modes2 = contrast.modes.length > 0 ? ` (${contrast.modes.join(", ")})` : "";
-    out.push({
-      rank: 3,
-      text: `${n} contrast ${plural(n, "pair fails", "pairs fail")} WCAG ${contrast.level}${modes2}`
-    });
-  }
-  const gaps = input.tokenGaps;
-  const missing = finite(gaps?.missing) ? gaps?.missing ?? 0 : 0;
-  const orphan = finite(gaps?.orphan) ? gaps?.orphan ?? 0 : 0;
-  if (missing > 0) {
-    out.push({
-      rank: 2,
-      text: `${missing} design ${plural(missing, "token is", "tokens are")} missing from the code output${orphan > 0 ? `, ${orphan} orphan ${plural(orphan, "output", "outputs")} without a source token` : ""}`
-    });
-  } else if (orphan > 0) {
-    out.push({
-      rank: 2,
-      text: `${orphan} orphan token ${plural(orphan, "output", "outputs")} without a source token`
-    });
-  }
-  const score = input.systemScore;
-  const redScoreTarget = targets.some(
-    (t) => t.metric === "system-score" && t.band === "red"
-  );
-  if (score !== void 0 && finite(score.current) && score.current < LOW_SCORE && !redScoreTarget) {
-    out.push({ rank: 2, text: `System score is ${score.current}/100` });
-  }
-  return top(out);
-}
-function buildActions(input, frames, stale, never) {
-  const out = [];
-  for (const t of input.targets ?? []) {
-    if (t.band !== "red") continue;
-    out.push({
-      rank: 3,
-      text: `Bring ${targetLabel(t.metric)} to ${targetOp(t.op)} ${targetValue(t.metric, t.target)} (now ${targetValue(t.metric, t.measured)})`
-    });
-  }
-  const debt = input.debt;
-  if (debt !== void 0) {
-    for (const item of debt.items.slice(0, 2)) {
-      out.push({
-        rank: debt.level === "high" ? 3 : 2,
-        text: item.recommendation
-      });
-    }
-  }
-  const drift = input.breakingDrift;
-  if (finite(drift) && drift > 0) {
-    out.push({
-      rank: 3,
-      text: `Resolve the ${drift} breaking token ${plural(drift, "change", "changes")} (run ds-bridge tokens check)`
-    });
-  }
-  const lowest = frames.find((f3) => f3.latest < input.readinessThreshold);
-  if (lowest !== void 0) {
-    out.push({
-      rank: 2,
-      text: `Raise handoff readiness of "${frameLabel(lowest)}" from ${lowest.latest} to ${input.readinessThreshold}+ (run ds-bridge handoff)`
-    });
-  }
-  if (stale.length > 0 || never.some((k4) => RECORD_KINDS.has(k4))) {
-    out.push({ rank: 1, text: "Refresh the data: run ds-bridge record" });
-  }
-  const byCommand = /* @__PURE__ */ new Map();
-  for (const kind of never) {
-    const command = START_COMMAND[kind];
-    if (command === void 0) continue;
-    const kinds = byCommand.get(command) ?? [];
-    kinds.push(kindLabel(kind));
-    byCommand.set(command, kinds);
-  }
-  for (const [command, kinds] of byCommand) {
-    out.push({
-      rank: 1,
-      text: `Start measuring ${joinAnd(kinds)}: run ${command}`
-    });
-  }
-  const contrast = input.contrast;
-  if (contrast !== void 0 && finite(contrast.failed) && contrast.failed > 0) {
-    const n = contrast.failed;
-    out.push({
-      rank: 3,
-      text: `Fix the ${n} failing contrast ${plural(n, "pair", "pairs")} (run ds-bridge a11y)`
-    });
-  }
-  const gaps = input.tokenGaps;
-  const missing = finite(gaps?.missing) ? gaps?.missing ?? 0 : 0;
-  const orphan = finite(gaps?.orphan) ? gaps?.orphan ?? 0 : 0;
-  if (missing > 0) {
-    out.push({
-      rank: 2,
-      text: `Add the ${missing} missing ${plural(missing, "token", "tokens")} to the code output (run ds-bridge tokens check)`
-    });
-  } else if (orphan > 0) {
-    out.push({
-      rank: 1,
-      text: `Remove or re-source the ${orphan} orphan token ${plural(orphan, "output", "outputs")} (run ds-bridge tokens check)`
-    });
-  }
-  return top(out);
-}
-function signedNumber(n) {
-  if (n > 0) return `+${n}`;
-  if (n < 0) return `\u2212${Math.abs(n)}`;
-  return "\xB10";
-}
-function dayCount(n) {
-  return `${n} ${plural(n, "day", "days")}`;
-}
-function scoreChangeText(headline2, windowDays) {
-  const score = headline2.score;
-  if (score?.delta !== void 0 && score.direction === void 0 && score.since !== void 0) {
-    return `${signedNumber(score.delta)} pts since ${score.since}`;
-  }
-  if (score?.delta === void 0 || score.direction === void 0) {
-    return void 0;
-  }
-  if (score.direction === "flat" || score.delta === 0) {
-    return `no change in ${dayCount(windowDays)}`;
-  }
-  const arrow3 = score.direction === "up" ? "\u25B2" : "\u25BC";
-  return `${arrow3} ${signedNumber(score.delta)} in ${dayCount(windowDays)}`;
-}
-function onSystemChangeText(headline2) {
-  const onSystem = headline2.onSystem;
-  if (onSystem?.delta === void 0 || onSystem.since === void 0) {
-    return void 0;
-  }
-  return `${signedNumber(onSystem.delta)} pts since ${onSystem.since}`;
-}
-function buildManagerReport(input) {
-  const frames = worstFirst(input.frames ?? []);
-  const measured = [];
-  const stale = [];
-  const never = [];
-  for (const row2 of input.dataFreshness ?? []) {
-    if (row2.band === "unknown") {
-      never.push(row2.kind);
-    } else if (row2.band === "red") {
-      stale.push({
-        kind: row2.kind,
-        ...row2.ageDays !== void 0 ? { ageDays: row2.ageDays } : {}
-      });
-    } else {
-      measured.push({ kind: row2.kind, ageDays: row2.ageDays ?? 0 });
-    }
-  }
-  return {
-    project: input.project,
-    generatedAt: input.generatedAt,
-    windowDays: input.windowDays,
-    readinessThreshold: input.readinessThreshold,
-    headline: buildHeadline(input),
-    targets: [...input.targets ?? []],
-    risks: buildRisks(
-      input,
-      frames,
-      stale.map((s) => s.kind),
-      never
-    ),
-    actions: buildActions(
-      input,
-      frames,
-      stale.map((s) => s.kind),
-      never
-    ),
-    frames,
-    coverage: { measured, stale, never }
   };
 }
 
@@ -11867,6 +11555,210 @@ function buildParityTrend(records) {
   return [...byDate.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([date, pct5]) => ({ date, pct: pct5 }));
 }
 
+// src/engines/report/release-readiness.ts
+function asNumber10(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function extractReleaseSignals(records) {
+  const signals = {};
+  for (const { kind, record } of records) {
+    switch (kind) {
+      case "impact":
+        signals.impact = { breaking: asNumber10(record.breaking) };
+        break;
+      case "tokens-check":
+        signals.drift = {
+          stale: asNumber10(record.stale),
+          missing: asNumber10(record.missing)
+        };
+        break;
+      case "parity":
+        signals.parity = {
+          missingInCode: asNumber10(record.missingInCode),
+          missingInFigma: asNumber10(record.missingInFigma),
+          total: asNumber10(record.total)
+        };
+        break;
+      default:
+        break;
+    }
+  }
+  return signals;
+}
+function impactCheck(signal) {
+  if (signal === void 0) {
+    return { name: "impact", pass: false, detail: "no impact data" };
+  }
+  const breaking = asNumber10(signal.breaking);
+  if (breaking === 0) {
+    return { name: "impact", pass: true, detail: "no breaking changes" };
+  }
+  return {
+    name: "impact",
+    pass: false,
+    detail: `${breaking} breaking change${breaking === 1 ? "" : "s"}`
+  };
+}
+function driftCheck(signal) {
+  if (signal === void 0) {
+    return { name: "drift", pass: false, detail: "no drift data" };
+  }
+  const stale = asNumber10(signal.stale);
+  const missing = asNumber10(signal.missing);
+  if (stale === 0 && missing === 0) {
+    return { name: "drift", pass: true, detail: "tokens in sync" };
+  }
+  return {
+    name: "drift",
+    pass: false,
+    detail: `${stale} stale, ${missing} missing`
+  };
+}
+function parityCheck(signal) {
+  if (signal === void 0 || asNumber10(signal.total) === 0) {
+    return { name: "parity", pass: false, detail: "no parity data" };
+  }
+  const missingInCode = asNumber10(signal.missingInCode);
+  const missingInFigma = asNumber10(signal.missingInFigma);
+  if (missingInCode === 0 && missingInFigma === 0) {
+    return { name: "parity", pass: true, detail: "full parity" };
+  }
+  return {
+    name: "parity",
+    pass: false,
+    detail: `${missingInCode} missing in code, ${missingInFigma} missing in figma`
+  };
+}
+function evaluateReleaseReadiness(signals) {
+  const checks = [
+    impactCheck(signals.impact),
+    driftCheck(signals.drift),
+    parityCheck(signals.parity)
+  ];
+  return { go: checks.every((c2) => c2.pass), checks };
+}
+
+// src/engines/report/targets.ts
+function isSatisfied(measured, op, value2) {
+  switch (op) {
+    case ">=":
+      return measured >= value2;
+    case "<=":
+      return measured <= value2;
+    case "==":
+      return measured === value2;
+  }
+}
+function defaultMargin(value2) {
+  return Math.abs(value2) * 0.1;
+}
+function bandFor2(measured, target) {
+  const { op, value: value2, warn } = target;
+  if (isSatisfied(measured, op, value2)) return "green";
+  const margin = defaultMargin(value2);
+  if (op === ">=") {
+    const floor = warn ?? value2 - margin;
+    return measured >= floor ? "amber" : "red";
+  }
+  if (op === "<=") {
+    const ceiling = warn ?? value2 + margin;
+    return measured <= ceiling ? "amber" : "red";
+  }
+  const halfWidth = warn ?? margin;
+  return Math.abs(measured - value2) <= halfWidth ? "amber" : "red";
+}
+function evaluateTargets(latest, targets) {
+  const verdicts = [];
+  for (const [metric, target] of Object.entries(targets)) {
+    const measured = latest[metric];
+    const band = measured === void 0 ? "unknown" : bandFor2(measured, target);
+    verdicts.push({
+      metric,
+      measured,
+      target: target.value,
+      op: target.op,
+      band
+    });
+  }
+  return verdicts;
+}
+
+// src/engines/report/timeline.ts
+var DEFAULT_TIMELINE_STOPS = 12;
+function utcDay(at) {
+  const ms = Date.parse(at);
+  if (Number.isNaN(ms)) return void 0;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+function timelineDays(text2, maxStops = DEFAULT_TIMELINE_STOPS) {
+  const days3 = /* @__PURE__ */ new Set();
+  for (const { at } of replayHistory(text2)) {
+    const day = at !== void 0 ? utcDay(at) : void 0;
+    if (day !== void 0) days3.add(day);
+  }
+  const keep = Math.max(maxStops - 1, 0);
+  if (keep === 0) return [];
+  return [...days3].sort().slice(0, -1).slice(-keep).map((day) => ({ day, endOfDay: `${day}T23:59:59.999Z` }));
+}
+function historyAsOf(text2, endOfDay) {
+  const cutoff = Date.parse(endOfDay);
+  if (Number.isNaN(cutoff)) return "";
+  const kept = [];
+  for (const line of text2.split("\n")) {
+    const raw = line.trim();
+    if (raw === "") continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+    if (typeof parsed !== "object" || parsed === null) continue;
+    const at = parsed.at;
+    if (typeof at !== "string") continue;
+    const ms = Date.parse(at);
+    if (!Number.isNaN(ms) && ms <= cutoff) kept.push(raw);
+  }
+  return kept.length > 0 ? `${kept.join("\n")}
+` : "";
+}
+
+// src/engines/report/velocity.ts
+var MS_PER_DAY2 = 24 * 60 * 60 * 1e3;
+function computeVelocity(trend, nowIso, windowDays) {
+  if (trend.length < 2) return void 0;
+  const latest = trend[trend.length - 1];
+  if (latest === void 0) return void 0;
+  const nowMs = Date.parse(nowIso);
+  let windowStartDate;
+  if (!Number.isNaN(nowMs)) {
+    windowStartDate = new Date(nowMs - windowDays * MS_PER_DAY2).toISOString().slice(0, 10);
+  }
+  let baseline;
+  if (windowStartDate !== void 0) {
+    for (const point of trend) {
+      if (point.date < windowStartDate) baseline = point;
+    }
+  }
+  if (baseline === void 0) baseline = trend[0];
+  if (baseline === void 0) return void 0;
+  const delta = latest.score - baseline.score;
+  const direction = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  let regressionStreak = 0;
+  for (let i = trend.length - 1; i > 0; i -= 1) {
+    const cur = trend[i];
+    const prev = trend[i - 1];
+    if (cur === void 0 || prev === void 0) break;
+    if (cur.score < prev.score) regressionStreak += 1;
+    else break;
+  }
+  return { delta, windowDays, direction, regressionStreak };
+}
+
+// src/io/report-selection.ts
+import { existsSync as existsSync6, readFileSync as readFileSync6 } from "fs";
+import { join as join7 } from "path";
+
 // src/engines/report/presets.ts
 function presetFor(persona) {
   return CATALOG.filter(
@@ -12020,815 +11912,6 @@ function resolveView(flags, projectConfig) {
   };
 }
 
-// src/engines/report/release-readiness.ts
-function asNumber10(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function extractReleaseSignals(records) {
-  const signals = {};
-  for (const { kind, record } of records) {
-    switch (kind) {
-      case "impact":
-        signals.impact = { breaking: asNumber10(record.breaking) };
-        break;
-      case "tokens-check":
-        signals.drift = {
-          stale: asNumber10(record.stale),
-          missing: asNumber10(record.missing)
-        };
-        break;
-      case "parity":
-        signals.parity = {
-          missingInCode: asNumber10(record.missingInCode),
-          missingInFigma: asNumber10(record.missingInFigma),
-          total: asNumber10(record.total)
-        };
-        break;
-      default:
-        break;
-    }
-  }
-  return signals;
-}
-function impactCheck(signal) {
-  if (signal === void 0) {
-    return { name: "impact", pass: false, detail: "no impact data" };
-  }
-  const breaking = asNumber10(signal.breaking);
-  if (breaking === 0) {
-    return { name: "impact", pass: true, detail: "no breaking changes" };
-  }
-  return {
-    name: "impact",
-    pass: false,
-    detail: `${breaking} breaking change${breaking === 1 ? "" : "s"}`
-  };
-}
-function driftCheck(signal) {
-  if (signal === void 0) {
-    return { name: "drift", pass: false, detail: "no drift data" };
-  }
-  const stale = asNumber10(signal.stale);
-  const missing = asNumber10(signal.missing);
-  if (stale === 0 && missing === 0) {
-    return { name: "drift", pass: true, detail: "tokens in sync" };
-  }
-  return {
-    name: "drift",
-    pass: false,
-    detail: `${stale} stale, ${missing} missing`
-  };
-}
-function parityCheck(signal) {
-  if (signal === void 0 || asNumber10(signal.total) === 0) {
-    return { name: "parity", pass: false, detail: "no parity data" };
-  }
-  const missingInCode = asNumber10(signal.missingInCode);
-  const missingInFigma = asNumber10(signal.missingInFigma);
-  if (missingInCode === 0 && missingInFigma === 0) {
-    return { name: "parity", pass: true, detail: "full parity" };
-  }
-  return {
-    name: "parity",
-    pass: false,
-    detail: `${missingInCode} missing in code, ${missingInFigma} missing in figma`
-  };
-}
-function evaluateReleaseReadiness(signals) {
-  const checks = [
-    impactCheck(signals.impact),
-    driftCheck(signals.drift),
-    parityCheck(signals.parity)
-  ];
-  return { go: checks.every((c2) => c2.pass), checks };
-}
-
-// src/engines/report/report-json.ts
-var REPORT_JSON_SCHEMA = "ds-bridge/report";
-var REPORT_JSON_SCHEMA_VERSION = 1;
-function reportJsonDocument(data, artifacts, viewLabel) {
-  return {
-    schema: REPORT_JSON_SCHEMA,
-    schemaVersion: REPORT_JSON_SCHEMA_VERSION,
-    view: viewLabel ?? null,
-    artifacts: [...artifacts],
-    data
-  };
-}
-
-// src/engines/report/scorecard.ts
-var ROW_ORDER = [
-  "score",
-  "on-system",
-  "lint-violations",
-  "drift",
-  "import-coverage",
-  "contrast",
-  "readiness"
-];
-function asNumber11(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function pct2(part, whole) {
-  if (whole <= 0) return void 0;
-  return Math.round(100 * part / whole);
-}
-function asRecord(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function extractLatest(text2) {
-  const latest = {};
-  for (const { kind, record } of replayHistory(text2)) {
-    switch (kind) {
-      case "tokens-check":
-        latest.tokensCheck = record;
-        break;
-      case "lint": {
-        latest.lint = record;
-        if (asRecord(record.adoption) !== void 0) {
-          latest.adoption = record;
-        }
-        break;
-      }
-      case "adoption":
-        latest.adoptionLine = record;
-        break;
-      case "handoff":
-        latest.handoff = record;
-        break;
-      case "a11y":
-        latest.a11y = record;
-        break;
-      default:
-        break;
-    }
-  }
-  return latest;
-}
-function scoreFor(text2, weights) {
-  const outcome = scoreFromHistory(text2, weights);
-  if (outcome.kind === "no-data") return void 0;
-  return {
-    current: outcome.current,
-    components: outcome.components.map((c2) => ({
-      kind: c2.kind,
-      score: c2.score,
-      weight: c2.weight
-    }))
-  };
-}
-function onSystemPct(record) {
-  const adoption = record === void 0 ? void 0 : asRecord(record.adoption);
-  if (adoption === void 0) return void 0;
-  const refs = asNumber11(adoption.refs);
-  const literals = asNumber11(adoption.literals);
-  return pct2(refs, refs + literals);
-}
-function violations(record) {
-  if (record === void 0) return void 0;
-  const byKind = asRecord(record.byKind) ?? {};
-  return asNumber11(byKind.exact) + asNumber11(byKind.near) + asNumber11(byKind.offSystem);
-}
-function driftCounts(record) {
-  if (record === void 0) return void 0;
-  return {
-    stale: asNumber11(record.stale),
-    missing: asNumber11(record.missing),
-    orphan: asNumber11(record.orphan)
-  };
-}
-function coverageCounts(record) {
-  if (record === void 0) return void 0;
-  return { imported: asNumber11(record.imported), total: asNumber11(record.total) };
-}
-function contrastPct(record) {
-  if (record === void 0) return void 0;
-  const modes2 = Array.isArray(record.modes) ? record.modes : [];
-  let passed = 0;
-  let failed = 0;
-  for (const m of modes2) {
-    const mm = asRecord(m);
-    if (mm === void 0) continue;
-    passed += asNumber11(mm.passed);
-    failed += asNumber11(mm.failed);
-  }
-  return pct2(passed, passed + failed);
-}
-function readinessValue(record) {
-  if (record === void 0) return void 0;
-  return {
-    score: asNumber11(record.score),
-    frame: typeof record.frameName === "string" ? record.frameName : ""
-  };
-}
-function scalarRow(id, now, base) {
-  if (now === void 0 && base === void 0) return void 0;
-  const row2 = { id };
-  if (now !== void 0) row2.now = now;
-  if (base !== void 0) row2.base = base;
-  if (now !== void 0 && base !== void 0) row2.delta = now - base;
-  return row2;
-}
-function buildScorecard(currentText, baseText, weights) {
-  const currentOnly = baseText === void 0;
-  const cur = extractLatest(currentText);
-  const bas = baseText === void 0 ? void 0 : extractLatest(baseText);
-  const rows = [];
-  const nowScore = scoreFor(currentText, weights);
-  const baseScore = baseText === void 0 ? void 0 : scoreFor(baseText, weights);
-  if (nowScore !== void 0 || baseScore !== void 0) {
-    const row2 = {
-      id: "score",
-      components: nowScore?.components ?? []
-    };
-    if (nowScore !== void 0) row2.now = nowScore.current;
-    if (baseScore !== void 0) row2.base = baseScore.current;
-    if (nowScore !== void 0 && baseScore !== void 0) {
-      row2.delta = nowScore.current - baseScore.current;
-    }
-    rows.push(row2);
-  }
-  const onSystem = scalarRow(
-    "on-system",
-    onSystemPct(cur.adoption),
-    bas === void 0 ? void 0 : onSystemPct(bas.adoption)
-  );
-  if (onSystem !== void 0) rows.push(onSystem);
-  const lintViolations = scalarRow(
-    "lint-violations",
-    violations(cur.lint),
-    bas === void 0 ? void 0 : violations(bas.lint)
-  );
-  if (lintViolations !== void 0) rows.push(lintViolations);
-  const nowDrift = driftCounts(cur.tokensCheck);
-  const baseDrift = bas === void 0 ? void 0 : driftCounts(bas.tokensCheck);
-  if (nowDrift !== void 0 || baseDrift !== void 0) {
-    const row2 = { id: "drift" };
-    if (nowDrift !== void 0) row2.now = nowDrift;
-    if (baseDrift !== void 0) row2.base = baseDrift;
-    rows.push(row2);
-  }
-  const nowCov = coverageCounts(cur.adoptionLine);
-  const baseCov = bas === void 0 ? void 0 : coverageCounts(bas.adoptionLine);
-  if (nowCov !== void 0 || baseCov !== void 0) {
-    const row2 = { id: "import-coverage" };
-    if (nowCov !== void 0) row2.now = nowCov;
-    if (baseCov !== void 0) row2.base = baseCov;
-    rows.push(row2);
-  }
-  const contrast = scalarRow(
-    "contrast",
-    contrastPct(cur.a11y),
-    bas === void 0 ? void 0 : contrastPct(bas.a11y)
-  );
-  if (contrast !== void 0) rows.push(contrast);
-  const nowReady = readinessValue(cur.handoff);
-  const baseReady = bas === void 0 ? void 0 : readinessValue(bas.handoff);
-  if (nowReady !== void 0 || baseReady !== void 0) {
-    const row2 = { id: "readiness" };
-    if (nowReady !== void 0) row2.now = nowReady;
-    if (baseReady !== void 0) row2.base = baseReady;
-    if (nowReady !== void 0 && baseReady !== void 0) {
-      row2.delta = nowReady.score - baseReady.score;
-    }
-    rows.push(row2);
-  }
-  if (rows.length === 0) return { kind: "no-data" };
-  rows.sort((a, b) => ROW_ORDER.indexOf(a.id) - ROW_ORDER.indexOf(b.id));
-  return { kind: "ok", currentOnly, rows };
-}
-
-// src/engines/report/scorecard-md.ts
-var BAND_GLYPH = {
-  green: "\u{1F7E2}",
-  amber: "\u{1F7E1}",
-  red: "\u{1F534}",
-  unknown: "\u26AA"
-};
-var TARGET_PERCENT = /* @__PURE__ */ new Set(["on-system", "contrast"]);
-var TITLE = "### Design-system scorecard";
-var ROW_LABEL = {
-  score: "System score",
-  "on-system": "On-system",
-  "lint-violations": "Lint violations",
-  drift: "Drift (stale/missing/orphan)",
-  "import-coverage": "Import coverage",
-  contrast: "Contrast",
-  readiness: "Readiness"
-};
-var MOVER_LABEL = {
-  score: "score",
-  "on-system": "on-system",
-  "lint-violations": "lint violations",
-  drift: "drift",
-  "import-coverage": "import coverage",
-  contrast: "contrast",
-  readiness: "readiness"
-};
-var COMPONENT_LABEL = {
-  drift: "Drift",
-  lint: "Lint",
-  readiness: "Readiness",
-  a11y: "A11y",
-  adoption: "On-system",
-  parity: "Parity"
-};
-function arrow(delta) {
-  if (delta > 0) return "\u25B2";
-  if (delta < 0) return "\u25BC";
-  return "=";
-}
-function signed(delta) {
-  return delta > 0 ? `+${delta}` : `${delta}`;
-}
-function driftCell(counts, bold) {
-  const text2 = `${counts.stale}/${counts.missing}/${counts.orphan}`;
-  return bold ? `**${text2}**` : text2;
-}
-function isPercent(id) {
-  return id === "on-system" || id === "contrast";
-}
-function scalar(id, value2) {
-  return isPercent(id) ? `${value2}%` : `${value2}`;
-}
-function metricLabel(row2) {
-  if (row2.id === "readiness") {
-    const frame = row2.now?.frame ?? row2.base?.frame ?? "";
-    return frame === "" ? "Readiness" : `Readiness (${frame})`;
-  }
-  return ROW_LABEL[row2.id];
-}
-function hasScalarDelta(row2) {
-  return (row2.id === "score" || row2.id === "on-system" || row2.id === "lint-violations" || row2.id === "contrast" || row2.id === "readiness") && row2.delta !== void 0;
-}
-function nowScalar(row2) {
-  switch (row2.id) {
-    case "score":
-    case "on-system":
-    case "lint-violations":
-    case "contrast":
-      return row2.now;
-    case "readiness":
-      return row2.now?.score;
-    default:
-      return void 0;
-  }
-}
-function baseScalar(row2) {
-  switch (row2.id) {
-    case "score":
-    case "on-system":
-    case "lint-violations":
-    case "contrast":
-      return row2.base;
-    case "readiness":
-      return row2.base?.score;
-    default:
-      return void 0;
-  }
-}
-function moverFragment(label, id, row2) {
-  const now = nowScalar(row2);
-  const base = baseScalar(row2);
-  const delta = hasScalarDelta(row2) ? row2.delta : 0;
-  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow(delta)}`;
-}
-function breakingTokenIncrease(rows) {
-  const drift = rows.find((r2) => r2.id === "drift");
-  if (drift === void 0 || drift.id !== "drift") return 0;
-  const nowStale = drift.now?.stale ?? 0;
-  const baseStale = drift.base?.stale;
-  if (baseStale === void 0) return 0;
-  return nowStale > baseStale ? nowStale - baseStale : 0;
-}
-function summaryLine(rows) {
-  const scoreRow = rows.find((r2) => r2.id === "score");
-  const movers = rows.filter((r2) => r2.id !== "score" && hasScalarDelta(r2));
-  movers.sort((a, b) => {
-    const da = hasScalarDelta(a) ? Math.abs(a.delta) : 0;
-    const db = hasScalarDelta(b) ? Math.abs(b.delta) : 0;
-    return db - da;
-  });
-  const topMover = movers[0];
-  const fragments = [];
-  if (scoreRow !== void 0 && scoreRow.id === "score") {
-    if (scoreRow.delta !== void 0) {
-      fragments.push(moverFragment("Score", "score", scoreRow));
-    } else if (scoreRow.now !== void 0) {
-      fragments.push(`Score ${scoreRow.now}`);
-    }
-    if (topMover !== void 0) {
-      fragments.push(
-        moverFragment(MOVER_LABEL[topMover.id], topMover.id, topMover)
-      );
-    }
-  } else if (topMover !== void 0) {
-    fragments.push(
-      moverFragment(ROW_LABEL[topMover.id], topMover.id, topMover)
-    );
-  }
-  const breaking = breakingTokenIncrease(rows);
-  if (breaking > 0) {
-    const noun = breaking === 1 ? "breaking token change" : "breaking token changes";
-    fragments.push(`**${breaking} ${noun}**`);
-  }
-  return fragments.join(" \xB7 ");
-}
-function primaryNow(row2) {
-  if (row2.id === "drift") return row2.now?.stale;
-  if (row2.id === "import-coverage") return row2.now?.imported;
-  return nowScalar(row2);
-}
-function currentOnlySummary(rows) {
-  const scoreRow = rows.find((r2) => r2.id === "score");
-  if (scoreRow !== void 0 && scoreRow.id === "score" && scoreRow.now !== void 0) {
-    return `Score ${scoreRow.now}`;
-  }
-  for (const row2 of rows) {
-    const now = primaryNow(row2);
-    if (now === void 0) continue;
-    const value2 = row2.id === "drift" || row2.id === "import-coverage" ? `${now}` : scalar(row2.id, now);
-    return `${ROW_LABEL[row2.id]} ${value2}`;
-  }
-  return "No movement";
-}
-function renderCompareRow(row2, breaking) {
-  const label = metricLabel(row2);
-  if (row2.id === "drift") {
-    const base2 = row2.base !== void 0 ? driftCell(row2.base, false) : "\u2014";
-    const now2 = row2.now !== void 0 ? driftCell(row2.now, breaking) : "\u2014";
-    const delta = row2.now !== void 0 && row2.base !== void 0 ? `${signed(row2.now.stale - row2.base.stale)} ${arrow(row2.now.stale - row2.base.stale)}` : "\u2014";
-    return `| ${label} | ${base2} | ${now2} | ${delta} |`;
-  }
-  if (row2.id === "import-coverage") {
-    const base2 = row2.base !== void 0 ? `${row2.base.imported}/${row2.base.total}` : "\u2014";
-    const now2 = row2.now !== void 0 ? `${row2.now.imported}/${row2.now.total}` : "\u2014";
-    const delta = row2.now !== void 0 && row2.base !== void 0 ? `${signed(row2.now.imported - row2.base.imported)} ${arrow(row2.now.imported - row2.base.imported)}` : "\u2014";
-    return `| ${label} | ${base2} | ${now2} | ${delta} |`;
-  }
-  const now = nowScalar(row2);
-  const base = baseScalar(row2);
-  const nowCell = now !== void 0 ? scalar(row2.id, now) : "\u2014";
-  const baseCell = base !== void 0 ? scalar(row2.id, base) : "\u2014";
-  const deltaCell = hasScalarDelta(row2) ? `${signed(row2.delta)} ${arrow(row2.delta)}` : "\u2014";
-  return `| ${label} | ${baseCell} | ${nowCell} | ${deltaCell} |`;
-}
-function renderCurrentRow(row2) {
-  const label = metricLabel(row2);
-  if (row2.id === "drift") {
-    const now2 = row2.now !== void 0 ? driftCell(row2.now, false) : "\u2014";
-    return `| ${label} | ${now2} |`;
-  }
-  if (row2.id === "import-coverage") {
-    const now2 = row2.now !== void 0 ? `${row2.now.imported}/${row2.now.total}` : "\u2014";
-    return `| ${label} | ${now2} |`;
-  }
-  const now = nowScalar(row2);
-  const nowCell = now !== void 0 ? scalar(row2.id, now) : "\u2014";
-  return `| ${label} | ${nowCell} |`;
-}
-function componentBlock(rows) {
-  const scoreRow = rows.find((r2) => r2.id === "score");
-  if (scoreRow === void 0 || scoreRow.id !== "score") return [];
-  if (scoreRow.components.length === 0) return [];
-  const lines = [
-    "#### Components",
-    "",
-    "| Component | Score | Weight |",
-    "| --- | --- | --- |"
-  ];
-  for (const c2 of scoreRow.components) {
-    lines.push(
-      `| ${COMPONENT_LABEL[c2.kind] ?? c2.kind} | ${c2.score} | ${c2.weight} |`
-    );
-  }
-  return lines;
-}
-function scoreNow(model) {
-  const row2 = model.rows.find((r2) => r2.id === "score");
-  return row2 !== void 0 && row2.id === "score" ? row2.now : void 0;
-}
-function scoreDelta(model) {
-  const row2 = model.rows.find((r2) => r2.id === "score");
-  return row2 !== void 0 && row2.id === "score" ? row2.delta : void 0;
-}
-function targetMeasured(metric, measured) {
-  if (measured === void 0) return "\u2014";
-  return TARGET_PERCENT.has(metric) ? `${measured}%` : `${measured}`;
-}
-function targetsBlock(targets) {
-  if (targets.length === 0) return [];
-  const lines = [
-    "### Targets",
-    "",
-    "| Metric | Measured | Target | Status |",
-    "| --- | --- | --- | --- |"
-  ];
-  for (const t of targets) {
-    lines.push(
-      `| ${t.metric} | ${targetMeasured(t.metric, t.measured)} | ${t.op} ${t.target} | ${BAND_GLYPH[t.band]} |`
-    );
-  }
-  return lines;
-}
-function ageCell(row2) {
-  return row2.ageDays !== void 0 ? `${row2.ageDays}d` : "\u2014";
-}
-function freshnessBlock(rows, base) {
-  if (rows.length === 0) return [];
-  const delta = base !== void 0;
-  const header = delta ? "| Kind | Last run | Age | \u0394 age | Band |" : "| Kind | Last run | Age | Band |";
-  const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
-  const lines = ["### Freshness", "", header, rule];
-  for (const row2 of rows) {
-    const last = row2.lastRun ?? "never";
-    const age3 = ageCell(row2);
-    const band = BAND_GLYPH[row2.band];
-    if (!delta) {
-      lines.push(`| ${row2.kind} | ${last} | ${age3} | ${band} |`);
-      continue;
-    }
-    const baseRow = base?.find((b) => b.kind === row2.kind);
-    const d = row2.ageDays !== void 0 && baseRow?.ageDays !== void 0 ? `${signed(row2.ageDays - baseRow.ageDays)} ${arrow(row2.ageDays - baseRow.ageDays)}` : "\u2014";
-    lines.push(`| ${row2.kind} | ${last} | ${age3} | ${d} | ${band} |`);
-  }
-  return lines;
-}
-function velocityBlock(velocity, now, gitRefDelta) {
-  const score = now !== void 0 ? `${now}` : "\u2014";
-  const window = `${signed(velocity.delta)} over ${velocity.windowDays}d`;
-  const streak = `${velocity.regressionStreak}-decline streak`;
-  const motion = gitRefDelta !== void 0 ? `window ${window} \xB7 git-ref ${signed(gitRefDelta)}` : window;
-  return [
-    "### Score velocity",
-    "",
-    `score ${score} \xB7 ${motion} \xB7 ${velocity.direction} \xB7 ${streak}`
-  ];
-}
-function migrationBlock(checklist) {
-  if (checklist.sites.length === 0) return [];
-  const n = checklist.sites.length;
-  const noun = n === 1 ? "call site" : "call sites";
-  const capped = checklist.truncated ? " (capped)" : "";
-  const lines = [
-    "### Migration checklist",
-    "",
-    `${n} ${noun} to migrate${capped}.`,
-    "",
-    "| Site | Subject | Change |",
-    "| --- | --- | --- |"
-  ];
-  for (const s of checklist.sites) {
-    lines.push(
-      `| \`${s.file}:${s.line}\` | ${s.subject} | \`${s.from}\` \u2192 \`${s.to}\` |`
-    );
-  }
-  return lines;
-}
-function ownershipBlock(rows, base) {
-  if (rows.length === 0) return [];
-  const delta = base !== void 0;
-  const header = delta ? "| Owner | On-system | Refs | Literals | \u0394 pct |" : "| Owner | On-system | Refs | Literals |";
-  const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
-  const lines = ["### Ownership", "", header, rule];
-  for (const row2 of rows) {
-    const cells = `${row2.owner} | ${row2.pct}% | ${row2.refs} | ${row2.literals}`;
-    if (!delta) {
-      lines.push(`| ${cells} |`);
-      continue;
-    }
-    const baseRow = base?.find((b) => b.owner === row2.owner);
-    const d = baseRow !== void 0 ? `${signed(row2.pct - baseRow.pct)} ${arrow(row2.pct - baseRow.pct)}` : "\u2014";
-    lines.push(`| ${cells} | ${d} |`);
-  }
-  return lines;
-}
-function libraryHealthBlock(rows, base, baseLabel, currentLabel) {
-  const now = rows[rows.length - 1];
-  const was = base?.[base.length - 1];
-  if (now === void 0 || was === void 0) return [];
-  const row2 = (label, b, n) => `| ${label} | ${b} | ${n} | ${signed(n - b)} ${arrow(n - b)} |`;
-  return [
-    "### Library health",
-    "",
-    `| Signal | ${baseLabel} | ${currentLabel} | \u0394 |`,
-    "| --- | --- | --- | --- |",
-    row2("Override hotspots", was.overrides, now.overrides),
-    row2("Deprecated usage", was.deprecated, now.deprecated),
-    row2("Detached candidates", was.detached, now.detached)
-  ];
-}
-function changelogBlock(changelog) {
-  if (changelog.slices.length === 0) return [];
-  const lines = ["### Changelog", ""];
-  changelog.slices.forEach((slice, index) => {
-    lines.push(
-      `**For ${slice.audience}** \u2014 ${slice.breaking} breaking \xB7 ${slice.additive} additive \xB7 ${slice.cosmetic} cosmetic`
-    );
-    for (const item of slice.recent) lines.push(`- ${item}`);
-    if (index < changelog.slices.length - 1) lines.push("");
-  });
-  return lines;
-}
-function appendixBlocks(model, options) {
-  const selected = options.artifacts;
-  if (selected === void 0) return [];
-  const blocks = options.blocks ?? {};
-  const base = options.baseBlocks;
-  const has = (id) => selected.includes(id);
-  const out = [];
-  const add = (lines) => {
-    if (lines.length > 0) out.push(...lines, "");
-  };
-  if (has("targets") && blocks.targets !== void 0) {
-    add(targetsBlock(blocks.targets));
-  }
-  if (has("data-freshness") && blocks.dataFreshness !== void 0) {
-    add(freshnessBlock(blocks.dataFreshness, base?.dataFreshness));
-  }
-  if (has("score-velocity") && blocks.scoreVelocity !== void 0) {
-    add(
-      velocityBlock(blocks.scoreVelocity, scoreNow(model), scoreDelta(model))
-    );
-  }
-  if (has("migration-checklist") && blocks.migrationChecklist !== void 0) {
-    add(migrationBlock(blocks.migrationChecklist));
-  }
-  if (has("ownership-leaderboard") && blocks.ownershipLeaderboard !== void 0) {
-    add(
-      ownershipBlock(blocks.ownershipLeaderboard, base?.ownershipLeaderboard)
-    );
-  }
-  if (has("library-health-trend") && blocks.libraryHealthTrend !== void 0) {
-    add(
-      libraryHealthBlock(
-        blocks.libraryHealthTrend,
-        base?.libraryHealthTrend,
-        options.baseLabel ?? "base",
-        options.currentLabel ?? "current"
-      )
-    );
-  }
-  if (has("audience-changelog") && blocks.audienceChangelog !== void 0) {
-    add(changelogBlock(blocks.audienceChangelog));
-  }
-  return out;
-}
-function renderScorecardMarkdown(model, options) {
-  const lines = [TITLE, ""];
-  if (model.kind === "no-data") {
-    lines.push(
-      "_No design-system history yet \u2014 run a check to populate the scorecard._",
-      ""
-    );
-    return lines.join("\n");
-  }
-  const currentLabel = options.currentLabel ?? "current";
-  const compare = !model.currentOnly;
-  lines.push(
-    compare ? summaryLine(model.rows) : currentOnlySummary(model.rows),
-    ""
-  );
-  const breaking = breakingTokenIncrease(model.rows) > 0;
-  if (compare) {
-    const baseLabel = options.baseLabel ?? "base";
-    lines.push(
-      `| Metric | ${baseLabel} | ${currentLabel} | \u0394 |`,
-      "| --- | --- | --- | --- |"
-    );
-    for (const row2 of model.rows) lines.push(renderCompareRow(row2, breaking));
-  } else {
-    lines.push(`| Metric | ${currentLabel} |`, "| --- | --- |");
-    for (const row2 of model.rows) lines.push(renderCurrentRow(row2));
-  }
-  lines.push("");
-  const components = componentBlock(model.rows);
-  if (components.length > 0) lines.push(...components, "");
-  if (options.noBaseline === true) {
-    const baseLabel = options.baseLabel ?? "base";
-    lines.push(`_no baseline at ${baseLabel}_`, "");
-  }
-  lines.push(...appendixBlocks(model, options));
-  return lines.join("\n");
-}
-
-// src/engines/report/targets.ts
-function isSatisfied(measured, op, value2) {
-  switch (op) {
-    case ">=":
-      return measured >= value2;
-    case "<=":
-      return measured <= value2;
-    case "==":
-      return measured === value2;
-  }
-}
-function defaultMargin(value2) {
-  return Math.abs(value2) * 0.1;
-}
-function bandFor2(measured, target) {
-  const { op, value: value2, warn } = target;
-  if (isSatisfied(measured, op, value2)) return "green";
-  const margin = defaultMargin(value2);
-  if (op === ">=") {
-    const floor = warn ?? value2 - margin;
-    return measured >= floor ? "amber" : "red";
-  }
-  if (op === "<=") {
-    const ceiling = warn ?? value2 + margin;
-    return measured <= ceiling ? "amber" : "red";
-  }
-  const halfWidth = warn ?? margin;
-  return Math.abs(measured - value2) <= halfWidth ? "amber" : "red";
-}
-function evaluateTargets(latest, targets) {
-  const verdicts = [];
-  for (const [metric, target] of Object.entries(targets)) {
-    const measured = latest[metric];
-    const band = measured === void 0 ? "unknown" : bandFor2(measured, target);
-    verdicts.push({
-      metric,
-      measured,
-      target: target.value,
-      op: target.op,
-      band
-    });
-  }
-  return verdicts;
-}
-
-// src/engines/report/timeline.ts
-var DEFAULT_TIMELINE_STOPS = 12;
-function utcDay(at) {
-  const ms = Date.parse(at);
-  if (Number.isNaN(ms)) return void 0;
-  return new Date(ms).toISOString().slice(0, 10);
-}
-function timelineDays(text2, maxStops = DEFAULT_TIMELINE_STOPS) {
-  const days3 = /* @__PURE__ */ new Set();
-  for (const { at } of replayHistory(text2)) {
-    const day = at !== void 0 ? utcDay(at) : void 0;
-    if (day !== void 0) days3.add(day);
-  }
-  const keep = Math.max(maxStops - 1, 0);
-  if (keep === 0) return [];
-  return [...days3].sort().slice(0, -1).slice(-keep).map((day) => ({ day, endOfDay: `${day}T23:59:59.999Z` }));
-}
-function historyAsOf(text2, endOfDay) {
-  const cutoff = Date.parse(endOfDay);
-  if (Number.isNaN(cutoff)) return "";
-  const kept = [];
-  for (const line of text2.split("\n")) {
-    const raw = line.trim();
-    if (raw === "") continue;
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      continue;
-    }
-    if (typeof parsed !== "object" || parsed === null) continue;
-    const at = parsed.at;
-    if (typeof at !== "string") continue;
-    const ms = Date.parse(at);
-    if (!Number.isNaN(ms) && ms <= cutoff) kept.push(raw);
-  }
-  return kept.length > 0 ? `${kept.join("\n")}
-` : "";
-}
-
-// src/engines/report/velocity.ts
-var MS_PER_DAY2 = 24 * 60 * 60 * 1e3;
-function computeVelocity(trend, nowIso, windowDays) {
-  if (trend.length < 2) return void 0;
-  const latest = trend[trend.length - 1];
-  if (latest === void 0) return void 0;
-  const nowMs = Date.parse(nowIso);
-  let windowStartDate;
-  if (!Number.isNaN(nowMs)) {
-    windowStartDate = new Date(nowMs - windowDays * MS_PER_DAY2).toISOString().slice(0, 10);
-  }
-  let baseline;
-  if (windowStartDate !== void 0) {
-    for (const point of trend) {
-      if (point.date < windowStartDate) baseline = point;
-    }
-  }
-  if (baseline === void 0) baseline = trend[0];
-  if (baseline === void 0) return void 0;
-  const delta = latest.score - baseline.score;
-  const direction = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-  let regressionStreak = 0;
-  for (let i = trend.length - 1; i > 0; i -= 1) {
-    const cur = trend[i];
-    const prev = trend[i - 1];
-    if (cur === void 0 || prev === void 0) break;
-    if (cur.score < prev.score) regressionStreak += 1;
-    else break;
-  }
-  return { delta, windowDays, direction, regressionStreak };
-}
-
 // src/io/dashboards.ts
 import { existsSync as existsSync5, mkdirSync as mkdirSync2, readdirSync, readFileSync as readFileSync5 } from "fs";
 import { join as join6 } from "path";
@@ -12933,3429 +12016,7 @@ function listDashboards(dir) {
   return [...byName2.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// src/render/figma-trend-format.ts
-var SIGNAL_LABEL = {
-  overrides: "Overrides",
-  deprecated: "Deprecated",
-  detached: "Detached \u2014 heuristic, REST cannot truly detect detachment"
-};
-var SIGNAL_ORDER = [
-  "overrides",
-  "deprecated",
-  "detached"
-];
-var STATUS_LABEL = {
-  new: "new",
-  rising: "\u25B2 rising",
-  falling: "\u25BC falling",
-  flat: "= flat",
-  resolved: "\u2713 resolved",
-  "below-top": "below top N (not stored)"
-};
-function signedDelta(delta) {
-  if (delta > 0) return `+${delta}`;
-  if (delta < 0) return `\u2212${Math.abs(delta)}`;
-  return "\xB10";
-}
-function valueWithDelta(latest, delta) {
-  if (latest === null) return "\u2014";
-  return delta === void 0 ? String(latest) : `${latest} (${signedDelta(delta)})`;
-}
-function sparkPrefix(values) {
-  return values.length >= 2 ? `${sparkline(values)} ` : "";
-}
-function hotspotDetail(row2) {
-  const known = row2.points.map((p4) => p4.count).filter((c2) => c2 !== null);
-  const delta = known.length > 1 ? row2.delta : void 0;
-  return `${sparkPrefix(known)}${valueWithDelta(row2.latest, delta)} \xB7 ${STATUS_LABEL[row2.status]}`;
-}
-function dateSpan(dates) {
-  return `${dates[0] ?? ""} \u2192 ${dates[dates.length - 1] ?? ""}`;
-}
-function belowGateMeta(trend) {
-  return `${trend.failing} of ${trend.total} frame${trend.total === 1 ? "" : "s"} below the ${trend.threshold} gate`;
-}
-function frameDetail(frame) {
-  const delta = frame.runs > 1 ? frame.delta : void 0;
-  const gate = frame.passing ? "\u2713 ready" : "\u2717 below gate";
-  return `${sparkPrefix(frame.points.map((p4) => p4.score))}${valueWithDelta(frame.latest, delta)} \xB7 ${gate} \xB7 ${frame.runs} run${frame.runs === 1 ? "" : "s"}`;
-}
-function frameOverflow(trend) {
-  const hidden = trend.total - trend.frames.length;
-  return hidden > 0 ? `+${hidden} more` : void 0;
-}
-function passRateSub(rate) {
-  return `${rate.passing} of ${rate.frames} frame${rate.frames === 1 ? "" : "s"} \u2265 ${rate.threshold}`;
-}
-function passRateTrendLine(rate) {
-  if (rate.trend.length < 2) return void 0;
-  const first = rate.trend[0];
-  const last = rate.trend[rate.trend.length - 1];
-  return `${sparkline(rate.trend.map((p4) => p4.pct))} ${first?.pct ?? 0}% \u2192 ${last?.pct ?? 0}% (${dateSpan(rate.trend.map((p4) => p4.date))})`;
-}
-
-// src/render/html/charts.ts
-var PALETTE2 = [
-  "#a3384b",
-  "#7f9139",
-  "#e3a73b",
-  "#d06f2e",
-  "#b89a6a",
-  "#8f9a5a"
-];
-var TONE = {
-  ok: "#6f8a2e",
-  warn: "#c98a1e",
-  error: "#b83f4f",
-  neutral: "#8a8f98"
-};
-function toneFor(pct5) {
-  if (pct5 >= 80) return "ok";
-  if (pct5 >= 50) return "warn";
-  return "error";
-}
-function bandColor(pct5) {
-  return TONE[toneFor(pct5)];
-}
-var TRACK_COLOR = "#eceae4";
-var TEXT_COLOR = "#2a2a27";
-var MUTED_COLOR = "#7a7a72";
-var GRID_COLOR = "#e6e4dd";
-var FONT = "-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif";
-function escapeXml(value2) {
-  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-function round2(n) {
-  return Number(n.toFixed(3));
-}
-function clamp2(value2, min, max) {
-  if (value2 < min) return min;
-  if (value2 > max) return max;
-  return value2;
-}
-function niceNum(x, snap) {
-  const exp = Math.floor(Math.log10(x));
-  const fraction = x / 10 ** exp;
-  let nice;
-  if (snap) {
-    if (fraction < 1.5) nice = 1;
-    else if (fraction < 3) nice = 2;
-    else if (fraction < 7) nice = 5;
-    else nice = 10;
-  } else {
-    if (fraction <= 1) nice = 1;
-    else if (fraction <= 2) nice = 2;
-    else if (fraction <= 5) nice = 5;
-    else nice = 10;
-  }
-  return nice * 10 ** exp;
-}
-function niceTicks(min, max, maxTicks) {
-  let lo = Math.min(min, max);
-  let hi = Math.max(min, max);
-  const intervals = Math.max(1, maxTicks - 1);
-  let span = hi - lo;
-  if (span === 0) {
-    span = Math.abs(hi) || 1;
-    lo = hi - span / 2;
-    hi = lo + span;
-  }
-  const niceSpan = niceNum(span, false);
-  const step = niceSpan / intervals;
-  const start = Math.floor(lo / step) * step;
-  const ticks = [];
-  for (let i = 0; i <= intervals; i++) {
-    ticks.push(Number((start + i * step).toFixed(10)));
-  }
-  return ticks;
-}
-function svgOpen(width, height) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img">`;
-}
-function text(x, y, body, attrs = {}) {
-  const weight = attrs.weight === void 0 ? "" : ` font-weight="${attrs.weight}"`;
-  return `<text x="${round2(x)}" y="${round2(y)}" text-anchor="${attrs.anchor ?? "start"}" fill="${attrs.fill ?? TEXT_COLOR}" font-family="${FONT}" font-size="${attrs.size ?? 12}"${weight}>${body}</text>`;
-}
-function emptyState(width, height, title) {
-  const safe = escapeXml(title);
-  return [
-    svgOpen(width, height),
-    `<title>${safe}</title>`,
-    `<text x="${round2(width / 2)}" y="${round2(height / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${MUTED_COLOR}" font-family="${FONT}" font-size="12">No data</text>`,
-    "</svg>"
-  ].join("");
-}
-function clip(label, chars) {
-  return label.length <= chars ? label : `${label.slice(0, Math.max(1, chars - 1))}\u2026`;
-}
-var CHAR_W = 6.6;
-function formatTick(value2, unit) {
-  const n = Number.isInteger(value2) ? String(value2) : String(round2(value2));
-  return unit ? `${n}${unit}` : n;
-}
-function lineChart(series, opts = {}) {
-  const width = opts.width ?? 480;
-  const height = opts.height ?? 240;
-  const palette = opts.colors ?? [...PALETTE2];
-  const plottable = series.filter((s) => s.points.length > 0);
-  const allPoints = plottable.flatMap((s) => s.points);
-  if (plottable.length === 0 || allPoints.length === 0) {
-    return emptyState(width, height, "Line chart (no data)");
-  }
-  const legend = plottable.length > 1;
-  const pad2 = {
-    top: legend ? 30 : 12,
-    right: 14,
-    bottom: opts.xLabels ? 26 : 14,
-    left: 36
-  };
-  const plotW = Math.max(0, width - pad2.left - pad2.right);
-  const plotH = Math.max(0, height - pad2.top - pad2.bottom);
-  const xs = allPoints.map((p4) => p4.x);
-  const ys = allPoints.map((p4) => p4.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(0, ...ys);
-  const maxY = Math.max(...ys);
-  const yTicks = niceTicks(minY, maxY, 5);
-  const yLo = yTicks[0] ?? minY;
-  const yHi = yTicks[yTicks.length - 1] ?? maxY;
-  const xSpan = maxX - minX || 1;
-  const ySpan = yHi - yLo || 1;
-  const sx = (x) => pad2.left + (x - minX) / xSpan * plotW;
-  const sy = (y) => pad2.top + (1 - (y - yLo) / ySpan) * plotH;
-  const parts = [];
-  parts.push(svgOpen(width, height));
-  parts.push(
-    `<title>Line chart: ${escapeXml(series.map((s) => s.label).join(", "))}</title>`
-  );
-  if (legend) {
-    let lx = pad2.left;
-    plottable.forEach((s, index) => {
-      const color = palette[index % palette.length] ?? PALETTE2[0];
-      parts.push(
-        `<rect x="${round2(lx)}" y="8" width="10" height="10" rx="5" fill="${color}" />`
-      );
-      parts.push(
-        text(lx + 15, 17, escapeXml(s.label), { size: 12, fill: MUTED_COLOR })
-      );
-      lx += 15 + s.label.length * CHAR_W + 18;
-    });
-  }
-  for (const tick of yTicks) {
-    const y = round2(sy(tick));
-    parts.push(
-      `<line x1="${pad2.left}" y1="${y}" x2="${round2(width - pad2.right)}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
-    );
-    parts.push(
-      text(pad2.left - 7, y + 4, formatTick(tick, opts.unit), {
-        anchor: "end",
-        size: 11,
-        fill: MUTED_COLOR
-      })
-    );
-  }
-  if (opts.xLabels) {
-    const base = round2(height - 8);
-    parts.push(
-      text(pad2.left, base, escapeXml(opts.xLabels[0]), {
-        size: 11,
-        fill: MUTED_COLOR
-      })
-    );
-    parts.push(
-      text(width - pad2.right, base, escapeXml(opts.xLabels[1]), {
-        anchor: "end",
-        size: 11,
-        fill: MUTED_COLOR
-      })
-    );
-  }
-  const filled = (opts.area ?? true) && plottable.length === 1;
-  plottable.forEach((s, index) => {
-    const stroke = palette[index % palette.length] ?? PALETTE2[0];
-    const coords = s.points.map((p4) => `${round2(sx(p4.x))},${round2(sy(p4.y))}`);
-    if (filled && s.points.length > 1) {
-      const first = s.points[0];
-      const last = s.points[s.points.length - 1];
-      if (first && last) {
-        const floor = round2(sy(yLo));
-        parts.push(
-          `<polygon points="${round2(sx(first.x))},${floor} ${coords.join(" ")} ${round2(sx(last.x))},${floor}" fill="${stroke}" fill-opacity="0.12" />`
-        );
-      }
-    }
-    parts.push(
-      `<polyline fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${coords.join(" ")}" />`
-    );
-    for (const p4 of s.points) {
-      parts.push(
-        `<circle cx="${round2(sx(p4.x))}" cy="${round2(sy(p4.y))}" r="3" fill="#ffffff" stroke="${stroke}" stroke-width="2" />`
-      );
-    }
-  });
-  parts.push("</svg>");
-  return parts.join("");
-}
-function barChart(items, opts = {}) {
-  const width = opts.width ?? 480;
-  const rowH = 26;
-  const height = opts.height ?? Math.max(rowH, items.length * rowH + 8);
-  const fill = opts.color ?? PALETTE2[0];
-  if (items.length === 0) {
-    return emptyState(width, height, "Bar chart (no data)");
-  }
-  const values = items.map((i) => formatTick(i.value, opts.unit));
-  const longest = Math.max(...items.map((i) => i.label.length));
-  const labelChars = Math.max(
-    4,
-    Math.min(longest, Math.floor(width * 0.42 / CHAR_W))
-  );
-  const labelW = Math.ceil(labelChars * CHAR_W + 10);
-  const valueW = Math.ceil(
-    Math.max(...values.map((v) => v.length)) * CHAR_W + 12
-  );
-  const pad2 = { top: 4, left: labelW, right: valueW };
-  const trackW = Math.max(0, width - pad2.left - pad2.right);
-  const max = opts.max ?? Math.max(0, ...items.map((i) => i.value));
-  const parts = [];
-  parts.push(svgOpen(width, height));
-  parts.push(
-    `<title>Bar chart: ${escapeXml(items.map((i) => i.label).join(", "))}</title>`
-  );
-  items.forEach((item, index) => {
-    const clamped = Math.max(0, item.value);
-    const barW = max > 0 ? round2(Math.min(clamped, max) / max * trackW) : 0;
-    const y = pad2.top + index * rowH;
-    const barY = round2(y + 6);
-    const barH = rowH - 12;
-    const midY = round2(y + rowH / 2 + 4);
-    const label = clip(item.label, labelChars);
-    const tip = label === item.label ? "" : `<title>${escapeXml(item.label)}</title>`;
-    parts.push(
-      `<g>${tip}${text(pad2.left - 8, midY, escapeXml(label), { anchor: "end", size: 12, fill: TEXT_COLOR })}</g>`
-    );
-    parts.push(
-      `<rect x="${pad2.left}" y="${barY}" width="${round2(trackW)}" height="${barH}" fill="${TRACK_COLOR}" rx="${barH / 2}" />`
-    );
-    parts.push(
-      `<rect class="bar" x="${pad2.left}" y="${barY}" width="${barW}" height="${barH}" fill="${item.color ?? fill}" rx="${barH / 2}" />`
-    );
-    parts.push(
-      text(pad2.left + trackW + 8, midY, escapeXml(values[index] ?? ""), {
-        size: 12,
-        fill: TEXT_COLOR,
-        weight: 600
-      })
-    );
-  });
-  parts.push("</svg>");
-  return parts.join("");
-}
-function donutGauge(value2, opts = {}) {
-  const size = 132;
-  const clamped = clamp2(value2, 0, 100);
-  const display = Math.round(clamped);
-  const cx = size / 2;
-  const cy = size / 2;
-  const strokeWidth = 14;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const drawn = round2(clamped / 100 * circumference);
-  const gap = round2(circumference - drawn);
-  const color = opts.color ?? bandColor(clamped);
-  const labelText = opts.label !== void 0 ? `${opts.label}: ` : "";
-  const title = `${labelText}${display}%`;
-  return [
-    svgOpen(size, size),
-    `<title>${escapeXml(title)}</title>`,
-    `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${TRACK_COLOR}" stroke-width="${strokeWidth}" />`,
-    `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-dasharray="${drawn} ${gap}" transform="rotate(-90 ${cx} ${cy})" />`,
-    `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${TEXT_COLOR}" font-family="${FONT}" font-size="30" font-weight="700">${display}</text>`,
-    "</svg>"
-  ].join("");
-}
-var STATUS_BAND_FILL = {
-  green: TONE.ok,
-  amber: TONE.warn,
-  red: TONE.error,
-  unknown: TRACK_COLOR
-};
-function statusGrid(rows, opts = {}) {
-  const width = opts.width ?? 480;
-  const rowH = 32;
-  const height = opts.height ?? Math.max(rowH, rows.length * rowH + 8);
-  if (rows.length === 0) {
-    return emptyState(width, height, "Status grid (no data)");
-  }
-  const pad2 = { top: 4, left: 2, right: 2 };
-  const pillW = 66;
-  const pillX = round2(width - pad2.right - pillW);
-  const measuredX = round2(width * 0.44);
-  const targetX = round2(width * 0.62);
-  const parts = [];
-  parts.push(svgOpen(width, height));
-  parts.push(
-    `<title>Status grid: ${escapeXml(rows.map((r2) => r2.label).join(", "))}</title>`
-  );
-  rows.forEach((row2, index) => {
-    const y = pad2.top + index * rowH;
-    const midY = round2(y + rowH / 2 + 4);
-    const fill = STATUS_BAND_FILL[row2.band];
-    const pillTextColor = row2.band === "unknown" ? TEXT_COLOR : "#ffffff";
-    if (index > 0) {
-      parts.push(
-        `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
-      );
-    }
-    parts.push(
-      text(pad2.left, midY, escapeXml(row2.label), { size: 12, weight: 600 })
-    );
-    parts.push(
-      text(measuredX, midY, escapeXml(row2.measured), { size: 12, weight: 600 })
-    );
-    parts.push(
-      text(targetX, midY, escapeXml(row2.target), {
-        size: 12,
-        fill: MUTED_COLOR
-      })
-    );
-    parts.push(
-      `<rect class="pill" x="${pillX}" y="${round2(y + 7)}" width="${pillW}" height="${rowH - 14}" fill="${fill}" rx="${(rowH - 14) / 2}" />`
-    );
-    parts.push(
-      text(pillX + pillW / 2, midY - 0.5, escapeXml(row2.band), {
-        anchor: "middle",
-        size: 11,
-        fill: pillTextColor,
-        weight: 600
-      })
-    );
-  });
-  parts.push("</svg>");
-  return parts.join("");
-}
-function heatGrid(rows, opts = {}) {
-  const cellSize = 26;
-  const longest = Math.max(0, ...rows.map((r2) => r2.label.length));
-  const labelW = Math.ceil(Math.min(18, Math.max(4, longest)) * CHAR_W + 12);
-  const maxCells = Math.max(0, ...rows.map((r2) => r2.cells.length));
-  const width = opts.width ?? labelW + Math.max(1, maxCells) * cellSize + 8;
-  const height = opts.height ?? Math.max(cellSize, rows.length * cellSize + 8);
-  const fill = opts.color ?? PALETTE2[0];
-  if (rows.length === 0) {
-    return emptyState(width, height, "Heat grid (no data)");
-  }
-  const pad2 = { top: 4, left: labelW };
-  const parts = [];
-  parts.push(svgOpen(width, height));
-  parts.push(
-    `<title>Heat grid: ${escapeXml(rows.map((r2) => r2.label).join(", "))}</title>`
-  );
-  rows.forEach((row2, rowIndex) => {
-    const y = pad2.top + rowIndex * cellSize;
-    parts.push(
-      text(labelW - 8, y + cellSize / 2 + 3, escapeXml(clip(row2.label, 18)), {
-        anchor: "end",
-        size: 12
-      })
-    );
-    row2.cells.forEach((cell3, cellIndex) => {
-      const x = pad2.left + cellIndex * cellSize;
-      const opacity = round2(clamp2(cell3.intensity, 0, 1));
-      parts.push(
-        `<rect x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${TRACK_COLOR}" rx="4" />`
-      );
-      parts.push(
-        `<rect class="cell" x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${fill}" fill-opacity="${opacity}" rx="4" />`
-      );
-    });
-  });
-  parts.push("</svg>");
-  return parts.join("");
-}
-
-// src/render/html/logo.ts
-var LOGO_DATA_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23141414'/%3E%3Cpath fill='%23ffffff' d='M135.11 344.03Q120.15 344.03 108.05 336.25Q95.95 328.48 88.93 313.46Q81.92 298.44 81.92 276.69Q81.92 254.36 89.17 239.40Q96.42 224.44 108.46 216.95Q120.50 209.47 134.99 209.47Q146.10 209.47 153.46 213.21Q160.83 216.95 165.39 222.45Q169.95 227.94 172.17 233.09L173.34 233.09L173.34 167.62L208.41 167.62L208.41 341.81L173.92 341.81L173.92 320.88L172.17 320.88Q169.83 326.14 165.21 331.46Q160.60 336.78 153.23 340.40Q145.87 344.03 135.11 344.03M145.98 315.85Q154.87 315.85 161.18 310.94Q167.49 306.03 170.77 297.21Q174.04 288.38 174.04 276.58Q174.04 264.65 170.83 255.94Q167.61 247.23 161.30 242.38Q154.98 237.53 145.98 237.53Q136.75 237.53 130.49 242.56Q124.24 247.58 121.08 256.35Q117.93 265.12 117.93 276.58Q117.93 288.03 121.14 296.92Q124.36 305.80 130.61 310.83Q136.86 315.85 145.98 315.85M279.47 344.38Q263.69 344.38 251.53 339.88Q239.37 335.38 231.65 326.79Q223.94 318.19 221.72 306.03L254.33 300.42Q256.91 309.54 263.34 314.10Q269.77 318.66 280.52 318.66Q290.57 318.66 296.36 314.86Q302.15 311.06 302.15 305.22Q302.15 300.07 298 296.80Q293.85 293.53 285.31 291.77L262.75 287.10Q243.81 283.24 234.46 273.94Q225.11 264.65 225.11 250.04Q225.11 237.41 232.01 228.35Q238.90 219.29 251.18 214.38Q263.45 209.47 280.05 209.47Q295.48 209.47 306.82 213.74Q318.16 218.01 325.18 225.84Q332.19 233.67 334.53 244.31L303.43 249.80Q301.45 243.14 295.78 238.87Q290.11 234.61 280.52 234.61Q271.87 234.61 266.02 238.23Q260.18 241.85 260.18 247.93Q260.18 252.84 263.98 256.23Q267.78 259.62 277.01 261.49L300.51 266.17Q319.45 270.03 328.68 278.74Q337.92 287.45 337.92 301.48Q337.92 314.33 330.44 323.98Q322.96 333.62 309.80 339Q296.65 344.38 279.47 344.38'/%3E%3Crect x='362.25' y='255.53' width='149.75' height='31.45' fill='%23e2625a'/%3E%3C/svg%3E";
-var LOGO_IMG = `<img class="logo" src="${LOGO_DATA_URI}" width="28" height="28" alt="" />`;
-
-// src/render/html/timeline.ts
-var MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec"
-];
-function dayLabels(day) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
-  const month = match !== null ? MONTHS[Number(match[2]) - 1] : void 0;
-  if (match === null || month === void 0) return { short: day, long: day };
-  const date = Number(match[3]);
-  return { short: `${date} ${month}`, long: `${date} ${month} ${match[1]}` };
-}
-function timelineRadios(stops) {
-  const last = stops.length - 1;
-  return stops.map(
-    (stop, i) => `<input type="radio" name="tl" class="tl-radio" id="${stop.id}"${i === last ? " checked" : ""} />`
-  ).join("");
-}
-function timelineNav(stops) {
-  const items = stops.map(
-    (stop) => `<li><label for="${stop.id}" title="${escapeHtml(stop.title)}"><span class="dot"></span><span class="tl-label">${escapeHtml(stop.label)}</span><span class="sr">${escapeHtml(stop.title)}</span></label></li>`
-  ).join("");
-  return `<nav class="timeline" aria-label="Dashboard history"><ol>${items}</ol></nav>`;
-}
-function timelineStyle(stops) {
-  const rules = stops.map(
-    (stop, i) => `#${stop.id}:checked ~ .tl-s${i}{display:block}#${stop.id}:checked ~ header .tl-g${i}{display:inline}#${stop.id}:checked ~ header label[for="${stop.id}"]{color:var(--bar-text)}#${stop.id}:checked ~ header label[for="${stop.id}"] .dot{background:var(--bar-accent);border-color:var(--bar-accent);transform:scale(1.3)}#${stop.id}:focus-visible ~ header label[for="${stop.id}"]{outline:2px solid var(--bar-accent);outline-offset:2px}`
-  );
-  const past = stops.slice(0, -1).map((stop) => `#${stop.id}:checked ~ header .generated`);
-  if (past.length > 0) rules.push(`${past.join(",")}{display:none}`);
-  return rules.join("\n");
-}
-var HEADER_STYLE = `
-header.dash .bar.top {
-	display: grid;
-	/* Equal side columns keep the timeline centred and still while the right
-	   side's text changes with the selected state. */
-	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-	align-items: center;
-	gap: 10px 24px;
-	/* Full window width: the logo sits at the far left, Generated at the far
-	   right, whatever the content column's width. */
-	max-width: none;
-	padding: 14px 24px;
-}
-header.dash .brand { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: start; }
-header.dash .brand .logo { flex: none; border-radius: 7px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16); }
-header.dash .brand h1 { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-header.dash .bar-meta { display: flex; align-items: center; gap: 12px; justify-self: end; white-space: nowrap; }
-@media (max-width: 780px) {
-	header.dash .bar.top { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-	header.dash .brand h1 { flex: 0 1 auto; min-width: 0; font-size: 18px; }
-	header.dash .bar-meta { justify-self: start; flex-wrap: wrap; white-space: normal; }
-}
-`;
-var TIMELINE_STYLE = `
-header.dash .tl-asof { display: none; color: var(--bar-accent); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
-/* rtl scroll container: when the stops overflow, it opens scrolled to the
-   newest end ("Now"); the list itself reads left-to-right. */
-.timeline { justify-self: center; max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; direction: rtl; }
-.timeline::-webkit-scrollbar { display: none; }
-.timeline ol { list-style: none; margin: 0; padding: 0; display: flex; position: relative; direction: ltr; }
-.timeline ol::before {
-	content: "";
-	position: absolute;
-	left: 24px;
-	right: 24px;
-	top: 10px;
-	height: 2px;
-	background: rgba(255, 255, 255, 0.16);
-}
-.timeline label {
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 5px;
-	min-width: 48px;
-	padding: 2px 4px;
-	border-radius: 6px;
-	cursor: pointer;
-	color: var(--bar-subtle);
-	font-size: 11px;
-	font-weight: 600;
-	line-height: 1.2;
-	font-variant-numeric: tabular-nums;
-	white-space: nowrap;
-}
-.timeline label:hover { color: var(--bar-text); }
-.timeline .dot {
-	width: 12px;
-	height: 12px;
-	margin-top: 3px;
-	border-radius: 50%;
-	background: var(--bar);
-	border: 2px solid var(--bar-subtle);
-	transition: transform 120ms ease;
-}
-.timeline label:hover .dot { border-color: var(--bar-text); }
-.tl-radio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.tl-state { display: none; }
-.tl-note {
-	margin: 0 0 16px;
-	padding: 10px 14px;
-	border-radius: 10px;
-	background: var(--accent-soft);
-	color: var(--text);
-	font-size: 13px;
-}
-@media (max-width: 780px) {
-	.timeline { justify-self: stretch; }
-	.timeline ol { width: max-content; margin: 0 auto; }
-}
-@media (prefers-reduced-motion: reduce) { .timeline .dot { transition: none; } }
-`;
-
-// src/render/html/dashboard.ts
-var CARD_W = 332;
-var WIDE_W = 720;
-function dateEnds(trend) {
-  return [trend[0]?.date ?? "", trend[trend.length - 1]?.date ?? ""];
-}
-function dayOf(value2) {
-  return /^\d{4}-\d{2}-\d{2}T/.test(value2) ? value2.slice(0, 10) : value2;
-}
-function escapeHtml(value2) {
-  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-var STYLE = `
-:root {
-	--bg: #f6f5f1;
-	--surface: #ffffff;
-	--text: #1f1e1b;
-	--text-subtle: #6b6a63;
-	--border: #e6e3da;
-	--track: #eceae4;
-	--accent: #a3384b;
-	--accent-soft: #f6e9ec;
-	--ok: #6f8a2e;
-	--warn: #c98a1e;
-	--error: #b83f4f;
-	--radius: 14px;
-	--bar: #2a2622;
-	--bar-text: #f6f5f1;
-	--bar-subtle: #b9b3a6;
-	--bar-accent: #e3a73b;
-	--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-}
-* { box-sizing: border-box; }
-body {
-	margin: 0;
-	background: var(--bg);
-	color: var(--text);
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-	font-size: 14px;
-	line-height: 1.5;
-	-webkit-font-smoothing: antialiased;
-}
-.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 72px; }
-header.dash { background: var(--bar); color: var(--bar-text); }
-header.dash .bar {
-	max-width: 1200px;
-	margin: 0 auto;
-	padding: 18px 24px;
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	gap: 6px 16px;
-}
-header.dash h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; flex: 1 1 auto; }
-header.dash .project { color: var(--bar-accent); }
-header.dash .view {
-	font-size: 12px;
-	font-weight: 600;
-	color: var(--bar-text);
-	border: 1px solid rgba(255, 255, 255, 0.22);
-	background: rgba(255, 255, 255, 0.08);
-	border-radius: 999px;
-	padding: 2px 10px;
-}
-header.dash .generated { color: var(--bar-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
-.kpis {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-	gap: 12px;
-	margin-bottom: 16px;
-}
-.kpi {
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	padding: 14px 16px 12px;
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	min-width: 0;
-}
-.kpi.ok { --tone: var(--ok); }
-.kpi.warn { --tone: var(--warn); }
-.kpi.error { --tone: var(--error); }
-.kpi-label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
-.kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--tone, var(--text)); font-variant-numeric: tabular-nums; }
-.kpi-sub { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-	grid-auto-flow: row dense;
-	align-items: start;
-	gap: 16px;
-}
-section.panel {
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius);
-	padding: 18px 20px 20px;
-	min-width: 0;
-}
-section.panel.wide { grid-column: span 2; }
-@media (max-width: 780px) { section.panel.wide { grid-column: auto; } }
-section.panel h2 {
-	font-size: 15px;
-	font-weight: 650;
-	margin: 0 0 12px;
-	color: var(--text);
-	letter-spacing: -0.005em;
-}
-.chart { overflow-x: auto; margin: 4px 0; }
-.chart svg { max-width: 100%; height: auto; display: block; }
-.chart.center svg { margin: 0 auto; }
-.split { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: center; }
-@media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
-.empty {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	align-items: flex-start;
-	justify-content: center;
-	min-height: 96px;
-	padding: 14px 16px;
-	border: 1px dashed var(--border);
-	border-radius: 10px;
-	background: var(--bg);
-	color: var(--text-subtle);
-	font-size: 13px;
-}
-.empty .empty-title { font-weight: 600; color: var(--text); }
-.empty code, .meta code {
-	font-family: var(--mono);
-	font-size: 12px;
-	background: var(--accent-soft);
-	color: var(--accent);
-	padding: 1px 6px;
-	border-radius: 6px;
-}
-table.parity-key, .meta {
-	width: 100%;
-	margin: 8px 0 0;
-	font-size: 12px;
-	color: var(--text-subtle);
-	border-collapse: collapse;
-}
-.meta:first-of-type { margin-top: 0; }
-.cols { margin-top: 8px; font-size: 12px; color: var(--text-subtle); }
-.cols b { color: var(--text); font-weight: 600; }
-.cols:has(.audience-col) { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; margin-top: 0; }
-.audience-col .cols b { font-size: 13px; text-transform: capitalize; }
-.stat { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
-.stat-value { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.stat-value.ok { color: var(--ok); }
-.stat-value.error { color: var(--error); }
-.stat-sub { color: var(--text-subtle); font-size: 13px; }
-table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
-table.weights th, table.weights td { padding: 5px 8px; border-top: 1px solid var(--border); text-align: left; }
-table.weights th { color: var(--text-subtle); font-weight: 600; border-top: 0; }
-table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
-ul.offenders, ul.deductions, ul.calendar { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
-ul.offenders li, ul.calendar li {
-	display: flex;
-	justify-content: space-between;
-	align-items: baseline;
-	gap: 12px;
-	padding: 6px 0;
-	border-top: 1px solid var(--border);
-}
-ul.offenders code, ul.calendar code {
-	font-family: var(--mono);
-	color: var(--text);
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-ul.offenders .count { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
-ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
-ul.deductions .pts { color: var(--error); font-variant-numeric: tabular-nums; font-weight: 600; }
-.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 6px; text-align: center; }
-ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; white-space: nowrap; }
-ul.calendar .detail { color: var(--text-subtle); text-align: right; }
-ul.calendar.stack li { flex-direction: column; align-items: flex-start; gap: 1px; }
-ul.calendar.stack .detail { text-align: left; }
-.badge {
-	display: inline-block;
-	font-family: var(--mono);
-	font-size: 11px;
-	background: var(--accent-soft);
-	color: var(--accent);
-	padding: 1px 7px;
-	border-radius: 999px;
-	margin-right: 4px;
-	white-space: nowrap;
-}
-`.trim();
-function emptyState2(command) {
-  return [
-    '<div class="empty">',
-    '<span class="empty-title">No data yet</span>',
-    `<span>Run <code>ds-bridge ${escapeHtml(command)}</code> to populate this section.</span>`,
-    "</div>"
-  ].join("");
-}
-function panel(title, body, size) {
-  return [
-    size === "wide" ? '<section class="panel wide">' : '<section class="panel">',
-    `<h2>${escapeHtml(title)}</h2>`,
-    body,
-    "</section>"
-  ].join("");
-}
-var COMPONENT_LABEL2 = {
-  drift: "drift",
-  lint: "lint",
-  readiness: "readiness",
-  a11y: "a11y",
-  adoption: "on-system",
-  parity: "parity"
-};
-function systemScoreSection(data, weightProfile) {
-  const score = data.systemScore;
-  if (score === void 0) {
-    return panel("System score", emptyState2("report"));
-  }
-  const trendSeries2 = [
-    {
-      label: "score",
-      points: score.trend.map((point, index) => ({
-        x: index,
-        y: point.score
-      }))
-    }
-  ];
-  const legendRows = score.components.map(
-    (c2) => `<tr><td>${escapeHtml(COMPONENT_LABEL2[c2.kind] ?? c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
-  ).join("");
-  const legend = [
-    '<table class="weights">',
-    "<thead><tr><th>Component</th><th>Sub-score</th><th>Weight</th></tr></thead>",
-    `<tbody>${legendRows}</tbody>`,
-    "</table>"
-  ].join("");
-  const caption = weightProfile?.source === "view" && weightProfile.name !== void 0 ? `<div class="meta">weights: ${escapeHtml(weightProfile.name)} profile</div>` : "";
-  return panel(
-    "System score",
-    [
-      '<div class="split">',
-      `<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
-      `<div class="chart">${lineChart(trendSeries2, { width: WIDE_W - 170, height: 180, colors: [PALETTE2[0]] })}</div>`,
-      "</div>",
-      legend,
-      caption
-    ].join(""),
-    "wide"
-  );
-}
-function driftSection(data) {
-  const trend = data.driftTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel("Drift trend", emptyState2("tokens check"));
-  }
-  const toSeries = (label, pick) => ({
-    label,
-    points: trend.map((point, index) => ({ x: index, y: pick(point) }))
-  });
-  const series = [
-    toSeries("breaking", (p4) => p4.breaking),
-    toSeries("additive", (p4) => p4.additive),
-    toSeries("cosmetic", (p4) => p4.cosmetic)
-  ];
-  const dateRange = trend.length > 0 ? `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(trend[trend.length - 1]?.date ?? "")}` : "";
-  return panel(
-    "Drift trend",
-    [
-      `<div class="chart">${lineChart(series, { width: WIDE_W, height: 220, xLabels: dateEnds(trend), colors: [TONE.error, TONE.ok, PALETTE2[4]] })}</div>`,
-      `<div class="cols"><b>Breaking</b> \xB7 <b>Additive</b> \xB7 <b>Cosmetic</b> over ${dateRange}</div>`
-    ].join(""),
-    "wide"
-  );
-}
-function lintSection(data) {
-  const lint = data.lintSummary;
-  if (lint === void 0) {
-    return panel("Lint violations", emptyState2("lint"));
-  }
-  const bars = [
-    { label: "Exact", value: lint.byKind.exact, color: PALETTE2[2] },
-    { label: "Near", value: lint.byKind.near, color: PALETTE2[3] },
-    { label: "Off-system", value: lint.byKind.offSystem, color: PALETTE2[0] }
-  ];
-  const offenders = lint.topOffenders.length > 0 ? [
-    '<ul class="offenders">',
-    ...lint.topOffenders.map(
-      (o) => `<li><code>${escapeHtml(o.file)}</code><span class="count">${escapeHtml(String(o.count))}</span></li>`
-    ),
-    "</ul>"
-  ].join("") : "";
-  return panel(
-    "Lint violations",
-    `<div class="chart">${barChart(bars, { width: CARD_W })}</div>${offenders}`
-  );
-}
-function readinessSection(data) {
-  const readiness = data.readiness;
-  if (readiness === void 0) {
-    return panel("Readiness", emptyState2("handoff <frame-url>"));
-  }
-  const deductions = readiness.deductions.length > 0 ? [
-    '<ul class="deductions">',
-    ...readiness.deductions.map(
-      (d) => `<li><span>${escapeHtml(d.reason)}</span><span class="pts">-${escapeHtml(String(d.points))}</span></li>`
-    ),
-    "</ul>"
-  ].join("") : "";
-  return panel(
-    "Readiness",
-    [
-      `<div class="chart center">${donutGauge(readiness.score, { label: "Readiness" })}</div>`,
-      `<div class="frame-name">${escapeHtml(readiness.frameName)}</div>`,
-      deductions
-    ].join("")
-  );
-}
-var PARITY_INTENSITY = {
-  ok: 0.12,
-  "prop-mismatch": 0.55,
-  "missing-in-code": 0.8,
-  "missing-in-figma": 1
-};
-function paritySection(data) {
-  const parity = data.parity;
-  if (parity === void 0 || parity.rows.length === 0) {
-    return panel("Parity matrix", emptyState2("parity"));
-  }
-  const rows = parity.rows.map((row2) => ({
-    label: row2.component,
-    cells: row2.cells.map((cell3) => ({
-      label: cell3.status,
-      intensity: PARITY_INTENSITY[cell3.status]
-    }))
-  }));
-  const columns = parity.columns.length > 0 ? `<div class="cols">Columns: ${parity.columns.map((c2) => `<b>${escapeHtml(c2)}</b>`).join(" \xB7 ")}</div>` : "";
-  return panel(
-    "Parity matrix",
-    `<div class="chart">${heatGrid(rows)}</div>${columns}`
-  );
-}
-function a11ySection(data) {
-  const a11y = data.a11y;
-  if (a11y === void 0 || a11y.modes.length === 0) {
-    return panel("Contrast (a11y)", emptyState2("a11y"));
-  }
-  const bars = a11y.modes.map((m) => ({
-    label: m.mode,
-    value: m.failed
-  }));
-  const tallies = [
-    // The offenders list's layout (mode left, tally right), and a real space
-    // between the two so the text reads "light 12 passed", not "light12 passed".
-    '<ul class="offenders modes">',
-    ...a11y.modes.map(
-      (m) => `<li><code>${escapeHtml(m.mode)}</code> <span class="count">${escapeHtml(String(m.passed))} passed \xB7 ${escapeHtml(String(m.failed))} failed</span></li>`
-    ),
-    "</ul>"
-  ].join("");
-  return panel(
-    "Contrast (a11y)",
-    [
-      `<div class="meta">Failures by mode \xB7 level ${escapeHtml(a11y.level)}</div>`,
-      `<div class="chart">${barChart(bars, { width: CARD_W, color: TONE.error })}</div>`,
-      tallies
-    ].join("")
-  );
-}
-function impactSection(data) {
-  const impact = data.impact;
-  if (impact === void 0) {
-    return panel("Change impact", emptyState2("impact"));
-  }
-  const bars = [
-    { label: "Breaking", value: impact.breaking, color: TONE.error },
-    { label: "Additive", value: impact.additive, color: TONE.ok },
-    { label: "Cosmetic", value: impact.cosmetic, color: PALETTE2[4] }
-  ];
-  const sites = impact.touchedCallSites;
-  const radius = `<div class="meta">Touches ${escapeHtml(String(sites))} call site${sites === 1 ? "" : "s"}</div>`;
-  return panel(
-    "Change impact",
-    `<div class="chart">${barChart(bars, { width: CARD_W })}</div>${radius}`
-  );
-}
-function onSystemPct2(refs, literals) {
-  const total = refs + literals;
-  return total === 0 ? 0 : Math.round(refs / total * 100);
-}
-function adoptionTrendSection(data) {
-  const trend = data.adoptionTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel("Adoption trend", emptyState2("lint <dir>"));
-  }
-  const series = [
-    {
-      label: "on-system %",
-      points: trend.map((point, index) => ({ x: index, y: point.pct }))
-    }
-  ];
-  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
-    trend[trend.length - 1]?.date ?? ""
-  )}`;
-  return panel(
-    "Adoption trend",
-    [
-      `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[1]] })}</div>`,
-      `<div class="meta">On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)</div>`
-    ].join("")
-  );
-}
-function importCoverageSection(data) {
-  const coverage = data.importCoverage;
-  if (coverage === void 0) {
-    return panel("Import coverage", emptyState2("adoption"));
-  }
-  const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
-  const list = uncovered.length > 0 ? [
-    '<ul class="offenders">',
-    ...uncovered.map(
-      (name) => `<li><code>${escapeHtml(name)}</code></li>`
-    ),
-    "</ul>"
-  ].join("") : "";
-  const overflow = uncoveredTotal > uncovered.length ? `<div class="meta">\u2026 and ${escapeHtml(
-    String(uncoveredTotal - uncovered.length)
-  )} more</div>` : "";
-  return panel(
-    "Import coverage",
-    [
-      `<div class="chart center">${donutGauge(pct5, { label: "Import coverage" })}</div>`,
-      `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
-      list,
-      overflow
-    ].join("")
-  );
-}
-function leaderboardSection(data) {
-  const rows = data.leaderboard;
-  if (rows === void 0 || rows.length === 0) {
-    return panel("Adoption leaderboard", emptyState2("lint <dir>"));
-  }
-  const bars = rows.map((row2) => {
-    const pct5 = onSystemPct2(row2.refs, row2.literals);
-    return { label: row2.dir, value: pct5, color: bandColor(pct5) };
-  });
-  const labels = [
-    '<ul class="offenders">',
-    ...rows.map(
-      (row2) => `<li><code>${escapeHtml(row2.dir)}</code><span class="count">${escapeHtml(
-        String(onSystemPct2(row2.refs, row2.literals))
-      )}%</span></li>`
-    ),
-    "</ul>"
-  ].join("");
-  return panel(
-    "Adoption leaderboard",
-    [
-      `<div class="meta">On-system % by directory, worst-first \xB7 css/scss values only</div>`,
-      `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
-      labels
-    ].join("")
-  );
-}
-function libraryHealthSection(data) {
-  const health = data.libraryHealth;
-  if (health === void 0) {
-    return panel("Library health", emptyState2("library-health"));
-  }
-  const { totals } = health;
-  const bars = [
-    {
-      label: "Override hotspots",
-      value: totals.overrideHotspots,
-      color: PALETTE2[3]
-    },
-    {
-      label: "Deprecated usage",
-      value: totals.deprecatedUsage,
-      color: PALETTE2[0]
-    },
-    {
-      label: "Detached candidates",
-      value: totals.detachedCandidates,
-      color: PALETTE2[4]
-    }
-  ];
-  const detachedCaveat = [
-    '<div class="meta">',
-    `Detached candidates: ${escapeHtml(String(totals.detachedCandidates))} `,
-    "\u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.",
-    "</div>"
-  ].join("");
-  const hotspots = health.overrideHotspots.length > 0 ? [
-    '<ul class="offenders">',
-    ...health.overrideHotspots.map(
-      (h) => `<li><code>${escapeHtml(h.name)}</code><span class="count">${escapeHtml(String(h.overrideCount))}</span></li>`
-    ),
-    "</ul>"
-  ].join("") : "";
-  return panel(
-    "Library health",
-    [
-      `<div class="chart">${barChart(bars, { width: CARD_W })}</div>`,
-      detachedCaveat,
-      hotspots
-    ].join("")
-  );
-}
-var BREAKING_SOURCE_LABEL = {
-  tokens: "tokens",
-  figma: "figma"
-};
-function breakingCalendarSection(data) {
-  const calendar = data.breakingCalendar;
-  if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel("Breaking calendar", emptyState2("tokens check"));
-  }
-  const rows = calendar.entries.map((entry) => {
-    const badge2 = `<span class="badge">${escapeHtml(
-      BREAKING_SOURCE_LABEL[entry.source]
-    )}</span>`;
-    const detail = entry.detail ?? `${entry.count}`;
-    return `<li><span class="date">${escapeHtml(entry.date)}</span><span class="detail">${badge2} ${escapeHtml(detail)}</span></li>`;
-  }).join("");
-  return panel(
-    "Breaking calendar",
-    [
-      `<div class="meta">${escapeHtml(String(calendar.total))} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first</div>`,
-      `<ul class="calendar">${rows}</ul>`
-    ].join("")
-  );
-}
-function changeFrequencySection(data) {
-  const frequency = data.changeFrequency;
-  if (frequency === void 0 || frequency.byKind.length === 0) {
-    return panel("Change frequency", emptyState2("tokens check"));
-  }
-  const bars = frequency.byKind.map((bucket) => ({
-    label: bucket.kind,
-    value: bucket.count
-  }));
-  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `<div class="meta">Records per kind \xB7 ${escapeHtml(dayOf(frequency.windowFirst))} \u2192 ${escapeHtml(dayOf(frequency.windowLast))}</div>` : '<div class="meta">Records per kind</div>';
-  return panel(
-    "Change frequency",
-    [
-      window,
-      `<div class="chart">${barChart(bars, { width: CARD_W, color: PALETTE2[1] })}</div>`
-    ].join("")
-  );
-}
-function targetsSection(data) {
-  const targets = data.targets;
-  if (targets === void 0 || targets.length === 0) {
-    return panel("Targets / SLAs", emptyState2("report"));
-  }
-  const rows = targets.map((verdict) => ({
-    label: COMPONENT_LABEL2[verdict.metric] ?? verdict.metric,
-    measured: verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
-    target: `${verdict.op} ${verdict.target}`,
-    band: verdict.band
-  }));
-  const legendRows = ["green", "amber", "red", "unknown"].map(
-    (band) => `<tr><td>${escapeHtml(band)}</td><td>${escapeHtml(
-      band === "green" ? "meets target" : band === "amber" ? "near target" : band === "red" ? "misses target" : "not measured"
-    )}</td></tr>`
-  ).join("");
-  const legend = [
-    '<table class="weights">',
-    "<thead><tr><th>Band</th><th>Meaning</th></tr></thead>",
-    `<tbody>${legendRows}</tbody>`,
-    "</table>"
-  ].join("");
-  return panel(
-    "Targets / SLAs",
-    [
-      `<div class="chart">${statusGrid(rows, { width: CARD_W })}</div>`,
-      legend
-    ].join("")
-  );
-}
-function parityTrendSection(data) {
-  const trend = data.parityTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel("Parity trend", emptyState2("registry build"));
-  }
-  const series = [
-    {
-      label: "parity %",
-      points: trend.map((point, index) => ({ x: index, y: point.pct }))
-    }
-  ];
-  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
-    trend[trend.length - 1]?.date ?? ""
-  )}`;
-  return panel(
-    "Parity trend",
-    [
-      `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[2]] })}</div>`,
-      `<div class="meta">Component parity pass-% over ${dateRange}</div>`
-    ].join("")
-  );
-}
-function componentHealthSection(data) {
-  const rows = data.componentHealth;
-  if (rows === void 0 || rows.length === 0) {
-    return panel("Component health", emptyState2("registry build"));
-  }
-  const bars = rows.map((row2) => ({
-    label: row2.component,
-    value: row2.healthScore,
-    color: bandColor(row2.healthScore)
-  }));
-  const offenders = rows.slice(0, 5);
-  const list = [
-    '<ul class="offenders">',
-    ...offenders.map((row2) => {
-      const issues = row2.issues.length > 0 ? row2.issues.join(", ") : "no issues";
-      return `<li><code>${escapeHtml(row2.component)}</code><span class="count">${escapeHtml(String(row2.healthScore))} \xB7 ${escapeHtml(issues)}</span></li>`;
-    }),
-    "</ul>"
-  ].join("");
-  return panel(
-    "Component health",
-    [
-      '<div class="meta">Composite health per component, worst-first</div>',
-      `<div class="chart">${barChart(bars, { width: WIDE_W, max: 100 })}</div>`,
-      list
-    ].join(""),
-    "wide"
-  );
-}
-function libraryHealthTrendSection(data) {
-  const trend = data.libraryHealthTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel("Library health trend", emptyState2("library-health"));
-  }
-  const toSeries = (label, pick) => ({
-    label,
-    points: trend.map((point, index) => ({ x: index, y: pick(point) }))
-  });
-  const series = [
-    toSeries("overrides", (p4) => p4.overrides),
-    toSeries("deprecated", (p4) => p4.deprecated),
-    toSeries("detached", (p4) => p4.detached)
-  ];
-  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
-    trend[trend.length - 1]?.date ?? ""
-  )}`;
-  return panel(
-    "Library health trend",
-    [
-      `<div class="chart">${lineChart(series, { width: CARD_W, height: 200, xLabels: dateEnds(trend), colors: [PALETTE2[3], PALETTE2[0], PALETTE2[4]] })}</div>`,
-      `<div class="cols"><b>Overrides</b> \xB7 <b>Deprecated</b> \xB7 <b>Detached</b> over ${dateRange}</div>`
-    ].join("")
-  );
-}
-function migrationChecklistSection(data) {
-  const checklist = data.migrationChecklist;
-  if (checklist === void 0 || checklist.sites.length === 0) {
-    return panel("Migration checklist", emptyState2("impact --checklist"));
-  }
-  const rows = checklist.sites.map((site) => {
-    const where = `${site.file}:${site.line}`;
-    const detail = `${escapeHtml(site.subject)} \xB7 ${escapeHtml(site.from)} \u2192 ${escapeHtml(site.to)}`;
-    return `<li><code>${escapeHtml(where)}</code><span class="detail">${detail}</span></li>`;
-  }).join("");
-  const overflow = checklist.truncated ? '<div class="meta">\u2026 and more sites beyond the cap</div>' : "";
-  return panel(
-    "Migration checklist",
-    [
-      `<div class="meta">${escapeHtml(String(checklist.sites.length))} call site${checklist.sites.length === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to</div>`,
-      `<ul class="calendar stack">${rows}</ul>`,
-      overflow
-    ].join(""),
-    "wide"
-  );
-}
-function scoreVelocitySection(data) {
-  const velocity = data.scoreVelocity;
-  if (velocity === void 0) {
-    return panel("Score velocity", emptyState2("report"));
-  }
-  const { delta, windowDays, direction, regressionStreak } = velocity;
-  const ARROW = {
-    up: "\u25B2",
-    down: "\u25BC",
-    flat: "\u25AC"
-  };
-  const arrow3 = ARROW[direction];
-  const signedDelta2 = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
-  const streakBadge = regressionStreak > 0 ? `<span class="badge">${escapeHtml(String(regressionStreak))} regression${regressionStreak === 1 ? "" : "s"}</span>` : "";
-  return panel(
-    "Score velocity",
-    [
-      `<div class="stat"><span class="stat-value ${direction === "up" ? "ok" : direction === "down" ? "error" : ""}">${escapeHtml(arrow3)} ${escapeHtml(signedDelta2)}</span><span class="stat-sub">over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</span></div>`,
-      `<div class="meta">${escapeHtml(direction)} \xB7 regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`
-    ].join("")
-  );
-}
-function ownershipLeaderboardSection(data) {
-  const rows = data.ownershipLeaderboard;
-  if (rows === void 0 || rows.length === 0) {
-    return panel("Ownership leaderboard", emptyState2("lint"));
-  }
-  const bars = rows.map((row2) => ({
-    label: row2.owner,
-    value: row2.pct,
-    color: bandColor(row2.pct)
-  }));
-  const labels = [
-    '<ul class="offenders">',
-    ...rows.map(
-      (row2) => `<li><code>${escapeHtml(row2.owner)}</code><span class="count">${escapeHtml(
-        String(row2.pct)
-      )}% \xB7 ${escapeHtml(String(row2.refs))} refs / ${escapeHtml(
-        String(row2.literals)
-      )} literals</span></li>`
-    ),
-    "</ul>"
-  ].join("");
-  return panel(
-    "Ownership leaderboard",
-    [
-      `<div class="meta">On-system % by owner, worst-first \xB7 css/scss values only</div>`,
-      `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
-      labels
-    ].join("")
-  );
-}
-function audienceChangelogSection(data) {
-  const changelog = data.audienceChangelog;
-  if (changelog === void 0 || changelog.slices.length === 0) {
-    return panel("Changelog by audience", emptyState2("changelog"));
-  }
-  const columns = changelog.slices.map((slice) => {
-    const badges = [
-      `<span class="badge">breaking ${escapeHtml(String(slice.breaking))}</span>`,
-      `<span class="badge">additive ${escapeHtml(String(slice.additive))}</span>`,
-      `<span class="badge">cosmetic ${escapeHtml(String(slice.cosmetic))}</span>`
-    ].join("");
-    const recent = slice.recent.length > 0 ? [
-      '<ul class="offenders">',
-      ...slice.recent.map(
-        (entry) => `<li><code>${escapeHtml(entry)}</code></li>`
-      ),
-      "</ul>"
-    ].join("") : '<div class="meta">No recent entries</div>';
-    return [
-      '<div class="audience-col">',
-      `<div class="cols"><b>${escapeHtml(slice.audience)}</b></div>`,
-      `<div class="meta">${badges}</div>`,
-      recent,
-      "</div>"
-    ].join("");
-  }).join("");
-  return panel(
-    "Changelog by audience",
-    `<div class="cols">${columns}</div>`,
-    "wide"
-  );
-}
-function frameImplementabilitySection(data) {
-  const frame = data.frameImplementability;
-  if (frame === void 0) {
-    return panel("Frame implementability", emptyState2("frame-impl"));
-  }
-  const { pct: pct5, resolved, total, gaps } = frame;
-  const gapList = gaps.length > 0 ? [
-    '<ul class="offenders">',
-    ...gaps.map(
-      (gap) => `<li><code>${escapeHtml(gap.reason)}</code><span class="count">${escapeHtml(String(gap.count))}</span></li>`
-    ),
-    "</ul>"
-  ].join("") : "";
-  return panel(
-    "Frame implementability",
-    [
-      `<div class="chart center">${donutGauge(pct5, { label: "Frame implementability" })}</div>`,
-      `<div class="meta">${escapeHtml(String(resolved))}/${escapeHtml(String(total))} requirements resolve to the system</div>`,
-      gapList
-    ].join("")
-  );
-}
-function releaseReadinessSection(data) {
-  const readiness = data.releaseReadiness;
-  if (readiness === void 0 || readiness.checks.length === 0) {
-    return panel("Release readiness", emptyState2("release-check"));
-  }
-  const GO_FILL = TONE.ok;
-  const NO_GO_FILL = TONE.error;
-  const headerFill = readiness.go ? GO_FILL : NO_GO_FILL;
-  const headerText = readiness.go ? "GO" : "NO-GO";
-  const header = `<div class="meta"><span class="badge" style="background:${headerFill};color:#ffffff">${escapeHtml(headerText)}</span></div>`;
-  const items = readiness.checks.map((check) => {
-    const mark = check.pass ? "\u2713" : "\u2717";
-    const markFill = check.pass ? GO_FILL : NO_GO_FILL;
-    const detail = check.detail !== void 0 && check.detail.length > 0 ? `<span class="detail">${escapeHtml(check.detail)}</span>` : "";
-    return `<li><span class="date" style="color:${markFill}">${mark}</span><span class="detail">${escapeHtml(check.name)}</span>${detail}</li>`;
-  }).join("");
-  return panel(
-    "Release readiness",
-    [header, `<ul class="calendar">${items}</ul>`].join("")
-  );
-}
-function dataFreshnessSection(data) {
-  const rows = data.dataFreshness;
-  if (rows === void 0 || rows.length === 0) {
-    return panel("Data freshness", emptyState2("report"));
-  }
-  const BAND_FILL = {
-    green: TONE.ok,
-    amber: TONE.warn,
-    red: TONE.error,
-    unknown: TONE.neutral
-  };
-  const ageLabel = (row2) => {
-    if (row2.ageDays === void 0) return "never";
-    if (row2.ageDays === 0) return "today";
-    return `${row2.ageDays}d ago`;
-  };
-  const items = rows.map((row2) => {
-    const fill = BAND_FILL[row2.band];
-    const pill = `<span class="badge" style="background:${fill};color:#ffffff">${escapeHtml(row2.band)}</span>`;
-    const age3 = escapeHtml(ageLabel(row2));
-    return `<li><span class="date">${escapeHtml(row2.kind)}</span><span class="detail">${pill} ${age3}</span></li>`;
-  }).join("");
-  return panel(
-    "Data freshness",
-    [
-      '<div class="meta">Measurement age per check-kind \xB7 band signals trust</div>',
-      `<ul class="calendar">${items}</ul>`
-    ].join("")
-  );
-}
-function debtTone(pct5) {
-  if (pct5 < 25) return "ok";
-  if (pct5 < 60) return "warn";
-  return "error";
-}
-function headlineTile(label, value2, tone, sub) {
-  return [
-    `<div class="kpi${value2 !== void 0 && tone !== void 0 ? ` ${tone}` : ""}">`,
-    `<span class="kpi-label">${escapeHtml(label)}</span>`,
-    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
-    `<span class="kpi-sub">${escapeHtml(value2 === void 0 ? "not measured" : sub ?? "")}</span>`,
-    "</div>"
-  ].join("");
-}
-function executiveSection(data) {
-  const exec = data.executive;
-  if (exec === void 0) {
-    return panel("Executive summary", emptyState2("record"));
-  }
-  const tiles = [
-    headlineTile(
-      "System score",
-      exec.health === void 0 ? void 0 : String(exec.health),
-      exec.health === void 0 ? void 0 : toneFor(exec.health),
-      "out of 100"
-    ),
-    headlineTile(
-      "Import coverage",
-      exec.adoption === void 0 ? void 0 : `${exec.adoption}%`,
-      exec.adoption === void 0 ? void 0 : toneFor(exec.adoption),
-      "components imported"
-    ),
-    headlineTile(
-      "Consistency",
-      exec.consistency === void 0 ? void 0 : String(exec.consistency),
-      exec.consistency === void 0 ? void 0 : toneFor(exec.consistency),
-      "on-system blend"
-    ),
-    headlineTile(
-      "Design debt",
-      exec.debt === void 0 ? void 0 : `${exec.debt}%`,
-      exec.debt === void 0 ? void 0 : debtTone(exec.debt),
-      "lower is better"
-    )
-  ].join("");
-  const trend = exec.trend ?? [];
-  const chart = trend.length >= 2 ? `<div class="chart">${lineChart(
-    [
-      {
-        label: "score",
-        points: trend.map((p4, i) => ({ x: i, y: p4.score }))
-      }
-    ],
-    {
-      width: CARD_W,
-      height: 140,
-      colors: [PALETTE2[0]],
-      xLabels: dateEnds(trend)
-    }
-  )}</div>` : "";
-  return panel(
-    "Executive summary",
-    [`<div class="kpis">${tiles}</div>`, chart].join("")
-  );
-}
-function consistencySection(data) {
-  const consistency = data.consistency;
-  if (consistency === void 0) {
-    return panel("Consistency", emptyState2("lint <dir>"));
-  }
-  const rows = consistency.components.map(
-    (c2) => `<tr><td>${escapeHtml(c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
-  ).join("");
-  return panel(
-    "Consistency",
-    [
-      `<div class="chart center">${donutGauge(consistency.score, { label: "Consistency" })}</div>`,
-      '<table class="weights">',
-      "<thead><tr><th>Signal</th><th>Score</th><th>Weight</th></tr></thead>",
-      `<tbody>${rows}</tbody>`,
-      "</table>",
-      '<div class="meta">tokens and components are true ratios \xB7 overrides is a documented-opinion penalty (8 per hotspot)</div>'
-    ].join("")
-  );
-}
-var DEBT_ITEMS_SHOWN = 8;
-function designDebtSection(data) {
-  const debt = data.debt;
-  if (debt === void 0) {
-    return panel("Design debt", emptyState2("lint <dir>"));
-  }
-  const tone = debtTone(debt.pct);
-  const shown = debt.items.slice(0, DEBT_ITEMS_SHOWN);
-  const items = shown.map(
-    (item) => `<li><span class="date">${escapeHtml(item.subject)} <span class="badge">${escapeHtml(item.kind)} \xB7 ${escapeHtml(String(item.count))}</span></span><span class="detail">${escapeHtml(item.recommendation)}</span></li>`
-  ).join("");
-  const more = debt.items.length > shown.length ? `<div class="meta">\u2026 and ${escapeHtml(String(debt.items.length - shown.length))} more</div>` : "";
-  return panel(
-    "Design debt",
-    [
-      `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(debt.pct))}%</span><span class="stat-sub">${escapeHtml(debt.level)} \xB7 ${escapeHtml(String(debt.items.length))} item${debt.items.length === 1 ? "" : "s"}</span></div>`,
-      items === "" ? "" : `<ul class="calendar stack">${items}</ul>`,
-      more
-    ].join("")
-  );
-}
-function libraryHotspotsTrendSection(data) {
-  const trend = data.libraryHotspotsTrend;
-  if (trend === void 0 || trend.rows.length === 0) {
-    return panel("Library hotspots trend", emptyState2("library-health"));
-  }
-  const blocks = SIGNAL_ORDER.flatMap((signal) => {
-    const rows = trend.rows.filter((r2) => r2.signal === signal);
-    if (rows.length === 0) return [];
-    const items = rows.map(
-      (row2) => `<li><code>${escapeHtml(row2.name)}</code><span class="detail">${escapeHtml(hotspotDetail(row2))}</span></li>`
-    ).join("");
-    return [
-      `<div class="cols"><b>${escapeHtml(SIGNAL_LABEL[signal])}</b></div>`,
-      `<ul class="calendar stack">${items}</ul>`
-    ];
-  });
-  return panel(
-    "Library hotspots trend",
-    [
-      `<div class="meta">Top components per signal \xB7 ${escapeHtml(dateSpan(trend.dates))}</div>`,
-      ...blocks
-    ].join(""),
-    "wide"
-  );
-}
-function frameReadinessTrendSection(data) {
-  const trend = data.frameReadinessTrend;
-  if (trend === void 0 || trend.frames.length === 0) {
-    return panel("Frame readiness trend", emptyState2("handoff <frame-url>"));
-  }
-  const items = trend.frames.map(
-    (frame) => `<li><code>${escapeHtml(frame.frameName === "" ? frame.key : frame.frameName)}</code><span class="detail">${escapeHtml(frameDetail(frame))}</span></li>`
-  ).join("");
-  const more = frameOverflow(trend);
-  return panel(
-    "Frame readiness trend",
-    [
-      `<div class="meta">${escapeHtml(belowGateMeta(trend))}</div>`,
-      `<ul class="calendar stack">${items}</ul>`,
-      more === void 0 ? "" : `<div class="meta">${escapeHtml(more)}</div>`
-    ].join(""),
-    "wide"
-  );
-}
-function handoffPassRateSection(data) {
-  const rate = data.handoffPassRate;
-  if (rate === void 0 || rate.frames === 0) {
-    return panel("Handoff pass rate", emptyState2("handoff <frame-url>"));
-  }
-  const tone = toneFor(rate.pct);
-  const line = passRateTrendLine(rate);
-  return panel(
-    "Handoff pass rate",
-    [
-      `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(rate.pct))}%</span><span class="stat-sub">${escapeHtml(passRateSub(rate))}</span></div>`,
-      line === void 0 ? "" : `<div class="meta">${escapeHtml(line)}</div>`
-    ].join("")
-  );
-}
-var SECTION_RENDERERS = {
-  "system-score": systemScoreSection,
-  "drift-trend": driftSection,
-  "lint-summary": lintSection,
-  readiness: readinessSection,
-  parity: paritySection,
-  a11y: a11ySection,
-  impact: impactSection,
-  "adoption-trend": adoptionTrendSection,
-  "import-coverage": importCoverageSection,
-  leaderboard: leaderboardSection,
-  "library-health": libraryHealthSection,
-  "breaking-calendar": breakingCalendarSection,
-  "change-frequency": changeFrequencySection,
-  // Persona-wave metric sections (C1–C13). Real chart/list renderers (M4.1 +
-  // M4.2); the completeness gate (24 artifacts) holds via the Record type.
-  targets: targetsSection,
-  "parity-trend": parityTrendSection,
-  "component-health": componentHealthSection,
-  "library-health-trend": libraryHealthTrendSection,
-  "migration-checklist": migrationChecklistSection,
-  "score-velocity": scoreVelocitySection,
-  "ownership-leaderboard": ownershipLeaderboardSection,
-  "audience-changelog": audienceChangelogSection,
-  "frame-implementability": frameImplementabilitySection,
-  "release-readiness": releaseReadinessSection,
-  "data-freshness": dataFreshnessSection,
-  // Executive layer (AN7) — the completeness gate is now 27 via the Record type.
-  consistency: consistencySection,
-  "design-debt": designDebtSection,
-  executive: executiveSection,
-  // Figma + per-frame trends (F6) — the completeness gate is now 30.
-  "library-hotspots-trend": libraryHotspotsTrendSection,
-  "frame-readiness-trend": frameReadinessTrendSection,
-  "handoff-pass-rate": handoffPassRateSection
-};
-function signed2(delta) {
-  if (delta > 0) return `+${delta}`;
-  if (delta < 0) return `\u2212${Math.abs(delta)}`;
-  return "\xB10";
-}
-function kpis(data, selection) {
-  const on = new Set(selection);
-  const out = [];
-  const score = data.systemScore;
-  if (on.has("system-score") && score !== void 0) {
-    const velocity = data.scoreVelocity;
-    const first = score.trend[0]?.score;
-    const sub = velocity !== void 0 ? `${signed2(velocity.delta)} over ${velocity.windowDays} day${velocity.windowDays === 1 ? "" : "s"}` : first !== void 0 && score.trend.length > 1 ? `${signed2(score.current - first)} over ${score.trend.length} runs` : void 0;
-    out.push({
-      label: "System score",
-      value: String(score.current),
-      tone: toneFor(score.current),
-      ...sub === void 0 ? {} : { sub }
-    });
-  }
-  const adoption = data.adoptionTrend;
-  const lastAdoption = adoption?.[adoption.length - 1];
-  if (on.has("adoption-trend") && adoption !== void 0 && lastAdoption) {
-    const first = adoption[0];
-    out.push({
-      label: "On-system",
-      value: `${lastAdoption.pct}%`,
-      tone: toneFor(lastAdoption.pct),
-      ...first !== void 0 && adoption.length > 1 ? {
-        sub: `${signed2(lastAdoption.pct - first.pct)} pts since ${first.date}`
-      } : {}
-    });
-  }
-  if (on.has("readiness") && data.readiness !== void 0) {
-    out.push({
-      label: "Readiness",
-      value: String(data.readiness.score),
-      tone: toneFor(data.readiness.score),
-      sub: data.readiness.frameName
-    });
-  }
-  const parity = data.parityTrend;
-  const lastParity = parity?.[parity.length - 1];
-  if (on.has("parity-trend") && lastParity) {
-    out.push({
-      label: "Parity",
-      value: `${lastParity.pct}%`,
-      tone: toneFor(lastParity.pct),
-      sub: `as of ${lastParity.date}`
-    });
-  }
-  const drift = data.driftTrend;
-  const lastDrift = drift?.[drift.length - 1];
-  if (on.has("drift-trend") && lastDrift) {
-    out.push({
-      label: "Breaking drift",
-      value: String(lastDrift.breaking),
-      tone: lastDrift.breaking > 0 ? "error" : "ok",
-      sub: `${lastDrift.additive} additive \xB7 ${lastDrift.cosmetic} cosmetic`
-    });
-  }
-  const a11y = data.a11y;
-  if (on.has("a11y") && a11y !== void 0 && a11y.modes.length > 0) {
-    const failed = a11y.modes.reduce((sum, m) => sum + m.failed, 0);
-    out.push({
-      label: "Contrast failures",
-      value: String(failed),
-      tone: failed > 0 ? "error" : "ok",
-      sub: `${a11y.modes.length} mode${a11y.modes.length === 1 ? "" : "s"} \xB7 level ${a11y.level}`
-    });
-  }
-  const release = data.releaseReadiness;
-  if (on.has("release-readiness") && release !== void 0 && release.checks.length > 0) {
-    const passed = release.checks.filter((c2) => c2.pass).length;
-    out.push({
-      label: "Release",
-      value: release.go ? "Go" : "No-go",
-      tone: release.go ? "ok" : "error",
-      sub: `${passed}/${release.checks.length} checks pass`
-    });
-  }
-  if (on.has("consistency") && data.consistency !== void 0) {
-    out.push({
-      label: "Consistency",
-      value: String(data.consistency.score),
-      tone: toneFor(data.consistency.score),
-      sub: `${data.consistency.components.length} signal${data.consistency.components.length === 1 ? "" : "s"}`
-    });
-  }
-  if (on.has("design-debt") && data.debt !== void 0) {
-    out.push({
-      label: "Design debt",
-      value: `${data.debt.pct}%`,
-      tone: debtTone(data.debt.pct),
-      sub: `${data.debt.level} \xB7 ${data.debt.items.length} item${data.debt.items.length === 1 ? "" : "s"}`
-    });
-  }
-  return out;
-}
-function kpiStrip(items) {
-  if (items.length === 0) return "";
-  const cards = items.map(
-    (k4) => [
-      `<div class="kpi${k4.tone === void 0 ? "" : ` ${k4.tone}`}">`,
-      `<span class="kpi-label">${escapeHtml(k4.label)}</span>`,
-      `<span class="kpi-value">${escapeHtml(k4.value)}</span>`,
-      k4.sub === void 0 ? "" : `<span class="kpi-sub">${escapeHtml(k4.sub)}</span>`,
-      "</div>"
-    ].join("")
-  );
-  return `<div class="kpis">${cards.join("")}</div>`;
-}
-var MONTHS2 = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec"
-];
-function readableInstant(iso) {
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) return iso;
-  const hh = String(at.getUTCHours()).padStart(2, "0");
-  const mm = String(at.getUTCMinutes()).padStart(2, "0");
-  return `${at.getUTCDate()} ${MONTHS2[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
-}
-function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
-  const project = escapeHtml(data.project);
-  const generatedAt = escapeHtml(readableInstant(data.generatedAt));
-  const viewLabel = options.viewLabel === void 0 ? "" : `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
-  const stateBody = (state) => [
-    kpiStrip(kpis(state, selection)),
-    '<div class="grid">',
-    ...selection.map(
-      (id) => id === "system-score" ? systemScoreSection(state, options.weightProfile) : SECTION_RENDERERS[id](state)
-    ),
-    "</div>"
-  ].join("");
-  const past = options.timeline ?? [];
-  const stops = [
-    ...past.map((state, i) => {
-      const labels = dayLabels(state.day);
-      return {
-        id: `tl-${i}`,
-        label: labels.short,
-        title: `End of ${labels.long}`
-      };
-    }),
-    {
-      id: "tl-now",
-      label: "Now",
-      title: `Now \xB7 generated ${readableInstant(data.generatedAt)}`
-    }
-  ];
-  const hasTimeline = past.length > 0;
-  const asOf = past.map(
-    (state, i) => `<span class="tl-asof tl-g${i}">As of ${escapeHtml(dayLabels(state.day).long)}</span>`
-  ).join("");
-  const header = [
-    '<header class="dash"><div class="bar top">',
-    `<div class="brand">${LOGO_IMG}<h1>ds-bridge report \xB7 <span class="project">${project}</span></h1></div>`,
-    hasTimeline ? timelineNav(stops) : "<div></div>",
-    `<div class="bar-meta">${viewLabel}${asOf}<span class="generated">Generated ${generatedAt}</span></div>`,
-    "</div></header>"
-  ].join("");
-  const bodies = hasTimeline ? [
-    ...past.map(
-      (state, i) => `<div class="wrap tl-state tl-s${i}"><p class="tl-note">You are viewing this dashboard as it was at the end of <strong>${escapeHtml(dayLabels(state.day).long)}</strong>. The parity grid and component health come from the current registry, not from history.</p>${stateBody(state.data)}</div>`
-    ),
-    `<div class="wrap tl-state tl-s${past.length}">${stateBody(data)}</div>`
-  ] : [`<div class="wrap">${stateBody(data)}</div>`];
-  const body = [
-    hasTimeline ? timelineRadios(stops) : "",
-    header,
-    ...bodies
-  ].join("");
-  return [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '<meta charset="utf-8" />',
-    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
-    `<title>ds-bridge report \xB7 ${project}</title>`,
-    `<style>${STYLE}${HEADER_STYLE}${hasTimeline ? `${TIMELINE_STYLE}${timelineStyle(stops)}` : ""}</style>`,
-    "</head>",
-    "<body>",
-    body,
-    "</body>",
-    "</html>",
-    ""
-  ].join("\n");
-}
-
-// src/render/html/index.ts
-function renderIndex(entries) {
-  const cards = entries.length > 0 ? entries.map(
-    (entry) => [
-      '<section class="panel">',
-      `<h2><a href="${escapeHtml(entry.href)}">${escapeHtml(entry.name)}</a></h2>`,
-      "</section>"
-    ].join("")
-  ).join("") : [
-    '<section class="panel">',
-    '<div class="empty">',
-    '<span class="empty-title">No dashboards published</span>',
-    "<span>Configure <code>publish</code> or pass <code>--dashboards</code>.</span>",
-    "</div>",
-    "</section>"
-  ].join("");
-  const body = [
-    '<div class="wrap">',
-    '<header class="dash">',
-    "<h1>ds-bridge dashboards</h1>",
-    "</header>",
-    '<div class="grid">',
-    cards,
-    "</div>",
-    "</div>"
-  ].join("");
-  return [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '<meta charset="utf-8" />',
-    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
-    "<title>ds-bridge dashboards</title>",
-    `<style>${STYLE}</style>`,
-    "</head>",
-    "<body>",
-    body,
-    "</body>",
-    "</html>",
-    ""
-  ].join("\n");
-}
-
-// src/render/html/manager.ts
-var PAGE_STYLE = `
-.page { max-width: 960px; }
-.page .grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
-ol.ranked { margin: 0; padding-left: 20px; font-size: 14px; }
-ol.ranked li { padding: 4px 0; }
-.empty-line { color: var(--text-subtle); font-size: 13px; margin: 0; }
-@media print {
-	body { background: #ffffff; }
-	header.dash { background: #ffffff; color: var(--text); border-bottom: 1px solid var(--border); }
-	header.dash .generated { color: var(--text-subtle); }
-	section.panel, .kpi { break-inside: avoid; }
-}
-`.trim();
-var NOT_MEASURED = "not measured";
-function tile(label, value2, tone, sub) {
-  const measured = value2 !== void 0;
-  return [
-    `<div class="kpi${measured && tone !== void 0 ? ` ${tone}` : ""}">`,
-    `<span class="kpi-label">${escapeHtml(label)}</span>`,
-    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
-    `<span class="kpi-sub">${escapeHtml(measured ? sub ?? "" : NOT_MEASURED)}</span>`,
-    "</div>"
-  ].join("");
-}
-function debtTone2(pct5) {
-  if (pct5 < 25) return "ok";
-  if (pct5 < 60) return "warn";
-  return "error";
-}
-function panel2(title, body) {
-  return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
-}
-function emptyLine(text2) {
-  return `<p class="empty-line">${escapeHtml(text2)}</p>`;
-}
-function ranked(items, empty) {
-  if (items.length === 0) return emptyLine(empty);
-  return `<ol class="ranked">${items.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`;
-}
-var STATUS = {
-  green: { text: "On track", fill: TONE.ok },
-  amber: { text: "At risk", fill: TONE.warn },
-  red: { text: "Off track", fill: TONE.error },
-  unknown: { text: "Not measured", fill: TONE.neutral }
-};
-function tableHtml(header, rows) {
-  const head = header.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
-  const body = rows.map((r2) => `<tr>${r2.map((c2) => `<td>${c2}</td>`).join("")}</tr>`).join("");
-  return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
-}
-function days(n) {
-  return `${n} ${n === 1 ? "day" : "days"}`;
-}
-function age(n) {
-  if (n === void 0) return "age unknown";
-  return n === 0 ? "today" : `${n}d ago`;
-}
-var FRAMES_SHOWN = 10;
-function renderManagerHtml(report) {
-  const h = report.headline;
-  const project = escapeHtml(report.project);
-  const tiles = [
-    tile(
-      "System score",
-      h.score === void 0 ? void 0 : String(h.score.current),
-      h.score === void 0 ? void 0 : toneFor(h.score.current),
-      scoreChangeText(h, report.windowDays) ?? "out of 100"
-    ),
-    tile(
-      "On-system usage",
-      h.onSystem === void 0 ? void 0 : `${h.onSystem.pct}%`,
-      h.onSystem === void 0 ? void 0 : toneFor(h.onSystem.pct),
-      onSystemChangeText(h) ?? "tokens vs literals"
-    ),
-    tile(
-      "Component import coverage",
-      h.importCoverage === void 0 ? void 0 : `${h.importCoverage.pct}%`,
-      h.importCoverage === void 0 ? void 0 : toneFor(h.importCoverage.pct),
-      h.importCoverage === void 0 ? void 0 : `${h.importCoverage.imported} of ${h.importCoverage.total} components`
-    ),
-    tile(
-      "Consistency",
-      h.consistency === void 0 ? void 0 : String(h.consistency),
-      h.consistency === void 0 ? void 0 : toneFor(h.consistency),
-      "out of 100"
-    ),
-    tile(
-      "Design debt",
-      h.debt === void 0 ? void 0 : `${h.debt.pct}/100`,
-      h.debt === void 0 ? void 0 : debtTone2(h.debt.pct),
-      h.debt === void 0 ? void 0 : `${h.debt.level} \xB7 lower is better`
-    ),
-    tile(
-      "Handoff readiness",
-      h.handoff === void 0 ? void 0 : `${h.handoff.ready}/${h.handoff.frames}`,
-      h.handoff === void 0 ? void 0 : toneFor(100 * h.handoff.ready / h.handoff.frames),
-      "frames at the readiness bar"
-    )
-  ].join("");
-  const targets = report.targets.length === 0 ? emptyLine(
-    "No targets set. Add metric_targets to .ds-bridge.json to track goals."
-  ) : tableHtml(
-    ["Target", "Now", "Goal", "Status"],
-    report.targets.map((t) => {
-      const status = STATUS[t.band];
-      return [
-        escapeHtml(targetLabel(t.metric)),
-        escapeHtml(targetValue(t.metric, t.measured)),
-        escapeHtml(
-          `${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
-        ),
-        `<span class="badge" style="background:${status.fill};color:#ffffff">${escapeHtml(status.text)}</span>`
-      ];
-    })
-  );
-  const shownFrames = report.frames.slice(0, FRAMES_SHOWN);
-  const frames = report.frames.length === 0 ? emptyLine(
-    "No handoff checks yet. Run ds-bridge handoff <frame-url> to track frame readiness."
-  ) : [
-    tableHtml(
-      ["Frame", "Readiness", "Pass rate", "Runs"],
-      shownFrames.map((f3) => [
-        escapeHtml(frameLabel(f3)),
-        escapeHtml(String(f3.latest)),
-        escapeHtml(`${f3.passRate}%`),
-        escapeHtml(String(f3.runs))
-      ])
-    ),
-    report.frames.length > shownFrames.length ? `<div class="meta">\u2026 and ${escapeHtml(String(report.frames.length - shownFrames.length))} more frames</div>` : ""
-  ].join("");
-  const { measured, stale, never } = report.coverage;
-  const coverageItems = [];
-  if (measured.length > 0) {
-    coverageItems.push(
-      `<li><span class="date">Measured</span><span class="detail">${escapeHtml(measured.map((m) => `${kindLabel(m.kind)} (${age(m.ageDays)})`).join(", "))}</span></li>`
-    );
-  }
-  if (stale.length > 0) {
-    coverageItems.push(
-      `<li><span class="date">Stale</span><span class="detail">${escapeHtml(stale.map((m) => `${kindLabel(m.kind)} (${age(m.ageDays)})`).join(", "))}</span></li>`
-    );
-  }
-  if (never.length > 0) {
-    coverageItems.push(
-      `<li><span class="date">Never measured</span><span class="detail">${escapeHtml(never.map(kindLabel).join(", "))}</span></li>`
-    );
-  }
-  const coverage = coverageItems.length === 0 ? emptyLine("No checks recorded yet. Run ds-bridge record.") : `<ul class="calendar stack">${coverageItems.join("")}</ul>`;
-  const body = [
-    '<header class="dash"><div class="bar">',
-    `<h1>Design system report \xB7 <span class="project">${project}</span></h1>`,
-    `<span class="generated">${escapeHtml(readableInstant(report.generatedAt))} \xB7 last ${escapeHtml(days(report.windowDays))}</span>`,
-    "</div></header>",
-    '<div class="wrap page">',
-    `<div class="kpis">${tiles}</div>`,
-    '<div class="grid">',
-    panel2("Top risks", ranked(report.risks, "No risks flagged.")),
-    panel2("Next actions", ranked(report.actions, "Nothing urgent.")),
-    panel2("Targets", targets),
-    panel2("Handoff readiness by frame", frames),
-    panel2("Data coverage", coverage),
-    "</div>",
-    h.debt !== void 0 ? `<div class="meta">${escapeHtml(DEBT_INDEX_NOTE)}</div>` : "",
-    '<div class="meta">Generated by ds-bridge (report --format exec-html) from .ds-bridge/history.jsonl. Numbers marked \u201Cnot measured\u201D were never recorded; they are not zero.</div>',
-    "</div>"
-  ].join("");
-  return [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "<head>",
-    '<meta charset="utf-8" />',
-    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
-    `<title>Design system report \xB7 ${project}</title>`,
-    `<style>${STYLE}
-${PAGE_STYLE}</style>`,
-    "</head>",
-    "<body>",
-    body,
-    "</body>",
-    "</html>",
-    ""
-  ].join("\n");
-}
-
-// src/render/html/snapshot.ts
-var SNAPSHOT_SENTINEL = "__GENERATED_AT__";
-function normalizeSnapshot(html) {
-  return html.replace(
-    /(<span class="generated">Generated )[^<]*(<\/span>)/,
-    `$1${SNAPSHOT_SENTINEL}$2`
-  );
-}
-
-// src/render/markdown/manager.ts
-var NOT_MEASURED2 = "not measured";
-var NO_CHANGE = "\u2014";
-function cell(text2) {
-  return text2.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
-}
-function row(cells) {
-  return `| ${cells.map(cell).join(" | ")} |`;
-}
-function table(header, rows) {
-  return [row(header), row(header.map(() => "---")), ...rows.map(row)];
-}
-function days2(n) {
-  return `${n} ${n === 1 ? "day" : "days"}`;
-}
-function headlineRows(report) {
-  const h = report.headline;
-  const onSystem = h.onSystem;
-  const coverage = h.importCoverage;
-  const handoff = h.handoff;
-  return [
-    [
-      "System score",
-      h.score === void 0 ? NOT_MEASURED2 : `${h.score.current}/100`,
-      scoreChangeText(h, report.windowDays) ?? NO_CHANGE
-    ],
-    [
-      "On-system usage",
-      onSystem === void 0 ? NOT_MEASURED2 : `${onSystem.pct}%`,
-      onSystemChangeText(h) ?? NO_CHANGE
-    ],
-    [
-      "Component import coverage",
-      coverage === void 0 ? NOT_MEASURED2 : `${coverage.pct}% (${coverage.imported} of ${coverage.total})`,
-      NO_CHANGE
-    ],
-    [
-      "Consistency",
-      h.consistency === void 0 ? NOT_MEASURED2 : `${h.consistency}/100`,
-      NO_CHANGE
-    ],
-    [
-      "Design debt",
-      h.debt === void 0 ? NOT_MEASURED2 : `${h.debt.pct}/100 (${h.debt.level})`,
-      NO_CHANGE
-    ],
-    [
-      "Handoff readiness",
-      handoff === void 0 ? NOT_MEASURED2 : `${handoff.ready} of ${handoff.frames} ${handoff.frames === 1 ? "frame" : "frames"} ready`,
-      NO_CHANGE
-    ]
-  ];
-}
-var STATUS2 = {
-  green: "On track",
-  amber: "At risk",
-  red: "Off track",
-  unknown: "Not measured"
-};
-function numbered(items, empty) {
-  if (items.length === 0) return [empty];
-  return items.map((text2, i) => `${i + 1}. ${text2.replace(/\r?\n/g, " ")}`);
-}
-function age2(n) {
-  if (n === void 0) return "age unknown";
-  return n === 0 ? "today" : `${n}d ago`;
-}
-var FRAMES_SHOWN2 = 10;
-function renderManagerMarkdown(report) {
-  const out = [
-    `# Design system report: ${report.project}`,
-    "",
-    `Report date ${report.generatedAt.slice(0, 10)} \xB7 changes over the last ${days2(report.windowDays)}`,
-    "",
-    ...table(["Metric", "Now", "Change"], headlineRows(report)),
-    ""
-  ];
-  const trend = report.headline.score?.trend ?? [];
-  if (trend.length >= 2) {
-    out.push(`Score trend: ${sparkline(trend)} (${trend.length} runs)`, "");
-  }
-  out.push("## Targets", "");
-  if (report.targets.length === 0) {
-    out.push(
-      "No targets set. Add `metric_targets` to `.ds-bridge.json` to track goals."
-    );
-  } else {
-    out.push(
-      ...table(
-        ["Target", "Now", "Goal", "Status"],
-        report.targets.map((t) => [
-          targetLabel(t.metric),
-          targetValue(t.metric, t.measured),
-          `${targetOp(t.op)} ${targetValue(t.metric, t.target)}`,
-          STATUS2[t.band]
-        ])
-      )
-    );
-  }
-  out.push("");
-  out.push(
-    "## Top risks",
-    "",
-    ...numbered(report.risks, "No risks flagged."),
-    ""
-  );
-  out.push(
-    "## Next actions",
-    "",
-    ...numbered(report.actions, "Nothing urgent."),
-    ""
-  );
-  out.push("## Handoff readiness by frame", "");
-  if (report.frames.length === 0) {
-    out.push(
-      "No handoff checks yet. Run `ds-bridge handoff <frame-url>` to track frame readiness."
-    );
-  } else {
-    const shown = report.frames.slice(0, FRAMES_SHOWN2);
-    out.push(
-      ...table(
-        ["Frame", "Readiness", "Pass rate", "Runs"],
-        shown.map((f3) => [
-          frameLabel(f3),
-          String(f3.latest),
-          `${f3.passRate}%`,
-          String(f3.runs)
-        ])
-      )
-    );
-    if (report.frames.length > shown.length) {
-      out.push("", `\u2026 and ${report.frames.length - shown.length} more frames`);
-    }
-  }
-  out.push("");
-  out.push("## Data coverage", "");
-  const { measured, stale, never } = report.coverage;
-  if (measured.length + stale.length + never.length === 0) {
-    out.push("- No checks recorded yet. Run `ds-bridge record`.");
-  } else {
-    if (measured.length > 0) {
-      out.push(
-        `- Measured: ${measured.map((m) => `${kindLabel(m.kind)} (${age2(m.ageDays)})`).join(", ")}`
-      );
-    }
-    if (stale.length > 0) {
-      out.push(
-        `- Stale: ${stale.map((m) => `${kindLabel(m.kind)} (${age2(m.ageDays)})`).join(", ")}`
-      );
-    }
-    if (never.length > 0) {
-      out.push(`- Never measured: ${never.map(kindLabel).join(", ")}`);
-    }
-  }
-  out.push("");
-  if (report.headline.debt !== void 0) {
-    out.push(`_${DEBT_INDEX_NOTE}_`, "");
-  }
-  out.push(
-    '_Generated by ds-bridge (`report --format exec`) from `.ds-bridge/history.jsonl`. Numbers marked "not measured" were never recorded; they are not zero._',
-    ""
-  );
-  return out.join("\n");
-}
-
-// src/render/terminal/dashboard.ts
-function emptyState3(command) {
-  return `No data yet \u2014 run \`ds-bridge ${command}\` to populate this section.`;
-}
-function panel3(title, body) {
-  return `${title}
-${"\u2500".repeat([...title].length)}
-${body}`;
-}
-function systemScoreTerminalSection(data, color) {
-  const score = data.systemScore;
-  if (score === void 0) {
-    return panel3("System score", emptyState3("report"));
-  }
-  const COMPONENT_LABEL3 = {
-    drift: "drift",
-    lint: "lint",
-    readiness: "readiness",
-    a11y: "a11y",
-    adoption: "on-system",
-    parity: "parity"
-  };
-  const gauge = renderGauge(score.current, {
-    label: "System score",
-    width: 24,
-    color
-  });
-  const trend = sparkline(score.trend.map((point) => point.score));
-  const legend = renderTable(
-    ["Component", "Sub-score", "Weight"],
-    score.components.map((c2) => [
-      COMPONENT_LABEL3[c2.kind] ?? c2.kind,
-      String(c2.score),
-      String(c2.weight)
-    ]),
-    { color }
-  );
-  return panel3("System score", [gauge, trend, legend].join("\n"));
-}
-function driftTrendTerminalSection(data, _color) {
-  const trend = data.driftTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel3("Drift trend", emptyState3("tokens check"));
-  }
-  const breaking = sparkline(trend.map((point) => point.breaking));
-  const additive = sparkline(trend.map((point) => point.additive));
-  const cosmetic = sparkline(trend.map((point) => point.cosmetic));
-  const dateRange = trend.length > 0 ? `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}` : "";
-  return panel3(
-    "Drift trend",
-    [
-      `Breaking ${breaking}`,
-      `Additive ${additive}`,
-      `Cosmetic ${cosmetic}`,
-      `Breaking \xB7 Additive \xB7 Cosmetic over ${dateRange}`
-    ].join("\n")
-  );
-}
-function lintSummaryTerminalSection(data, color) {
-  const lint = data.lintSummary;
-  if (lint === void 0) {
-    return panel3("Lint violations", emptyState3("lint"));
-  }
-  const bars = renderBarChart(
-    [
-      { label: "Exact", value: lint.byKind.exact },
-      { label: "Near", value: lint.byKind.near },
-      { label: "Off-system", value: lint.byKind.offSystem }
-    ],
-    { width: 24, color }
-  );
-  const offenders = lint.topOffenders.length > 0 ? lint.topOffenders.map((o) => `${o.file}  ${o.count}`).join("\n") : "";
-  const body = offenders === "" ? bars : `${bars}
-${offenders}`;
-  return panel3("Lint violations", body);
-}
-function readinessTerminalSection(data, color) {
-  const readiness = data.readiness;
-  if (readiness === void 0) {
-    return panel3("Readiness", emptyState3("handoff <frame-url>"));
-  }
-  const gauge = renderGauge(readiness.score, {
-    label: "Readiness",
-    width: 24,
-    color
-  });
-  const deductions = readiness.deductions.length > 0 ? readiness.deductions.map((d) => `${d.reason}  -${d.points}`).join("\n") : "";
-  const lines = [gauge, readiness.frameName];
-  if (deductions !== "") {
-    lines.push(deductions);
-  }
-  return panel3("Readiness", lines.join("\n"));
-}
-function parityTerminalSection(data, color) {
-  const parity = data.parity;
-  if (parity === void 0 || parity.rows.length === 0) {
-    return panel3("Parity matrix", emptyState3("parity"));
-  }
-  const STATUS_CELL = {
-    ok: "ok",
-    "prop-mismatch": "warn",
-    "missing-in-code": "fail",
-    "missing-in-figma": "fail"
-  };
-  const rows = parity.rows.map((row2) => ({
-    label: row2.component,
-    cells: row2.cells.map((cell3) => STATUS_CELL[cell3.status])
-  }));
-  const body = [renderMatrix(rows, parity.columns, { color })];
-  if (parity.columns.length > 0) {
-    body.push(`Columns: ${parity.columns.join(" \xB7 ")}`);
-  }
-  return panel3("Parity matrix", body.join("\n"));
-}
-function a11yTerminalSection(data, color) {
-  const a11y = data.a11y;
-  if (a11y === void 0 || a11y.modes.length === 0) {
-    return panel3("Contrast (a11y)", emptyState3("a11y"));
-  }
-  const bars = a11y.modes.map((m) => ({
-    label: m.mode,
-    value: m.failed
-  }));
-  const tallies = a11y.modes.map(
-    (m) => `${m.mode}  ${m.passed} passed \xB7 ${m.failed} failed`
-  );
-  const body = [
-    `Failures by mode \xB7 level ${a11y.level}`,
-    renderBarChart(bars, { width: 24, color }),
-    ...tallies
-  ].join("\n");
-  return panel3("Contrast (a11y)", body);
-}
-function impactTerminalSection(data, color) {
-  const impact = data.impact;
-  if (impact === void 0) {
-    return panel3("Change impact", emptyState3("impact"));
-  }
-  const bars = [
-    { label: "Breaking", value: impact.breaking },
-    { label: "Additive", value: impact.additive },
-    { label: "Cosmetic", value: impact.cosmetic }
-  ];
-  const sites = impact.touchedCallSites;
-  const radius = `Touches ${sites} call site${sites === 1 ? "" : "s"}`;
-  const body = [renderBarChart(bars, { width: 24, color }), radius].join("\n");
-  return panel3("Change impact", body);
-}
-function adoptionTrendTerminalSection(data, _color) {
-  const trend = data.adoptionTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel3("Adoption trend", emptyState3("lint <dir>"));
-  }
-  const spark = sparkline(trend.map((point) => point.pct));
-  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
-  const body = [
-    `on-system %  ${spark}`,
-    `On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)`
-  ].join("\n");
-  return panel3("Adoption trend", body);
-}
-function importCoverageTerminalSection(data, color) {
-  const coverage = data.importCoverage;
-  if (coverage === void 0) {
-    return panel3("Import coverage", emptyState3("adoption"));
-  }
-  const { imported, total, uncovered, uncoveredTotal } = coverage;
-  const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
-  const lines = [];
-  lines.push(renderGauge(pct5, { label: "Import coverage", width: 24, color }));
-  lines.push(
-    `${imported}/${total} registry components imported \xB7 resolved .tsx imports only (a floor)`
-  );
-  if (uncovered.length > 0) {
-    for (const name of uncovered) {
-      lines.push(`\u2022 ${name}`);
-    }
-  }
-  if (uncoveredTotal > uncovered.length) {
-    lines.push(`\u2026 and ${uncoveredTotal - uncovered.length} more`);
-  }
-  return panel3("Import coverage", lines.join("\n"));
-}
-function leaderboardTerminalSection(data, color) {
-  const rows = data.leaderboard;
-  if (rows === void 0 || rows.length === 0) {
-    return panel3("Adoption leaderboard", emptyState3("lint <dir>"));
-  }
-  const onSystemPct4 = (refs, literals) => {
-    const total = refs + literals;
-    return total === 0 ? 0 : Math.round(refs / total * 100);
-  };
-  const bars = rows.map((row2) => ({
-    label: row2.dir,
-    value: onSystemPct4(row2.refs, row2.literals)
-  }));
-  const lines = [];
-  lines.push("On-system % by directory, worst-first \xB7 css/scss values only");
-  lines.push(renderBarChart(bars, { width: 24, color }));
-  return panel3("Adoption leaderboard", lines.join("\n"));
-}
-function libraryHealthTerminalSection(data, color) {
-  const health = data.libraryHealth;
-  if (health === void 0) {
-    return panel3("Library health", emptyState3("library-health"));
-  }
-  const { totals } = health;
-  const bars = [
-    { label: "Override hotspots", value: totals.overrideHotspots },
-    { label: "Deprecated usage", value: totals.deprecatedUsage },
-    { label: "Detached candidates", value: totals.detachedCandidates }
-  ];
-  const lines = [];
-  lines.push(renderBarChart(bars, { width: 24, color }));
-  lines.push(
-    `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
-  );
-  if (health.overrideHotspots.length > 0) {
-    for (const h of health.overrideHotspots) {
-      lines.push(`\u2022 ${h.name} (${h.overrideCount})`);
-    }
-  }
-  return panel3("Library health", lines.join("\n"));
-}
-function breakingCalendarTerminalSection(data, color) {
-  const calendar = data.breakingCalendar;
-  if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel3("Breaking calendar", emptyState3("tokens check"));
-  }
-  const BREAKING_SOURCE_LABEL2 = {
-    tokens: "tokens",
-    figma: "figma"
-  };
-  const rows = calendar.entries.map((entry) => {
-    const detail = entry.detail ?? `${entry.count}`;
-    return [entry.date, BREAKING_SOURCE_LABEL2[entry.source], detail];
-  });
-  const lines = [];
-  lines.push(
-    `${calendar.total} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first`
-  );
-  lines.push(renderTable(["Date", "Source", "Detail"], rows, { color }));
-  return panel3("Breaking calendar", lines.join("\n"));
-}
-function changeFrequencyTerminalSection(data, color) {
-  const frequency = data.changeFrequency;
-  if (frequency === void 0 || frequency.byKind.length === 0) {
-    return panel3("Change frequency", emptyState3("tokens check"));
-  }
-  const items = frequency.byKind.map((bucket) => ({
-    label: bucket.kind,
-    value: bucket.count
-  }));
-  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `Records per kind \xB7 ${frequency.windowFirst} \u2192 ${frequency.windowLast}` : "Records per kind";
-  const body = [window, renderBarChart(items, { width: 24, color })].join("\n");
-  return panel3("Change frequency", body);
-}
-function targetsTerminalSection(data, color) {
-  const targets = data.targets;
-  if (targets === void 0 || targets.length === 0) {
-    return panel3("Targets / SLAs", emptyState3("report"));
-  }
-  const COMPONENT_LABEL3 = {
-    drift: "drift",
-    lint: "lint",
-    readiness: "readiness",
-    a11y: "a11y",
-    adoption: "on-system",
-    parity: "parity"
-  };
-  const bandLevel2 = (band) => band === "green" ? "ok" : band === "amber" ? "warn" : band === "red" ? "error" : "info";
-  const rows = targets.map((verdict) => [
-    COMPONENT_LABEL3[verdict.metric] ?? verdict.metric,
-    verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
-    `${verdict.op} ${verdict.target}`,
-    severityColor(bandLevel2(verdict.band), verdict.band, { color })
-  ]);
-  const table3 = renderTable(["Metric", "Measured", "Target", "Status"], rows, {
-    color
-  });
-  const legend = [
-    "green = meets target",
-    "amber = near target",
-    "red = misses target",
-    "unknown = not measured"
-  ].join("  \xB7  ");
-  return panel3("Targets / SLAs", [table3, legend].join("\n"));
-}
-function parityTrendTerminalSection(data, _color) {
-  const trend = data.parityTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel3("Parity trend", emptyState3("registry build"));
-  }
-  const values = trend.map((point) => point.pct);
-  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
-  const body = [
-    `parity %  ${sparkline(values)}`,
-    `Component parity pass-% over ${dateRange}`
-  ].join("\n");
-  return panel3("Parity trend", body);
-}
-function componentHealthTerminalSection(data, color) {
-  const rows = data.componentHealth;
-  if (rows === void 0 || rows.length === 0) {
-    return panel3("Component health", emptyState3("registry build"));
-  }
-  const tableRows = rows.map((row2) => [
-    row2.component,
-    String(row2.healthScore),
-    row2.issues.length > 0 ? row2.issues.join(", ") : "no issues"
-  ]);
-  const table3 = renderTable(["Component", "Health", "Issues"], tableRows, {
-    color
-  });
-  const body = ["Composite health per component, worst-first", table3].join(
-    "\n"
-  );
-  return panel3("Component health", body);
-}
-function libraryHealthTrendTerminalSection(data, _color) {
-  const trend = data.libraryHealthTrend;
-  if (trend === void 0 || trend.length === 0) {
-    return panel3("Library health trend", emptyState3("library-health"));
-  }
-  const overrides = sparkline(trend.map((p4) => p4.overrides));
-  const deprecated = sparkline(trend.map((p4) => p4.deprecated));
-  const detached = sparkline(trend.map((p4) => p4.detached));
-  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
-  const detachedCaveat = "Detached: \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.";
-  const body = [
-    `Overrides  ${overrides}`,
-    `Deprecated ${deprecated}`,
-    `Detached   ${detached}`,
-    `over ${dateRange}`,
-    detachedCaveat
-  ].join("\n");
-  return panel3("Library health trend", body);
-}
-function migrationChecklistTerminalSection(data, color) {
-  const checklist = data.migrationChecklist;
-  if (checklist === void 0 || checklist.sites.length === 0) {
-    return panel3("Migration checklist", emptyState3("impact --checklist"));
-  }
-  const headers = ["site", "subject", "from \u2192 to"];
-  const rows = checklist.sites.map((site) => [
-    `${site.file}:${site.line}`,
-    site.subject,
-    `${site.from} \u2192 ${site.to}`
-  ]);
-  const count = checklist.sites.length;
-  const meta = `${count} call site${count === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to`;
-  const overflow = checklist.truncated ? "\u2026 and more sites beyond the cap" : "";
-  const mapUsageCaveat = "mapUsage scans resolved .tsx imports only, so the number is a floor.";
-  const body = [
-    meta,
-    renderTable(headers, rows, { color }),
-    ...overflow !== "" ? [overflow] : [],
-    mapUsageCaveat
-  ].join("\n");
-  return panel3("Migration checklist", body);
-}
-function scoreVelocityTerminalSection(data, color) {
-  const velocity = data.scoreVelocity;
-  if (velocity === void 0) {
-    return panel3("Score velocity", emptyState3("report"));
-  }
-  const { delta, windowDays, direction, regressionStreak } = velocity;
-  const ARROW = {
-    up: "\u25B2",
-    down: "\u25BC",
-    flat: "\u25AC"
-  };
-  const arrow3 = ARROW[direction];
-  const signedDelta2 = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
-  const streakText = regressionStreak > 0 ? severityColor("warn", `${regressionStreak}-decline streak`, { color }) : "0-decline streak";
-  const headline2 = `${arrow3} ${signedDelta2} over ${windowDays} day${windowDays === 1 ? "" : "s"}`;
-  const body = [headline2, `${direction} \xB7 ${streakText}`].join("\n");
-  return panel3("Score velocity", body);
-}
-function ownershipLeaderboardTerminalSection(data, color) {
-  const rows = data.ownershipLeaderboard;
-  if (rows === void 0 || rows.length === 0) {
-    return panel3("Ownership leaderboard", emptyState3("lint"));
-  }
-  const bars = rows.map((row2) => ({ label: row2.owner, value: row2.pct }));
-  const labels = rows.map(
-    (row2) => `${row2.owner}: ${row2.pct}% \xB7 ${row2.refs} refs / ${row2.literals} literals`
-  ).join("\n");
-  const body = [
-    "On-system % by owner, worst-first \xB7 css/scss values only",
-    renderBarChart(bars, { width: 24, color }),
-    labels
-  ].join("\n");
-  return panel3("Ownership leaderboard", body);
-}
-function audienceChangelogTerminalSection(data, color) {
-  const changelog = data.audienceChangelog;
-  if (changelog === void 0 || changelog.slices.length === 0) {
-    return panel3("Changelog by audience", emptyState3("changelog"));
-  }
-  const headers = ["audience", "breaking", "additive", "cosmetic", "recent"];
-  const rows = changelog.slices.map((slice) => [
-    slice.audience,
-    String(slice.breaking),
-    String(slice.additive),
-    String(slice.cosmetic),
-    slice.recent.length > 0 ? slice.recent.join(", ") : "No recent entries"
-  ]);
-  return panel3("Changelog by audience", renderTable(headers, rows, { color }));
-}
-function frameImplementabilityTerminalSection(data, color) {
-  const frame = data.frameImplementability;
-  if (frame === void 0) {
-    return panel3("Frame implementability", emptyState3("frame-impl"));
-  }
-  const { pct: pct5, resolved, total, gaps } = frame;
-  const gauge = renderGauge(pct5, {
-    label: "Frame implementability",
-    width: 24,
-    color
-  });
-  const meta = `${resolved}/${total} requirements resolve to the system`;
-  const body = [gauge, meta];
-  if (gaps.length > 0) {
-    body.push(
-      renderBarChart(
-        gaps.map((gap) => ({ label: gap.reason, value: gap.count })),
-        { width: 24, color }
-      )
-    );
-  }
-  return panel3("Frame implementability", body.join("\n"));
-}
-function releaseReadinessTerminalSection(data, color) {
-  const readiness = data.releaseReadiness;
-  if (readiness === void 0 || readiness.checks.length === 0) {
-    return panel3("Release readiness", emptyState3("release-check"));
-  }
-  const verdict = readiness.go ? severityColor("ok", "GO", { color }) : severityColor("error", "NO-GO", { color });
-  const headers = ["check", "pass", "detail"];
-  const rows = readiness.checks.map((check) => [
-    check.name,
-    check.pass ? severityColor("ok", "\u2713", { color }) : severityColor("error", "\u2717", { color }),
-    check.detail !== void 0 && check.detail.length > 0 ? check.detail : ""
-  ]);
-  return panel3(
-    "Release readiness",
-    [verdict, renderTable(headers, rows, { color })].join("\n")
-  );
-}
-function dataFreshnessTerminalSection(data, color) {
-  const rows = data.dataFreshness;
-  if (rows === void 0 || rows.length === 0) {
-    return panel3("Data freshness", emptyState3("report"));
-  }
-  const BAND_SEVERITY = {
-    green: "ok",
-    amber: "warn",
-    red: "error",
-    unknown: "info"
-  };
-  const ageLabel = (row2) => {
-    if (row2.ageDays === void 0) return "never";
-    if (row2.ageDays === 0) return "today";
-    return `${row2.ageDays}d ago`;
-  };
-  const headers = ["kind", "lastRun", "age", "band"];
-  const tableRows = rows.map((row2) => [
-    row2.kind,
-    row2.lastRun ?? "never",
-    ageLabel(row2),
-    severityColor(BAND_SEVERITY[row2.band], row2.band, { color })
-  ]);
-  return panel3(
-    "Data freshness",
-    [
-      "Measurement age per check-kind \xB7 band signals trust",
-      renderTable(headers, tableRows, { color })
-    ].join("\n")
-  );
-}
-function executiveTerminalSection(data, _color) {
-  const exec = data.executive;
-  if (exec === void 0) {
-    return panel3("Executive summary", emptyState3("record"));
-  }
-  const row2 = (label, value2) => `${label.padEnd(17)}${value2 ?? "\u2014"}`;
-  const lines = [
-    row2(
-      "System score",
-      exec.health === void 0 ? void 0 : String(exec.health)
-    ),
-    row2(
-      "Import coverage",
-      exec.adoption === void 0 ? void 0 : `${exec.adoption}%`
-    ),
-    row2(
-      "Consistency",
-      exec.consistency === void 0 ? void 0 : String(exec.consistency)
-    ),
-    row2("Design debt", exec.debt === void 0 ? void 0 : `${exec.debt}%`)
-  ];
-  const trend = exec.trend ?? [];
-  if (trend.length >= 2) {
-    lines.push(`${"Trend".padEnd(17)}${sparkline(trend.map((p4) => p4.score))}`);
-  }
-  return panel3("Executive summary", lines.join("\n"));
-}
-function consistencyTerminalSection(data, color) {
-  const consistency = data.consistency;
-  if (consistency === void 0) {
-    return panel3("Consistency", emptyState3("lint <dir>"));
-  }
-  const gauge = renderGauge(consistency.score, {
-    label: "Consistency",
-    width: 24,
-    color
-  });
-  const table3 = renderTable(
-    ["Signal", "Score", "Weight"],
-    consistency.components.map((c2) => [
-      c2.kind,
-      String(c2.score),
-      String(c2.weight)
-    ]),
-    { color }
-  );
-  return panel3(
-    "Consistency",
-    [
-      gauge,
-      table3,
-      "overrides is a documented-opinion penalty (8 per hotspot)"
-    ].join("\n")
-  );
-}
-function designDebtTerminalSection(data, color) {
-  const debt = data.debt;
-  if (debt === void 0) {
-    return panel3("Design debt", emptyState3("lint <dir>"));
-  }
-  const LEVEL_SEVERITY = { low: "ok", medium: "warn", high: "error" };
-  const headline2 = `${debt.pct}% \xB7 ${severityColor(LEVEL_SEVERITY[debt.level], debt.level, { color })}`;
-  if (debt.items.length === 0) return panel3("Design debt", headline2);
-  const shown = debt.items.slice(0, 8);
-  const table3 = renderTable(
-    ["Subject", "Kind", "Count", "Recommendation"],
-    shown.map((i) => [i.subject, i.kind, String(i.count), i.recommendation]),
-    { color }
-  );
-  const more = debt.items.length > shown.length ? [`\u2026 and ${debt.items.length - shown.length} more`] : [];
-  return panel3("Design debt", [headline2, table3, ...more].join("\n"));
-}
-function libraryHotspotsTrendTerminalSection(data, _color) {
-  const trend = data.libraryHotspotsTrend;
-  if (trend === void 0 || trend.rows.length === 0) {
-    return panel3("Library hotspots trend", emptyState3("library-health"));
-  }
-  const lines = [`Top components per signal \xB7 ${dateSpan(trend.dates)}`];
-  for (const signal of SIGNAL_ORDER) {
-    const rows = trend.rows.filter((r2) => r2.signal === signal);
-    if (rows.length === 0) continue;
-    const width = Math.max(...rows.map((r2) => [...r2.name].length));
-    lines.push("", SIGNAL_LABEL[signal]);
-    for (const row2 of rows) {
-      lines.push(`  ${row2.name.padEnd(width)}  ${hotspotDetail(row2)}`);
-    }
-  }
-  return panel3("Library hotspots trend", lines.join("\n"));
-}
-function frameReadinessTrendTerminalSection(data, _color) {
-  const trend = data.frameReadinessTrend;
-  if (trend === void 0 || trend.frames.length === 0) {
-    return panel3("Frame readiness trend", emptyState3("handoff <frame-url>"));
-  }
-  const names = trend.frames.map(
-    (f3) => f3.frameName === "" ? f3.key : f3.frameName
-  );
-  const width = Math.max(...names.map((n) => [...n].length));
-  const lines = [
-    belowGateMeta(trend),
-    ...trend.frames.map(
-      (frame, i) => `  ${(names[i] ?? "").padEnd(width)}  ${frameDetail(frame)}`
-    )
-  ];
-  const more = frameOverflow(trend);
-  if (more !== void 0) lines.push(more);
-  return panel3("Frame readiness trend", lines.join("\n"));
-}
-function handoffPassRateTerminalSection(data, _color) {
-  const rate = data.handoffPassRate;
-  if (rate === void 0 || rate.frames === 0) {
-    return panel3("Handoff pass rate", emptyState3("handoff <frame-url>"));
-  }
-  const lines = [`${rate.pct}% \xB7 ${passRateSub(rate)}`];
-  const line = passRateTrendLine(rate);
-  if (line !== void 0) lines.push(line);
-  return panel3("Handoff pass rate", lines.join("\n"));
-}
-var SECTION_RENDERERS_TERMINAL = {
-  "system-score": systemScoreTerminalSection,
-  "drift-trend": driftTrendTerminalSection,
-  "lint-summary": lintSummaryTerminalSection,
-  readiness: readinessTerminalSection,
-  parity: parityTerminalSection,
-  a11y: a11yTerminalSection,
-  impact: impactTerminalSection,
-  "adoption-trend": adoptionTrendTerminalSection,
-  "import-coverage": importCoverageTerminalSection,
-  leaderboard: leaderboardTerminalSection,
-  "library-health": libraryHealthTerminalSection,
-  "breaking-calendar": breakingCalendarTerminalSection,
-  "change-frequency": changeFrequencyTerminalSection,
-  targets: targetsTerminalSection,
-  "parity-trend": parityTrendTerminalSection,
-  "component-health": componentHealthTerminalSection,
-  "library-health-trend": libraryHealthTrendTerminalSection,
-  "migration-checklist": migrationChecklistTerminalSection,
-  "score-velocity": scoreVelocityTerminalSection,
-  "ownership-leaderboard": ownershipLeaderboardTerminalSection,
-  "audience-changelog": audienceChangelogTerminalSection,
-  "frame-implementability": frameImplementabilityTerminalSection,
-  "release-readiness": releaseReadinessTerminalSection,
-  "data-freshness": dataFreshnessTerminalSection,
-  consistency: consistencyTerminalSection,
-  "design-debt": designDebtTerminalSection,
-  executive: executiveTerminalSection,
-  "library-hotspots-trend": libraryHotspotsTrendTerminalSection,
-  "frame-readiness-trend": frameReadinessTrendTerminalSection,
-  "handoff-pass-rate": handoffPassRateTerminalSection
-};
-function renderTerminalDashboard(data, selection, opts) {
-  const headerLines = [`ds-bridge report \xB7 ${data.project}`];
-  if (opts.viewLabel !== void 0) headerLines.push(`View: ${opts.viewLabel}`);
-  headerLines.push(`Generated ${opts.generatedAt}`);
-  const header = headerLines.join("\n");
-  const sections = selection.map(
-    (id) => SECTION_RENDERERS_TERMINAL[id](data, opts.color)
-  );
-  return [header, ...sections].join("\n\n");
-}
-
-// src/cli-commands/report.ts
-var RULE_REASON = {
-  "var-binding": "Variable binding",
-  "auto-layout": "Auto layout",
-  component: "Component usage",
-  naming: "Naming"
-};
-function renderInstant(env = process.env) {
-  const epoch = env.SOURCE_DATE_EPOCH?.trim();
-  if (epoch !== void 0 && /^\d+$/.test(epoch)) {
-    return new Date(Number(epoch) * 1e3).toISOString();
-  }
-  return (/* @__PURE__ */ new Date()).toISOString();
-}
-function asNumber12(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function onSystemPct3(refs, literals) {
-  const total = refs + literals;
-  return total === 0 ? 0 : Math.round(refs / total * 100);
-}
-function aggregateHistory(text2, historyPath, onWarning) {
-  const driftTrend = [];
-  let lint;
-  let readiness;
-  let a11y;
-  let impact;
-  const adoptionTrend = [];
-  let leaderboard;
-  let importCoverage;
-  let libraryHealth;
-  const lines = text2.split("\n");
-  for (let index = 0; index < lines.length; index += 1) {
-    const trimmed = (lines[index] ?? "").trim();
-    if (trimmed === "") continue;
-    let record;
-    try {
-      record = JSON.parse(trimmed);
-    } catch {
-      onWarning(
-        `warning: skipping corrupted history line ${index + 1} in ${historyPath}`
-      );
-      continue;
-    }
-    if (record.kind === "tokens-check") {
-      const r2 = record;
-      const date = typeof r2.at === "string" ? r2.at.slice(0, 10) : "";
-      driftTrend.push({
-        date,
-        breaking: asNumber12(r2.stale),
-        additive: asNumber12(r2.missing),
-        cosmetic: asNumber12(r2.orphan)
-      });
-      continue;
-    }
-    if (record.kind === "lint") {
-      const r2 = record;
-      const byKind = r2.byKind ?? { exact: 0, near: 0, offSystem: 0 };
-      lint = {
-        byKind: {
-          exact: asNumber12(byKind.exact),
-          near: asNumber12(byKind.near),
-          offSystem: asNumber12(byKind.offSystem)
-        },
-        topOffenders: []
-      };
-      const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
-      if (adoption !== void 0) {
-        const refs = asNumber12(adoption.refs);
-        const literals = asNumber12(adoption.literals);
-        if (typeof r2.at === "string") {
-          adoptionTrend.push({
-            date: r2.at.slice(0, 10),
-            pct: onSystemPct3(refs, literals)
-          });
-        }
-        const byDirectory = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
-        leaderboard = byDirectory.map((d) => ({
-          dir: typeof d.dir === "string" ? d.dir : "",
-          refs: asNumber12(d.refs),
-          literals: asNumber12(d.literals)
-        }));
-      }
-      continue;
-    }
-    if (record.kind === "adoption") {
-      const r2 = record;
-      const imported = asNumber12(r2.imported);
-      const total = asNumber12(r2.total);
-      const uncovered = Array.isArray(r2.uncovered) ? r2.uncovered.filter((n) => typeof n === "string") : [];
-      importCoverage = {
-        imported,
-        total,
-        uncovered,
-        uncoveredTotal: Math.max(0, total - imported)
-      };
-      continue;
-    }
-    if (record.kind === "handoff") {
-      const r2 = record;
-      const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
-      readiness = {
-        score: asNumber12(r2.score),
-        frameName: typeof r2.frameName === "string" ? r2.frameName : "",
-        deductions: deductions.map((d) => ({
-          reason: RULE_REASON[d.rule] ?? d.rule,
-          points: asNumber12(d.points)
-        }))
-      };
-      continue;
-    }
-    if (record.kind === "a11y") {
-      const r2 = record;
-      const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
-      a11y = {
-        level: r2.level === "AAA" ? "AAA" : "AA",
-        modes: modes2.map((m) => ({
-          mode: typeof m.mode === "string" ? m.mode : "",
-          passed: asNumber12(m.passed),
-          failed: asNumber12(m.failed)
-        }))
-      };
-      continue;
-    }
-    if (record.kind === "impact") {
-      const r2 = record;
-      impact = {
-        breaking: asNumber12(r2.breaking),
-        additive: asNumber12(r2.additive),
-        cosmetic: asNumber12(r2.cosmetic),
-        touchedCallSites: asNumber12(r2.touchedCallSites)
-      };
-      continue;
-    }
-    if (record.kind === "library-health") {
-      const r2 = record;
-      libraryHealth = {
-        overrideHotspots: [],
-        deprecatedUsage: [],
-        detachedCandidates: [],
-        totals: {
-          overrideHotspots: asNumber12(r2.overrideHotspots),
-          deprecatedUsage: asNumber12(r2.deprecatedUsage),
-          detachedCandidates: asNumber12(r2.detachedCandidates)
-        }
-      };
-    }
-  }
-  return {
-    driftTrend,
-    lintSummary: lint,
-    readiness,
-    a11y,
-    impact,
-    adoptionTrend,
-    leaderboard,
-    importCoverage,
-    libraryHealth
-  };
-}
-function computeSystemScore(text2, weights) {
-  const outcome = scoreFromHistory(text2, weights);
-  if (outcome.kind === "no-data") return void 0;
-  return {
-    current: outcome.current,
-    components: outcome.components,
-    trend: outcome.trend
-  };
-}
-function computeConsumerArtifacts(records) {
-  return {
-    breakingCalendar: buildBreakingCalendar(records),
-    changeFrequency: buildChangeFrequency(records)
-  };
-}
-function computeParityTrend(records) {
-  return buildParityTrend(records);
-}
-function computeFigmaTrends(records, readinessThreshold2) {
-  const libraryHotspotsTrend = buildLibraryHotspotsTrend(records);
-  const frameReadinessTrend = buildFrameReadinessTrend(
-    records,
-    readinessThreshold2
-  );
-  const handoffPassRate = buildHandoffPassRate(records, readinessThreshold2);
-  return {
-    ...libraryHotspotsTrend !== void 0 ? { libraryHotspotsTrend } : {},
-    ...frameReadinessTrend !== void 0 ? { frameReadinessTrend } : {},
-    ...handoffPassRate !== void 0 ? { handoffPassRate } : {}
-  };
-}
-function computeLibraryHealthTrend(records) {
-  return buildLibraryHealthTrend(records);
-}
-var VELOCITY_WINDOW = /^(\d+)([dw])$/;
-function parseVelocityWindow(raw) {
-  if (raw === void 0) return { kind: "ok", days: void 0 };
-  const match = VELOCITY_WINDOW.exec(raw);
-  if (match === null) {
-    return {
-      kind: "error",
-      message: `Invalid --velocity-window "${raw}". Expected a relative window "<N>d" or "<N>w".`
-    };
-  }
-  const count = Number.parseInt(match[1] ?? "", 10);
-  if (count <= 0) {
-    return {
-      kind: "error",
-      message: `Invalid --velocity-window "${raw}". The count must be a positive integer.`
-    };
-  }
-  return { kind: "ok", days: match[2] === "w" ? count * 7 : count };
-}
-function computeScoreVelocity(trend, nowIso, windowDays) {
-  return computeVelocity(trend, nowIso, windowDays);
-}
-function computeMigrationChecklist(records, cap) {
-  let latestImpact;
-  for (const entry of records) {
-    if (entry.kind === "impact") latestImpact = entry.record;
-  }
-  return buildMigrationChecklist(latestImpact, cap);
-}
-function computeAudienceChangelog(records) {
-  let latestChangelog;
-  for (const entry of records) {
-    if (entry.kind === "changelog") latestChangelog = entry.record;
-  }
-  return buildAudienceChangelog(latestChangelog);
-}
-function computeFrameImplementability(records) {
-  let latestFrameImpl;
-  for (const entry of records) {
-    if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
-  }
-  return buildFrameImplementability(latestFrameImpl);
-}
-function resolveOwnership(targetDir, ownership, ownershipFile) {
-  if (ownership !== void 0) return ownership;
-  if (ownershipFile === void 0) return void 0;
-  let text2;
-  try {
-    text2 = readFileSync6(resolve6(targetDir, ownershipFile), "utf8");
-  } catch {
-    return void 0;
-  }
-  return parseCodeowners(text2);
-}
-function byDirectoryFromRecords(records) {
-  let byDirectory = [];
-  for (const { kind, record } of records) {
-    if (kind !== "lint") continue;
-    const adoption = asRecord2(record.adoption);
-    if (adoption === void 0) continue;
-    const raw = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
-    byDirectory = raw.map((entry) => {
-      const dirRec = asRecord2(entry) ?? {};
-      return {
-        dir: typeof dirRec.dir === "string" ? dirRec.dir : "",
-        refs: asNumber12(dirRec.refs),
-        literals: asNumber12(dirRec.literals)
-      };
-    });
-  }
-  return byDirectory;
-}
-function computeOwnershipLeaderboard(records, ownership) {
-  if (ownership === void 0) return [];
-  return rollupByOwner(byDirectoryFromRecords(records), ownership);
-}
-function computeReleaseReadiness(records) {
-  const signals = extractReleaseSignals(records);
-  if (signals.impact === void 0 && signals.drift === void 0 && signals.parity === void 0) {
-    return { go: false, checks: [] };
-  }
-  return evaluateReleaseReadiness(signals);
-}
-function computeDataFreshness(records, nowIso, thresholds) {
-  return buildFreshness(records, nowIso, thresholds);
-}
-function readParityRows(stateDir) {
-  const registryPath = join7(stateDir, "registry.json");
-  let text2;
-  try {
-    text2 = readFileSync6(registryPath, "utf8");
-  } catch {
-    return [];
-  }
-  let registry;
-  try {
-    registry = JSON.parse(text2);
-  } catch {
-    return [];
-  }
-  return buildParity(registry).rows;
-}
-function computeComponentHealth(stateDir, readiness, a11y, aliases) {
-  return buildComponentHealth({
-    parityRows: readParityRows(stateDir),
-    ...readiness !== void 0 ? {
-      readiness: {
-        frameName: readiness.frameName,
-        score: readiness.score
-      }
-    } : {},
-    ...a11y !== void 0 ? { a11y: { modes: a11y.modes } } : {},
-    ...aliases !== void 0 ? { aliases } : {}
-  });
-}
-function asRecord2(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function safePct(part, whole) {
-  if (whole <= 0) return void 0;
-  return Math.round(100 * part / whole);
-}
-function latestTargetScalars(records, systemScore) {
-  let adoptionLint;
-  let tokensCheck;
-  let parity;
-  let a11y;
-  let handoff;
-  for (const { kind, record } of records) {
-    switch (kind) {
-      case "lint":
-        if (asRecord2(record.adoption) !== void 0) adoptionLint = record;
-        break;
-      case "tokens-check":
-        tokensCheck = record;
-        break;
-      case "parity":
-        parity = record;
-        break;
-      case "a11y":
-        a11y = record;
-        break;
-      case "handoff":
-        handoff = record;
-        break;
-      default:
-        break;
-    }
-  }
-  const scalars = {};
-  const adoption = adoptionLint && asRecord2(adoptionLint.adoption);
-  if (adoption !== void 0) {
-    const refs = asNumber12(adoption.refs);
-    const literals = asNumber12(adoption.literals);
-    const pct5 = safePct(refs, refs + literals);
-    if (pct5 !== void 0) scalars["on-system"] = pct5;
-  }
-  if (tokensCheck !== void 0) {
-    scalars.drift = asNumber12(tokensCheck.stale) + asNumber12(tokensCheck.missing) + asNumber12(tokensCheck.orphan);
-  }
-  if (parity !== void 0) {
-    const total = asNumber12(parity.total);
-    if (typeof parity.score === "number" && Number.isFinite(parity.score)) {
-      scalars.parity = parity.score;
-    } else if (total > 0) {
-      scalars.parity = Math.round(100 * asNumber12(parity.ok) / total);
-    }
-  }
-  if (a11y !== void 0) {
-    const modes2 = Array.isArray(a11y.modes) ? a11y.modes : [];
-    let passed = 0;
-    let failed = 0;
-    for (const m of modes2) {
-      const mm = asRecord2(m);
-      if (mm === void 0) continue;
-      passed += asNumber12(mm.passed);
-      failed += asNumber12(mm.failed);
-    }
-    const pct5 = safePct(passed, passed + failed);
-    if (pct5 !== void 0) scalars.contrast = pct5;
-  }
-  if (handoff !== void 0) scalars.readiness = asNumber12(handoff.score);
-  if (systemScore !== void 0) scalars["system-score"] = systemScore;
-  return scalars;
-}
-function computeTargets(records, targets, systemScore) {
-  if (targets === void 0) return [];
-  return evaluateTargets(latestTargetScalars(records, systemScore), targets);
-}
-function readParity(stateDir, onWarning) {
-  const registryPath = join7(stateDir, "registry.json");
-  let text2;
-  try {
-    text2 = readFileSync6(registryPath, "utf8");
-  } catch {
-    return void 0;
-  }
-  let registry;
-  try {
-    registry = JSON.parse(text2);
-  } catch {
-    onWarning(`warning: skipping unreadable registry ${registryPath}`);
-    return void 0;
-  }
-  const section = toParitySection(buildParity(registry));
-  if (section.rows.length === 0) return void 0;
-  return section;
-}
-function readRegistryFile(stateDir) {
-  try {
-    return JSON.parse(
-      readFileSync6(join7(stateDir, "registry.json"), "utf8")
-    );
-  } catch {
-    return void 0;
-  }
-}
-function computeExecutiveLayer(stateDir, records, systemScore, importCoverage) {
-  const inputs = executiveInputs(records, readRegistryFile(stateDir));
-  const outcome = buildConsistency(inputs.consistency);
-  const debt = inputs.debt !== void 0 ? buildDebt(inputs.debt) : void 0;
-  const executive = buildExecutive({
-    ...systemScore !== void 0 ? { systemScore } : {},
-    ...importCoverage !== void 0 ? { coverage: importCoverage } : {},
-    consistency: outcome,
-    ...debt !== void 0 ? { debt } : {}
-  });
-  return {
-    ...outcome.kind === "ok" ? {
-      consistency: {
-        score: outcome.score,
-        components: outcome.components
-      }
-    } : {},
-    ...debt !== void 0 ? { debt } : {},
-    ...Object.keys(executive).length > 0 ? { executive } : {}
-  };
-}
-function managerContrast(a11y) {
-  if (a11y === void 0) return void 0;
-  let failed = 0;
-  const modes2 = [];
-  for (const m of a11y.modes) {
-    if (typeof m.failed === "number" && m.failed > 0) {
-      failed += m.failed;
-      modes2.push(m.mode);
-    }
-  }
-  return { failed, level: a11y.level, modes: modes2 };
-}
-function storedScorePoints(replayed, nowIso, windowDays) {
-  const nowMs = Date.parse(nowIso);
-  const startMs = Number.isNaN(nowMs) ? Number.NEGATIVE_INFINITY : nowMs - windowDays * 24 * 60 * 60 * 1e3;
-  const out = [];
-  for (const entry of replayed) {
-    if (entry.kind !== "score") continue;
-    const r2 = entry.record;
-    if (typeof r2.at !== "string") continue;
-    if (typeof r2.score !== "number" || !Number.isFinite(r2.score)) continue;
-    const atMs = Date.parse(r2.at);
-    if (Number.isNaN(atMs) || atMs < startMs) continue;
-    out.push({ date: r2.at.slice(0, 10), score: r2.score });
-  }
-  return out;
-}
-function runManagerReport(format, stateDir, options, selection, data, windowDays) {
-  const replayed = replayHistory(readHistoryText(stateDir));
-  const frames = readinessByFrame(replayed, selection.readinessThreshold);
-  const lastDrift = data.driftTrend?.[data.driftTrend.length - 1];
-  const contrast = managerContrast(data.a11y);
-  const scorePoints = storedScorePoints(replayed, data.generatedAt, windowDays);
-  const report = buildManagerReport({
-    project: data.project,
-    generatedAt: data.generatedAt,
-    windowDays,
-    readinessThreshold: selection.readinessThreshold,
-    ...data.systemScore !== void 0 ? { systemScore: data.systemScore } : {},
-    ...data.scoreVelocity !== void 0 ? { scoreVelocity: data.scoreVelocity } : {},
-    ...data.adoptionTrend !== void 0 ? { adoptionTrend: data.adoptionTrend } : {},
-    ...data.importCoverage !== void 0 ? { importCoverage: data.importCoverage } : {},
-    ...data.targets !== void 0 ? { targets: data.targets } : {},
-    ...data.consistency !== void 0 ? { consistency: data.consistency } : {},
-    ...data.debt !== void 0 ? { debt: data.debt } : {},
-    ...data.dataFreshness !== void 0 ? { dataFreshness: data.dataFreshness } : {},
-    frames,
-    ...lastDrift !== void 0 ? {
-      breakingDrift: lastDrift.breaking,
-      tokenGaps: {
-        missing: lastDrift.additive,
-        orphan: lastDrift.cosmetic
-      }
-    } : {},
-    ...contrast !== void 0 ? { contrast } : {},
-    ...scorePoints.length > 0 ? { scorePoints } : {}
-  });
-  if (format === "exec") {
-    const markdown = renderManagerMarkdown(report);
-    if (options.out !== void 0) {
-      const outPath2 = resolve6(options.out);
-      const written2 = writeDashboard(outPath2, markdown);
-      if (written2.kind === "error") {
-        failReport(written2.message);
-        return;
-      }
-      process.stdout.write(`${outPath2}
-`);
-    } else {
-      process.stdout.write(markdown);
-    }
-    process.exitCode = 0;
-    return;
-  }
-  const outPath = options.out !== void 0 ? resolve6(options.out) : join7(stateDir, "reports", "exec.html");
-  const written = writeDashboard(outPath, renderManagerHtml(report));
-  if (written.kind === "error") {
-    failReport(written.message);
-    return;
-  }
-  process.stdout.write(`${outPath}
-`);
-  if (options.open) openReport(outPath, process.env);
-  process.exitCode = 0;
-}
-function writeDashboard(outPath, html) {
-  try {
-    mkdirSync3(dirname3(outPath), { recursive: true });
-    writeFileSync3(outPath, html, "utf8");
-    return { kind: "ok" };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not write report to "${outPath}": ${detail}`
-    };
-  }
-}
-function openerCommand(env) {
-  const override = env.DS_BRIDGE_OPEN_CMD;
-  if (override !== void 0 && override.trim() !== "") return override;
-  return platform === "darwin" ? "open" : "xdg-open";
-}
-function openReport(filePath, env) {
-  const command = openerCommand(env);
-  try {
-    const child = spawn(command, [filePath], {
-      stdio: "ignore",
-      detached: false
-    });
-    child.on("error", (error) => {
-      process.stderr.write(
-        `warning: could not open report with "${command}": ${error.message}
-`
-      );
-    });
-    child.unref();
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    process.stderr.write(
-      `warning: could not open report with "${command}": ${detail}
-`
-    );
-  }
-}
-function failReport(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
+// src/io/report-selection.ts
 function parseArtifactsFlag(raw) {
   if (raw === void 0) return void 0;
   return raw.split(",").map((id) => id.trim()).filter((id) => id.length > 0);
@@ -16546,242 +12207,424 @@ function resolveSelection(targetDir, options) {
     }
   }
 }
+
+// src/io/report-data.ts
+var RULE_REASON = {
+  "var-binding": "Variable binding",
+  "auto-layout": "Auto layout",
+  component: "Component usage",
+  naming: "Naming"
+};
+function renderInstant(env = process.env) {
+  const epoch = env.SOURCE_DATE_EPOCH?.trim();
+  if (epoch !== void 0 && /^\d+$/.test(epoch)) {
+    return new Date(Number(epoch) * 1e3).toISOString();
+  }
+  return (/* @__PURE__ */ new Date()).toISOString();
+}
+function asNumber11(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function onSystemPct(refs, literals) {
+  const total = refs + literals;
+  return total === 0 ? 0 : Math.round(refs / total * 100);
+}
+function aggregateHistory(text2, historyPath, onWarning) {
+  const driftTrend = [];
+  let lint;
+  let readiness;
+  let a11y;
+  let impact;
+  const adoptionTrend = [];
+  let leaderboard;
+  let importCoverage;
+  let libraryHealth;
+  const lines = text2.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = (lines[index] ?? "").trim();
+    if (trimmed === "") continue;
+    let record;
+    try {
+      record = JSON.parse(trimmed);
+    } catch {
+      onWarning(
+        `warning: skipping corrupted history line ${index + 1} in ${historyPath}`
+      );
+      continue;
+    }
+    if (record.kind === "tokens-check") {
+      const r2 = record;
+      const date = typeof r2.at === "string" ? r2.at.slice(0, 10) : "";
+      driftTrend.push({
+        date,
+        breaking: asNumber11(r2.stale),
+        additive: asNumber11(r2.missing),
+        cosmetic: asNumber11(r2.orphan)
+      });
+      continue;
+    }
+    if (record.kind === "lint") {
+      const r2 = record;
+      const byKind = r2.byKind ?? { exact: 0, near: 0, offSystem: 0 };
+      lint = {
+        byKind: {
+          exact: asNumber11(byKind.exact),
+          near: asNumber11(byKind.near),
+          offSystem: asNumber11(byKind.offSystem)
+        },
+        topOffenders: []
+      };
+      const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
+      if (adoption !== void 0) {
+        const refs = asNumber11(adoption.refs);
+        const literals = asNumber11(adoption.literals);
+        if (typeof r2.at === "string") {
+          adoptionTrend.push({
+            date: r2.at.slice(0, 10),
+            pct: onSystemPct(refs, literals)
+          });
+        }
+        const byDirectory = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
+        leaderboard = byDirectory.map((d) => ({
+          dir: typeof d.dir === "string" ? d.dir : "",
+          refs: asNumber11(d.refs),
+          literals: asNumber11(d.literals)
+        }));
+      }
+      continue;
+    }
+    if (record.kind === "adoption") {
+      const r2 = record;
+      const imported = asNumber11(r2.imported);
+      const total = asNumber11(r2.total);
+      const uncovered = Array.isArray(r2.uncovered) ? r2.uncovered.filter((n) => typeof n === "string") : [];
+      importCoverage = {
+        imported,
+        total,
+        uncovered,
+        uncoveredTotal: Math.max(0, total - imported)
+      };
+      continue;
+    }
+    if (record.kind === "handoff") {
+      const r2 = record;
+      const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
+      readiness = {
+        score: asNumber11(r2.score),
+        frameName: typeof r2.frameName === "string" ? r2.frameName : "",
+        deductions: deductions.map((d) => ({
+          reason: RULE_REASON[d.rule] ?? d.rule,
+          points: asNumber11(d.points)
+        }))
+      };
+      continue;
+    }
+    if (record.kind === "a11y") {
+      const r2 = record;
+      const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
+      a11y = {
+        level: r2.level === "AAA" ? "AAA" : "AA",
+        modes: modes2.map((m) => ({
+          mode: typeof m.mode === "string" ? m.mode : "",
+          passed: asNumber11(m.passed),
+          failed: asNumber11(m.failed)
+        }))
+      };
+      continue;
+    }
+    if (record.kind === "impact") {
+      const r2 = record;
+      impact = {
+        breaking: asNumber11(r2.breaking),
+        additive: asNumber11(r2.additive),
+        cosmetic: asNumber11(r2.cosmetic),
+        touchedCallSites: asNumber11(r2.touchedCallSites)
+      };
+      continue;
+    }
+    if (record.kind === "library-health") {
+      const r2 = record;
+      libraryHealth = {
+        overrideHotspots: [],
+        deprecatedUsage: [],
+        detachedCandidates: [],
+        totals: {
+          overrideHotspots: asNumber11(r2.overrideHotspots),
+          deprecatedUsage: asNumber11(r2.deprecatedUsage),
+          detachedCandidates: asNumber11(r2.detachedCandidates)
+        }
+      };
+    }
+  }
+  return {
+    driftTrend,
+    lintSummary: lint,
+    readiness,
+    a11y,
+    impact,
+    adoptionTrend,
+    leaderboard,
+    importCoverage,
+    libraryHealth
+  };
+}
+function computeSystemScore(text2, weights) {
+  const outcome = scoreFromHistory(text2, weights);
+  if (outcome.kind === "no-data") return void 0;
+  return {
+    current: outcome.current,
+    components: outcome.components,
+    trend: outcome.trend
+  };
+}
+function computeConsumerArtifacts(records) {
+  return {
+    breakingCalendar: buildBreakingCalendar(records),
+    changeFrequency: buildChangeFrequency(records)
+  };
+}
+function computeParityTrend(records) {
+  return buildParityTrend(records);
+}
+function computeFigmaTrends(records, readinessThreshold2) {
+  const libraryHotspotsTrend = buildLibraryHotspotsTrend(records);
+  const frameReadinessTrend = buildFrameReadinessTrend(
+    records,
+    readinessThreshold2
+  );
+  const handoffPassRate = buildHandoffPassRate(records, readinessThreshold2);
+  return {
+    ...libraryHotspotsTrend !== void 0 ? { libraryHotspotsTrend } : {},
+    ...frameReadinessTrend !== void 0 ? { frameReadinessTrend } : {},
+    ...handoffPassRate !== void 0 ? { handoffPassRate } : {}
+  };
+}
+function computeLibraryHealthTrend(records) {
+  return buildLibraryHealthTrend(records);
+}
+var VELOCITY_WINDOW = /^(\d+)([dw])$/;
+function parseVelocityWindow(raw) {
+  if (raw === void 0) return { kind: "ok", days: void 0 };
+  const match = VELOCITY_WINDOW.exec(raw);
+  if (match === null) {
+    return {
+      kind: "error",
+      message: `Invalid --velocity-window "${raw}". Expected a relative window "<N>d" or "<N>w".`
+    };
+  }
+  const count = Number.parseInt(match[1] ?? "", 10);
+  if (count <= 0) {
+    return {
+      kind: "error",
+      message: `Invalid --velocity-window "${raw}". The count must be a positive integer.`
+    };
+  }
+  return { kind: "ok", days: match[2] === "w" ? count * 7 : count };
+}
+function computeScoreVelocity(trend, nowIso, windowDays) {
+  return computeVelocity(trend, nowIso, windowDays);
+}
+function computeMigrationChecklist(records, cap) {
+  let latestImpact;
+  for (const entry of records) {
+    if (entry.kind === "impact") latestImpact = entry.record;
+  }
+  return buildMigrationChecklist(latestImpact, cap);
+}
+function computeAudienceChangelog(records) {
+  let latestChangelog;
+  for (const entry of records) {
+    if (entry.kind === "changelog") latestChangelog = entry.record;
+  }
+  return buildAudienceChangelog(latestChangelog);
+}
+function computeFrameImplementability(records) {
+  let latestFrameImpl;
+  for (const entry of records) {
+    if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
+  }
+  return buildFrameImplementability(latestFrameImpl);
+}
+function resolveOwnership(targetDir, ownership, ownershipFile) {
+  if (ownership !== void 0) return ownership;
+  if (ownershipFile === void 0) return void 0;
+  let text2;
+  try {
+    text2 = readFileSync7(resolve6(targetDir, ownershipFile), "utf8");
+  } catch {
+    return void 0;
+  }
+  return parseCodeowners(text2);
+}
+function byDirectoryFromRecords(records) {
+  let byDirectory = [];
+  for (const { kind, record } of records) {
+    if (kind !== "lint") continue;
+    const adoption = asRecord(record.adoption);
+    if (adoption === void 0) continue;
+    const raw = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
+    byDirectory = raw.map((entry) => {
+      const dirRec = asRecord(entry) ?? {};
+      return {
+        dir: typeof dirRec.dir === "string" ? dirRec.dir : "",
+        refs: asNumber11(dirRec.refs),
+        literals: asNumber11(dirRec.literals)
+      };
+    });
+  }
+  return byDirectory;
+}
+function computeOwnershipLeaderboard(records, ownership) {
+  if (ownership === void 0) return [];
+  return rollupByOwner(byDirectoryFromRecords(records), ownership);
+}
+function computeReleaseReadiness(records) {
+  const signals = extractReleaseSignals(records);
+  if (signals.impact === void 0 && signals.drift === void 0 && signals.parity === void 0) {
+    return { go: false, checks: [] };
+  }
+  return evaluateReleaseReadiness(signals);
+}
+function computeDataFreshness(records, nowIso, thresholds) {
+  return buildFreshness(records, nowIso, thresholds);
+}
+function computeComponentHealth(parityRows, readiness, a11y, aliases) {
+  return buildComponentHealth({
+    parityRows,
+    ...readiness !== void 0 ? {
+      readiness: {
+        frameName: readiness.frameName,
+        score: readiness.score
+      }
+    } : {},
+    ...a11y !== void 0 ? { a11y: { modes: a11y.modes } } : {},
+    ...aliases !== void 0 ? { aliases } : {}
+  });
+}
+function asRecord(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function safePct(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function latestTargetScalars(records, systemScore) {
+  let adoptionLint;
+  let tokensCheck;
+  let parity;
+  let a11y;
+  let handoff;
+  for (const { kind, record } of records) {
+    switch (kind) {
+      case "lint":
+        if (asRecord(record.adoption) !== void 0) adoptionLint = record;
+        break;
+      case "tokens-check":
+        tokensCheck = record;
+        break;
+      case "parity":
+        parity = record;
+        break;
+      case "a11y":
+        a11y = record;
+        break;
+      case "handoff":
+        handoff = record;
+        break;
+      default:
+        break;
+    }
+  }
+  const scalars = {};
+  const adoption = adoptionLint && asRecord(adoptionLint.adoption);
+  if (adoption !== void 0) {
+    const refs = asNumber11(adoption.refs);
+    const literals = asNumber11(adoption.literals);
+    const pct5 = safePct(refs, refs + literals);
+    if (pct5 !== void 0) scalars["on-system"] = pct5;
+  }
+  if (tokensCheck !== void 0) {
+    scalars.drift = asNumber11(tokensCheck.stale) + asNumber11(tokensCheck.missing) + asNumber11(tokensCheck.orphan);
+  }
+  if (parity !== void 0) {
+    const total = asNumber11(parity.total);
+    if (typeof parity.score === "number" && Number.isFinite(parity.score)) {
+      scalars.parity = parity.score;
+    } else if (total > 0) {
+      scalars.parity = Math.round(100 * asNumber11(parity.ok) / total);
+    }
+  }
+  if (a11y !== void 0) {
+    const modes2 = Array.isArray(a11y.modes) ? a11y.modes : [];
+    let passed = 0;
+    let failed = 0;
+    for (const m of modes2) {
+      const mm = asRecord(m);
+      if (mm === void 0) continue;
+      passed += asNumber11(mm.passed);
+      failed += asNumber11(mm.failed);
+    }
+    const pct5 = safePct(passed, passed + failed);
+    if (pct5 !== void 0) scalars.contrast = pct5;
+  }
+  if (handoff !== void 0) scalars.readiness = asNumber11(handoff.score);
+  if (systemScore !== void 0) scalars["system-score"] = systemScore;
+  return scalars;
+}
+function computeTargets(records, targets, systemScore) {
+  if (targets === void 0) return [];
+  return evaluateTargets(latestTargetScalars(records, systemScore), targets);
+}
+function paritySection(report) {
+  if (report === void 0) return void 0;
+  const section = toParitySection(report);
+  return section.rows.length > 0 ? section : void 0;
+}
+function loadRegistry2(stateDir, onWarning) {
+  const registryPath = join8(stateDir, "registry.json");
+  let text2;
+  try {
+    text2 = readFileSync7(registryPath, "utf8");
+  } catch {
+    return void 0;
+  }
+  try {
+    return JSON.parse(text2);
+  } catch {
+    onWarning(`warning: skipping unreadable registry ${registryPath}`);
+    return void 0;
+  }
+}
+function computeExecutiveLayer(registry, records, systemScore, importCoverage) {
+  const inputs = executiveInputs(records, registry);
+  const outcome = buildConsistency(inputs.consistency);
+  const debt = inputs.debt !== void 0 ? buildDebt(inputs.debt) : void 0;
+  const executive = buildExecutive({
+    ...systemScore !== void 0 ? { systemScore } : {},
+    ...importCoverage !== void 0 ? { coverage: importCoverage } : {},
+    consistency: outcome,
+    ...debt !== void 0 ? { debt } : {}
+  });
+  return {
+    ...outcome.kind === "ok" ? {
+      consistency: {
+        score: outcome.score,
+        components: outcome.components
+      }
+    } : {},
+    ...debt !== void 0 ? { debt } : {},
+    ...Object.keys(executive).length > 0 ? { executive } : {}
+  };
+}
 function readHistoryText(stateDir) {
   try {
-    return readFileSync6(join7(stateDir, "history.jsonl"), "utf8");
+    return readFileSync7(join8(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
-function runMarkdownReport(targetDir, options, selection) {
-  const weightProfile = resolveWeightProfile(
-    selection.viewName,
-    selection.scoreWeights,
-    selection.scoreWeightsByView
-  );
-  const stateDir = join7(targetDir, ".ds-bridge");
-  const currentText = readHistoryText(stateDir);
-  const currentRecords = replayHistory(currentText);
-  let baseText;
-  let noBaseline = false;
-  const baseLabel = options.delta;
-  if (options.delta !== void 0) {
-    const outcome = readFileAtRef({
-      ref: options.delta,
-      path: join7(".ds-bridge", "history.jsonl"),
-      cwd: targetDir,
-      exec: spawnGitExec
-    });
-    if (outcome.kind === "git-error") {
-      failReport(`Could not read "${options.delta}": ${outcome.message}`);
-      return;
-    }
-    if (outcome.kind === "missing") {
-      noBaseline = true;
-    } else {
-      baseText = outcome.text;
-    }
-  }
-  const effectiveWeights = weightProfile.weights;
-  const model = buildScorecard(currentText, baseText, effectiveWeights);
-  if (model.kind === "no-data") {
-    failReport(
-      "No design-system history yet \u2014 run a check (e.g. ds-bridge tokens-check) to populate the scorecard."
-    );
-    return;
-  }
-  const generatedAt = renderInstant();
-  const systemScore = computeSystemScore(currentText, effectiveWeights);
-  const parsedWindow = parseVelocityWindow(options.velocityWindow);
-  const velocityWindowDays = (parsedWindow.kind === "ok" ? parsedWindow.days : void 0) ?? selection.scoreVelocityWindow;
-  const ownership = resolveOwnership(
-    targetDir,
-    selection.ownership,
-    selection.ownershipFile
-  );
-  const blocks = {};
-  const targets = computeTargets(
-    currentRecords,
-    selection.metricTargets,
-    systemScore?.current
-  );
-  if (targets.length > 0) blocks.targets = targets;
-  const dataFreshness = computeDataFreshness(
-    currentRecords,
-    generatedAt,
-    selection.freshnessThresholds
-  );
-  if (dataFreshness.length > 0) blocks.dataFreshness = dataFreshness;
-  const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
-  if (scoreVelocity !== void 0) blocks.scoreVelocity = scoreVelocity;
-  const ownershipLeaderboard = computeOwnershipLeaderboard(
-    currentRecords,
-    ownership
-  );
-  if (ownershipLeaderboard.length > 0) {
-    blocks.ownershipLeaderboard = ownershipLeaderboard;
-  }
-  const migrationChecklist = computeMigrationChecklist(
-    currentRecords,
-    selection.migrationSitesCap
-  );
-  if (migrationChecklist.sites.length > 0) {
-    blocks.migrationChecklist = migrationChecklist;
-  }
-  const libraryHealthTrend = computeLibraryHealthTrend(currentRecords);
-  if (libraryHealthTrend.length > 0)
-    blocks.libraryHealthTrend = libraryHealthTrend;
-  const audienceChangelog = computeAudienceChangelog(currentRecords);
-  if (audienceChangelog.slices.length > 0) {
-    blocks.audienceChangelog = audienceChangelog;
-  }
-  let baseBlocks;
-  if (baseText !== void 0) {
-    const baseRecords = replayHistory(baseText);
-    const b = {};
-    const baseFreshness = buildFreshness(
-      baseRecords,
-      generatedAt,
-      selection.freshnessThresholds
-    );
-    if (baseFreshness.length > 0) b.dataFreshness = baseFreshness;
-    const baseLht = buildLibraryHealthTrend(baseRecords);
-    if (baseLht.length > 0) b.libraryHealthTrend = baseLht;
-    if (ownership !== void 0) {
-      const baseOwners = rollupByOwner(
-        byDirectoryFromRecords(baseRecords),
-        ownership
-      );
-      if (baseOwners.length > 0) b.ownershipLeaderboard = baseOwners;
-    }
-    baseBlocks = b;
-  }
-  const markdown = renderScorecardMarkdown(model, {
-    ...baseLabel !== void 0 ? { baseLabel } : {},
-    ...noBaseline ? { noBaseline: true } : {},
-    artifacts: selection.artifacts,
-    blocks,
-    ...baseBlocks !== void 0 ? { baseBlocks } : {}
-  });
-  if (options.out !== void 0) {
-    const outPath = resolve6(options.out);
-    const written = writeDashboard(outPath, markdown);
-    if (written.kind === "error") {
-      failReport(written.message);
-      return;
-    }
-    process.stdout.write(`${outPath}
-`);
-  } else {
-    process.stdout.write(markdown);
-  }
-  if (options.gate) {
-    const score = scoreFromHistory(currentText, effectiveWeights);
-    const verdicts = computeTargets(
-      currentRecords,
-      selection.metricTargets,
-      score.kind === "ok" ? score.current : void 0
-    );
-    if (verdicts.some((v) => v.band === "red")) {
-      process.exitCode = 1;
-      return;
-    }
-  }
-  process.exitCode = 0;
-}
-function readPublishConfig(targetDir) {
-  const configPath = join7(targetDir, ".ds-bridge.json");
-  if (!existsSync6(configPath)) return void 0;
-  try {
-    const projectFileText = readFileSync6(configPath, "utf8");
-    const resolved = resolveConfig({ projectFileText });
-    return resolved.kind === "ok" ? resolved.config.publish : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function resolvePublishNames(targetDir, options) {
-  if (options.dashboards !== void 0) {
-    return options.dashboards.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
-  }
-  if (options.allDashboards === true) {
-    return listDashboards(targetDir).filter((e4) => e4.hasShared).map((e4) => e4.name);
-  }
-  return readPublishConfig(targetDir) ?? [];
-}
-function runSiteReport(targetDir, options, selection, data, weightProfile, mode, timeline = []) {
-  const stateDir = join7(targetDir, ".ds-bridge");
-  const snapshot = mode === "snapshot";
-  const suffix = snapshot ? ".snapshot.html" : ".html";
-  const transform = snapshot ? normalizeSnapshot : (html) => html;
-  const outDir = options.out !== void 0 ? resolve6(options.out) : join7(stateDir, snapshot ? "snapshots" : "reports");
-  const names = resolvePublishNames(targetDir, options);
-  const entries = [];
-  const writePage = (name, html) => {
-    const written = writeDashboard(
-      join7(outDir, `${name}${suffix}`),
-      transform(html)
-    );
-    if (written.kind === "error") {
-      failReport(written.message);
-      return false;
-    }
-    entries.push({ name, href: `./${name}${suffix}` });
-    return true;
-  };
-  if (names.length === 0) {
-    const name = selection.viewLabel ?? "dashboard";
-    const html = renderDashboard(data, selection.artifacts, {
-      viewLabel: name,
-      weightProfile: {
-        source: weightProfile.source,
-        ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
-      },
-      timeline
-    });
-    if (!writePage(name, html)) return;
-  } else {
-    for (const name of names) {
-      const read = readDashboardFile(targetDir, name);
-      if (read.kind === "not-found") {
-        failReport(`Unknown dashboard "${name}" in the publish set.`);
-        return;
-      }
-      if (read.kind === "invalid") {
-        failReport(`Dashboard "${name}" is invalid: ${read.message}`);
-        return;
-      }
-      const sel = read.dashboard.selection;
-      const outcome = resolveView(
-        sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
-        {}
-      );
-      if (outcome.kind !== "ok") {
-        failReport(`Dashboard "${name}" has an unresolvable selection.`);
-        return;
-      }
-      const html = renderDashboard(data, outcome.artifacts, {
-        viewLabel: name,
-        timeline
-      });
-      if (!writePage(name, html)) return;
-    }
-  }
-  const indexName = snapshot ? "index.snapshot.html" : "index.html";
-  const indexWritten = writeDashboard(
-    join7(outDir, indexName),
-    transform(renderIndex(entries))
-  );
-  if (indexWritten.kind === "error") {
-    failReport(indexWritten.message);
-    return;
-  }
-  process.stdout.write(`${outDir}
-`);
-  process.exitCode = 0;
-}
 function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) {
-  const stateDir = join7(targetDir, ".ds-bridge");
+  const stateDir = join8(targetDir, ".ds-bridge");
   const warn = (message) => {
     if (asOf === void 0) process.stderr.write(`${message}
 `);
@@ -16790,10 +12633,12 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) 
   const records = replayHistory(historyText);
   const aggregation = aggregateHistory(
     historyText,
-    join7(stateDir, "history.jsonl"),
+    join8(stateDir, "history.jsonl"),
     warn
   );
-  const parity = readParity(stateDir, warn);
+  const registry = loadRegistry2(stateDir, warn);
+  const parityReport = registry !== void 0 ? buildParity(registry) : void 0;
+  const parity = paritySection(parityReport);
   const weightProfile = resolveWeightProfile(
     selection.viewName,
     selection.scoreWeights,
@@ -16824,7 +12669,7 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) 
     selection.freshnessThresholds
   );
   const componentHealth = computeComponentHealth(
-    stateDir,
+    parityReport?.rows ?? [],
     aggregation.readiness,
     aggregation.a11y,
     selection.componentAliases
@@ -16835,7 +12680,7 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) 
   );
   const releaseReadiness = computeReleaseReadiness(records);
   const executiveLayer = computeExecutiveLayer(
-    stateDir,
+    registry,
     records,
     systemScore,
     aggregation.importCoverage
@@ -16873,7 +12718,7 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) 
   return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
 }
 function assemblePastStates(targetDir, selection, velocityWindowFlagDays) {
-  const text2 = readHistoryText(join7(targetDir, ".ds-bridge"));
+  const text2 = readHistoryText(join8(targetDir, ".ds-bridge"));
   return timelineDays(text2).map(({ day, endOfDay }) => ({
     day,
     data: assembleReportData(targetDir, selection, velocityWindowFlagDays, {
@@ -16883,20 +12728,7 @@ function assemblePastStates(targetDir, selection, velocityWindowFlagDays) {
   }));
 }
 function loadReportData(targetDir) {
-  const selection = resolveSelection(targetDir, {
-    open: false,
-    out: void 0,
-    view: void 0,
-    artifacts: void 0,
-    format: void 0,
-    delta: void 0,
-    gate: false,
-    velocityWindow: void 0,
-    dashboard: void 0,
-    dashboards: void 0,
-    allDashboards: void 0,
-    snapshot: void 0
-  });
+  const selection = resolveSelection(targetDir, {});
   if ("kind" in selection) {
     return { kind: "error", message: selection.message };
   }
@@ -16904,213 +12736,6 @@ function loadReportData(targetDir) {
     kind: "ok",
     data: assembleReportData(targetDir, selection, void 0).data
   };
-}
-function runReport(path, options) {
-  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal" && options.format !== "site" && options.format !== "exec" && options.format !== "exec-html" && options.format !== "json") {
-    failReport(
-      `Unknown --format "${options.format}". Expected "html", "md", "terminal", "site", "exec", "exec-html", or "json".`
-    );
-    return;
-  }
-  const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
-  if (velocityWindowFlag.kind === "error") {
-    failReport(velocityWindowFlag.message);
-    return;
-  }
-  const targetDir = resolve6(path);
-  if (!existsSync6(targetDir) || !statSync4(targetDir).isDirectory()) {
-    failReport(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const selection = resolveSelection(targetDir, options);
-  if ("kind" in selection) {
-    failReport(selection.message);
-    return;
-  }
-  const format = options.format ?? selection.reportType ?? "html";
-  if (format !== "html" && format !== "md" && format !== "terminal" && format !== "site" && format !== "exec" && format !== "exec-html" && format !== "json") {
-    failReport(
-      `report_type "${format}" is not a supported render target \u2014 pass --format html|md|terminal|site|exec|exec-html|json.`
-    );
-    return;
-  }
-  if (options.delta !== void 0 && format !== "md") {
-    failReport("--delta requires --format md.");
-    return;
-  }
-  if (options.open && format !== "html" && format !== "exec-html") {
-    failReport(
-      `--open is not valid with --format ${format} (there is no file to open).`
-    );
-    return;
-  }
-  if (options.gate && format !== "md") {
-    failReport(
-      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
-    );
-    return;
-  }
-  if (options.snapshot && format !== "html" && format !== "site") {
-    failReport(
-      `--snapshot renders HTML snapshots \u2014 not valid with --format ${format}.`
-    );
-    return;
-  }
-  if (format === "md") {
-    runMarkdownReport(targetDir, options, selection);
-    return;
-  }
-  const { data, stateDir, generatedAt, velocityWindowDays, weightProfile } = assembleReportData(targetDir, selection, velocityWindowFlag.days);
-  if (format === "json") {
-    const text2 = `${JSON.stringify(
-      reportJsonDocument(data, selection.artifacts, selection.viewLabel),
-      null,
-      2
-    )}
-`;
-    if (options.out !== void 0) {
-      const outPath2 = resolve6(options.out);
-      const written2 = writeDashboard(outPath2, text2);
-      if (written2.kind === "error") {
-        failReport(written2.message);
-        return;
-      }
-      process.stdout.write(`${outPath2}
-`);
-    } else {
-      process.stdout.write(text2);
-    }
-    process.exitCode = 0;
-    return;
-  }
-  if (format === "exec" || format === "exec-html") {
-    runManagerReport(
-      format,
-      stateDir,
-      options,
-      selection,
-      data,
-      velocityWindowDays
-    );
-    return;
-  }
-  if (options.snapshot === true) {
-    runSiteReport(
-      targetDir,
-      options,
-      selection,
-      data,
-      weightProfile,
-      "snapshot"
-    );
-    return;
-  }
-  const pastStates = () => options.timeline === false ? [] : assemblePastStates(targetDir, selection, velocityWindowFlag.days);
-  if (format === "site") {
-    runSiteReport(
-      targetDir,
-      options,
-      selection,
-      data,
-      weightProfile,
-      "live",
-      pastStates()
-    );
-    return;
-  }
-  if (format === "terminal") {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    const text2 = renderTerminalDashboard(data, selection.artifacts, {
-      generatedAt,
-      color,
-      ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
-    });
-    if (options.out !== void 0) {
-      const outPath2 = resolve6(options.out);
-      const written2 = writeDashboard(outPath2, text2);
-      if (written2.kind === "error") {
-        failReport(written2.message);
-        return;
-      }
-      process.stdout.write(`${outPath2}
-`);
-    } else {
-      process.stdout.write(`${text2}
-`);
-    }
-    process.exitCode = 0;
-    return;
-  }
-  const html = renderDashboard(data, selection.artifacts, {
-    timeline: pastStates(),
-    ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {},
-    // Caption the system-score section ONLY for a `view`-source profile; the
-    // renderer renders nothing for project/default (golden-neutral).
-    weightProfile: {
-      source: weightProfile.source,
-      ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
-    }
-  });
-  const outPath = options.out !== void 0 ? resolve6(options.out) : join7(stateDir, "reports", "dashboard.html");
-  const written = writeDashboard(outPath, html);
-  if (written.kind === "error") {
-    failReport(written.message);
-    return;
-  }
-  process.stdout.write(`${outPath}
-`);
-  if (options.open) {
-    openReport(outPath, process.env);
-  }
-  process.exitCode = 0;
-}
-function registerReportCommand(program2) {
-  program2.command("report").description("Render an offline HTML dashboard from the project history").argument("[path]", "project directory to report on", ".").option(
-    "--view <preset>",
-    "render a preset: ds-designer | ds-manager | ds-engineer | product-designer | product-manager | product-engineer | everything | exec | org"
-  ).option(
-    "--artifacts <ids>",
-    "render a custom comma-separated artifact list (mutually exclusive with --view)"
-  ).option(
-    "--format <format>",
-    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY) | terminal | site | exec (the paste-ready markdown DS-manager one-pager) | exec-html (the same one-pager as offline HTML, default .ds-bridge/reports/exec.html) | json (the full ReportData, versioned \u2014 schemas/report.v1.schema.json). A saved --dashboard's report_type defaults it."
-  ).option(
-    "--delta <ref>",
-    "compare against the base ref's committed history (requires --format md)"
-  ).option(
-    "--gate",
-    "exit 1 when a metric_targets verdict is red (requires --format md; CI gate, C1)",
-    false
-  ).option(
-    "--velocity-window <window>",
-    "score-velocity look-back window as <N>d|<N>w (C8; overrides score_velocity_window, default 30d)"
-  ).option(
-    "--dashboard <name>",
-    "render a saved dashboard from dashboards/<name>.json (mutually exclusive with --view/--artifacts)"
-  ).option(
-    "--dashboards <names>",
-    "with --format site: the comma-separated publish set (saved dashboard names)"
-  ).option(
-    "--all-dashboards",
-    "with --format site: publish every committed (non-.local) saved dashboard",
-    false
-  ).option(
-    "--snapshot",
-    "write normalized committed HTML snapshots to .ds-bridge/snapshots/ (M12.1)",
-    false
-  ).option(
-    "--no-timeline",
-    "html/site: leave out the header timeline of earlier days (smaller file)"
-  ).option(
-    "--out <file>",
-    "output file (default <path>/.ds-bridge/reports/dashboard.html; exec-html \u2192 .ds-bridge/reports/exec.html; with --format md|exec|json, writes to the file instead of stdout)"
-  ).option(
-    "--open",
-    'open the report after writing (override the opener with the DS_BRIDGE_OPEN_CMD env var; defaults to "open" on macOS, "xdg-open" elsewhere)',
-    false
-  ).action((path, options) => {
-    runReport(path, options);
-  });
 }
 
 // src/cli-commands/analytics.ts
@@ -17135,7 +12760,7 @@ function runAnalytics(path, options) {
     return;
   }
   const targetDir = resolve7(path);
-  if (!existsSync7(targetDir) || !statSync5(targetDir).isDirectory()) {
+  if (!existsSync7(targetDir) || !statSync4(targetDir).isDirectory()) {
     fail3(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -17153,7 +12778,7 @@ function runAnalytics(path, options) {
     process.exitCode = 0;
     return;
   }
-  const outDir = options.out !== void 0 ? resolve7(options.out) : join8(targetDir, ".ds-bridge", "analytics");
+  const outDir = options.out !== void 0 ? resolve7(options.out) : join9(targetDir, ".ds-bridge", "analytics");
   const files = emit.domains.map((domain) => [
     ARTIFACT_FILE[domain],
     buildDomainArtifact(domain, data)
@@ -17161,10 +12786,10 @@ function runAnalytics(path, options) {
   if (emit.merged) files.push([MERGED_ARTIFACT_FILE, buildAnalytics(data)]);
   const written = [];
   try {
-    mkdirSync4(outDir, { recursive: true });
+    mkdirSync3(outDir, { recursive: true });
     for (const [name, value2] of files) {
-      const file = join8(outDir, name);
-      writeFileSync4(file, stableStringify(value2), "utf8");
+      const file = join9(outDir, name);
+      writeFileSync3(file, stableStringify(value2), "utf8");
       written.push(file);
     }
   } catch (error) {
@@ -17200,17 +12825,17 @@ function registerAnalyticsCommand(program2) {
 // src/cli-commands/badge.ts
 import {
   existsSync as existsSync8,
-  mkdirSync as mkdirSync5,
-  readFileSync as readFileSync7,
-  statSync as statSync6,
-  writeFileSync as writeFileSync5
+  mkdirSync as mkdirSync4,
+  readFileSync as readFileSync8,
+  statSync as statSync5,
+  writeFileSync as writeFileSync4
 } from "fs";
-import { dirname as dirname4, join as join9, resolve as resolve8 } from "path";
+import { dirname as dirname3, join as join10, resolve as resolve8 } from "path";
 
 // src/render/html/badge.ts
 var DEFAULT_LABEL = "ds-bridge";
 var LABEL_BG = "#404040";
-var TEXT_COLOR2 = "#ffffff";
+var TEXT_COLOR = "#ffffff";
 var BAND_GREEN = "#16a34a";
 var BAND_AMBER = "#d97706";
 var BAND_RED = "#dc2626";
@@ -17218,10 +12843,10 @@ var CHAR_WIDTH = 7;
 var SEGMENT_PADDING = 10;
 var HEIGHT = 20;
 var FONT_SIZE = 11;
-function escapeXml2(value2) {
+function escapeXml(value2) {
   return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-function clamp3(value2, min, max) {
+function clamp2(value2, min, max) {
   if (value2 < min) return min;
   if (value2 > max) return max;
   return value2;
@@ -17239,25 +12864,25 @@ function segmentWidth(text2) {
 }
 function renderBadge(input) {
   const label = input.label ?? DEFAULT_LABEL;
-  const display = roundHalfUp4(clamp3(input.score, 0, 100));
+  const display = roundHalfUp4(clamp2(input.score, 0, 100));
   const valueText = `${display}/100`;
   const fill = bandFill(display);
   const labelW = segmentWidth(label);
   const valueW = segmentWidth(valueText);
   const totalW = labelW + valueW;
-  const safeLabel = escapeXml2(label);
-  const safeValue = escapeXml2(valueText);
+  const safeLabel = escapeXml(label);
+  const safeValue = escapeXml(valueText);
   const title = `${label} system score: ${valueText}`;
   const labelMid = labelW / 2;
   const valueMid = labelW + valueW / 2;
   const textY = HEIGHT / 2 + FONT_SIZE / 2 - 2;
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${HEIGHT}" viewBox="0 0 ${totalW} ${HEIGHT}" role="img">`,
-    `<title>${escapeXml2(title)}</title>`,
+    `<title>${escapeXml(title)}</title>`,
     `<rect x="0" y="0" width="${labelW}" height="${HEIGHT}" fill="${LABEL_BG}" />`,
     `<rect x="${labelW}" y="0" width="${valueW}" height="${HEIGHT}" fill="${fill}" />`,
-    `<text x="${labelMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeLabel}</text>`,
-    `<text x="${valueMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeValue}</text>`,
+    `<text x="${labelMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeLabel}</text>`,
+    `<text x="${valueMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeValue}</text>`,
     "</svg>"
   ].join("");
 }
@@ -17282,10 +12907,10 @@ function noDataMessage(historyPath) {
   ].join("\n");
 }
 function readProjectConfigText(targetDir) {
-  const configPath = join9(targetDir, ".ds-bridge.json");
+  const configPath = join10(targetDir, ".ds-bridge.json");
   if (!existsSync8(configPath)) return void 0;
   try {
-    return readFileSync7(configPath, "utf8");
+    return readFileSync8(configPath, "utf8");
   } catch {
     return void 0;
   }
@@ -17307,15 +12932,15 @@ function weightProfileForConfig(cfg) {
 }
 function runBadge(path, options) {
   const targetDir = resolve8(path);
-  if (!existsSync8(targetDir) || !statSync6(targetDir).isDirectory()) {
+  if (!existsSync8(targetDir) || !statSync5(targetDir).isDirectory()) {
     fail4(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const stateDir = join9(targetDir, ".ds-bridge");
-  const historyPath = join9(stateDir, "history.jsonl");
+  const stateDir = join10(targetDir, ".ds-bridge");
+  const historyPath = join10(stateDir, "history.jsonl");
   let historyText;
   try {
-    historyText = readFileSync7(historyPath, "utf8");
+    historyText = readFileSync8(historyPath, "utf8");
   } catch {
     fail4(noDataMessage(historyPath));
     return;
@@ -17336,10 +12961,10 @@ function runBadge(path, options) {
     return;
   }
   const svg = renderBadge({ score: outcome.current });
-  const outPath = options.out !== void 0 ? resolve8(options.out) : join9(stateDir, "badge.svg");
+  const outPath = options.out !== void 0 ? resolve8(options.out) : join10(stateDir, "badge.svg");
   try {
-    mkdirSync5(dirname4(outPath), { recursive: true });
-    writeFileSync5(outPath, svg, "utf8");
+    mkdirSync4(dirname3(outPath), { recursive: true });
+    writeFileSync4(outPath, svg, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail4(`Could not write badge to "${outPath}": ${detail}`);
@@ -17358,7 +12983,7 @@ function registerBadgeCommand(program2) {
 }
 
 // src/cli-commands/changelog.ts
-import { join as join10 } from "path";
+import { join as join11 } from "path";
 import { cwd as processCwd } from "process";
 
 // src/engines/changelog/aggregate.ts
@@ -17590,7 +13215,7 @@ var DEFAULT_BASE_URL = "https://api.figma.com";
 var MAX_RETRIES = 3;
 var DEFAULT_RETRY_AFTER_SECONDS = 1;
 function defaultSleep(ms) {
-  return new Promise((resolve17) => setTimeout(resolve17, ms));
+  return new Promise((resolve18) => setTimeout(resolve18, ms));
 }
 function joinIds(ids) {
   return encodeURIComponent(ids.join(","));
@@ -17850,7 +13475,7 @@ function buildChangelogHistoryRecord(entries, since, at) {
   };
 }
 function appendChangelogHistory(deps, record) {
-  const stateDir = join10(deps.cwd, ".ds-bridge");
+  const stateDir = join11(deps.cwd, ".ds-bridge");
   appendHistoryRecord(stateDir, record);
 }
 async function runChangelog(options, deps) {
@@ -17937,16 +13562,16 @@ import {
   appendFileSync as appendFileSync2,
   chmodSync,
   existsSync as existsSync9,
-  readFileSync as readFileSync9,
+  readFileSync as readFileSync10,
   renameSync as renameSync3,
   unlinkSync as unlinkSync2,
-  writeFileSync as writeFileSync6
+  writeFileSync as writeFileSync5
 } from "fs";
-import { join as join11, resolve as resolvePath } from "path";
+import { join as join12, resolve as resolvePath } from "path";
 import * as readline from "readline";
 
 // src/io/dotenv.ts
-import { readFileSync as readFileSync8 } from "fs";
+import { readFileSync as readFileSync9 } from "fs";
 function parseDotenv(text2) {
   const out = {};
   for (const rawLine of text2.split("\n")) {
@@ -17972,7 +13597,7 @@ function stripOneQuoteLayer(value2) {
 function loadDotenvInto(filePath, env) {
   let text2;
   try {
-    text2 = readFileSync8(filePath, "utf8");
+    text2 = readFileSync9(filePath, "utf8");
   } catch {
     return;
   }
@@ -18083,13 +13708,13 @@ function serializeDotenv(map) {
 `;
 }
 function writeEnvFileMerged(dir, updates) {
-  const filePath = join11(dir, ENV_FILE_NAME);
-  const existing = existsSync9(filePath) ? parseDotenv(readFileSync9(filePath, "utf8")) : {};
+  const filePath = join12(dir, ENV_FILE_NAME);
+  const existing = existsSync9(filePath) ? parseDotenv(readFileSync10(filePath, "utf8")) : {};
   const merged = { ...existing, ...updates };
   const text2 = serializeDotenv(merged);
-  const tempPath = join11(dir, `${ENV_FILE_NAME}.${process.pid}.tmp`);
+  const tempPath = join12(dir, `${ENV_FILE_NAME}.${process.pid}.tmp`);
   try {
-    writeFileSync6(tempPath, text2, { encoding: "utf8", mode: 384 });
+    writeFileSync5(tempPath, text2, { encoding: "utf8", mode: 384 });
     renameSync3(tempPath, filePath);
   } catch (error) {
     try {
@@ -18120,21 +13745,21 @@ function runPersistToken(path) {
     writeEnvFileMerged(targetDir, updates);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not write ${join11(targetDir, ENV_FILE_NAME)}: ${detail}`);
+    fail5(`Could not write ${join12(targetDir, ENV_FILE_NAME)}: ${detail}`);
     return;
   }
   const savedKey = updates.FIGMA_DESIGN_SYSTEM_FILE !== void 0 ? " and the design-system file key" : "";
   process.stdout.write(
-    `Saved Figma token (${maskToken(token)})${savedKey} to ${join11(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
+    `Saved Figma token (${maskToken(token)})${savedKey} to ${join12(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
 `
   );
   process.exitCode = 0;
 }
 function ensureGitignored(dir) {
-  const gitignorePath = join11(dir, ".gitignore");
+  const gitignorePath = join12(dir, ".gitignore");
   let existing = "";
   if (existsSync9(gitignorePath)) {
-    existing = readFileSync9(gitignorePath, "utf8");
+    existing = readFileSync10(gitignorePath, "utf8");
     if (existing.split(/\r?\n/).some((line) => line.trim() === ENV_FILE_NAME)) {
       return false;
     }
@@ -18150,10 +13775,10 @@ ${ENV_FILE_NAME}
   return true;
 }
 function detectFileKeyDefault(dir) {
-  const filePath = join11(dir, ENV_FILE_NAME);
+  const filePath = join12(dir, ENV_FILE_NAME);
   if (existsSync9(filePath)) {
     try {
-      const existing = parseDotenv(readFileSync9(filePath, "utf8"));
+      const existing = parseDotenv(readFileSync10(filePath, "utf8"));
       const fromFile = existing.FIGMA_DESIGN_SYSTEM_FILE;
       if (fromFile !== void 0 && fromFile !== "") {
         return extractFigmaFileKey(fromFile);
@@ -18172,14 +13797,14 @@ function applyConnect(dir, token, fileKey) {
   writeEnvFileMerged(dir, updates);
   const gitignoreUpdated = ensureGitignored(dir);
   return {
-    envPath: join11(dir, ENV_FILE_NAME),
+    envPath: join12(dir, ENV_FILE_NAME),
     masked: maskToken(token),
     fileKey: trimmedKey === "" ? void 0 : trimmedKey,
     gitignoreUpdated
   };
 }
 function promptHidden(question) {
-  return new Promise((resolve17) => {
+  return new Promise((resolve18) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -18195,19 +13820,19 @@ function promptHidden(question) {
     rl.question(question, (answer) => {
       rl.close();
       process.stdout.write("\n");
-      resolve17(answer.trim());
+      resolve18(answer.trim());
     });
   });
 }
 function promptLine(question) {
-  return new Promise((resolve17) => {
+  return new Promise((resolve18) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
     rl.question(question, (answer) => {
       rl.close();
-      resolve17(answer.trim());
+      resolve18(answer.trim());
     });
   });
 }
@@ -18246,7 +13871,7 @@ Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` inste
     summary = applyConnect(targetDir, token, fileKey);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not write ${join11(targetDir, ENV_FILE_NAME)}: ${detail}`);
+    fail5(`Could not write ${join12(targetDir, ENV_FILE_NAME)}: ${detail}`);
     return;
   }
   const ignoreNote = summary.gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.
@@ -18287,10 +13912,10 @@ async function runVerify(token, fileKey) {
   process.exitCode = result.ok ? 0 : 2;
 }
 function readProjectObject(dir) {
-  const filePath = join11(dir, PROJECT_FILE_NAME2);
+  const filePath = join12(dir, PROJECT_FILE_NAME2);
   if (!existsSync9(filePath)) return {};
   try {
-    const raw = JSON.parse(readFileSync9(filePath, "utf8"));
+    const raw = JSON.parse(readFileSync10(filePath, "utf8"));
     if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
       return raw;
     }
@@ -18299,10 +13924,10 @@ function readProjectObject(dir) {
   return {};
 }
 function readEnvFile(dir) {
-  const filePath = join11(dir, ENV_FILE_NAME);
+  const filePath = join12(dir, ENV_FILE_NAME);
   if (!existsSync9(filePath)) return {};
   try {
-    return parseDotenv(readFileSync9(filePath, "utf8"));
+    return parseDotenv(readFileSync10(filePath, "utf8"));
   } catch {
     return {};
   }
@@ -18338,8 +13963,8 @@ function buildShowReport(dir) {
   const env = process.env;
   const projObj = readProjectObject(dir);
   const envFile = readEnvFile(dir);
-  const projectFilePath = join11(dir, PROJECT_FILE_NAME2);
-  const projectFileText = existsSync9(projectFilePath) ? readFileSync9(projectFilePath, "utf8") : void 0;
+  const projectFilePath = join12(dir, PROJECT_FILE_NAME2);
+  const projectFileText = existsSync9(projectFilePath) ? readFileSync10(projectFilePath, "utf8") : void 0;
   const resolved = resolveConfig({
     env,
     ...projectFileText !== void 0 ? { projectFileText } : {}
@@ -18435,11 +14060,11 @@ function runSetLibrary(value2, path) {
     writeProjectConfig(dir, { figma_file_key: key });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not write ${join11(dir, PROJECT_FILE_NAME2)}: ${detail}`);
+    fail5(`Could not write ${join12(dir, PROJECT_FILE_NAME2)}: ${detail}`);
     return;
   }
   process.stdout.write(
-    `Set figma_file_key to ${key} in ${join11(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
+    `Set figma_file_key to ${key} in ${join12(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
 `
   );
   process.exitCode = 0;
@@ -18464,12 +14089,12 @@ function runAddProduct(alias, value2, path) {
     writeProjectConfig(dir, { product_file_keys: merged });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    fail5(`Could not write ${join11(dir, PROJECT_FILE_NAME2)}: ${detail}`);
+    fail5(`Could not write ${join12(dir, PROJECT_FILE_NAME2)}: ${detail}`);
     return;
   }
   const verb = Object.hasOwn(existing, cleanAlias) ? "Updated" : "Registered";
   process.stdout.write(
-    `${verb} product file "${cleanAlias}" \u2192 ${key} in ${join11(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
+    `${verb} product file "${cleanAlias}" \u2192 ${key} in ${join12(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
 `
   );
   process.exitCode = 0;
@@ -18477,8 +14102,8 @@ function runAddProduct(alias, value2, path) {
 function runList(path) {
   const dir = resolvePath(path);
   const env = process.env;
-  const projectFilePath = join11(dir, PROJECT_FILE_NAME2);
-  const projectFileText = existsSync9(projectFilePath) ? readFileSync9(projectFilePath, "utf8") : void 0;
+  const projectFilePath = join12(dir, PROJECT_FILE_NAME2);
+  const projectFileText = existsSync9(projectFilePath) ? readFileSync10(projectFilePath, "utf8") : void 0;
   const resolved = resolveConfig({
     env,
     ...projectFileText !== void 0 ? { projectFileText } : {}
@@ -18551,8 +14176,8 @@ function registerConfigCommand(program2) {
 }
 
 // src/cli-commands/dashboard.ts
-import { appendFileSync as appendFileSync3, existsSync as existsSync10, readFileSync as readFileSync11, unlinkSync as unlinkSync3 } from "fs";
-import { join as join13, resolve as resolvePath2 } from "path";
+import { appendFileSync as appendFileSync3, existsSync as existsSync10, readFileSync as readFileSync12, unlinkSync as unlinkSync3 } from "fs";
+import { join as join14, resolve as resolvePath2 } from "path";
 
 // src/engines/report/nl-match.ts
 function tokenize2(phrase) {
@@ -18580,8 +14205,8 @@ function matchPhrase(phrase) {
 }
 
 // src/cli-commands/dashboard-wizard.ts
-import { readFileSync as readFileSync10 } from "fs";
-import { join as join12 } from "path";
+import { readFileSync as readFileSync11 } from "fs";
+import { join as join13 } from "path";
 import { createInterface as createInterface2 } from "readline/promises";
 var WIZARD_VIEWS = PRESET_NAMES.filter(
   (name) => name !== "exec" && name !== "org"
@@ -18603,7 +14228,7 @@ var PROJECT_FILE_NAME3 = ".ds-bridge.json";
 function readExistingProductFileKeys(dir) {
   try {
     const raw = JSON.parse(
-      readFileSync10(join12(dir, PROJECT_FILE_NAME3), "utf8")
+      readFileSync11(join13(dir, PROJECT_FILE_NAME3), "utf8")
     );
     if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
       const pfk = raw.product_file_keys;
@@ -18626,9 +14251,9 @@ var LineReader = class {
   constructor(rl) {
     rl.on("line", (line) => {
       if (this.waiting !== void 0) {
-        const { resolve: resolve17 } = this.waiting;
+        const { resolve: resolve18 } = this.waiting;
         this.waiting = void 0;
-        resolve17(line);
+        resolve18(line);
       } else {
         this.queue.push(line);
       }
@@ -18647,8 +14272,8 @@ var LineReader = class {
     const buffered = this.queue.shift();
     if (buffered !== void 0) return Promise.resolve(buffered);
     if (this.closed) return Promise.reject(new EofError());
-    return new Promise((resolve17, reject) => {
-      this.waiting = { resolve: resolve17, reject };
+    return new Promise((resolve18, reject) => {
+      this.waiting = { resolve: resolve18, reject };
     });
   }
 };
@@ -18769,11 +14394,11 @@ function fail6(message) {
 }
 var PROJECT_FILE_NAME4 = ".ds-bridge.json";
 function readSelection(targetDir) {
-  const configPath = join13(targetDir, PROJECT_FILE_NAME4);
+  const configPath = join14(targetDir, PROJECT_FILE_NAME4);
   let projectFileText;
   if (existsSync10(configPath)) {
     try {
-      projectFileText = readFileSync11(configPath, "utf8");
+      projectFileText = readFileSync12(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -19067,11 +14692,11 @@ function metaFrom(dashboard) {
   return meta;
 }
 function ensureLocalGitignore(targetDir) {
-  const gitignorePath = join13(targetDir, ".gitignore");
+  const gitignorePath = join14(targetDir, ".gitignore");
   const line = "dashboards/*.local.json";
   let existing = "";
   if (existsSync10(gitignorePath)) {
-    existing = readFileSync11(gitignorePath, "utf8");
+    existing = readFileSync12(gitignorePath, "utf8");
     if (existing.split(/\r?\n/).some((l) => l.trim() === line)) return;
   }
   const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
@@ -19154,7 +14779,7 @@ function runLs(path) {
 }
 function runRm(name, path, options) {
   const targetDir = resolvePath2(path);
-  const file = join13(
+  const file = join14(
     targetDir,
     "dashboards",
     `${name}${options.local ? ".local" : ""}.json`
@@ -19280,12 +14905,12 @@ function registerDashboardCommand(program2) {
 // src/cli-commands/digest.ts
 import {
   existsSync as existsSync11,
-  mkdirSync as mkdirSync6,
-  readFileSync as readFileSync12,
-  statSync as statSync7,
-  writeFileSync as writeFileSync7
+  mkdirSync as mkdirSync5,
+  readFileSync as readFileSync13,
+  statSync as statSync6,
+  writeFileSync as writeFileSync6
 } from "fs";
-import { dirname as dirname5, join as join14, resolve as resolve9 } from "path";
+import { dirname as dirname4, join as join15, resolve as resolve9 } from "path";
 import { cwd as processCwd2 } from "process";
 
 // src/engines/report/digest.ts
@@ -19340,13 +14965,13 @@ var MOVEMENT_ORDER = [
   "readiness",
   "a11y"
 ];
-function asNumber13(value2) {
+function asNumber12(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function asRecord3(value2) {
+function asRecord2(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
-function pct3(part, whole) {
+function pct2(part, whole) {
   if (whole <= 0) return void 0;
   return Math.round(100 * part / whole);
 }
@@ -19361,7 +14986,7 @@ function absorb(side, kind, record) {
       break;
     case "lint":
       side.lint = record;
-      if (asRecord3(record.adoption) !== void 0) side.adoption = record;
+      if (asRecord2(record.adoption) !== void 0) side.adoption = record;
       break;
     case "adoption":
       side.adoptionLine = record;
@@ -19377,27 +15002,27 @@ function absorb(side, kind, record) {
   }
 }
 function driftMetric(r2) {
-  return r2 === void 0 ? void 0 : asNumber13(r2.stale);
+  return r2 === void 0 ? void 0 : asNumber12(r2.stale);
 }
 function lintMetric(r2) {
   if (r2 === void 0) return void 0;
-  const byKind = asRecord3(r2.byKind) ?? {};
-  return asNumber13(byKind.exact) + asNumber13(byKind.near) + asNumber13(byKind.offSystem);
+  const byKind = asRecord2(r2.byKind) ?? {};
+  return asNumber12(byKind.exact) + asNumber12(byKind.near) + asNumber12(byKind.offSystem);
 }
 function onSystemMetric(r2) {
-  const adoption = r2 === void 0 ? void 0 : asRecord3(r2.adoption);
+  const adoption = r2 === void 0 ? void 0 : asRecord2(r2.adoption);
   if (adoption === void 0) return void 0;
-  return pct3(
-    asNumber13(adoption.refs),
-    asNumber13(adoption.refs) + asNumber13(adoption.literals)
+  return pct2(
+    asNumber12(adoption.refs),
+    asNumber12(adoption.refs) + asNumber12(adoption.literals)
   );
 }
 function coverageMetric(r2) {
   if (r2 === void 0) return void 0;
-  return pct3(asNumber13(r2.imported), asNumber13(r2.total));
+  return pct2(asNumber12(r2.imported), asNumber12(r2.total));
 }
 function readinessMetric(r2) {
-  return r2 === void 0 ? void 0 : asNumber13(r2.score);
+  return r2 === void 0 ? void 0 : asNumber12(r2.score);
 }
 function a11yMetric(r2) {
   if (r2 === void 0) return void 0;
@@ -19405,12 +15030,12 @@ function a11yMetric(r2) {
   let passed = 0;
   let failed = 0;
   for (const m of modes2) {
-    const mm = asRecord3(m);
+    const mm = asRecord2(m);
     if (mm === void 0) continue;
-    passed += asNumber13(mm.passed);
-    failed += asNumber13(mm.failed);
+    passed += asNumber12(mm.passed);
+    failed += asNumber12(mm.failed);
   }
-  return pct3(passed, passed + failed);
+  return pct2(passed, passed + failed);
 }
 var METRICS = {
   drift: { slot: "tokensCheck", read: driftMetric },
@@ -19465,7 +15090,7 @@ function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
   if (driftStale !== void 0 && driftStale > 0) {
     candidates.push({ command: "ds-bridge tokens check", audience: "both" });
   }
-  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber13(asRecord3(inWindow.lint.byKind)?.offSystem);
+  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber12(asRecord2(inWindow.lint.byKind)?.offSystem);
   if (offSystem !== void 0 && offSystem > 0) {
     candidates.push({
       command: "ds-bridge lint",
@@ -19483,7 +15108,7 @@ function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
   const a11yFailing = (() => {
     if (inWindow.a11y === void 0) return false;
     const modes2 = Array.isArray(inWindow.a11y.modes) ? inWindow.a11y.modes : [];
-    return modes2.some((m) => asNumber13(asRecord3(m)?.failed) > 0);
+    return modes2.some((m) => asNumber12(asRecord2(m)?.failed) > 0);
   })();
   if (a11yFailing) {
     candidates.push({ command: "ds-bridge a11y", audience: "designer" });
@@ -19520,7 +15145,7 @@ var ACTION_REASON = {
   "ds-bridge a11y": "failing contrast pairs need a look",
   "ds-bridge adoption": "import coverage is below 100%"
 };
-function arrow2(row2) {
+function arrow(row2) {
   if (row2.isNew) return "\u2014";
   switch (row2.direction) {
     case "up":
@@ -19541,10 +15166,10 @@ function movementText(row2) {
   const label = MOVEMENT_LABEL[row2.kind];
   const current = value(row2.kind, row2.current);
   if (row2.isNew) {
-    return `${label} ${arrow2(row2)} new ${current}`;
+    return `${label} ${arrow(row2)} new ${current}`;
   }
   const baseline = value(row2.kind, row2.baseline ?? 0);
-  return `${label} ${arrow2(row2)} ${baseline} \u2192 ${current}`;
+  return `${label} ${arrow(row2)} ${baseline} \u2192 ${current}`;
 }
 function actionText(action) {
   if (action.command === "ds-bridge lint") {
@@ -19625,6 +15250,245 @@ _${doc.quiet}_
   }
   return `${blocks.join("\n\n")}
 `;
+}
+
+// src/render/html/base.ts
+function escapeHtml(value2) {
+  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+var STYLE = `
+:root {
+	--bg: #f6f5f1;
+	--surface: #ffffff;
+	--text: #1f1e1b;
+	--text-subtle: #6b6a63;
+	--border: #e6e3da;
+	--track: #eceae4;
+	--accent: #a3384b;
+	--accent-soft: #f6e9ec;
+	--ok: #6f8a2e;
+	--warn: #c98a1e;
+	--error: #b83f4f;
+	--radius: 14px;
+	--bar: #2a2622;
+	--bar-text: #f6f5f1;
+	--bar-subtle: #b9b3a6;
+	--bar-accent: #e3a73b;
+	--mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 72px; }
+header.dash { background: var(--bar); color: var(--bar-text); }
+header.dash .bar {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 18px 24px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 16px;
+}
+header.dash h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: -0.02em; flex: 1 1 auto; }
+header.dash .project { color: var(--bar-accent); }
+header.dash .view {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bar-text);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.08);
+	border-radius: 999px;
+	padding: 2px 10px;
+}
+header.dash .generated { color: var(--bar-subtle); font-size: 13px; font-variant-numeric: tabular-nums; }
+.kpis {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 12px;
+	margin-bottom: 16px;
+}
+.kpi {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 14px 16px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.kpi.ok { --tone: var(--ok); }
+.kpi.warn { --tone: var(--warn); }
+.kpi.error { --tone: var(--error); }
+.kpi-label { font-size: 12px; font-weight: 600; color: var(--text-subtle); }
+.kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; color: var(--tone, var(--text)); font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 12px; color: var(--text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	grid-auto-flow: row dense;
+	align-items: start;
+	gap: 16px;
+}
+section.panel {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 18px 20px 20px;
+	min-width: 0;
+}
+section.panel.wide { grid-column: span 2; }
+@media (max-width: 780px) { section.panel.wide { grid-column: auto; } }
+section.panel h2 {
+	font-size: 15px;
+	font-weight: 650;
+	margin: 0 0 12px;
+	color: var(--text);
+	letter-spacing: -0.005em;
+}
+.chart { overflow-x: auto; margin: 4px 0; }
+.chart svg { max-width: 100%; height: auto; display: block; }
+.chart.center svg { margin: 0 auto; }
+.split { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: center; }
+@media (max-width: 560px) { .split { grid-template-columns: 1fr; } }
+.empty {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	align-items: flex-start;
+	justify-content: center;
+	min-height: 96px;
+	padding: 14px 16px;
+	border: 1px dashed var(--border);
+	border-radius: 10px;
+	background: var(--bg);
+	color: var(--text-subtle);
+	font-size: 13px;
+}
+.empty .empty-title { font-weight: 600; color: var(--text); }
+.empty code, .meta code {
+	font-family: var(--mono);
+	font-size: 12px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 1px 6px;
+	border-radius: 6px;
+}
+table.parity-key, .meta {
+	width: 100%;
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: var(--text-subtle);
+	border-collapse: collapse;
+}
+.meta:first-of-type { margin-top: 0; }
+.cols { margin-top: 8px; font-size: 12px; color: var(--text-subtle); }
+.cols b { color: var(--text); font-weight: 600; }
+.cols:has(.audience-col) { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; margin-top: 0; }
+.audience-col .cols b { font-size: 13px; text-transform: capitalize; }
+.stat { display: flex; align-items: baseline; gap: 10px; margin: 2px 0 4px; }
+.stat-value { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat-value.ok { color: var(--ok); }
+.stat-value.error { color: var(--error); }
+.stat-sub { color: var(--text-subtle); font-size: 13px; }
+table.weights { width: 100%; margin-top: 12px; font-size: 12px; border-collapse: collapse; }
+table.weights th, table.weights td { padding: 5px 8px; border-top: 1px solid var(--border); text-align: left; }
+table.weights th { color: var(--text-subtle); font-weight: 600; border-top: 0; }
+table.weights td.num, table.weights th + th { text-align: right; font-variant-numeric: tabular-nums; }
+ul.offenders, ul.deductions, ul.calendar { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
+ul.offenders li, ul.calendar li {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	padding: 6px 0;
+	border-top: 1px solid var(--border);
+}
+ul.offenders code, ul.calendar code {
+	font-family: var(--mono);
+	color: var(--text);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+ul.offenders .count { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+ul.deductions li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+ul.deductions .pts { color: var(--error); font-variant-numeric: tabular-nums; font-weight: 600; }
+.frame-name { font-size: 13px; color: var(--text-subtle); margin-top: 6px; text-align: center; }
+ul.calendar .date { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; white-space: nowrap; }
+ul.calendar .detail { color: var(--text-subtle); text-align: right; }
+ul.calendar.stack li { flex-direction: column; align-items: flex-start; gap: 1px; }
+ul.calendar.stack .detail { text-align: left; }
+.badge {
+	display: inline-block;
+	font-family: var(--mono);
+	font-size: 11px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	padding: 1px 7px;
+	border-radius: 999px;
+	margin-right: 4px;
+	white-space: nowrap;
+}
+`.trim();
+var MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
+function readableInstant(iso) {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return iso;
+  const hh = String(at.getUTCHours()).padStart(2, "0");
+  const mm = String(at.getUTCMinutes()).padStart(2, "0");
+  return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}, ${hh}:${mm} UTC`;
+}
+function debtTone(pct5) {
+  const level = debtLevel(pct5);
+  return level === "low" ? "ok" : level === "medium" ? "warn" : "error";
+}
+function panel(title, body, size) {
+  return [
+    size === "wide" ? '<section class="panel wide">' : '<section class="panel">',
+    `<h2>${escapeHtml(title)}</h2>`,
+    body,
+    "</section>"
+  ].join("");
+}
+function kpiTile(label, value2, tone, sub) {
+  const measured = value2 !== void 0;
+  return [
+    `<div class="kpi${measured && tone !== void 0 ? ` ${tone}` : ""}">`,
+    `<span class="kpi-label">${escapeHtml(label)}</span>`,
+    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
+    `<span class="kpi-sub">${escapeHtml(measured ? sub ?? "" : "not measured")}</span>`,
+    "</div>"
+  ].join("");
+}
+function tableHtml(headers, rows) {
+  const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+  const body = rows.map(
+    (r2) => `<tr>${r2.map((c2) => `<td>${typeof c2 === "string" ? escapeHtml(c2) : c2.html}</td>`).join("")}</tr>`
+  ).join("");
+  return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
 // src/render/html/digest.ts
@@ -19711,17 +15575,17 @@ function parseAudience2(flag) {
 }
 function readHistoryText2(stateDir) {
   try {
-    return readFileSync12(join14(stateDir, "history.jsonl"), "utf8");
+    return readFileSync13(join15(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
 }
 function resolveReadinessThreshold(targetDir) {
-  const configPath = join14(targetDir, ".ds-bridge.json");
+  const configPath = join15(targetDir, ".ds-bridge.json");
   let projectFileText;
   if (existsSync11(configPath)) {
     try {
-      projectFileText = readFileSync12(configPath, "utf8");
+      projectFileText = readFileSync13(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -19766,7 +15630,7 @@ function runDigest(path, options, deps) {
     return;
   }
   const targetDir = resolve9(deps.cwd, path);
-  if (!existsSync11(targetDir) || !statSync7(targetDir).isDirectory()) {
+  if (!existsSync11(targetDir) || !statSync6(targetDir).isDirectory()) {
     deps.stderr(`Path "${targetDir}" is not a directory.
 `);
     process.exitCode = 2;
@@ -19779,7 +15643,7 @@ function runDigest(path, options, deps) {
     process.exitCode = 2;
     return;
   }
-  const stateDir = join14(targetDir, ".ds-bridge");
+  const stateDir = join15(targetDir, ".ds-bridge");
   const text2 = readHistoryText2(stateDir);
   const model = buildDigest(
     text2,
@@ -19791,8 +15655,8 @@ function runDigest(path, options, deps) {
   if (options.out !== void 0) {
     const outPath = resolve9(deps.cwd, options.out);
     try {
-      mkdirSync6(dirname5(outPath), { recursive: true });
-      writeFileSync7(outPath, markdown, "utf8");
+      mkdirSync5(dirname4(outPath), { recursive: true });
+      writeFileSync6(outPath, markdown, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       deps.stderr(`Could not write digest to "${outPath}": ${detail}
@@ -19822,7 +15686,7 @@ function registerDigestCommand(program2) {
     "md | html (a self-contained page, e.g. for a Pages site; default md)"
   ).option(
     "--out <file>",
-    "redirect the digest markdown to a file (and print the path) instead of stdout"
+    "write the digest (markdown, or html with --format html) to a file and print the path, instead of stdout"
   ).action((path, options) => {
     runDigest(path, options, defaultDeps2());
   });
@@ -19831,12 +15695,12 @@ function registerDigestCommand(program2) {
 // src/cli-commands/docs.ts
 import {
   existsSync as existsSync12,
-  mkdirSync as mkdirSync7,
-  readFileSync as readFileSync13,
-  statSync as statSync8,
-  writeFileSync as writeFileSync8
+  mkdirSync as mkdirSync6,
+  readFileSync as readFileSync14,
+  statSync as statSync7,
+  writeFileSync as writeFileSync7
 } from "fs";
-import { dirname as dirname6, join as join15, resolve as resolvePath3 } from "path";
+import { dirname as dirname5, join as join16, resolve as resolvePath3 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/engines/docs/merge.ts
@@ -20086,13 +15950,13 @@ async function scanCode(targetDir) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath3(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname6(filename);
+    globals.__dirname = dirname5(filename);
   }
   const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
   return scanCodeComponents(targetDir);
 }
-function loadRegistry2(targetDir) {
-  const registryPath = join15(targetDir, ".ds-bridge", "registry.json");
+function loadRegistry3(targetDir) {
+  const registryPath = join16(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync12(registryPath)) {
     fail7(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -20101,7 +15965,7 @@ function loadRegistry2(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync13(registryPath, "utf8");
+    raw = readFileSync14(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail7(`Could not read registry "${registryPath}": ${detail}`);
@@ -20124,7 +15988,7 @@ async function discoverTokens(targetDir) {
   if (source === void 0) return EMPTY_TOKENS;
   let raw;
   try {
-    raw = readFileSync13(source.path, "utf8");
+    raw = readFileSync14(source.path, "utf8");
   } catch {
     return EMPTY_TOKENS;
   }
@@ -20145,7 +16009,7 @@ function mdxFileName(component) {
 }
 function hasRegistry(candidate) {
   return existsSync12(
-    join15(resolvePath3(candidate), ".ds-bridge", "registry.json")
+    join16(resolvePath3(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate(component, path) {
@@ -20173,11 +16037,11 @@ async function runDocs(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate(rawComponent, rawPath);
   const targetDir = resolvePath3(path);
-  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
+  if (!existsSync12(targetDir) || !statSync7(targetDir).isDirectory()) {
     fail7(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const registry = loadRegistry2(targetDir);
+  const registry = loadRegistry3(targetDir);
   if (registry === void 0) return;
   const code = await scanCode(targetDir);
   const tokens = await discoverTokens(targetDir);
@@ -20194,9 +16058,9 @@ async function runDocs(rawComponent, rawPath, options) {
       return;
     }
   }
-  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join15(targetDir, ".ds-bridge", "docs");
+  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join16(targetDir, ".ds-bridge", "docs");
   try {
-    mkdirSync7(outDir, { recursive: true });
+    mkdirSync6(outDir, { recursive: true });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail7(`Could not create output directory "${outDir}": ${detail}`);
@@ -20205,9 +16069,9 @@ async function runDocs(rawComponent, rawPath, options) {
   const pages = [];
   for (const doc of docs) {
     const fileName = mdxFileName(doc.name);
-    const pagePath = join15(outDir, fileName);
+    const pagePath = join16(outDir, fileName);
     try {
-      writeFileSync8(pagePath, renderComponentMdx(doc), "utf8");
+      writeFileSync7(pagePath, renderComponentMdx(doc), "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       fail7(`Could not write "${pagePath}": ${detail}`);
@@ -20215,9 +16079,9 @@ async function runDocs(rawComponent, rawPath, options) {
     }
     pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
   }
-  const llmsPath = join15(outDir, "llms.txt");
+  const llmsPath = join16(outDir, "llms.txt");
   try {
-    writeFileSync8(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+    writeFileSync7(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail7(`Could not write "${llmsPath}": ${detail}`);
@@ -20248,8 +16112,8 @@ function registerDocsCommand(program2) {
 }
 
 // src/cli-commands/frame-impl.ts
-import { existsSync as existsSync13, readdirSync as readdirSync2, readFileSync as readFileSync14 } from "fs";
-import { isAbsolute as isAbsolute2, join as join16, resolve as resolve10, sep as sep2 } from "path";
+import { existsSync as existsSync13, readdirSync as readdirSync2, readFileSync as readFileSync15 } from "fs";
+import { isAbsolute as isAbsolute2, join as join17, resolve as resolve10, sep as sep2 } from "path";
 import { cwd } from "process";
 
 // src/engines/tokens/normalize.ts
@@ -20607,21 +16471,21 @@ function clientErrorMessage(result) {
   }
 }
 function readProjectConfigText2() {
-  const configPath = join16(cwd(), ".ds-bridge.json");
+  const configPath = join17(cwd(), ".ds-bridge.json");
   if (!existsSync13(configPath)) return void 0;
   try {
-    return readFileSync14(configPath, "utf8");
+    return readFileSync15(configPath, "utf8");
   } catch {
     return void 0;
   }
 }
-function loadRegistry3(registryPath) {
+function loadRegistry4(registryPath) {
   if (!existsSync13(registryPath)) {
     return { kind: "error", message: missingRegistryMessage(registryPath) };
   }
   try {
     const registry = JSON.parse(
-      readFileSync14(registryPath, "utf8")
+      readFileSync15(registryPath, "utf8")
     );
     return { kind: "ok", registry };
   } catch (error) {
@@ -20642,7 +16506,7 @@ function isTokenDir2(name) {
 function detectFileFormat2(absPath) {
   let raw;
   try {
-    raw = readFileSync14(absPath, "utf8");
+    raw = readFileSync15(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -20666,7 +16530,7 @@ function collectTokenCandidates(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join16(dir, entry.name);
+    const full = join17(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS2.has(entry.name)) continue;
       collectTokenCandidates(
@@ -20691,11 +16555,11 @@ function discoverFirstTokenSource(root) {
 }
 function loadTokens(targetDir) {
   let tokenPath;
-  const configPath = join16(targetDir, ".ds-bridge.json");
+  const configPath = join17(targetDir, ".ds-bridge.json");
   if (existsSync13(configPath)) {
     try {
       const resolved = resolveConfig({
-        projectFileText: readFileSync14(configPath, "utf8")
+        projectFileText: readFileSync15(configPath, "utf8")
       });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
@@ -20717,7 +16581,7 @@ Set token_source in .ds-bridge.json, or add a conventional token file (tokens.js
   }
   let parsed;
   try {
-    parsed = JSON.parse(readFileSync14(tokenPath, "utf8"));
+    parsed = JSON.parse(readFileSync15(tokenPath, "utf8"));
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -20864,7 +16728,7 @@ function renderTerm6(impl, color) {
   return lines.join("\n");
 }
 function appendFrameImplHistory(record) {
-  const stateDir = join16(cwd(), ".ds-bridge");
+  const stateDir = join17(cwd(), ".ds-bridge");
   appendHistoryRecord(stateDir, record);
 }
 async function runFrameImpl(url, options) {
@@ -20914,8 +16778,8 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
   }
   const fileKey = fileKeyOutcome.key;
   const targetDir = cwd();
-  const registryPath = join16(targetDir, ".ds-bridge", "registry.json");
-  const registryOutcome = loadRegistry3(registryPath);
+  const registryPath = join17(targetDir, ".ds-bridge", "registry.json");
+  const registryOutcome = loadRegistry4(registryPath);
   if (registryOutcome.kind === "error") {
     fail8(registryOutcome.message);
     return;
@@ -20993,7 +16857,7 @@ function registerFrameImplCommand(program2) {
 }
 
 // src/cli-commands/handoff.ts
-import { join as join17 } from "path";
+import { join as join18 } from "path";
 import { cwd as cwd2 } from "process";
 
 // src/engines/handoff/score.ts
@@ -21182,7 +17046,7 @@ var RULE_LABEL = {
 };
 var HISTORY_DEDUCTION_LIMIT = 3;
 function appendHandoffHistory(report, frameName, frame) {
-  const stateDir = join17(cwd2(), ".ds-bridge");
+  const stateDir = join18(cwd2(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "handoff",
@@ -21434,11 +17298,11 @@ function registerHandoffCommand(program2) {
 import {
   appendFileSync as appendFileSync4,
   existsSync as existsSync14,
-  readFileSync as readFileSync15,
-  statSync as statSync9,
-  writeFileSync as writeFileSync9
+  readFileSync as readFileSync16,
+  statSync as statSync8,
+  writeFileSync as writeFileSync8
 } from "fs";
-import { join as join18, resolve as resolve11 } from "path";
+import { join as join19, resolve as resolve11 } from "path";
 
 // src/engines/history/compact.ts
 function canonical(value2) {
@@ -21450,11 +17314,7 @@ function canonical(value2) {
   return JSON.stringify(value2) ?? "null";
 }
 function payloadIdentity(record) {
-  const payload = {};
-  for (const [key, value2] of Object.entries(record)) {
-    if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
-  }
-  return canonical(payload);
+  return canonical(payloadOf(record));
 }
 function parseEntry(raw) {
   let parsed;
@@ -21526,7 +17386,7 @@ var IDENTITY_KEYS = ["mode", "dir", "componentName", "name"];
 function asObject6(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2) ? value2 : void 0;
 }
-function str3(value2) {
+function stringOrNull(value2) {
   return typeof value2 === "string" ? value2 : null;
 }
 function identityOf(element) {
@@ -21557,9 +17417,9 @@ function numericLeaves(obj, prefix, out) {
   }
 }
 function subjectOf(record) {
-  const frameName = str3(record.frameName);
+  const frameName = stringOrNull(record.frameName);
   if (frameName === null) return null;
-  const nodeId = str3(record.nodeId);
+  const nodeId = stringOrNull(record.nodeId);
   return nodeId === null ? frameName : `${frameName} (${nodeId})`;
 }
 function exportRows(text2, filter) {
@@ -21580,10 +17440,7 @@ function exportRows(text2, filter) {
     const record = entry.record;
     const v2 = entry.envelope !== void 0;
     const git = v2 ? asObject6(record.git) : void 0;
-    const payload = {};
-    for (const [key, value2] of Object.entries(record)) {
-      if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
-    }
+    const payload = payloadOf(record);
     const subject = subjectOf(record);
     const leaves = [];
     numericLeaves(payload, "", leaves);
@@ -21592,10 +17449,10 @@ function exportRows(text2, filter) {
       rows.push({
         at: entry.at,
         date: entry.at.slice(0, 10),
-        runId: v2 ? str3(record.runId) : null,
-        sha: git !== void 0 ? str3(git.sha) : null,
-        branch: git !== void 0 ? str3(git.branch) : null,
-        source: v2 ? str3(record.source) : null,
+        runId: v2 ? stringOrNull(record.runId) : null,
+        sha: git !== void 0 ? stringOrNull(git.sha) : null,
+        branch: git !== void 0 ? stringOrNull(git.branch) : null,
+        source: v2 ? stringOrNull(record.source) : null,
         kind: entry.kind,
         subject,
         metric,
@@ -21774,9 +17631,7 @@ function migrateLine(raw) {
   out.source = "local";
   out.git = null;
   out.tool = null;
-  for (const [key, value2] of Object.entries(record)) {
-    if (!RESERVED_ENVELOPE_KEYS.has(key)) out[key] = value2;
-  }
+  Object.assign(out, payloadOf(record));
   return JSON.stringify(out);
 }
 function migrateHistory(text2) {
@@ -21855,21 +17710,25 @@ function prepare2(path, options) {
     return void 0;
   }
   const targetDir = resolve11(path);
-  if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
+  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return void 0;
   }
-  return { format, targetDir, stateDir: join18(targetDir, ".ds-bridge") };
+  return { format, targetDir, stateDir: join19(targetDir, ".ds-bridge") };
 }
 function readText(file) {
   try {
-    return readFileSync15(file, "utf8");
-  } catch {
-    return void 0;
+    return readFileSync16(file, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return void 0;
+    const detail = error instanceof Error ? error.message : String(error);
+    fail10(`Could not read ${file}: ${detail}`);
+    return null;
   }
 }
 function readinessThreshold(targetDir) {
-  const projectFileText = readText(join18(targetDir, ".ds-bridge.json"));
+  const projectFileText = readText(join19(targetDir, ".ds-bridge.json"));
+  if (projectFileText === null) return void 0;
   const resolved = resolveConfig({
     env: process.env,
     ...projectFileText !== void 0 ? { projectFileText } : {}
@@ -21892,7 +17751,8 @@ function runStats(path, options) {
   if (threshold === void 0) return;
   const file = historyFilePath(ctx.stateDir);
   const text2 = readText(file);
-  const bytes = text2 === void 0 ? 0 : statSync9(file).size;
+  if (text2 === null) return;
+  const bytes = text2 === void 0 ? 0 : statSync8(file).size;
   const stats = historyStats(text2 ?? "", bytes);
   const frames = readinessByFrame(
     replayHistory(text2 ?? ""),
@@ -21957,7 +17817,7 @@ function rewriteUnderLock(stateDir, dryRun, transform) {
     return { ok: false };
   }
   try {
-    const bytes = readFileSync15(file);
+    const bytes = readFileSync16(file);
     const text2 = bytes.toString("utf8");
     const next = transform(text2);
     if (!dryRun && next.text !== text2)
@@ -22037,10 +17897,10 @@ function runMigrate(path, options) {
 function runInit(path, options) {
   const ctx = prepare2(path, options);
   if (ctx === void 0) return;
-  const file = join18(ctx.targetDir, ".gitattributes");
+  const file = join19(ctx.targetDir, ".gitattributes");
   let current;
   try {
-    current = readFileSync15(file, "utf8");
+    current = readFileSync16(file, "utf8");
   } catch (error) {
     if (error.code !== "ENOENT") {
       const detail = error instanceof Error ? error.message : String(error);
@@ -22052,7 +17912,7 @@ function runInit(path, options) {
   if (next.changed && !options.dryRun) {
     try {
       if (current === void 0) {
-        writeFileSync9(file, next.text, { encoding: "utf8", flag: "wx" });
+        writeFileSync8(file, next.text, { encoding: "utf8", flag: "wx" });
       } else {
         appendFileSync4(file, next.text.slice(current.length), "utf8");
       }
@@ -22093,7 +17953,7 @@ function runExport(path, options) {
     return;
   }
   const targetDir = resolve11(path);
-  if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
+  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -22119,13 +17979,15 @@ function runExport(path, options) {
     filter.untilMs = until.untilMs;
     filter.untilExclusive = until.exclusive;
   }
-  const text2 = readText(historyFilePath(join18(targetDir, ".ds-bridge"))) ?? "";
+  const read = readText(historyFilePath(join19(targetDir, ".ds-bridge")));
+  if (read === null) return;
+  const text2 = read ?? "";
   const rows = exportRows(text2, filter);
   const output = format === "csv" ? toCsv(rows) : toJsonl(rows);
   if (options.out !== void 0) {
     const outPath = resolve11(options.out);
     try {
-      writeFileSync9(outPath, output, "utf8");
+      writeFileSync8(outPath, output, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       fail10(`Could not write ${outPath}: ${detail}`);
@@ -22183,8 +18045,8 @@ function registerHistoryCommand(program2) {
 }
 
 // src/cli-commands/impact.ts
-import { existsSync as existsSync15, mkdirSync as mkdirSync8, readFileSync as readFileSync16, writeFileSync as writeFileSync10 } from "fs";
-import { dirname as dirname7, join as join19 } from "path";
+import { existsSync as existsSync15, mkdirSync as mkdirSync7, readFileSync as readFileSync17, writeFileSync as writeFileSync9 } from "fs";
+import { dirname as dirname6, join as join20 } from "path";
 import { cwd as cwd3, env as processEnv } from "process";
 import { fileURLToPath as fileURLToPath4 } from "url";
 
@@ -22592,10 +18454,10 @@ function clientErrorMessage3(result) {
   }
 }
 function readProjectConfigText3() {
-  const configPath = join19(cwd3(), ".ds-bridge.json");
+  const configPath = join20(cwd3(), ".ds-bridge.json");
   if (!existsSync15(configPath)) return void 0;
   try {
-    return readFileSync16(configPath, "utf8");
+    return readFileSync17(configPath, "utf8");
   } catch {
     return void 0;
   }
@@ -22603,14 +18465,14 @@ function readProjectConfigText3() {
 function cursorPath() {
   const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join19(dataDir, "impact-cursor.json");
+    return join20(dataDir, "impact-cursor.json");
   }
-  return join19(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
+  return join20(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
 }
 function readCursor(path) {
   if (!existsSync15(path)) return void 0;
   try {
-    const parsed = JSON.parse(readFileSync16(path, "utf8"));
+    const parsed = JSON.parse(readFileSync17(path, "utf8"));
     if (!Array.isArray(parsed.snapshot)) return void 0;
     return parsed;
   } catch {
@@ -22619,19 +18481,19 @@ function readCursor(path) {
 }
 function writeCursor(path, cursor) {
   try {
-    mkdirSync8(dirname7(path), { recursive: true });
-    writeFileSync10(path, `${JSON.stringify(cursor, null, 2)}
+    mkdirSync7(dirname6(path), { recursive: true });
+    writeFileSync9(path, `${JSON.stringify(cursor, null, 2)}
 `, "utf8");
     return true;
   } catch {
     return false;
   }
 }
-function loadRegistry4() {
-  const registryPath = join19(cwd3(), ".ds-bridge", "registry.json");
+function loadRegistry5() {
+  const registryPath = join20(cwd3(), ".ds-bridge", "registry.json");
   if (!existsSync15(registryPath)) return void 0;
   try {
-    return JSON.parse(readFileSync16(registryPath, "utf8"));
+    return JSON.parse(readFileSync17(registryPath, "utf8"));
   } catch {
     return void 0;
   }
@@ -22641,7 +18503,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath4(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname7(filename);
+    globals.__dirname = dirname6(filename);
   }
   const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
@@ -22694,7 +18556,7 @@ function buildMigrationSites(diff, usageByName, cap) {
   return { sites: truncated ? all.slice(0, limit) : all, truncated };
 }
 function appendImpactHistory(targetDir, diff, usageByName, cap) {
-  const stateDir = join19(targetDir, ".ds-bridge");
+  const stateDir = join20(targetDir, ".ds-bridge");
   let touchedCallSites = 0;
   for (const usage of usageByName.values()) {
     touchedCallSites += usage.usages.length;
@@ -22927,7 +18789,7 @@ Run "ds-bridge impact" again after library changes to see the diff.
   }
   const diff = diffComponents(cursor.snapshot, freshSnapshot);
   const breaking = hasBreaking(diff);
-  const registry = loadRegistry4();
+  const registry = loadRegistry5();
   const usageByName = /* @__PURE__ */ new Map();
   if (registry !== void 0) {
     const usages = await mapChangedUsage(registry, changedNames(diff));
@@ -23006,8 +18868,8 @@ function registerImpactCommand(program2) {
 }
 
 // src/cli-commands/library-health.ts
-import { existsSync as existsSync16, mkdirSync as mkdirSync9, readFileSync as readFileSync17, writeFileSync as writeFileSync11 } from "fs";
-import { join as join21 } from "path";
+import { existsSync as existsSync16, mkdirSync as mkdirSync8, readFileSync as readFileSync18, writeFileSync as writeFileSync10 } from "fs";
+import { join as join22 } from "path";
 import { cwd as cwd4, env as processEnv2 } from "process";
 
 // src/engines/figma/library-health.ts
@@ -23100,6 +18962,14 @@ function assessLibraryHealth(file, opts) {
     totals
   };
 }
+function capLibraryHealth(report, cap = CAP) {
+  return {
+    overrideHotspots: report.overrideHotspots.slice(0, cap),
+    deprecatedUsage: report.deprecatedUsage.slice(0, cap),
+    detachedCandidates: report.detachedCandidates.slice(0, cap),
+    totals: report.totals
+  };
+}
 
 // src/engines/figma/library-health-top.ts
 function rank(counts, n) {
@@ -23144,14 +19014,14 @@ function parseTopN(raw) {
 }
 
 // src/io/figma/cache.ts
-import { dirname as dirname8, join as join20 } from "path";
+import { dirname as dirname7, join as join21 } from "path";
 function cachePath(args) {
   const fileName = `library-${args.key}.json`;
   const dataDir = args.env.CLAUDE_PLUGIN_DATA;
   if (dataDir !== void 0 && dataDir !== "") {
-    return join20(dataDir, "figma", fileName);
+    return join21(dataDir, "figma", fileName);
   }
-  return join20(args.cwd, ".ds-bridge", "cache", fileName);
+  return join21(args.cwd, ".ds-bridge", "cache", fileName);
 }
 function isEnvelope(value2) {
   return typeof value2 === "object" && value2 !== null && typeof value2.stampedAtMs === "number";
@@ -23175,7 +19045,7 @@ function writeCache(args) {
   const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
   const envelope = { stampedAtMs: args.now, data: args.data };
   try {
-    args.fs.mkdir(dirname8(path));
+    args.fs.mkdir(dirname7(path));
     args.fs.write(path, `${JSON.stringify(envelope, null, 2)}
 `);
   } catch {
@@ -23208,10 +19078,10 @@ function missingFileKeyMessage2() {
   ].join("\n");
 }
 function readProjectConfigText4() {
-  const configPath = join21(cwd4(), ".ds-bridge.json");
+  const configPath = join22(cwd4(), ".ds-bridge.json");
   if (!existsSync16(configPath)) return void 0;
   try {
-    return readFileSync17(configPath, "utf8");
+    return readFileSync18(configPath, "utf8");
   } catch {
     return void 0;
   }
@@ -23245,16 +19115,16 @@ function clientErrorMessage4(result) {
 }
 var fsAdapter = {
   exists: (path) => existsSync16(path),
-  read: (path) => readFileSync17(path, "utf8"),
+  read: (path) => readFileSync18(path, "utf8"),
   mkdir: (path) => {
-    mkdirSync9(path, { recursive: true });
+    mkdirSync8(path, { recursive: true });
   },
   write: (path, content) => {
-    writeFileSync11(path, content, "utf8");
+    writeFileSync10(path, content, "utf8");
   }
 };
 function appendLibraryHealthHistory(totals, lists, fileKey) {
-  const stateDir = join21(cwd4(), ".ds-bridge");
+  const stateDir = join22(cwd4(), ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "library-health",
@@ -23397,11 +19267,9 @@ async function runLibraryHealth(options) {
       return;
     }
   }
-  const report = assessLibraryHealth(file);
-  const lists = topN > 0 ? libraryHealthTopLists(
-    assessLibraryHealth(file, { cap: Number.POSITIVE_INFINITY }),
-    topN
-  ) : void 0;
+  const full = assessLibraryHealth(file, { cap: Number.POSITIVE_INFINITY });
+  const report = capLibraryHealth(full);
+  const lists = topN > 0 ? libraryHealthTopLists(full, topN) : void 0;
   appendLibraryHealthHistory(report.totals, lists, fileKey);
   if (format === "json") {
     process.stdout.write(`${JSON.stringify(report, null, 2)}
@@ -23432,11 +19300,11 @@ import { spawnSync as spawnSync2 } from "child_process";
 import {
   existsSync as existsSync17,
   readdirSync as readdirSync3,
-  readFileSync as readFileSync18,
-  statSync as statSync10,
-  writeFileSync as writeFileSync12
+  readFileSync as readFileSync19,
+  statSync as statSync9,
+  writeFileSync as writeFileSync11
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join22, relative, resolve as resolve12, sep as sep3 } from "path";
+import { isAbsolute as isAbsolute3, join as join23, relative, resolve as resolve12, sep as sep3 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -23615,8 +19483,8 @@ function extractTsx(source, file) {
         }
       } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
         if (isSpacingProperty(property)) {
-          const num5 = Number.parseFloat(rawValue);
-          if (Number.isFinite(num5) && num5 !== 0) {
+          const num4 = Number.parseFloat(rawValue);
+          if (Number.isFinite(num4) && num4 !== 0) {
             const pos = indexToLineCol(source, absValueIndex);
             out.push({
               file,
@@ -23708,7 +19576,7 @@ function dirnameOf(path) {
   const slash = path.lastIndexOf("/");
   return slash === -1 ? "" : path.slice(0, slash);
 }
-function pct4(refs, literals) {
+function pct3(refs, literals) {
   const denom = refs + literals;
   return denom === 0 ? 0 : refs / denom;
 }
@@ -23728,8 +19596,8 @@ function tallyAdoption(files) {
     }
   }
   const byDirectory = [...byDir.values()].filter((d) => d.refs + d.literals > 0).sort((a, b) => {
-    const pa = pct4(a.refs, a.literals);
-    const pb = pct4(b.refs, b.literals);
+    const pa = pct3(a.refs, a.literals);
+    const pb = pct3(b.refs, b.literals);
     if (pa !== pb) return pa - pb;
     return a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0;
   }).slice(0, BY_DIRECTORY_CAP);
@@ -23935,7 +19803,7 @@ function computeAdoption(files, findings) {
   const perFile = cssFiles.map((file) => {
     let refs = 0;
     try {
-      refs = countTokenRefs(readFileSync18(file.abs, "utf8"));
+      refs = countTokenRefs(readFileSync19(file.abs, "utf8"));
     } catch {
       refs = 0;
     }
@@ -23957,7 +19825,7 @@ function isCssLike(path) {
   return lower.endsWith(".css") || lower.endsWith(".scss");
 }
 function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join22(targetDir, ".ds-bridge");
+  const stateDir = join23(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
@@ -23978,7 +19846,7 @@ function walkLintableFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join22(dir, entry.name);
+    const full = join23(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkLintableFiles(full, acc);
@@ -23998,11 +19866,11 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join22(targetDir, ".ds-bridge.json");
+  const configPath = join23(targetDir, ".ds-bridge.json");
   if (existsSync17(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync18(configPath, "utf8");
+      projectFileText = readFileSync19(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -24054,7 +19922,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join22(dir, entry.name);
+    const full = join23(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS3.has(entry.name)) continue;
       collectTokenCandidates2(
@@ -24071,7 +19939,7 @@ function collectTokenCandidates2(dir, insideTokenDir, acc) {
 function detectFileFormat3(absPath) {
   let raw;
   try {
-    raw = readFileSync18(absPath, "utf8");
+    raw = readFileSync19(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -24087,7 +19955,7 @@ function detectFileFormat3(absPath) {
 function loadTokenMap(tokenPath) {
   let raw;
   try {
-    raw = readFileSync18(tokenPath, "utf8");
+    raw = readFileSync19(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -24129,7 +19997,7 @@ ${lines.join("\n")}`
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync18(absPath, "utf8");
+    content = readFileSync19(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -24235,7 +20103,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync18(absPath, "utf8");
+      content = readFileSync19(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -24246,7 +20114,7 @@ function applyFixes(editsByFile) {
     const next = applyEdits(content, edits);
     if (next === content) continue;
     try {
-      writeFileSync12(absPath, next, "utf8");
+      writeFileSync11(absPath, next, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -24286,7 +20154,7 @@ function registerLintCommand(program2) {
       fail13(`Path "${targetPath}" does not exist.`);
       return;
     }
-    const stat2 = statSync10(targetPath);
+    const stat2 = statSync9(targetPath);
     const isFile = stat2.isFile();
     if (isFile && !hasExtension(targetPath)) {
       fail13(
@@ -24405,8 +20273,8 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync18, readFileSync as readFileSync19, statSync as statSync11 } from "fs";
-import { join as join23, resolve as resolvePath4 } from "path";
+import { existsSync as existsSync18, readFileSync as readFileSync20, statSync as statSync10 } from "fs";
+import { join as join24, resolve as resolvePath4 } from "path";
 function fail14(message) {
   process.stderr.write(`${message}
 `);
@@ -24426,8 +20294,8 @@ function statusSeverity2(status) {
       return "error";
   }
 }
-function loadRegistry5(targetDir) {
-  const registryPath = join23(targetDir, ".ds-bridge", "registry.json");
+function loadRegistry6(targetDir) {
+  const registryPath = join24(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync18(registryPath)) {
     fail14(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -24436,7 +20304,7 @@ function loadRegistry5(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync19(registryPath, "utf8");
+    raw = readFileSync20(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail14(`Could not read registry "${registryPath}": ${detail}`);
@@ -24536,7 +20404,7 @@ function renderMarkdown(report) {
 }
 function hasRegistry2(candidate) {
   return existsSync18(
-    join23(resolvePath4(candidate), ".ds-bridge", "registry.json")
+    join24(resolvePath4(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate2(component, path) {
@@ -24547,11 +20415,11 @@ function disambiguate2(component, path) {
 }
 function appendParityHistory(targetDir, registry, report) {
   try {
-    const stateDir = join23(targetDir, ".ds-bridge");
+    const stateDir = join24(targetDir, ".ds-bridge");
     const snapshot = typeof registry.generatedAt === "string" ? registry.generatedAt : void 0;
     let text2 = "";
     try {
-      text2 = readFileSync19(join23(stateDir, "history.jsonl"), "utf8");
+      text2 = readFileSync20(join24(stateDir, "history.jsonl"), "utf8");
     } catch {
       text2 = "";
     }
@@ -24559,17 +20427,8 @@ function appendParityHistory(targetDir, registry, report) {
     if (snapshot !== void 0 && latest !== void 0 && (latest.at === snapshot || latest.record.registryAt === snapshot)) {
       return;
     }
-    const { ok, missingInCode, missingInFigma, propMismatch } = report.summary;
-    const total = ok + missingInCode + missingInFigma + propMismatch;
     appendHistoryRecord(stateDir, {
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      kind: "parity",
-      total,
-      ok,
-      missingInCode,
-      missingInFigma,
-      propMismatch,
-      score: total > 0 ? Math.round(100 * ok / total) : 0,
+      ...parityHistoryRecord(report.summary, (/* @__PURE__ */ new Date()).toISOString()),
       ...snapshot !== void 0 ? { registryAt: snapshot } : {}
     });
   } catch {
@@ -24583,11 +20442,11 @@ function runParity(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate2(rawComponent, rawPath);
   const targetDir = resolvePath4(path);
-  if (!existsSync18(targetDir) || !statSync11(targetDir).isDirectory()) {
+  if (!existsSync18(targetDir) || !statSync10(targetDir).isDirectory()) {
     fail14(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const registry = loadRegistry5(targetDir);
+  const registry = loadRegistry6(targetDir);
   if (registry === void 0) return;
   const full = buildParity(registry);
   const rows = filterRows(full.rows, component);
@@ -24633,8 +20492,8 @@ function registerParityCommand(program2) {
 // src/cli-commands/record.ts
 import { spawnSync as spawnSync3 } from "child_process";
 import { randomUUID as randomUUID2 } from "crypto";
-import { existsSync as existsSync19, readFileSync as readFileSync20, statSync as statSync12 } from "fs";
-import { join as join24, resolve as resolve13 } from "path";
+import { existsSync as existsSync19, readFileSync as readFileSync21, statSync as statSync11 } from "fs";
+import { join as join25, resolve as resolve13 } from "path";
 
 // src/engines/history/score-record.ts
 function scoreRecordPayload(text2, profile) {
@@ -24725,6 +20584,13 @@ function classifyStep(run, recorded) {
     reason: firstLine ?? "no history record written"
   };
 }
+var STEP_TIMEOUT_MS = 5 * 60 * 1e3;
+var STEP_STDERR_MAX = 16 * 1024 * 1024;
+function stepTimeoutMs(env) {
+  const raw = env.DS_BRIDGE_RECORD_STEP_TIMEOUT_MS;
+  const parsed = raw !== void 0 && /^\d+$/.test(raw) ? Number(raw) : 0;
+  return parsed > 0 ? parsed : STEP_TIMEOUT_MS;
+}
 function spawnSelf(args, options) {
   const entry = process.argv[1];
   if (entry === void 0) {
@@ -24737,11 +20603,16 @@ function spawnSelf(args, options) {
       cwd: options.cwd,
       env: options.env,
       encoding: "utf8",
-      stdio: ["ignore", "ignore", "pipe"]
+      stdio: ["ignore", "ignore", "pipe"],
+      timeout: stepTimeoutMs(options.env),
+      killSignal: "SIGTERM",
+      maxBuffer: STEP_STDERR_MAX
     }
   );
   if (run.error !== void 0) {
-    return { status: null, stderr: "", error: run.error.message };
+    const code = run.error.code;
+    const error = code === "ETIMEDOUT" ? `timed out after ${Math.round(stepTimeoutMs(options.env) / 1e3)}s` : run.error.message;
+    return { status: null, stderr: "", error };
   }
   return { status: run.status, stderr: run.stderr ?? "" };
 }
@@ -24751,11 +20622,11 @@ function fail15(message) {
   process.exitCode = 2;
 }
 function readProjectSettings(targetDir, env) {
-  const configPath = join24(targetDir, ".ds-bridge.json");
+  const configPath = join25(targetDir, ".ds-bridge.json");
   let projectFileText;
   if (existsSync19(configPath)) {
     try {
-      projectFileText = readFileSync20(configPath, "utf8");
+      projectFileText = readFileSync21(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -24777,7 +20648,7 @@ function readProjectSettings(targetDir, env) {
 }
 function readHistoryText3(stateDir) {
   try {
-    return readFileSync20(historyFilePath(stateDir), "utf8");
+    return readFileSync21(historyFilePath(stateDir), "utf8");
   } catch {
     return "";
   }
@@ -24840,13 +20711,13 @@ function runRecord(path, options, deps) {
     }
   }
   const targetDir = resolve13(path);
-  if (!existsSync19(targetDir) || !statSync12(targetDir).isDirectory()) {
+  if (!existsSync19(targetDir) || !statSync11(targetDir).isDirectory()) {
     fail15(`Path "${targetDir}" is not a directory.`);
     return 2;
   }
-  const stateDir = join24(targetDir, ".ds-bridge");
+  const stateDir = join25(targetDir, ".ds-bridge");
   const detectEnv = { ...deps.env };
-  loadDotenvInto(join24(targetDir, ".ds-bridge.env"), detectEnv);
+  loadDotenvInto(join25(targetDir, ".ds-bridge.env"), detectEnv);
   const settings = readProjectSettings(targetDir, detectEnv);
   if (settings.kind === "error") {
     fail15(settings.message);
@@ -24859,7 +20730,7 @@ function runRecord(path, options, deps) {
     DS_BRIDGE_SOURCE: source
   };
   const steps = planRecordSteps({
-    hasRegistry: existsSync19(join24(stateDir, "registry.json")),
+    hasRegistry: existsSync19(join25(stateDir, "registry.json")),
     figmaConfigured: settings.figmaConfigured,
     figma: options.figma === true,
     figmaToken: settings.figmaToken,
@@ -24903,10 +20774,7 @@ function runRecord(path, options, deps) {
     return 2;
   }
   let score = null;
-  const payload = scoreRecordPayload(
-    readHistoryText3(stateDir),
-    settings.profile
-  );
+  const payload = batchRecords.length > 0 ? scoreRecordPayload(readHistoryText3(stateDir), settings.profile) : void 0;
   if (payload !== void 0) {
     try {
       appendHistoryRecord(stateDir, payload, { env: childEnv, source });
@@ -24959,12 +20827,12 @@ function registerRecordCommand(program2) {
 // src/cli-commands/registry.ts
 import {
   existsSync as existsSync20,
-  mkdirSync as mkdirSync10,
-  readFileSync as readFileSync21,
-  statSync as statSync13,
-  writeFileSync as writeFileSync13
+  mkdirSync as mkdirSync9,
+  readFileSync as readFileSync22,
+  statSync as statSync12,
+  writeFileSync as writeFileSync12
 } from "fs";
-import { dirname as dirname9, join as join25, resolve as resolvePath5 } from "path";
+import { dirname as dirname8, join as join26, resolve as resolvePath5 } from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // src/engines/registry/match.ts
@@ -25162,7 +21030,7 @@ async function scanCode2(targetDir) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath5(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname9(filename);
+    globals.__dirname = dirname8(filename);
   }
   const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
   return scanCodeComponents(targetDir);
@@ -25212,7 +21080,7 @@ async function runBuild(path, options) {
     return;
   }
   const targetDir = resolvePath5(path);
-  if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
+  if (!existsSync20(targetDir) || !statSync12(targetDir).isDirectory()) {
     fail16(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -25257,11 +21125,11 @@ async function runBuild(path, options) {
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join25(targetDir, ".ds-bridge");
-  const registryPath = join25(stateDir, "registry.json");
+  const stateDir = join26(targetDir, ".ds-bridge");
+  const registryPath = join26(stateDir, "registry.json");
   try {
-    mkdirSync10(stateDir, { recursive: true });
-    writeFileSync13(
+    mkdirSync9(stateDir, { recursive: true });
+    writeFileSync12(
       registryPath,
       `${JSON.stringify(registry, null, 2)}
 `,
@@ -25286,19 +21154,7 @@ async function runBuild(path, options) {
   process.exitCode = 0;
 }
 function parityRecordFrom(registry, generatedAt) {
-  const { ok, missingInCode, missingInFigma, propMismatch } = buildParity(registry).summary;
-  const total = ok + missingInCode + missingInFigma + propMismatch;
-  const score = total > 0 ? Math.round(100 * ok / total) : 0;
-  return {
-    at: generatedAt,
-    kind: "parity",
-    total,
-    ok,
-    missingInCode,
-    missingInFigma,
-    propMismatch,
-    score
-  };
+  return parityHistoryRecord(buildParity(registry).summary, generatedAt);
 }
 function appendParityHistory2(stateDir, record) {
   try {
@@ -25335,8 +21191,8 @@ function renderBuildSummary(registry, registryPath, parity) {
   }
   return lines.join("\n");
 }
-function loadRegistry6(targetDir) {
-  const registryPath = join25(targetDir, ".ds-bridge", "registry.json");
+function loadRegistry7(targetDir) {
+  const registryPath = join26(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync20(registryPath)) {
     fail16(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -25345,7 +21201,7 @@ function loadRegistry6(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync21(registryPath, "utf8");
+    raw = readFileSync22(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail16(`Could not read registry "${registryPath}": ${detail}`);
@@ -25361,11 +21217,11 @@ function loadRegistry6(targetDir) {
 }
 function runResolve(nodeNameOrId, path) {
   const targetDir = resolvePath5(path);
-  if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
+  if (!existsSync20(targetDir) || !statSync12(targetDir).isDirectory()) {
     fail16(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const registry = loadRegistry6(targetDir);
+  const registry = loadRegistry7(targetDir);
   if (registry === void 0) return;
   const outcome = resolveEntry(registry, nodeNameOrId);
   switch (outcome.kind) {
@@ -25415,8 +21271,8 @@ function registerRegistryCommand(program2) {
 }
 
 // src/cli-commands/release-check.ts
-import { existsSync as existsSync21, readFileSync as readFileSync22, statSync as statSync14 } from "fs";
-import { join as join26, resolve as resolve14 } from "path";
+import { existsSync as existsSync21, readFileSync as readFileSync23, statSync as statSync13 } from "fs";
+import { join as join27, resolve as resolve14 } from "path";
 function fail17(message) {
   process.stderr.write(`${message}
 `);
@@ -25424,7 +21280,7 @@ function fail17(message) {
 }
 function readHistoryText4(stateDir) {
   try {
-    return readFileSync22(join26(stateDir, "history.jsonl"), "utf8");
+    return readFileSync23(join27(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
@@ -25449,11 +21305,11 @@ function runReleaseCheck(path, options) {
     return;
   }
   const targetDir = resolve14(path);
-  if (!existsSync21(targetDir) || !statSync14(targetDir).isDirectory()) {
+  if (!existsSync21(targetDir) || !statSync13(targetDir).isDirectory()) {
     fail17(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const stateDir = join26(targetDir, ".ds-bridge");
+  const stateDir = join27(targetDir, ".ds-bridge");
   const signals = extractReleaseSignals(
     replayHistory(readHistoryText4(stateDir))
   );
@@ -25479,9 +21335,4223 @@ function registerReleaseCheckCommand(program2) {
   });
 }
 
+// src/cli-commands/report.ts
+import { spawn } from "child_process";
+import {
+  existsSync as existsSync22,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync24,
+  statSync as statSync14,
+  writeFileSync as writeFileSync13
+} from "fs";
+import { dirname as dirname9, join as join28, resolve as resolve15 } from "path";
+import { platform } from "process";
+
+// src/engines/report/manager-report.ts
+var TOP_N = 3;
+var LOW_CONSISTENCY = 50;
+var LOW_SCORE = 50;
+function top(candidates) {
+  return [...candidates].sort((a, b) => b.rank - a.rank).slice(0, TOP_N).map((c2) => c2.text);
+}
+function plural(n, one, many) {
+  return n === 1 ? one : many;
+}
+function finite2(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2);
+}
+function frameLabel(f3) {
+  return f3.frameName !== "" ? f3.frameName : f3.key;
+}
+var KIND_LABEL = {
+  drift: "token drift",
+  readiness: "handoff readiness",
+  "frame-impl": "frame implementability",
+  "library-health": "library health"
+};
+function kindLabel(kind) {
+  return KIND_LABEL[kind] ?? kind;
+}
+var TARGET_LABEL = {
+  "system-score": "System score",
+  "on-system": "On-system usage",
+  drift: "Token drift",
+  parity: "Figma\u2194code parity",
+  contrast: "Contrast (WCAG)",
+  readiness: "Handoff readiness (latest run)"
+};
+function targetLabel(metric) {
+  return TARGET_LABEL[metric] ?? metric;
+}
+var TARGET_OP = {
+  ">=": "\u2265",
+  "<=": "\u2264",
+  "==": "="
+};
+function targetOp(op) {
+  return TARGET_OP[op] ?? op;
+}
+var PERCENT_METRICS = /* @__PURE__ */ new Set(["on-system", "parity"]);
+function targetValue(metric, value2) {
+  if (value2 === void 0) return "\u2014";
+  return PERCENT_METRICS.has(metric) ? `${value2}%` : String(value2);
+}
+var DEBT_INDEX_NOTE = "Design debt is a weighted index (deprecated \xD78, detached \xD75, off-system \xD72 per item), capped at 100.";
+var SCORE_KINDS = /* @__PURE__ */ new Set([
+  "drift",
+  "lint",
+  "readiness",
+  "a11y",
+  "adoption"
+]);
+var RECORD_KINDS = /* @__PURE__ */ new Set(["lint", "drift", "a11y"]);
+var START_COMMAND = {
+  readiness: "ds-bridge handoff <frame-url>",
+  parity: "ds-bridge record --figma",
+  "library-health": "ds-bridge record --figma",
+  impact: "ds-bridge impact",
+  changelog: "ds-bridge changelog",
+  "frame-impl": "ds-bridge frame-impl <frame-url>",
+  adoption: "ds-bridge registry build"
+};
+function joinAnd(items) {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+function buildHeadline(input) {
+  const headline2 = {};
+  const score = input.systemScore;
+  if (score !== void 0) {
+    const velocity = input.scoreVelocity;
+    const points = (input.scorePoints ?? []).filter((p4) => finite2(p4.score));
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    headline2.score = {
+      current: score.current,
+      ...velocity !== void 0 ? { delta: velocity.delta, direction: velocity.direction } : points.length >= 2 && firstPoint !== void 0 && lastPoint !== void 0 ? {
+        // Against "Now" itself, so the row can never read "Now 72 ·
+        // ±0 pts" when the stored points were scored with other
+        // weights (a per-view profile) or before a newer run.
+        delta: score.current - firstPoint.score,
+        since: firstPoint.date
+      } : {},
+      trend: (Array.isArray(score.trend) ? score.trend : []).map(
+        (p4) => p4.score
+      )
+    };
+  }
+  const adoption = input.adoptionTrend ?? [];
+  const last = adoption[adoption.length - 1];
+  const first = adoption[0];
+  if (last !== void 0) {
+    headline2.onSystem = adoption.length >= 2 && first !== void 0 ? { pct: last.pct, delta: last.pct - first.pct, since: first.date } : { pct: last.pct };
+  }
+  const coverage = input.importCoverage;
+  if (coverage !== void 0 && finite2(coverage.total) && coverage.total > 0) {
+    headline2.importCoverage = {
+      imported: coverage.imported,
+      total: coverage.total,
+      pct: Math.min(
+        100,
+        Math.max(0, Math.round(100 * coverage.imported / coverage.total))
+      )
+    };
+  }
+  if (input.consistency !== void 0) {
+    headline2.consistency = input.consistency.score;
+  }
+  if (input.debt !== void 0) {
+    headline2.debt = {
+      pct: input.debt.pct,
+      level: input.debt.level,
+      items: input.debt.items.length
+    };
+  }
+  const frames = input.frames ?? [];
+  if (frames.length > 0) {
+    headline2.handoff = {
+      ready: frames.filter((f3) => f3.latest >= input.readinessThreshold).length,
+      frames: frames.length
+    };
+  }
+  return headline2;
+}
+function worstFirst(frames) {
+  return [...frames].sort(
+    (a, b) => a.latest - b.latest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  );
+}
+function buildRisks(input, frames, stale, never) {
+  const out = [];
+  const targets = input.targets ?? [];
+  for (const t of targets) {
+    if (t.band !== "red") continue;
+    out.push({
+      rank: 3,
+      text: `${targetLabel(t.metric)} is off target: ${targetValue(t.metric, t.measured)} vs goal ${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
+    });
+  }
+  const velocity = input.scoreVelocity;
+  if (velocity !== void 0 && velocity.direction === "down") {
+    const fell = Math.abs(velocity.delta);
+    const streak = velocity.regressionStreak;
+    out.push({
+      rank: streak >= 2 ? 3 : 2,
+      text: `System score fell ${fell} ${plural(fell, "pt", "pts")} in ${velocity.windowDays} ${plural(velocity.windowDays, "day", "days")}${streak >= 2 ? ` (${streak} drops in a row)` : ""}`
+    });
+  }
+  const drift = input.breakingDrift;
+  if (finite2(drift) && drift > 0) {
+    out.push({
+      rank: 3,
+      text: `${drift} breaking token ${plural(drift, "change", "changes")} in the latest drift check`
+    });
+  }
+  const debt = input.debt;
+  if (debt !== void 0 && debt.level !== "low") {
+    const largest = debt.items[0]?.subject;
+    out.push({
+      rank: debt.level === "high" ? 3 : 2,
+      text: `Design debt is ${debt.level} at ${debt.pct}/100${largest !== void 0 ? ` (largest: ${largest})` : ""}`
+    });
+  }
+  const below = frames.filter((f3) => f3.latest < input.readinessThreshold);
+  const lowest = below[0];
+  if (lowest !== void 0) {
+    out.push({
+      rank: 2,
+      text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`
+    });
+  }
+  const consistency = input.consistency;
+  if (consistency !== void 0 && consistency.score < LOW_CONSISTENCY) {
+    out.push({
+      rank: 2,
+      text: `Consistency is low at ${consistency.score}/100`
+    });
+  }
+  if (stale.length > 0) {
+    out.push({
+      rank: 2,
+      text: `Stale data: ${stale.map(kindLabel).join(", ")} not measured recently`
+    });
+  }
+  for (const t of targets) {
+    if (t.band !== "amber") continue;
+    out.push({
+      rank: 1,
+      text: `${targetLabel(t.metric)} is close to its goal: ${targetValue(t.metric, t.measured)} vs ${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
+    });
+  }
+  const neverScored = never.filter((k4) => SCORE_KINDS.has(k4));
+  if (neverScored.length > 0) {
+    out.push({
+      rank: 1,
+      text: `Never measured: ${neverScored.map(kindLabel).join(", ")}`
+    });
+  }
+  const contrast = input.contrast;
+  if (contrast !== void 0 && finite2(contrast.failed) && contrast.failed > 0) {
+    const n = contrast.failed;
+    const modes2 = contrast.modes.length > 0 ? ` (${contrast.modes.join(", ")})` : "";
+    out.push({
+      rank: 3,
+      text: `${n} contrast ${plural(n, "pair fails", "pairs fail")} WCAG ${contrast.level}${modes2}`
+    });
+  }
+  const gaps = input.tokenGaps;
+  const missing = finite2(gaps?.missing) ? gaps?.missing ?? 0 : 0;
+  const orphan = finite2(gaps?.orphan) ? gaps?.orphan ?? 0 : 0;
+  if (missing > 0) {
+    out.push({
+      rank: 2,
+      text: `${missing} design ${plural(missing, "token is", "tokens are")} missing from the code output${orphan > 0 ? `, ${orphan} orphan ${plural(orphan, "output", "outputs")} without a source token` : ""}`
+    });
+  } else if (orphan > 0) {
+    out.push({
+      rank: 2,
+      text: `${orphan} orphan token ${plural(orphan, "output", "outputs")} without a source token`
+    });
+  }
+  const score = input.systemScore;
+  const redScoreTarget = targets.some(
+    (t) => t.metric === "system-score" && t.band === "red"
+  );
+  if (score !== void 0 && finite2(score.current) && score.current < LOW_SCORE && !redScoreTarget) {
+    out.push({ rank: 2, text: `System score is ${score.current}/100` });
+  }
+  return top(out);
+}
+function buildActions(input, frames, stale, never) {
+  const out = [];
+  for (const t of input.targets ?? []) {
+    if (t.band !== "red") continue;
+    out.push({
+      rank: 3,
+      text: `Bring ${targetLabel(t.metric)} to ${targetOp(t.op)} ${targetValue(t.metric, t.target)} (now ${targetValue(t.metric, t.measured)})`
+    });
+  }
+  const debt = input.debt;
+  if (debt !== void 0) {
+    for (const item of debt.items.slice(0, 2)) {
+      out.push({
+        rank: debt.level === "high" ? 3 : 2,
+        text: item.recommendation
+      });
+    }
+  }
+  const drift = input.breakingDrift;
+  if (finite2(drift) && drift > 0) {
+    out.push({
+      rank: 3,
+      text: `Resolve the ${drift} breaking token ${plural(drift, "change", "changes")} (run ds-bridge tokens check)`
+    });
+  }
+  const lowest = frames.find((f3) => f3.latest < input.readinessThreshold);
+  if (lowest !== void 0) {
+    out.push({
+      rank: 2,
+      text: `Raise handoff readiness of "${frameLabel(lowest)}" from ${lowest.latest} to ${input.readinessThreshold}+ (run ds-bridge handoff)`
+    });
+  }
+  if (stale.length > 0 || never.some((k4) => RECORD_KINDS.has(k4))) {
+    out.push({ rank: 1, text: "Refresh the data: run ds-bridge record" });
+  }
+  const byCommand = /* @__PURE__ */ new Map();
+  for (const kind of never) {
+    const command = START_COMMAND[kind];
+    if (command === void 0) continue;
+    const kinds = byCommand.get(command) ?? [];
+    kinds.push(kindLabel(kind));
+    byCommand.set(command, kinds);
+  }
+  for (const [command, kinds] of byCommand) {
+    out.push({
+      rank: 1,
+      text: `Start measuring ${joinAnd(kinds)}: run ${command}`
+    });
+  }
+  const contrast = input.contrast;
+  if (contrast !== void 0 && finite2(contrast.failed) && contrast.failed > 0) {
+    const n = contrast.failed;
+    out.push({
+      rank: 3,
+      text: `Fix the ${n} failing contrast ${plural(n, "pair", "pairs")} (run ds-bridge a11y)`
+    });
+  }
+  const gaps = input.tokenGaps;
+  const missing = finite2(gaps?.missing) ? gaps?.missing ?? 0 : 0;
+  const orphan = finite2(gaps?.orphan) ? gaps?.orphan ?? 0 : 0;
+  if (missing > 0) {
+    out.push({
+      rank: 2,
+      text: `Add the ${missing} missing ${plural(missing, "token", "tokens")} to the code output (run ds-bridge tokens check)`
+    });
+  } else if (orphan > 0) {
+    out.push({
+      rank: 1,
+      text: `Remove or re-source the ${orphan} orphan token ${plural(orphan, "output", "outputs")} (run ds-bridge tokens check)`
+    });
+  }
+  return top(out);
+}
+function signedNumber(n) {
+  if (n > 0) return `+${n}`;
+  if (n < 0) return `\u2212${Math.abs(n)}`;
+  return "\xB10";
+}
+function dayCount(n) {
+  return `${n} ${plural(n, "day", "days")}`;
+}
+function scoreChangeText(headline2, windowDays) {
+  const score = headline2.score;
+  if (score?.delta !== void 0 && score.direction === void 0 && score.since !== void 0) {
+    return `${signedNumber(score.delta)} pts since ${score.since}`;
+  }
+  if (score?.delta === void 0 || score.direction === void 0) {
+    return void 0;
+  }
+  if (score.direction === "flat" || score.delta === 0) {
+    return `no change in ${dayCount(windowDays)}`;
+  }
+  const arrow3 = score.direction === "up" ? "\u25B2" : "\u25BC";
+  return `${arrow3} ${signedNumber(score.delta)} in ${dayCount(windowDays)}`;
+}
+function onSystemChangeText(headline2) {
+  const onSystem = headline2.onSystem;
+  if (onSystem?.delta === void 0 || onSystem.since === void 0) {
+    return void 0;
+  }
+  return `${signedNumber(onSystem.delta)} pts since ${onSystem.since}`;
+}
+function buildManagerReport(input) {
+  const frames = worstFirst(input.frames ?? []);
+  const measured = [];
+  const stale = [];
+  const never = [];
+  for (const row2 of input.dataFreshness ?? []) {
+    if (row2.band === "unknown") {
+      never.push(row2.kind);
+    } else if (row2.band === "red") {
+      stale.push({
+        kind: row2.kind,
+        ...row2.ageDays !== void 0 ? { ageDays: row2.ageDays } : {}
+      });
+    } else {
+      measured.push({ kind: row2.kind, ageDays: row2.ageDays ?? 0 });
+    }
+  }
+  return {
+    project: input.project,
+    generatedAt: input.generatedAt,
+    windowDays: input.windowDays,
+    readinessThreshold: input.readinessThreshold,
+    headline: buildHeadline(input),
+    targets: [...input.targets ?? []],
+    risks: buildRisks(
+      input,
+      frames,
+      stale.map((s) => s.kind),
+      never
+    ),
+    actions: buildActions(
+      input,
+      frames,
+      stale.map((s) => s.kind),
+      never
+    ),
+    frames,
+    coverage: { measured, stale, never }
+  };
+}
+
+// src/engines/report/report-json.ts
+var REPORT_JSON_SCHEMA = "ds-bridge/report";
+var REPORT_JSON_SCHEMA_VERSION = 1;
+function reportJsonDocument(data, artifacts, viewLabel) {
+  return {
+    schema: REPORT_JSON_SCHEMA,
+    schemaVersion: REPORT_JSON_SCHEMA_VERSION,
+    view: viewLabel ?? null,
+    artifacts: [...artifacts],
+    data
+  };
+}
+
+// src/engines/report/scorecard.ts
+var ROW_ORDER = [
+  "score",
+  "on-system",
+  "lint-violations",
+  "drift",
+  "import-coverage",
+  "contrast",
+  "readiness"
+];
+function asNumber13(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function pct4(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function asRecord3(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function extractLatest(text2) {
+  const latest = {};
+  for (const { kind, record } of replayHistory(text2)) {
+    switch (kind) {
+      case "tokens-check":
+        latest.tokensCheck = record;
+        break;
+      case "lint": {
+        latest.lint = record;
+        if (asRecord3(record.adoption) !== void 0) {
+          latest.adoption = record;
+        }
+        break;
+      }
+      case "adoption":
+        latest.adoptionLine = record;
+        break;
+      case "handoff":
+        latest.handoff = record;
+        break;
+      case "a11y":
+        latest.a11y = record;
+        break;
+      default:
+        break;
+    }
+  }
+  return latest;
+}
+function scoreFor(text2, weights) {
+  const outcome = scoreFromHistory(text2, weights);
+  if (outcome.kind === "no-data") return void 0;
+  return {
+    current: outcome.current,
+    components: outcome.components.map((c2) => ({
+      kind: c2.kind,
+      score: c2.score,
+      weight: c2.weight
+    }))
+  };
+}
+function onSystemPct2(record) {
+  const adoption = record === void 0 ? void 0 : asRecord3(record.adoption);
+  if (adoption === void 0) return void 0;
+  const refs = asNumber13(adoption.refs);
+  const literals = asNumber13(adoption.literals);
+  return pct4(refs, refs + literals);
+}
+function violations(record) {
+  if (record === void 0) return void 0;
+  const byKind = asRecord3(record.byKind) ?? {};
+  return asNumber13(byKind.exact) + asNumber13(byKind.near) + asNumber13(byKind.offSystem);
+}
+function driftCounts(record) {
+  if (record === void 0) return void 0;
+  return {
+    stale: asNumber13(record.stale),
+    missing: asNumber13(record.missing),
+    orphan: asNumber13(record.orphan)
+  };
+}
+function coverageCounts(record) {
+  if (record === void 0) return void 0;
+  return { imported: asNumber13(record.imported), total: asNumber13(record.total) };
+}
+function contrastPct(record) {
+  if (record === void 0) return void 0;
+  const modes2 = Array.isArray(record.modes) ? record.modes : [];
+  let passed = 0;
+  let failed = 0;
+  for (const m of modes2) {
+    const mm = asRecord3(m);
+    if (mm === void 0) continue;
+    passed += asNumber13(mm.passed);
+    failed += asNumber13(mm.failed);
+  }
+  return pct4(passed, passed + failed);
+}
+function readinessValue(record) {
+  if (record === void 0) return void 0;
+  return {
+    score: asNumber13(record.score),
+    frame: typeof record.frameName === "string" ? record.frameName : ""
+  };
+}
+function scalarRow(id, now, base) {
+  if (now === void 0 && base === void 0) return void 0;
+  const row2 = { id };
+  if (now !== void 0) row2.now = now;
+  if (base !== void 0) row2.base = base;
+  if (now !== void 0 && base !== void 0) row2.delta = now - base;
+  return row2;
+}
+function buildScorecard(currentText, baseText, weights) {
+  const currentOnly = baseText === void 0;
+  const cur = extractLatest(currentText);
+  const bas = baseText === void 0 ? void 0 : extractLatest(baseText);
+  const rows = [];
+  const nowScore = scoreFor(currentText, weights);
+  const baseScore = baseText === void 0 ? void 0 : scoreFor(baseText, weights);
+  if (nowScore !== void 0 || baseScore !== void 0) {
+    const row2 = {
+      id: "score",
+      components: nowScore?.components ?? []
+    };
+    if (nowScore !== void 0) row2.now = nowScore.current;
+    if (baseScore !== void 0) row2.base = baseScore.current;
+    if (nowScore !== void 0 && baseScore !== void 0) {
+      row2.delta = nowScore.current - baseScore.current;
+    }
+    rows.push(row2);
+  }
+  const onSystem = scalarRow(
+    "on-system",
+    onSystemPct2(cur.adoption),
+    bas === void 0 ? void 0 : onSystemPct2(bas.adoption)
+  );
+  if (onSystem !== void 0) rows.push(onSystem);
+  const lintViolations = scalarRow(
+    "lint-violations",
+    violations(cur.lint),
+    bas === void 0 ? void 0 : violations(bas.lint)
+  );
+  if (lintViolations !== void 0) rows.push(lintViolations);
+  const nowDrift = driftCounts(cur.tokensCheck);
+  const baseDrift = bas === void 0 ? void 0 : driftCounts(bas.tokensCheck);
+  if (nowDrift !== void 0 || baseDrift !== void 0) {
+    const row2 = { id: "drift" };
+    if (nowDrift !== void 0) row2.now = nowDrift;
+    if (baseDrift !== void 0) row2.base = baseDrift;
+    rows.push(row2);
+  }
+  const nowCov = coverageCounts(cur.adoptionLine);
+  const baseCov = bas === void 0 ? void 0 : coverageCounts(bas.adoptionLine);
+  if (nowCov !== void 0 || baseCov !== void 0) {
+    const row2 = { id: "import-coverage" };
+    if (nowCov !== void 0) row2.now = nowCov;
+    if (baseCov !== void 0) row2.base = baseCov;
+    rows.push(row2);
+  }
+  const contrast = scalarRow(
+    "contrast",
+    contrastPct(cur.a11y),
+    bas === void 0 ? void 0 : contrastPct(bas.a11y)
+  );
+  if (contrast !== void 0) rows.push(contrast);
+  const nowReady = readinessValue(cur.handoff);
+  const baseReady = bas === void 0 ? void 0 : readinessValue(bas.handoff);
+  if (nowReady !== void 0 || baseReady !== void 0) {
+    const row2 = { id: "readiness" };
+    if (nowReady !== void 0) row2.now = nowReady;
+    if (baseReady !== void 0) row2.base = baseReady;
+    if (nowReady !== void 0 && baseReady !== void 0) {
+      row2.delta = nowReady.score - baseReady.score;
+    }
+    rows.push(row2);
+  }
+  if (rows.length === 0) return { kind: "no-data" };
+  rows.sort((a, b) => ROW_ORDER.indexOf(a.id) - ROW_ORDER.indexOf(b.id));
+  return { kind: "ok", currentOnly, rows };
+}
+
+// src/engines/report/scorecard-md.ts
+var BAND_GLYPH = {
+  green: "\u{1F7E2}",
+  amber: "\u{1F7E1}",
+  red: "\u{1F534}",
+  unknown: "\u26AA"
+};
+var TARGET_PERCENT = /* @__PURE__ */ new Set(["on-system", "contrast"]);
+var TITLE = "### Design-system scorecard";
+var ROW_LABEL = {
+  score: "System score",
+  "on-system": "On-system",
+  "lint-violations": "Lint violations",
+  drift: "Drift (stale/missing/orphan)",
+  "import-coverage": "Import coverage",
+  contrast: "Contrast",
+  readiness: "Readiness"
+};
+var MOVER_LABEL = {
+  score: "score",
+  "on-system": "on-system",
+  "lint-violations": "lint violations",
+  drift: "drift",
+  "import-coverage": "import coverage",
+  contrast: "contrast",
+  readiness: "readiness"
+};
+var COMPONENT_LABEL = {
+  drift: "Drift",
+  lint: "Lint",
+  readiness: "Readiness",
+  a11y: "A11y",
+  adoption: "On-system",
+  parity: "Parity"
+};
+function arrow2(delta) {
+  if (delta > 0) return "\u25B2";
+  if (delta < 0) return "\u25BC";
+  return "=";
+}
+function signed(delta) {
+  return delta > 0 ? `+${delta}` : `${delta}`;
+}
+function driftCell(counts, bold) {
+  const text2 = `${counts.stale}/${counts.missing}/${counts.orphan}`;
+  return bold ? `**${text2}**` : text2;
+}
+function isPercent(id) {
+  return id === "on-system" || id === "contrast";
+}
+function scalar(id, value2) {
+  return isPercent(id) ? `${value2}%` : `${value2}`;
+}
+function metricLabel(row2) {
+  if (row2.id === "readiness") {
+    const frame = row2.now?.frame ?? row2.base?.frame ?? "";
+    return frame === "" ? "Readiness" : `Readiness (${frame})`;
+  }
+  return ROW_LABEL[row2.id];
+}
+function hasScalarDelta(row2) {
+  return (row2.id === "score" || row2.id === "on-system" || row2.id === "lint-violations" || row2.id === "contrast" || row2.id === "readiness") && row2.delta !== void 0;
+}
+function nowScalar(row2) {
+  switch (row2.id) {
+    case "score":
+    case "on-system":
+    case "lint-violations":
+    case "contrast":
+      return row2.now;
+    case "readiness":
+      return row2.now?.score;
+    default:
+      return void 0;
+  }
+}
+function baseScalar(row2) {
+  switch (row2.id) {
+    case "score":
+    case "on-system":
+    case "lint-violations":
+    case "contrast":
+      return row2.base;
+    case "readiness":
+      return row2.base?.score;
+    default:
+      return void 0;
+  }
+}
+function moverFragment(label, id, row2) {
+  const now = nowScalar(row2);
+  const base = baseScalar(row2);
+  const delta = hasScalarDelta(row2) ? row2.delta : 0;
+  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow2(delta)}`;
+}
+function breakingTokenIncrease(rows) {
+  const drift = rows.find((r2) => r2.id === "drift");
+  if (drift === void 0 || drift.id !== "drift") return 0;
+  const nowStale = drift.now?.stale ?? 0;
+  const baseStale = drift.base?.stale;
+  if (baseStale === void 0) return 0;
+  return nowStale > baseStale ? nowStale - baseStale : 0;
+}
+function summaryLine(rows) {
+  const scoreRow = rows.find((r2) => r2.id === "score");
+  const movers = rows.filter((r2) => r2.id !== "score" && hasScalarDelta(r2));
+  movers.sort((a, b) => {
+    const da = hasScalarDelta(a) ? Math.abs(a.delta) : 0;
+    const db = hasScalarDelta(b) ? Math.abs(b.delta) : 0;
+    return db - da;
+  });
+  const topMover = movers[0];
+  const fragments = [];
+  if (scoreRow !== void 0 && scoreRow.id === "score") {
+    if (scoreRow.delta !== void 0) {
+      fragments.push(moverFragment("Score", "score", scoreRow));
+    } else if (scoreRow.now !== void 0) {
+      fragments.push(`Score ${scoreRow.now}`);
+    }
+    if (topMover !== void 0) {
+      fragments.push(
+        moverFragment(MOVER_LABEL[topMover.id], topMover.id, topMover)
+      );
+    }
+  } else if (topMover !== void 0) {
+    fragments.push(
+      moverFragment(ROW_LABEL[topMover.id], topMover.id, topMover)
+    );
+  }
+  const breaking = breakingTokenIncrease(rows);
+  if (breaking > 0) {
+    const noun = breaking === 1 ? "breaking token change" : "breaking token changes";
+    fragments.push(`**${breaking} ${noun}**`);
+  }
+  return fragments.join(" \xB7 ");
+}
+function primaryNow(row2) {
+  if (row2.id === "drift") return row2.now?.stale;
+  if (row2.id === "import-coverage") return row2.now?.imported;
+  return nowScalar(row2);
+}
+function currentOnlySummary(rows) {
+  const scoreRow = rows.find((r2) => r2.id === "score");
+  if (scoreRow !== void 0 && scoreRow.id === "score" && scoreRow.now !== void 0) {
+    return `Score ${scoreRow.now}`;
+  }
+  for (const row2 of rows) {
+    const now = primaryNow(row2);
+    if (now === void 0) continue;
+    const value2 = row2.id === "drift" || row2.id === "import-coverage" ? `${now}` : scalar(row2.id, now);
+    return `${ROW_LABEL[row2.id]} ${value2}`;
+  }
+  return "No movement";
+}
+function renderCompareRow(row2, breaking) {
+  const label = metricLabel(row2);
+  if (row2.id === "drift") {
+    const base2 = row2.base !== void 0 ? driftCell(row2.base, false) : "\u2014";
+    const now2 = row2.now !== void 0 ? driftCell(row2.now, breaking) : "\u2014";
+    const delta = row2.now !== void 0 && row2.base !== void 0 ? `${signed(row2.now.stale - row2.base.stale)} ${arrow2(row2.now.stale - row2.base.stale)}` : "\u2014";
+    return `| ${label} | ${base2} | ${now2} | ${delta} |`;
+  }
+  if (row2.id === "import-coverage") {
+    const base2 = row2.base !== void 0 ? `${row2.base.imported}/${row2.base.total}` : "\u2014";
+    const now2 = row2.now !== void 0 ? `${row2.now.imported}/${row2.now.total}` : "\u2014";
+    const delta = row2.now !== void 0 && row2.base !== void 0 ? `${signed(row2.now.imported - row2.base.imported)} ${arrow2(row2.now.imported - row2.base.imported)}` : "\u2014";
+    return `| ${label} | ${base2} | ${now2} | ${delta} |`;
+  }
+  const now = nowScalar(row2);
+  const base = baseScalar(row2);
+  const nowCell = now !== void 0 ? scalar(row2.id, now) : "\u2014";
+  const baseCell = base !== void 0 ? scalar(row2.id, base) : "\u2014";
+  const deltaCell = hasScalarDelta(row2) ? `${signed(row2.delta)} ${arrow2(row2.delta)}` : "\u2014";
+  return `| ${label} | ${baseCell} | ${nowCell} | ${deltaCell} |`;
+}
+function renderCurrentRow(row2) {
+  const label = metricLabel(row2);
+  if (row2.id === "drift") {
+    const now2 = row2.now !== void 0 ? driftCell(row2.now, false) : "\u2014";
+    return `| ${label} | ${now2} |`;
+  }
+  if (row2.id === "import-coverage") {
+    const now2 = row2.now !== void 0 ? `${row2.now.imported}/${row2.now.total}` : "\u2014";
+    return `| ${label} | ${now2} |`;
+  }
+  const now = nowScalar(row2);
+  const nowCell = now !== void 0 ? scalar(row2.id, now) : "\u2014";
+  return `| ${label} | ${nowCell} |`;
+}
+function componentBlock(rows) {
+  const scoreRow = rows.find((r2) => r2.id === "score");
+  if (scoreRow === void 0 || scoreRow.id !== "score") return [];
+  if (scoreRow.components.length === 0) return [];
+  const lines = [
+    "#### Components",
+    "",
+    "| Component | Score | Weight |",
+    "| --- | --- | --- |"
+  ];
+  for (const c2 of scoreRow.components) {
+    lines.push(
+      `| ${COMPONENT_LABEL[c2.kind] ?? c2.kind} | ${c2.score} | ${c2.weight} |`
+    );
+  }
+  return lines;
+}
+function scoreNow(model) {
+  const row2 = model.rows.find((r2) => r2.id === "score");
+  return row2 !== void 0 && row2.id === "score" ? row2.now : void 0;
+}
+function scoreDelta(model) {
+  const row2 = model.rows.find((r2) => r2.id === "score");
+  return row2 !== void 0 && row2.id === "score" ? row2.delta : void 0;
+}
+function targetMeasured(metric, measured) {
+  if (measured === void 0) return "\u2014";
+  return TARGET_PERCENT.has(metric) ? `${measured}%` : `${measured}`;
+}
+function targetsBlock(targets) {
+  if (targets.length === 0) return [];
+  const lines = [
+    "### Targets",
+    "",
+    "| Metric | Measured | Target | Status |",
+    "| --- | --- | --- | --- |"
+  ];
+  for (const t of targets) {
+    lines.push(
+      `| ${t.metric} | ${targetMeasured(t.metric, t.measured)} | ${t.op} ${t.target} | ${BAND_GLYPH[t.band]} |`
+    );
+  }
+  return lines;
+}
+function ageCell(row2) {
+  return row2.ageDays !== void 0 ? `${row2.ageDays}d` : "\u2014";
+}
+function freshnessBlock(rows, base) {
+  if (rows.length === 0) return [];
+  const delta = base !== void 0;
+  const header = delta ? "| Kind | Last run | Age | \u0394 age | Band |" : "| Kind | Last run | Age | Band |";
+  const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
+  const lines = ["### Freshness", "", header, rule];
+  for (const row2 of rows) {
+    const last = row2.lastRun ?? "never";
+    const age3 = ageCell(row2);
+    const band = BAND_GLYPH[row2.band];
+    if (!delta) {
+      lines.push(`| ${row2.kind} | ${last} | ${age3} | ${band} |`);
+      continue;
+    }
+    const baseRow = base?.find((b) => b.kind === row2.kind);
+    const d = row2.ageDays !== void 0 && baseRow?.ageDays !== void 0 ? `${signed(row2.ageDays - baseRow.ageDays)} ${arrow2(row2.ageDays - baseRow.ageDays)}` : "\u2014";
+    lines.push(`| ${row2.kind} | ${last} | ${age3} | ${d} | ${band} |`);
+  }
+  return lines;
+}
+function velocityBlock(velocity, now, gitRefDelta) {
+  const score = now !== void 0 ? `${now}` : "\u2014";
+  const window = `${signed(velocity.delta)} over ${velocity.windowDays}d`;
+  const streak = `${velocity.regressionStreak}-decline streak`;
+  const motion = gitRefDelta !== void 0 ? `window ${window} \xB7 git-ref ${signed(gitRefDelta)}` : window;
+  return [
+    "### Score velocity",
+    "",
+    `score ${score} \xB7 ${motion} \xB7 ${velocity.direction} \xB7 ${streak}`
+  ];
+}
+function migrationBlock(checklist) {
+  if (checklist.sites.length === 0) return [];
+  const n = checklist.sites.length;
+  const noun = n === 1 ? "call site" : "call sites";
+  const capped = checklist.truncated ? " (capped)" : "";
+  const lines = [
+    "### Migration checklist",
+    "",
+    `${n} ${noun} to migrate${capped}.`,
+    "",
+    "| Site | Subject | Change |",
+    "| --- | --- | --- |"
+  ];
+  for (const s of checklist.sites) {
+    lines.push(
+      `| \`${s.file}:${s.line}\` | ${s.subject} | \`${s.from}\` \u2192 \`${s.to}\` |`
+    );
+  }
+  return lines;
+}
+function ownershipBlock(rows, base) {
+  if (rows.length === 0) return [];
+  const delta = base !== void 0;
+  const header = delta ? "| Owner | On-system | Refs | Literals | \u0394 pct |" : "| Owner | On-system | Refs | Literals |";
+  const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
+  const lines = ["### Ownership", "", header, rule];
+  for (const row2 of rows) {
+    const cells = `${row2.owner} | ${row2.pct}% | ${row2.refs} | ${row2.literals}`;
+    if (!delta) {
+      lines.push(`| ${cells} |`);
+      continue;
+    }
+    const baseRow = base?.find((b) => b.owner === row2.owner);
+    const d = baseRow !== void 0 ? `${signed(row2.pct - baseRow.pct)} ${arrow2(row2.pct - baseRow.pct)}` : "\u2014";
+    lines.push(`| ${cells} | ${d} |`);
+  }
+  return lines;
+}
+function libraryHealthBlock(rows, base, baseLabel, currentLabel) {
+  const now = rows[rows.length - 1];
+  const was = base?.[base.length - 1];
+  if (now === void 0 || was === void 0) return [];
+  const row2 = (label, b, n) => `| ${label} | ${b} | ${n} | ${signed(n - b)} ${arrow2(n - b)} |`;
+  return [
+    "### Library health",
+    "",
+    `| Signal | ${baseLabel} | ${currentLabel} | \u0394 |`,
+    "| --- | --- | --- | --- |",
+    row2("Override hotspots", was.overrides, now.overrides),
+    row2("Deprecated usage", was.deprecated, now.deprecated),
+    row2("Detached candidates", was.detached, now.detached)
+  ];
+}
+function changelogBlock(changelog) {
+  if (changelog.slices.length === 0) return [];
+  const lines = ["### Changelog", ""];
+  changelog.slices.forEach((slice, index) => {
+    lines.push(
+      `**For ${slice.audience}** \u2014 ${slice.breaking} breaking \xB7 ${slice.additive} additive \xB7 ${slice.cosmetic} cosmetic`
+    );
+    for (const item of slice.recent) lines.push(`- ${item}`);
+    if (index < changelog.slices.length - 1) lines.push("");
+  });
+  return lines;
+}
+function appendixBlocks(model, options) {
+  const selected = options.artifacts;
+  if (selected === void 0) return [];
+  const blocks = options.blocks ?? {};
+  const base = options.baseBlocks;
+  const has = (id) => selected.includes(id);
+  const out = [];
+  const add = (lines) => {
+    if (lines.length > 0) out.push(...lines, "");
+  };
+  if (has("targets") && blocks.targets !== void 0) {
+    add(targetsBlock(blocks.targets));
+  }
+  if (has("data-freshness") && blocks.dataFreshness !== void 0) {
+    add(freshnessBlock(blocks.dataFreshness, base?.dataFreshness));
+  }
+  if (has("score-velocity") && blocks.scoreVelocity !== void 0) {
+    add(
+      velocityBlock(blocks.scoreVelocity, scoreNow(model), scoreDelta(model))
+    );
+  }
+  if (has("migration-checklist") && blocks.migrationChecklist !== void 0) {
+    add(migrationBlock(blocks.migrationChecklist));
+  }
+  if (has("ownership-leaderboard") && blocks.ownershipLeaderboard !== void 0) {
+    add(
+      ownershipBlock(blocks.ownershipLeaderboard, base?.ownershipLeaderboard)
+    );
+  }
+  if (has("library-health-trend") && blocks.libraryHealthTrend !== void 0) {
+    add(
+      libraryHealthBlock(
+        blocks.libraryHealthTrend,
+        base?.libraryHealthTrend,
+        options.baseLabel ?? "base",
+        options.currentLabel ?? "current"
+      )
+    );
+  }
+  if (has("audience-changelog") && blocks.audienceChangelog !== void 0) {
+    add(changelogBlock(blocks.audienceChangelog));
+  }
+  return out;
+}
+function renderScorecardMarkdown(model, options) {
+  const lines = [TITLE, ""];
+  if (model.kind === "no-data") {
+    lines.push(
+      "_No design-system history yet \u2014 run a check to populate the scorecard._",
+      ""
+    );
+    return lines.join("\n");
+  }
+  const currentLabel = options.currentLabel ?? "current";
+  const compare = !model.currentOnly;
+  lines.push(
+    compare ? summaryLine(model.rows) : currentOnlySummary(model.rows),
+    ""
+  );
+  const breaking = breakingTokenIncrease(model.rows) > 0;
+  if (compare) {
+    const baseLabel = options.baseLabel ?? "base";
+    lines.push(
+      `| Metric | ${baseLabel} | ${currentLabel} | \u0394 |`,
+      "| --- | --- | --- | --- |"
+    );
+    for (const row2 of model.rows) lines.push(renderCompareRow(row2, breaking));
+  } else {
+    lines.push(`| Metric | ${currentLabel} |`, "| --- | --- |");
+    for (const row2 of model.rows) lines.push(renderCurrentRow(row2));
+  }
+  lines.push("");
+  const components = componentBlock(model.rows);
+  if (components.length > 0) lines.push(...components, "");
+  if (options.noBaseline === true) {
+    const baseLabel = options.baseLabel ?? "base";
+    lines.push(`_no baseline at ${baseLabel}_`, "");
+  }
+  lines.push(...appendixBlocks(model, options));
+  return lines.join("\n");
+}
+
+// src/render/html/charts.ts
+var PALETTE2 = [
+  "#a3384b",
+  "#7f9139",
+  "#e3a73b",
+  "#d06f2e",
+  "#b89a6a",
+  "#8f9a5a"
+];
+var TONE = {
+  ok: "#6f8a2e",
+  warn: "#c98a1e",
+  error: "#b83f4f",
+  neutral: "#8a8f98"
+};
+function toneFor(pct5) {
+  if (pct5 >= 80) return "ok";
+  if (pct5 >= 50) return "warn";
+  return "error";
+}
+function bandColor(pct5) {
+  return TONE[toneFor(pct5)];
+}
+var TRACK_COLOR = "#eceae4";
+var TEXT_COLOR2 = "#2a2a27";
+var MUTED_COLOR = "#7a7a72";
+var GRID_COLOR = "#e6e4dd";
+var FONT = "-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif";
+function escapeXml2(value2) {
+  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function round2(n) {
+  return Number(n.toFixed(3));
+}
+function clamp3(value2, min, max) {
+  if (value2 < min) return min;
+  if (value2 > max) return max;
+  return value2;
+}
+function niceNum(x, snap) {
+  const exp = Math.floor(Math.log10(x));
+  const fraction = x / 10 ** exp;
+  let nice;
+  if (snap) {
+    if (fraction < 1.5) nice = 1;
+    else if (fraction < 3) nice = 2;
+    else if (fraction < 7) nice = 5;
+    else nice = 10;
+  } else {
+    if (fraction <= 1) nice = 1;
+    else if (fraction <= 2) nice = 2;
+    else if (fraction <= 5) nice = 5;
+    else nice = 10;
+  }
+  return nice * 10 ** exp;
+}
+function niceTicks(min, max, maxTicks) {
+  let lo = Math.min(min, max);
+  let hi = Math.max(min, max);
+  const intervals = Math.max(1, maxTicks - 1);
+  let span = hi - lo;
+  if (span === 0) {
+    span = Math.abs(hi) || 1;
+    lo = hi - span / 2;
+    hi = lo + span;
+  }
+  const niceSpan = niceNum(span, false);
+  const step = niceSpan / intervals;
+  const start = Math.floor(lo / step) * step;
+  const ticks = [];
+  for (let i = 0; i <= intervals; i++) {
+    ticks.push(Number((start + i * step).toFixed(10)));
+  }
+  return ticks;
+}
+function svgOpen(width, height) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img">`;
+}
+function text(x, y, body, attrs = {}) {
+  const weight = attrs.weight === void 0 ? "" : ` font-weight="${attrs.weight}"`;
+  return `<text x="${round2(x)}" y="${round2(y)}" text-anchor="${attrs.anchor ?? "start"}" fill="${attrs.fill ?? TEXT_COLOR2}" font-family="${FONT}" font-size="${attrs.size ?? 12}"${weight}>${body}</text>`;
+}
+function emptyState(width, height, title) {
+  const safe = escapeXml2(title);
+  return [
+    svgOpen(width, height),
+    `<title>${safe}</title>`,
+    `<text x="${round2(width / 2)}" y="${round2(height / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${MUTED_COLOR}" font-family="${FONT}" font-size="12">No data</text>`,
+    "</svg>"
+  ].join("");
+}
+function clip(label, chars) {
+  return label.length <= chars ? label : `${label.slice(0, Math.max(1, chars - 1))}\u2026`;
+}
+var CHAR_W = 6.6;
+function formatTick(value2, unit) {
+  const n = Number.isInteger(value2) ? String(value2) : String(round2(value2));
+  return unit ? `${n}${unit}` : n;
+}
+function lineChart(series, opts = {}) {
+  const width = opts.width ?? 480;
+  const height = opts.height ?? 240;
+  const palette = opts.colors ?? [...PALETTE2];
+  const plottable = series.filter((s) => s.points.length > 0);
+  const allPoints = plottable.flatMap((s) => s.points);
+  if (plottable.length === 0 || allPoints.length === 0) {
+    return emptyState(width, height, "Line chart (no data)");
+  }
+  const legend = plottable.length > 1;
+  const pad2 = {
+    top: legend ? 30 : 12,
+    right: 14,
+    bottom: opts.xLabels ? 26 : 14,
+    left: 36
+  };
+  const plotW = Math.max(0, width - pad2.left - pad2.right);
+  const plotH = Math.max(0, height - pad2.top - pad2.bottom);
+  const xs = allPoints.map((p4) => p4.x);
+  const ys = allPoints.map((p4) => p4.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(0, ...ys);
+  const maxY = Math.max(...ys);
+  const yTicks = niceTicks(minY, maxY, 5);
+  const yLo = yTicks[0] ?? minY;
+  const yHi = yTicks[yTicks.length - 1] ?? maxY;
+  const xSpan = maxX - minX || 1;
+  const ySpan = yHi - yLo || 1;
+  const sx = (x) => pad2.left + (x - minX) / xSpan * plotW;
+  const sy = (y) => pad2.top + (1 - (y - yLo) / ySpan) * plotH;
+  const parts = [];
+  parts.push(svgOpen(width, height));
+  parts.push(
+    `<title>Line chart: ${escapeXml2(series.map((s) => s.label).join(", "))}</title>`
+  );
+  if (legend) {
+    let lx = pad2.left;
+    plottable.forEach((s, index) => {
+      const color = palette[index % palette.length] ?? PALETTE2[0];
+      parts.push(
+        `<rect x="${round2(lx)}" y="8" width="10" height="10" rx="5" fill="${color}" />`
+      );
+      parts.push(
+        text(lx + 15, 17, escapeXml2(s.label), { size: 12, fill: MUTED_COLOR })
+      );
+      lx += 15 + s.label.length * CHAR_W + 18;
+    });
+  }
+  for (const tick of yTicks) {
+    const y = round2(sy(tick));
+    parts.push(
+      `<line x1="${pad2.left}" y1="${y}" x2="${round2(width - pad2.right)}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
+    );
+    parts.push(
+      text(pad2.left - 7, y + 4, formatTick(tick, opts.unit), {
+        anchor: "end",
+        size: 11,
+        fill: MUTED_COLOR
+      })
+    );
+  }
+  if (opts.xLabels) {
+    const base = round2(height - 8);
+    parts.push(
+      text(pad2.left, base, escapeXml2(opts.xLabels[0]), {
+        size: 11,
+        fill: MUTED_COLOR
+      })
+    );
+    parts.push(
+      text(width - pad2.right, base, escapeXml2(opts.xLabels[1]), {
+        anchor: "end",
+        size: 11,
+        fill: MUTED_COLOR
+      })
+    );
+  }
+  const filled = (opts.area ?? true) && plottable.length === 1;
+  plottable.forEach((s, index) => {
+    const stroke = palette[index % palette.length] ?? PALETTE2[0];
+    const coords = s.points.map((p4) => `${round2(sx(p4.x))},${round2(sy(p4.y))}`);
+    if (filled && s.points.length > 1) {
+      const first = s.points[0];
+      const last = s.points[s.points.length - 1];
+      if (first && last) {
+        const floor = round2(sy(yLo));
+        parts.push(
+          `<polygon points="${round2(sx(first.x))},${floor} ${coords.join(" ")} ${round2(sx(last.x))},${floor}" fill="${stroke}" fill-opacity="0.12" />`
+        );
+      }
+    }
+    parts.push(
+      `<polyline fill="none" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${coords.join(" ")}" />`
+    );
+    for (const p4 of s.points) {
+      parts.push(
+        `<circle cx="${round2(sx(p4.x))}" cy="${round2(sy(p4.y))}" r="3" fill="#ffffff" stroke="${stroke}" stroke-width="2" />`
+      );
+    }
+  });
+  parts.push("</svg>");
+  return parts.join("");
+}
+function barChart(items, opts = {}) {
+  const width = opts.width ?? 480;
+  const rowH = 26;
+  const height = opts.height ?? Math.max(rowH, items.length * rowH + 8);
+  const fill = opts.color ?? PALETTE2[0];
+  if (items.length === 0) {
+    return emptyState(width, height, "Bar chart (no data)");
+  }
+  const values = items.map((i) => formatTick(i.value, opts.unit));
+  const longest = Math.max(...items.map((i) => i.label.length));
+  const labelChars = Math.max(
+    4,
+    Math.min(longest, Math.floor(width * 0.42 / CHAR_W))
+  );
+  const labelW = Math.ceil(labelChars * CHAR_W + 10);
+  const valueW = Math.ceil(
+    Math.max(...values.map((v) => v.length)) * CHAR_W + 12
+  );
+  const pad2 = { top: 4, left: labelW, right: valueW };
+  const trackW = Math.max(0, width - pad2.left - pad2.right);
+  const max = opts.max ?? Math.max(0, ...items.map((i) => i.value));
+  const parts = [];
+  parts.push(svgOpen(width, height));
+  parts.push(
+    `<title>Bar chart: ${escapeXml2(items.map((i) => i.label).join(", "))}</title>`
+  );
+  items.forEach((item, index) => {
+    const clamped = Math.max(0, item.value);
+    const barW = max > 0 ? round2(Math.min(clamped, max) / max * trackW) : 0;
+    const y = pad2.top + index * rowH;
+    const barY = round2(y + 6);
+    const barH = rowH - 12;
+    const midY = round2(y + rowH / 2 + 4);
+    const label = clip(item.label, labelChars);
+    const tip = label === item.label ? "" : `<title>${escapeXml2(item.label)}</title>`;
+    parts.push(
+      `<g>${tip}${text(pad2.left - 8, midY, escapeXml2(label), { anchor: "end", size: 12, fill: TEXT_COLOR2 })}</g>`
+    );
+    parts.push(
+      `<rect x="${pad2.left}" y="${barY}" width="${round2(trackW)}" height="${barH}" fill="${TRACK_COLOR}" rx="${barH / 2}" />`
+    );
+    parts.push(
+      `<rect class="bar" x="${pad2.left}" y="${barY}" width="${barW}" height="${barH}" fill="${item.color ?? fill}" rx="${barH / 2}" />`
+    );
+    parts.push(
+      text(pad2.left + trackW + 8, midY, escapeXml2(values[index] ?? ""), {
+        size: 12,
+        fill: TEXT_COLOR2,
+        weight: 600
+      })
+    );
+  });
+  parts.push("</svg>");
+  return parts.join("");
+}
+function donutGauge(value2, opts = {}) {
+  const size = 132;
+  const clamped = clamp3(value2, 0, 100);
+  const display = Math.round(clamped);
+  const cx = size / 2;
+  const cy = size / 2;
+  const strokeWidth = 14;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const drawn = round2(clamped / 100 * circumference);
+  const gap = round2(circumference - drawn);
+  const color = opts.color ?? bandColor(clamped);
+  const labelText = opts.label !== void 0 ? `${opts.label}: ` : "";
+  const title = `${labelText}${display}%`;
+  return [
+    svgOpen(size, size),
+    `<title>${escapeXml2(title)}</title>`,
+    `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${TRACK_COLOR}" stroke-width="${strokeWidth}" />`,
+    `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-dasharray="${drawn} ${gap}" transform="rotate(-90 ${cx} ${cy})" />`,
+    `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${TEXT_COLOR2}" font-family="${FONT}" font-size="30" font-weight="700">${display}</text>`,
+    "</svg>"
+  ].join("");
+}
+var STATUS_BAND_FILL = {
+  green: TONE.ok,
+  amber: TONE.warn,
+  red: TONE.error,
+  unknown: TRACK_COLOR
+};
+function statusGrid(rows, opts = {}) {
+  const width = opts.width ?? 480;
+  const rowH = 32;
+  const height = opts.height ?? Math.max(rowH, rows.length * rowH + 8);
+  if (rows.length === 0) {
+    return emptyState(width, height, "Status grid (no data)");
+  }
+  const pad2 = { top: 4, left: 2, right: 2 };
+  const pillW = 66;
+  const pillX = round2(width - pad2.right - pillW);
+  const measuredX = round2(width * 0.44);
+  const targetX = round2(width * 0.62);
+  const parts = [];
+  parts.push(svgOpen(width, height));
+  parts.push(
+    `<title>Status grid: ${escapeXml2(rows.map((r2) => r2.label).join(", "))}</title>`
+  );
+  rows.forEach((row2, index) => {
+    const y = pad2.top + index * rowH;
+    const midY = round2(y + rowH / 2 + 4);
+    const fill = STATUS_BAND_FILL[row2.band];
+    const pillTextColor = row2.band === "unknown" ? TEXT_COLOR2 : "#ffffff";
+    if (index > 0) {
+      parts.push(
+        `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
+      );
+    }
+    parts.push(
+      text(pad2.left, midY, escapeXml2(row2.label), { size: 12, weight: 600 })
+    );
+    parts.push(
+      text(measuredX, midY, escapeXml2(row2.measured), { size: 12, weight: 600 })
+    );
+    parts.push(
+      text(targetX, midY, escapeXml2(row2.target), {
+        size: 12,
+        fill: MUTED_COLOR
+      })
+    );
+    parts.push(
+      `<rect class="pill" x="${pillX}" y="${round2(y + 7)}" width="${pillW}" height="${rowH - 14}" fill="${fill}" rx="${(rowH - 14) / 2}" />`
+    );
+    parts.push(
+      text(pillX + pillW / 2, midY - 0.5, escapeXml2(row2.band), {
+        anchor: "middle",
+        size: 11,
+        fill: pillTextColor,
+        weight: 600
+      })
+    );
+  });
+  parts.push("</svg>");
+  return parts.join("");
+}
+function heatGrid(rows, opts = {}) {
+  const cellSize = 26;
+  const longest = Math.max(0, ...rows.map((r2) => r2.label.length));
+  const labelW = Math.ceil(Math.min(18, Math.max(4, longest)) * CHAR_W + 12);
+  const maxCells = Math.max(0, ...rows.map((r2) => r2.cells.length));
+  const width = opts.width ?? labelW + Math.max(1, maxCells) * cellSize + 8;
+  const height = opts.height ?? Math.max(cellSize, rows.length * cellSize + 8);
+  const fill = opts.color ?? PALETTE2[0];
+  if (rows.length === 0) {
+    return emptyState(width, height, "Heat grid (no data)");
+  }
+  const pad2 = { top: 4, left: labelW };
+  const parts = [];
+  parts.push(svgOpen(width, height));
+  parts.push(
+    `<title>Heat grid: ${escapeXml2(rows.map((r2) => r2.label).join(", "))}</title>`
+  );
+  rows.forEach((row2, rowIndex) => {
+    const y = pad2.top + rowIndex * cellSize;
+    parts.push(
+      text(labelW - 8, y + cellSize / 2 + 3, escapeXml2(clip(row2.label, 18)), {
+        anchor: "end",
+        size: 12
+      })
+    );
+    row2.cells.forEach((cell, cellIndex) => {
+      const x = pad2.left + cellIndex * cellSize;
+      const opacity = round2(clamp3(cell.intensity, 0, 1));
+      parts.push(
+        `<rect x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${TRACK_COLOR}" rx="4" />`
+      );
+      parts.push(
+        `<rect class="cell" x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${fill}" fill-opacity="${opacity}" rx="4" />`
+      );
+    });
+  });
+  parts.push("</svg>");
+  return parts.join("");
+}
+
+// src/render/html/logo.ts
+var LOGO_DATA_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23141414'/%3E%3Cpath fill='%23ffffff' d='M135.11 344.03Q120.15 344.03 108.05 336.25Q95.95 328.48 88.93 313.46Q81.92 298.44 81.92 276.69Q81.92 254.36 89.17 239.40Q96.42 224.44 108.46 216.95Q120.50 209.47 134.99 209.47Q146.10 209.47 153.46 213.21Q160.83 216.95 165.39 222.45Q169.95 227.94 172.17 233.09L173.34 233.09L173.34 167.62L208.41 167.62L208.41 341.81L173.92 341.81L173.92 320.88L172.17 320.88Q169.83 326.14 165.21 331.46Q160.60 336.78 153.23 340.40Q145.87 344.03 135.11 344.03M145.98 315.85Q154.87 315.85 161.18 310.94Q167.49 306.03 170.77 297.21Q174.04 288.38 174.04 276.58Q174.04 264.65 170.83 255.94Q167.61 247.23 161.30 242.38Q154.98 237.53 145.98 237.53Q136.75 237.53 130.49 242.56Q124.24 247.58 121.08 256.35Q117.93 265.12 117.93 276.58Q117.93 288.03 121.14 296.92Q124.36 305.80 130.61 310.83Q136.86 315.85 145.98 315.85M279.47 344.38Q263.69 344.38 251.53 339.88Q239.37 335.38 231.65 326.79Q223.94 318.19 221.72 306.03L254.33 300.42Q256.91 309.54 263.34 314.10Q269.77 318.66 280.52 318.66Q290.57 318.66 296.36 314.86Q302.15 311.06 302.15 305.22Q302.15 300.07 298 296.80Q293.85 293.53 285.31 291.77L262.75 287.10Q243.81 283.24 234.46 273.94Q225.11 264.65 225.11 250.04Q225.11 237.41 232.01 228.35Q238.90 219.29 251.18 214.38Q263.45 209.47 280.05 209.47Q295.48 209.47 306.82 213.74Q318.16 218.01 325.18 225.84Q332.19 233.67 334.53 244.31L303.43 249.80Q301.45 243.14 295.78 238.87Q290.11 234.61 280.52 234.61Q271.87 234.61 266.02 238.23Q260.18 241.85 260.18 247.93Q260.18 252.84 263.98 256.23Q267.78 259.62 277.01 261.49L300.51 266.17Q319.45 270.03 328.68 278.74Q337.92 287.45 337.92 301.48Q337.92 314.33 330.44 323.98Q322.96 333.62 309.80 339Q296.65 344.38 279.47 344.38'/%3E%3Crect x='362.25' y='255.53' width='149.75' height='31.45' fill='%23e2625a'/%3E%3C/svg%3E";
+var LOGO_IMG = `<img class="logo" src="${LOGO_DATA_URI}" width="28" height="28" alt="" />`;
+
+// src/render/html/sections/shared.ts
+var CARD_W = 332;
+var WIDE_W = 720;
+function dateEnds(trend) {
+  return [trend[0]?.date ?? "", trend[trend.length - 1]?.date ?? ""];
+}
+function dayOf(value2) {
+  return /^\d{4}-\d{2}-\d{2}T/.test(value2) ? value2.slice(0, 10) : value2;
+}
+function emptyState2(command) {
+  return [
+    '<div class="empty">',
+    '<span class="empty-title">No data yet</span>',
+    `<span>Run <code>ds-bridge ${escapeHtml(command)}</code> to populate this section.</span>`,
+    "</div>"
+  ].join("");
+}
+
+// src/render/html/sections/checks.ts
+var COMPONENT_LABEL2 = {
+  drift: "drift",
+  lint: "lint",
+  readiness: "readiness",
+  a11y: "a11y",
+  adoption: "on-system",
+  parity: "parity"
+};
+function systemScoreSection(data, weightProfile) {
+  const score = data.systemScore;
+  if (score === void 0) {
+    return panel("System score", emptyState2("report"));
+  }
+  const trendSeries2 = [
+    {
+      label: "score",
+      points: score.trend.map((point, index) => ({
+        x: index,
+        y: point.score
+      }))
+    }
+  ];
+  const legendRows = score.components.map(
+    (c2) => `<tr><td>${escapeHtml(COMPONENT_LABEL2[c2.kind] ?? c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
+  ).join("");
+  const legend = [
+    '<table class="weights">',
+    "<thead><tr><th>Component</th><th>Sub-score</th><th>Weight</th></tr></thead>",
+    `<tbody>${legendRows}</tbody>`,
+    "</table>"
+  ].join("");
+  const caption = weightProfile?.source === "view" && weightProfile.name !== void 0 ? `<div class="meta">weights: ${escapeHtml(weightProfile.name)} profile</div>` : "";
+  return panel(
+    "System score",
+    [
+      '<div class="split">',
+      `<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
+      `<div class="chart">${lineChart(trendSeries2, { width: WIDE_W - 170, height: 180, colors: [PALETTE2[0]] })}</div>`,
+      "</div>",
+      legend,
+      caption
+    ].join(""),
+    "wide"
+  );
+}
+function driftSection(data) {
+  const trend = data.driftTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel("Drift trend", emptyState2("tokens check"));
+  }
+  const toSeries = (label, pick) => ({
+    label,
+    points: trend.map((point, index) => ({ x: index, y: pick(point) }))
+  });
+  const series = [
+    toSeries("breaking", (p4) => p4.breaking),
+    toSeries("additive", (p4) => p4.additive),
+    toSeries("cosmetic", (p4) => p4.cosmetic)
+  ];
+  const dateRange = trend.length > 0 ? `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(trend[trend.length - 1]?.date ?? "")}` : "";
+  return panel(
+    "Drift trend",
+    [
+      `<div class="chart">${lineChart(series, { width: WIDE_W, height: 220, xLabels: dateEnds(trend), colors: [TONE.error, TONE.ok, PALETTE2[4]] })}</div>`,
+      `<div class="cols"><b>Breaking</b> \xB7 <b>Additive</b> \xB7 <b>Cosmetic</b> over ${dateRange}</div>`
+    ].join(""),
+    "wide"
+  );
+}
+function lintSection(data) {
+  const lint = data.lintSummary;
+  if (lint === void 0) {
+    return panel("Lint violations", emptyState2("lint"));
+  }
+  const bars = [
+    { label: "Exact", value: lint.byKind.exact, color: PALETTE2[2] },
+    { label: "Near", value: lint.byKind.near, color: PALETTE2[3] },
+    { label: "Off-system", value: lint.byKind.offSystem, color: PALETTE2[0] }
+  ];
+  const offenders = lint.topOffenders.length > 0 ? [
+    '<ul class="offenders">',
+    ...lint.topOffenders.map(
+      (o) => `<li><code>${escapeHtml(o.file)}</code><span class="count">${escapeHtml(String(o.count))}</span></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  return panel(
+    "Lint violations",
+    `<div class="chart">${barChart(bars, { width: CARD_W })}</div>${offenders}`
+  );
+}
+function readinessSection(data) {
+  const readiness = data.readiness;
+  if (readiness === void 0) {
+    return panel("Readiness", emptyState2("handoff <frame-url>"));
+  }
+  const deductions = readiness.deductions.length > 0 ? [
+    '<ul class="deductions">',
+    ...readiness.deductions.map(
+      (d) => `<li><span>${escapeHtml(d.reason)}</span><span class="pts">-${escapeHtml(String(d.points))}</span></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  return panel(
+    "Readiness",
+    [
+      `<div class="chart center">${donutGauge(readiness.score, { label: "Readiness" })}</div>`,
+      `<div class="frame-name">${escapeHtml(readiness.frameName)}</div>`,
+      deductions
+    ].join("")
+  );
+}
+var PARITY_INTENSITY = {
+  ok: 0.12,
+  "prop-mismatch": 0.55,
+  "missing-in-code": 0.8,
+  "missing-in-figma": 1
+};
+function paritySection2(data) {
+  const parity = data.parity;
+  if (parity === void 0 || parity.rows.length === 0) {
+    return panel("Parity matrix", emptyState2("parity"));
+  }
+  const rows = parity.rows.map((row2) => ({
+    label: row2.component,
+    cells: row2.cells.map((cell) => ({
+      label: cell.status,
+      intensity: PARITY_INTENSITY[cell.status]
+    }))
+  }));
+  const columns = parity.columns.length > 0 ? `<div class="cols">Columns: ${parity.columns.map((c2) => `<b>${escapeHtml(c2)}</b>`).join(" \xB7 ")}</div>` : "";
+  return panel(
+    "Parity matrix",
+    `<div class="chart">${heatGrid(rows)}</div>${columns}`
+  );
+}
+function a11ySection(data) {
+  const a11y = data.a11y;
+  if (a11y === void 0 || a11y.modes.length === 0) {
+    return panel("Contrast (a11y)", emptyState2("a11y"));
+  }
+  const bars = a11y.modes.map((m) => ({
+    label: m.mode,
+    value: m.failed
+  }));
+  const tallies = [
+    // The offenders list's layout (mode left, tally right), and a real space
+    // between the two so the text reads "light 12 passed", not "light12 passed".
+    '<ul class="offenders modes">',
+    ...a11y.modes.map(
+      (m) => `<li><code>${escapeHtml(m.mode)}</code> <span class="count">${escapeHtml(String(m.passed))} passed \xB7 ${escapeHtml(String(m.failed))} failed</span></li>`
+    ),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Contrast (a11y)",
+    [
+      `<div class="meta">Failures by mode \xB7 level ${escapeHtml(a11y.level)}</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W, color: TONE.error })}</div>`,
+      tallies
+    ].join("")
+  );
+}
+function impactSection(data) {
+  const impact = data.impact;
+  if (impact === void 0) {
+    return panel("Change impact", emptyState2("impact"));
+  }
+  const bars = [
+    { label: "Breaking", value: impact.breaking, color: TONE.error },
+    { label: "Additive", value: impact.additive, color: TONE.ok },
+    { label: "Cosmetic", value: impact.cosmetic, color: PALETTE2[4] }
+  ];
+  const sites = impact.touchedCallSites;
+  const radius = `<div class="meta">Touches ${escapeHtml(String(sites))} call site${sites === 1 ? "" : "s"}</div>`;
+  return panel(
+    "Change impact",
+    `<div class="chart">${barChart(bars, { width: CARD_W })}</div>${radius}`
+  );
+}
+function onSystemPct3(refs, literals) {
+  const total = refs + literals;
+  return total === 0 ? 0 : Math.round(refs / total * 100);
+}
+function adoptionTrendSection(data) {
+  const trend = data.adoptionTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel("Adoption trend", emptyState2("lint <dir>"));
+  }
+  const series = [
+    {
+      label: "on-system %",
+      points: trend.map((point, index) => ({ x: index, y: point.pct }))
+    }
+  ];
+  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
+    trend[trend.length - 1]?.date ?? ""
+  )}`;
+  return panel(
+    "Adoption trend",
+    [
+      `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[1]] })}</div>`,
+      `<div class="meta">On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)</div>`
+    ].join("")
+  );
+}
+function importCoverageSection(data) {
+  const coverage = data.importCoverage;
+  if (coverage === void 0) {
+    return panel("Import coverage", emptyState2("adoption"));
+  }
+  const { imported, total, uncovered, uncoveredTotal } = coverage;
+  const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
+  const list = uncovered.length > 0 ? [
+    '<ul class="offenders">',
+    ...uncovered.map(
+      (name) => `<li><code>${escapeHtml(name)}</code></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  const overflow = uncoveredTotal > uncovered.length ? `<div class="meta">\u2026 and ${escapeHtml(
+    String(uncoveredTotal - uncovered.length)
+  )} more</div>` : "";
+  return panel(
+    "Import coverage",
+    [
+      `<div class="chart center">${donutGauge(pct5, { label: "Import coverage" })}</div>`,
+      `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
+      list,
+      overflow
+    ].join("")
+  );
+}
+function leaderboardSection(data) {
+  const rows = data.leaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Adoption leaderboard", emptyState2("lint <dir>"));
+  }
+  const bars = rows.map((row2) => {
+    const pct5 = onSystemPct3(row2.refs, row2.literals);
+    return { label: row2.dir, value: pct5, color: bandColor(pct5) };
+  });
+  const labels = [
+    '<ul class="offenders">',
+    ...rows.map(
+      (row2) => `<li><code>${escapeHtml(row2.dir)}</code><span class="count">${escapeHtml(
+        String(onSystemPct3(row2.refs, row2.literals))
+      )}%</span></li>`
+    ),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Adoption leaderboard",
+    [
+      `<div class="meta">On-system % by directory, worst-first \xB7 css/scss values only</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
+      labels
+    ].join("")
+  );
+}
+function libraryHealthSection(data) {
+  const health = data.libraryHealth;
+  if (health === void 0) {
+    return panel("Library health", emptyState2("library-health"));
+  }
+  const { totals } = health;
+  const bars = [
+    {
+      label: "Override hotspots",
+      value: totals.overrideHotspots,
+      color: PALETTE2[3]
+    },
+    {
+      label: "Deprecated usage",
+      value: totals.deprecatedUsage,
+      color: PALETTE2[0]
+    },
+    {
+      label: "Detached candidates",
+      value: totals.detachedCandidates,
+      color: PALETTE2[4]
+    }
+  ];
+  const detachedCaveat = [
+    '<div class="meta">',
+    `Detached candidates: ${escapeHtml(String(totals.detachedCandidates))} `,
+    "\u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.",
+    "</div>"
+  ].join("");
+  const hotspots = health.overrideHotspots.length > 0 ? [
+    '<ul class="offenders">',
+    ...health.overrideHotspots.map(
+      (h) => `<li><code>${escapeHtml(h.name)}</code><span class="count">${escapeHtml(String(h.overrideCount))}</span></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  return panel(
+    "Library health",
+    [
+      `<div class="chart">${barChart(bars, { width: CARD_W })}</div>`,
+      detachedCaveat,
+      hotspots
+    ].join("")
+  );
+}
+
+// src/render/html/sections/executive.ts
+function executiveSection(data) {
+  const exec = data.executive;
+  if (exec === void 0) {
+    return panel("Executive summary", emptyState2("record"));
+  }
+  const tiles = [
+    kpiTile(
+      "System score",
+      exec.health === void 0 ? void 0 : String(exec.health),
+      exec.health === void 0 ? void 0 : toneFor(exec.health),
+      "out of 100"
+    ),
+    kpiTile(
+      "Import coverage",
+      exec.adoption === void 0 ? void 0 : `${exec.adoption}%`,
+      exec.adoption === void 0 ? void 0 : toneFor(exec.adoption),
+      "components imported"
+    ),
+    kpiTile(
+      "Consistency",
+      exec.consistency === void 0 ? void 0 : String(exec.consistency),
+      exec.consistency === void 0 ? void 0 : toneFor(exec.consistency),
+      "on-system blend"
+    ),
+    kpiTile(
+      "Design debt",
+      exec.debt === void 0 ? void 0 : `${exec.debt}/100`,
+      exec.debt === void 0 ? void 0 : debtTone(exec.debt),
+      "lower is better"
+    )
+  ].join("");
+  const trend = exec.trend ?? [];
+  const chart = trend.length >= 2 ? `<div class="chart">${lineChart(
+    [
+      {
+        label: "score",
+        points: trend.map((p4, i) => ({ x: i, y: p4.score }))
+      }
+    ],
+    {
+      width: CARD_W,
+      height: 140,
+      colors: [PALETTE2[0]],
+      xLabels: dateEnds(trend)
+    }
+  )}</div>` : "";
+  return panel(
+    "Executive summary",
+    [`<div class="kpis">${tiles}</div>`, chart].join("")
+  );
+}
+function consistencySection(data) {
+  const consistency = data.consistency;
+  if (consistency === void 0) {
+    return panel("Consistency", emptyState2("lint <dir>"));
+  }
+  const rows = consistency.components.map(
+    (c2) => `<tr><td>${escapeHtml(c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
+  ).join("");
+  return panel(
+    "Consistency",
+    [
+      `<div class="chart center">${donutGauge(consistency.score, { label: "Consistency" })}</div>`,
+      '<table class="weights">',
+      "<thead><tr><th>Signal</th><th>Score</th><th>Weight</th></tr></thead>",
+      `<tbody>${rows}</tbody>`,
+      "</table>",
+      '<div class="meta">tokens and components are true ratios \xB7 overrides is a documented-opinion penalty (8 per hotspot)</div>'
+    ].join("")
+  );
+}
+var DEBT_ITEMS_SHOWN = 8;
+function designDebtSection(data) {
+  const debt = data.debt;
+  if (debt === void 0) {
+    return panel("Design debt", emptyState2("lint <dir>"));
+  }
+  const tone = debtTone(debt.pct);
+  const shown = debt.items.slice(0, DEBT_ITEMS_SHOWN);
+  const items = shown.map(
+    (item) => `<li><span class="date">${escapeHtml(item.subject)} <span class="badge">${escapeHtml(item.kind)} \xB7 ${escapeHtml(String(item.count))}</span></span><span class="detail">${escapeHtml(item.recommendation)}</span></li>`
+  ).join("");
+  const more = debt.items.length > shown.length ? `<div class="meta">\u2026 and ${escapeHtml(String(debt.items.length - shown.length))} more</div>` : "";
+  return panel(
+    "Design debt",
+    [
+      `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(debt.pct))}/100</span><span class="stat-sub">${escapeHtml(debt.level)} \xB7 ${escapeHtml(String(debt.items.length))} item${debt.items.length === 1 ? "" : "s"}</span></div>`,
+      items === "" ? "" : `<ul class="calendar stack">${items}</ul>`,
+      more
+    ].join("")
+  );
+}
+
+// src/render/figma-trend-format.ts
+var SIGNAL_LABEL = {
+  overrides: "Overrides",
+  deprecated: "Deprecated",
+  detached: "Detached \u2014 heuristic, REST cannot truly detect detachment"
+};
+var SIGNAL_ORDER = [
+  "overrides",
+  "deprecated",
+  "detached"
+];
+var STATUS_LABEL = {
+  new: "new",
+  rising: "\u25B2 rising",
+  falling: "\u25BC falling",
+  flat: "= flat",
+  resolved: "\u2713 resolved",
+  "below-top": "below top N (not stored)"
+};
+function signedDelta(delta) {
+  if (delta > 0) return `+${delta}`;
+  if (delta < 0) return `\u2212${Math.abs(delta)}`;
+  return "\xB10";
+}
+function valueWithDelta(latest, delta) {
+  if (latest === null) return "\u2014";
+  return delta === void 0 ? String(latest) : `${latest} (${signedDelta(delta)})`;
+}
+function sparkPrefix(values) {
+  return values.length >= 2 ? `${sparkline(values)} ` : "";
+}
+function hotspotDetail(row2) {
+  const known = row2.points.map((p4) => p4.count).filter((c2) => c2 !== null);
+  const delta = known.length > 1 ? row2.delta : void 0;
+  return `${sparkPrefix(known)}${valueWithDelta(row2.latest, delta)} \xB7 ${STATUS_LABEL[row2.status]}`;
+}
+function dateSpan(dates) {
+  return `${dates[0] ?? ""} \u2192 ${dates[dates.length - 1] ?? ""}`;
+}
+function belowGateMeta(trend) {
+  return `${trend.failing} of ${trend.total} frame${trend.total === 1 ? "" : "s"} below the ${trend.threshold} gate`;
+}
+function frameDetail(frame) {
+  const delta = frame.runs > 1 ? frame.delta : void 0;
+  const gate = frame.passing ? "\u2713 ready" : "\u2717 below gate";
+  return `${sparkPrefix(frame.points.map((p4) => p4.score))}${valueWithDelta(frame.latest, delta)} \xB7 ${gate} \xB7 ${frame.runs} run${frame.runs === 1 ? "" : "s"}`;
+}
+function frameOverflow(trend) {
+  const hidden = trend.total - trend.frames.length;
+  return hidden > 0 ? `+${hidden} more` : void 0;
+}
+function passRateSub(rate) {
+  return `${rate.passing} of ${rate.frames} frame${rate.frames === 1 ? "" : "s"} \u2265 ${rate.threshold}`;
+}
+function passRateTrendLine(rate) {
+  if (rate.trend.length < 2) return void 0;
+  const first = rate.trend[0];
+  const last = rate.trend[rate.trend.length - 1];
+  return `${sparkline(rate.trend.map((p4) => p4.pct))} ${first?.pct ?? 0}% \u2192 ${last?.pct ?? 0}% (${dateSpan(rate.trend.map((p4) => p4.date))})`;
+}
+
+// src/render/html/sections/figma.ts
+function libraryHotspotsTrendSection(data) {
+  const trend = data.libraryHotspotsTrend;
+  if (trend === void 0 || trend.rows.length === 0) {
+    return panel("Library hotspots trend", emptyState2("library-health"));
+  }
+  const blocks = SIGNAL_ORDER.flatMap((signal) => {
+    const rows = trend.rows.filter((r2) => r2.signal === signal);
+    if (rows.length === 0) return [];
+    const items = rows.map(
+      (row2) => `<li><code>${escapeHtml(row2.name)}</code><span class="detail">${escapeHtml(hotspotDetail(row2))}</span></li>`
+    ).join("");
+    return [
+      `<div class="cols"><b>${escapeHtml(SIGNAL_LABEL[signal])}</b></div>`,
+      `<ul class="calendar stack">${items}</ul>`
+    ];
+  });
+  return panel(
+    "Library hotspots trend",
+    [
+      `<div class="meta">Top components per signal \xB7 ${escapeHtml(dateSpan(trend.dates))}</div>`,
+      ...blocks
+    ].join(""),
+    "wide"
+  );
+}
+function frameReadinessTrendSection(data) {
+  const trend = data.frameReadinessTrend;
+  if (trend === void 0 || trend.frames.length === 0) {
+    return panel("Frame readiness trend", emptyState2("handoff <frame-url>"));
+  }
+  const items = trend.frames.map(
+    (frame) => `<li><code>${escapeHtml(frame.frameName === "" ? frame.key : frame.frameName)}</code><span class="detail">${escapeHtml(frameDetail(frame))}</span></li>`
+  ).join("");
+  const more = frameOverflow(trend);
+  return panel(
+    "Frame readiness trend",
+    [
+      `<div class="meta">${escapeHtml(belowGateMeta(trend))}</div>`,
+      `<ul class="calendar stack">${items}</ul>`,
+      more === void 0 ? "" : `<div class="meta">${escapeHtml(more)}</div>`
+    ].join(""),
+    "wide"
+  );
+}
+function handoffPassRateSection(data) {
+  const rate = data.handoffPassRate;
+  if (rate === void 0 || rate.frames === 0) {
+    return panel("Handoff pass rate", emptyState2("handoff <frame-url>"));
+  }
+  const tone = toneFor(rate.pct);
+  const line = passRateTrendLine(rate);
+  return panel(
+    "Handoff pass rate",
+    [
+      `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(rate.pct))}%</span><span class="stat-sub">${escapeHtml(passRateSub(rate))}</span></div>`,
+      line === void 0 ? "" : `<div class="meta">${escapeHtml(line)}</div>`
+    ].join("")
+  );
+}
+
+// src/render/html/sections/metrics.ts
+var BREAKING_SOURCE_LABEL = {
+  tokens: "tokens",
+  figma: "figma"
+};
+function breakingCalendarSection(data) {
+  const calendar = data.breakingCalendar;
+  if (calendar === void 0 || calendar.entries.length === 0) {
+    return panel("Breaking calendar", emptyState2("tokens check"));
+  }
+  const rows = calendar.entries.map((entry) => {
+    const badge2 = `<span class="badge">${escapeHtml(
+      BREAKING_SOURCE_LABEL[entry.source]
+    )}</span>`;
+    const detail = entry.detail ?? `${entry.count}`;
+    return `<li><span class="date">${escapeHtml(entry.date)}</span><span class="detail">${badge2} ${escapeHtml(detail)}</span></li>`;
+  }).join("");
+  return panel(
+    "Breaking calendar",
+    [
+      `<div class="meta">${escapeHtml(String(calendar.total))} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first</div>`,
+      `<ul class="calendar">${rows}</ul>`
+    ].join("")
+  );
+}
+function changeFrequencySection(data) {
+  const frequency = data.changeFrequency;
+  if (frequency === void 0 || frequency.byKind.length === 0) {
+    return panel("Change frequency", emptyState2("tokens check"));
+  }
+  const bars = frequency.byKind.map((bucket) => ({
+    label: bucket.kind,
+    value: bucket.count
+  }));
+  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `<div class="meta">Records per kind \xB7 ${escapeHtml(dayOf(frequency.windowFirst))} \u2192 ${escapeHtml(dayOf(frequency.windowLast))}</div>` : '<div class="meta">Records per kind</div>';
+  return panel(
+    "Change frequency",
+    [
+      window,
+      `<div class="chart">${barChart(bars, { width: CARD_W, color: PALETTE2[1] })}</div>`
+    ].join("")
+  );
+}
+function targetsSection(data) {
+  const targets = data.targets;
+  if (targets === void 0 || targets.length === 0) {
+    return panel("Targets / SLAs", emptyState2("report"));
+  }
+  const rows = targets.map((verdict) => ({
+    label: COMPONENT_LABEL2[verdict.metric] ?? verdict.metric,
+    measured: verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
+    target: `${verdict.op} ${verdict.target}`,
+    band: verdict.band
+  }));
+  const legendRows = ["green", "amber", "red", "unknown"].map(
+    (band) => `<tr><td>${escapeHtml(band)}</td><td>${escapeHtml(
+      band === "green" ? "meets target" : band === "amber" ? "near target" : band === "red" ? "misses target" : "not measured"
+    )}</td></tr>`
+  ).join("");
+  const legend = [
+    '<table class="weights">',
+    "<thead><tr><th>Band</th><th>Meaning</th></tr></thead>",
+    `<tbody>${legendRows}</tbody>`,
+    "</table>"
+  ].join("");
+  return panel(
+    "Targets / SLAs",
+    [
+      `<div class="chart">${statusGrid(rows, { width: CARD_W })}</div>`,
+      legend
+    ].join("")
+  );
+}
+function parityTrendSection(data) {
+  const trend = data.parityTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel("Parity trend", emptyState2("registry build"));
+  }
+  const series = [
+    {
+      label: "parity %",
+      points: trend.map((point, index) => ({ x: index, y: point.pct }))
+    }
+  ];
+  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
+    trend[trend.length - 1]?.date ?? ""
+  )}`;
+  return panel(
+    "Parity trend",
+    [
+      `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[2]] })}</div>`,
+      `<div class="meta">Component parity pass-% over ${dateRange}</div>`
+    ].join("")
+  );
+}
+function componentHealthSection(data) {
+  const rows = data.componentHealth;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Component health", emptyState2("registry build"));
+  }
+  const bars = rows.map((row2) => ({
+    label: row2.component,
+    value: row2.healthScore,
+    color: bandColor(row2.healthScore)
+  }));
+  const offenders = rows.slice(0, 5);
+  const list = [
+    '<ul class="offenders">',
+    ...offenders.map((row2) => {
+      const issues = row2.issues.length > 0 ? row2.issues.join(", ") : "no issues";
+      return `<li><code>${escapeHtml(row2.component)}</code><span class="count">${escapeHtml(String(row2.healthScore))} \xB7 ${escapeHtml(issues)}</span></li>`;
+    }),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Component health",
+    [
+      '<div class="meta">Composite health per component, worst-first</div>',
+      `<div class="chart">${barChart(bars, { width: WIDE_W, max: 100 })}</div>`,
+      list
+    ].join(""),
+    "wide"
+  );
+}
+function libraryHealthTrendSection(data) {
+  const trend = data.libraryHealthTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel("Library health trend", emptyState2("library-health"));
+  }
+  const toSeries = (label, pick) => ({
+    label,
+    points: trend.map((point, index) => ({ x: index, y: pick(point) }))
+  });
+  const series = [
+    toSeries("overrides", (p4) => p4.overrides),
+    toSeries("deprecated", (p4) => p4.deprecated),
+    toSeries("detached", (p4) => p4.detached)
+  ];
+  const dateRange = `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(
+    trend[trend.length - 1]?.date ?? ""
+  )}`;
+  return panel(
+    "Library health trend",
+    [
+      `<div class="chart">${lineChart(series, { width: CARD_W, height: 200, xLabels: dateEnds(trend), colors: [PALETTE2[3], PALETTE2[0], PALETTE2[4]] })}</div>`,
+      `<div class="cols"><b>Overrides</b> \xB7 <b>Deprecated</b> \xB7 <b>Detached</b> over ${dateRange}</div>`
+    ].join("")
+  );
+}
+function migrationChecklistSection(data) {
+  const checklist = data.migrationChecklist;
+  if (checklist === void 0 || checklist.sites.length === 0) {
+    return panel("Migration checklist", emptyState2("impact --checklist"));
+  }
+  const rows = checklist.sites.map((site) => {
+    const where = `${site.file}:${site.line}`;
+    const detail = `${escapeHtml(site.subject)} \xB7 ${escapeHtml(site.from)} \u2192 ${escapeHtml(site.to)}`;
+    return `<li><code>${escapeHtml(where)}</code><span class="detail">${detail}</span></li>`;
+  }).join("");
+  const overflow = checklist.truncated ? '<div class="meta">\u2026 and more sites beyond the cap</div>' : "";
+  return panel(
+    "Migration checklist",
+    [
+      `<div class="meta">${escapeHtml(String(checklist.sites.length))} call site${checklist.sites.length === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to</div>`,
+      `<ul class="calendar stack">${rows}</ul>`,
+      overflow
+    ].join(""),
+    "wide"
+  );
+}
+function scoreVelocitySection(data) {
+  const velocity = data.scoreVelocity;
+  if (velocity === void 0) {
+    return panel("Score velocity", emptyState2("report"));
+  }
+  const { delta, windowDays, direction, regressionStreak } = velocity;
+  const ARROW = {
+    up: "\u25B2",
+    down: "\u25BC",
+    flat: "\u25AC"
+  };
+  const arrow3 = ARROW[direction];
+  const signedDelta2 = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
+  const streakBadge = regressionStreak > 0 ? `<span class="badge">${escapeHtml(String(regressionStreak))} regression${regressionStreak === 1 ? "" : "s"}</span>` : "";
+  return panel(
+    "Score velocity",
+    [
+      `<div class="stat"><span class="stat-value ${direction === "up" ? "ok" : direction === "down" ? "error" : ""}">${escapeHtml(arrow3)} ${escapeHtml(signedDelta2)}</span><span class="stat-sub">over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</span></div>`,
+      `<div class="meta">${escapeHtml(direction)} \xB7 regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`
+    ].join("")
+  );
+}
+function ownershipLeaderboardSection(data) {
+  const rows = data.ownershipLeaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Ownership leaderboard", emptyState2("lint"));
+  }
+  const bars = rows.map((row2) => ({
+    label: row2.owner,
+    value: row2.pct,
+    color: bandColor(row2.pct)
+  }));
+  const labels = [
+    '<ul class="offenders">',
+    ...rows.map(
+      (row2) => `<li><code>${escapeHtml(row2.owner)}</code><span class="count">${escapeHtml(
+        String(row2.pct)
+      )}% \xB7 ${escapeHtml(String(row2.refs))} refs / ${escapeHtml(
+        String(row2.literals)
+      )} literals</span></li>`
+    ),
+    "</ul>"
+  ].join("");
+  return panel(
+    "Ownership leaderboard",
+    [
+      `<div class="meta">On-system % by owner, worst-first \xB7 css/scss values only</div>`,
+      `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
+      labels
+    ].join("")
+  );
+}
+function audienceChangelogSection(data) {
+  const changelog = data.audienceChangelog;
+  if (changelog === void 0 || changelog.slices.length === 0) {
+    return panel("Changelog by audience", emptyState2("changelog"));
+  }
+  const columns = changelog.slices.map((slice) => {
+    const badges = [
+      `<span class="badge">breaking ${escapeHtml(String(slice.breaking))}</span>`,
+      `<span class="badge">additive ${escapeHtml(String(slice.additive))}</span>`,
+      `<span class="badge">cosmetic ${escapeHtml(String(slice.cosmetic))}</span>`
+    ].join("");
+    const recent = slice.recent.length > 0 ? [
+      '<ul class="offenders">',
+      ...slice.recent.map(
+        (entry) => `<li><code>${escapeHtml(entry)}</code></li>`
+      ),
+      "</ul>"
+    ].join("") : '<div class="meta">No recent entries</div>';
+    return [
+      '<div class="audience-col">',
+      `<div class="cols"><b>${escapeHtml(slice.audience)}</b></div>`,
+      `<div class="meta">${badges}</div>`,
+      recent,
+      "</div>"
+    ].join("");
+  }).join("");
+  return panel(
+    "Changelog by audience",
+    `<div class="cols">${columns}</div>`,
+    "wide"
+  );
+}
+function frameImplementabilitySection(data) {
+  const frame = data.frameImplementability;
+  if (frame === void 0) {
+    return panel("Frame implementability", emptyState2("frame-impl"));
+  }
+  const { pct: pct5, resolved, total, gaps } = frame;
+  const gapList = gaps.length > 0 ? [
+    '<ul class="offenders">',
+    ...gaps.map(
+      (gap) => `<li><code>${escapeHtml(gap.reason)}</code><span class="count">${escapeHtml(String(gap.count))}</span></li>`
+    ),
+    "</ul>"
+  ].join("") : "";
+  return panel(
+    "Frame implementability",
+    [
+      `<div class="chart center">${donutGauge(pct5, { label: "Frame implementability" })}</div>`,
+      `<div class="meta">${escapeHtml(String(resolved))}/${escapeHtml(String(total))} requirements resolve to the system</div>`,
+      gapList
+    ].join("")
+  );
+}
+function releaseReadinessSection(data) {
+  const readiness = data.releaseReadiness;
+  if (readiness === void 0 || readiness.checks.length === 0) {
+    return panel("Release readiness", emptyState2("release-check"));
+  }
+  const GO_FILL = TONE.ok;
+  const NO_GO_FILL = TONE.error;
+  const headerFill = readiness.go ? GO_FILL : NO_GO_FILL;
+  const headerText = readiness.go ? "GO" : "NO-GO";
+  const header = `<div class="meta"><span class="badge" style="background:${headerFill};color:#ffffff">${escapeHtml(headerText)}</span></div>`;
+  const items = readiness.checks.map((check) => {
+    const mark = check.pass ? "\u2713" : "\u2717";
+    const markFill = check.pass ? GO_FILL : NO_GO_FILL;
+    const detail = check.detail !== void 0 && check.detail.length > 0 ? `<span class="detail">${escapeHtml(check.detail)}</span>` : "";
+    return `<li><span class="date" style="color:${markFill}">${mark}</span><span class="detail">${escapeHtml(check.name)}</span>${detail}</li>`;
+  }).join("");
+  return panel(
+    "Release readiness",
+    [header, `<ul class="calendar">${items}</ul>`].join("")
+  );
+}
+function dataFreshnessSection(data) {
+  const rows = data.dataFreshness;
+  if (rows === void 0 || rows.length === 0) {
+    return panel("Data freshness", emptyState2("report"));
+  }
+  const BAND_FILL = {
+    green: TONE.ok,
+    amber: TONE.warn,
+    red: TONE.error,
+    unknown: TONE.neutral
+  };
+  const ageLabel = (row2) => {
+    if (row2.ageDays === void 0) return "never";
+    if (row2.ageDays === 0) return "today";
+    return `${row2.ageDays}d ago`;
+  };
+  const items = rows.map((row2) => {
+    const fill = BAND_FILL[row2.band];
+    const pill = `<span class="badge" style="background:${fill};color:#ffffff">${escapeHtml(row2.band)}</span>`;
+    const age3 = escapeHtml(ageLabel(row2));
+    return `<li><span class="date">${escapeHtml(row2.kind)}</span><span class="detail">${pill} ${age3}</span></li>`;
+  }).join("");
+  return panel(
+    "Data freshness",
+    [
+      '<div class="meta">Measurement age per check-kind \xB7 band signals trust</div>',
+      `<ul class="calendar">${items}</ul>`
+    ].join("")
+  );
+}
+
+// src/render/html/timeline.ts
+var MONTHS2 = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec"
+];
+function dayLabels(day) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  const month = match !== null ? MONTHS2[Number(match[2]) - 1] : void 0;
+  if (match === null || month === void 0) return { short: day, long: day };
+  const date = Number(match[3]);
+  return { short: `${date} ${month}`, long: `${date} ${month} ${match[1]}` };
+}
+function timelineRadios(stops) {
+  const last = stops.length - 1;
+  return stops.map(
+    (stop, i) => `<input type="radio" name="tl" class="tl-radio" id="${stop.id}"${i === last ? " checked" : ""} />`
+  ).join("");
+}
+function timelineNav(stops) {
+  const items = stops.map(
+    (stop) => `<li><label for="${stop.id}" title="${escapeHtml(stop.title)}"><span class="dot"></span><span class="tl-label">${escapeHtml(stop.label)}</span><span class="sr">${escapeHtml(stop.title)}</span></label></li>`
+  ).join("");
+  return `<nav class="timeline" aria-label="Dashboard history"><ol>${items}</ol></nav>`;
+}
+function timelineStyle(stops) {
+  const rules = stops.map(
+    (stop, i) => `#${stop.id}:checked ~ .tl-s${i}{display:block}#${stop.id}:checked ~ header .tl-g${i}{display:inline}#${stop.id}:checked ~ header label[for="${stop.id}"]{color:var(--bar-text)}#${stop.id}:checked ~ header label[for="${stop.id}"] .dot{background:var(--bar-accent);border-color:var(--bar-accent);transform:scale(1.3)}#${stop.id}:focus-visible ~ header label[for="${stop.id}"]{outline:2px solid var(--bar-accent);outline-offset:2px}`
+  );
+  const past = stops.slice(0, -1).map((stop) => `#${stop.id}:checked ~ header .generated`);
+  if (past.length > 0) rules.push(`${past.join(",")}{display:none}`);
+  return rules.join("\n");
+}
+var HEADER_STYLE = `
+header.dash .bar.top {
+	display: grid;
+	/* Equal side columns keep the timeline centred and still while the right
+	   side's text changes with the selected state. */
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: center;
+	gap: 10px 24px;
+	/* Full window width: the logo sits at the far left, Generated at the far
+	   right, whatever the content column's width. */
+	max-width: none;
+	padding: 14px 24px;
+}
+header.dash .brand { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: start; }
+header.dash .brand .logo { flex: none; border-radius: 7px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16); }
+header.dash .brand h1 { flex: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.dash .bar-meta { display: flex; align-items: center; gap: 12px; justify-self: end; white-space: nowrap; }
+@media (max-width: 780px) {
+	header.dash .bar.top { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+	header.dash .brand h1 { flex: 0 1 auto; min-width: 0; font-size: 18px; }
+	header.dash .bar-meta { justify-self: start; flex-wrap: wrap; white-space: normal; }
+}
+`;
+var TIMELINE_STYLE = `
+header.dash .tl-asof { display: none; color: var(--bar-accent); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* A fixed-width strip that scrolls when the stops overflow:
+   - rtl scroll container, so it opens scrolled to the newest end ("Now");
+     the list itself reads left-to-right;
+   - both ends fade to transparent (mask). The list is padded by the fade
+     width, so a stop scrolled fully to either end is never faded \u2014 only
+     stops that continue off-strip are. */
+.timeline {
+	--tl-fade: 32px;
+	justify-self: center;
+	width: max-content;
+	max-width: min(560px, 100%);
+	min-width: 0;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scrollbar-width: none;
+	direction: rtl;
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 var(--tl-fade), #000 calc(100% - var(--tl-fade)), transparent);
+	mask-image: linear-gradient(to right, transparent, #000 var(--tl-fade), #000 calc(100% - var(--tl-fade)), transparent);
+}
+.timeline::-webkit-scrollbar { display: none; }
+.timeline ol {
+	list-style: none;
+	margin: 0;
+	padding: 0 var(--tl-fade);
+	display: flex;
+	position: relative;
+	direction: ltr;
+	width: max-content;
+}
+.timeline ol::before {
+	content: "";
+	position: absolute;
+	left: calc(var(--tl-fade) + 24px);
+	right: calc(var(--tl-fade) + 24px);
+	top: 10px;
+	height: 2px;
+	background: rgba(255, 255, 255, 0.16);
+}
+.timeline label {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 5px;
+	min-width: 48px;
+	padding: 2px 4px;
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--bar-subtle);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.2;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.timeline label:hover { color: var(--bar-text); }
+.timeline .dot {
+	width: 12px;
+	height: 12px;
+	margin-top: 3px;
+	border-radius: 50%;
+	background: var(--bar);
+	border: 2px solid var(--bar-subtle);
+	transition: transform 120ms ease;
+}
+.timeline label:hover .dot { border-color: var(--bar-text); }
+.tl-radio { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tl-state { display: none; }
+.tl-note {
+	margin: 0 0 16px;
+	padding: 10px 14px;
+	border-radius: 10px;
+	background: var(--accent-soft);
+	color: var(--text);
+	font-size: 13px;
+}
+@media (max-width: 780px) {
+	.timeline { justify-self: stretch; max-width: 100%; }
+	.timeline ol { margin: 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) { .timeline .dot { transition: none; } }
+`;
+
+// src/render/html/dashboard.ts
+var SECTION_RENDERERS = {
+  "system-score": systemScoreSection,
+  "drift-trend": driftSection,
+  "lint-summary": lintSection,
+  readiness: readinessSection,
+  parity: paritySection2,
+  a11y: a11ySection,
+  impact: impactSection,
+  "adoption-trend": adoptionTrendSection,
+  "import-coverage": importCoverageSection,
+  leaderboard: leaderboardSection,
+  "library-health": libraryHealthSection,
+  "breaking-calendar": breakingCalendarSection,
+  "change-frequency": changeFrequencySection,
+  // Persona-wave metric sections (C1–C13). Real chart/list renderers (M4.1 +
+  // M4.2); the completeness gate (24 artifacts) holds via the Record type.
+  targets: targetsSection,
+  "parity-trend": parityTrendSection,
+  "component-health": componentHealthSection,
+  "library-health-trend": libraryHealthTrendSection,
+  "migration-checklist": migrationChecklistSection,
+  "score-velocity": scoreVelocitySection,
+  "ownership-leaderboard": ownershipLeaderboardSection,
+  "audience-changelog": audienceChangelogSection,
+  "frame-implementability": frameImplementabilitySection,
+  "release-readiness": releaseReadinessSection,
+  "data-freshness": dataFreshnessSection,
+  // Executive layer (AN7) — the completeness gate is now 27 via the Record type.
+  consistency: consistencySection,
+  "design-debt": designDebtSection,
+  executive: executiveSection,
+  // Figma + per-frame trends (F6) — the completeness gate is now 30.
+  "library-hotspots-trend": libraryHotspotsTrendSection,
+  "frame-readiness-trend": frameReadinessTrendSection,
+  "handoff-pass-rate": handoffPassRateSection
+};
+function signed2(delta) {
+  if (delta > 0) return `+${delta}`;
+  if (delta < 0) return `\u2212${Math.abs(delta)}`;
+  return "\xB10";
+}
+function kpis(data, selection) {
+  const on = new Set(selection);
+  const out = [];
+  const score = data.systemScore;
+  if (on.has("system-score") && score !== void 0) {
+    const velocity = data.scoreVelocity;
+    const first = score.trend[0]?.score;
+    const sub = velocity !== void 0 ? `${signed2(velocity.delta)} over ${velocity.windowDays} day${velocity.windowDays === 1 ? "" : "s"}` : first !== void 0 && score.trend.length > 1 ? `${signed2(score.current - first)} over ${score.trend.length} runs` : void 0;
+    out.push({
+      label: "System score",
+      value: String(score.current),
+      tone: toneFor(score.current),
+      ...sub === void 0 ? {} : { sub }
+    });
+  }
+  const adoption = data.adoptionTrend;
+  const lastAdoption = adoption?.[adoption.length - 1];
+  if (on.has("adoption-trend") && adoption !== void 0 && lastAdoption) {
+    const first = adoption[0];
+    out.push({
+      label: "On-system",
+      value: `${lastAdoption.pct}%`,
+      tone: toneFor(lastAdoption.pct),
+      ...first !== void 0 && adoption.length > 1 ? {
+        sub: `${signed2(lastAdoption.pct - first.pct)} pts since ${first.date}`
+      } : {}
+    });
+  }
+  if (on.has("readiness") && data.readiness !== void 0) {
+    out.push({
+      label: "Readiness",
+      value: String(data.readiness.score),
+      tone: toneFor(data.readiness.score),
+      sub: data.readiness.frameName
+    });
+  }
+  const parity = data.parityTrend;
+  const lastParity = parity?.[parity.length - 1];
+  if (on.has("parity-trend") && lastParity) {
+    out.push({
+      label: "Parity",
+      value: `${lastParity.pct}%`,
+      tone: toneFor(lastParity.pct),
+      sub: `as of ${lastParity.date}`
+    });
+  }
+  const drift = data.driftTrend;
+  const lastDrift = drift?.[drift.length - 1];
+  if (on.has("drift-trend") && lastDrift) {
+    out.push({
+      label: "Breaking drift",
+      value: String(lastDrift.breaking),
+      tone: lastDrift.breaking > 0 ? "error" : "ok",
+      sub: `${lastDrift.additive} additive \xB7 ${lastDrift.cosmetic} cosmetic`
+    });
+  }
+  const a11y = data.a11y;
+  if (on.has("a11y") && a11y !== void 0 && a11y.modes.length > 0) {
+    const failed = a11y.modes.reduce((sum, m) => sum + m.failed, 0);
+    out.push({
+      label: "Contrast failures",
+      value: String(failed),
+      tone: failed > 0 ? "error" : "ok",
+      sub: `${a11y.modes.length} mode${a11y.modes.length === 1 ? "" : "s"} \xB7 level ${a11y.level}`
+    });
+  }
+  const release = data.releaseReadiness;
+  if (on.has("release-readiness") && release !== void 0 && release.checks.length > 0) {
+    const passed = release.checks.filter((c2) => c2.pass).length;
+    out.push({
+      label: "Release",
+      value: release.go ? "Go" : "No-go",
+      tone: release.go ? "ok" : "error",
+      sub: `${passed}/${release.checks.length} checks pass`
+    });
+  }
+  if (on.has("consistency") && data.consistency !== void 0) {
+    out.push({
+      label: "Consistency",
+      value: String(data.consistency.score),
+      tone: toneFor(data.consistency.score),
+      sub: `${data.consistency.components.length} signal${data.consistency.components.length === 1 ? "" : "s"}`
+    });
+  }
+  if (on.has("design-debt") && data.debt !== void 0) {
+    out.push({
+      label: "Design debt",
+      // A weighted 0–100 index, not a percentage (same as the manager page).
+      value: `${data.debt.pct}/100`,
+      tone: debtTone(data.debt.pct),
+      sub: `${data.debt.level} \xB7 ${data.debt.items.length} item${data.debt.items.length === 1 ? "" : "s"}`
+    });
+  }
+  return out;
+}
+function kpiStrip(items) {
+  if (items.length === 0) return "";
+  const cards = items.map(
+    (k4) => [
+      `<div class="kpi${k4.tone === void 0 ? "" : ` ${k4.tone}`}">`,
+      `<span class="kpi-label">${escapeHtml(k4.label)}</span>`,
+      `<span class="kpi-value">${escapeHtml(k4.value)}</span>`,
+      k4.sub === void 0 ? "" : `<span class="kpi-sub">${escapeHtml(k4.sub)}</span>`,
+      "</div>"
+    ].join("")
+  );
+  return `<div class="kpis">${cards.join("")}</div>`;
+}
+function renderDashboard(data, selection = ALL_ARTIFACT_IDS, options = {}) {
+  const project = escapeHtml(data.project);
+  const generatedAt = escapeHtml(readableInstant(data.generatedAt));
+  const viewLabel = options.viewLabel === void 0 ? "" : `<span class="view">${escapeHtml(options.viewLabel)}</span>`;
+  const stateBody = (state) => [
+    kpiStrip(kpis(state, selection)),
+    '<div class="grid">',
+    ...selection.map(
+      (id) => id === "system-score" ? systemScoreSection(state, options.weightProfile) : SECTION_RENDERERS[id](state)
+    ),
+    "</div>"
+  ].join("");
+  const past = options.timeline ?? [];
+  const stops = [
+    ...past.map((state, i) => {
+      const labels = dayLabels(state.day);
+      return {
+        id: `tl-${i}`,
+        label: labels.short,
+        title: `End of ${labels.long}`
+      };
+    }),
+    {
+      id: "tl-now",
+      label: "Now",
+      title: `Now \xB7 generated ${readableInstant(data.generatedAt)}`
+    }
+  ];
+  const hasTimeline = past.length > 0;
+  const asOf = past.map(
+    (state, i) => `<span class="tl-asof tl-g${i}">As of ${escapeHtml(dayLabels(state.day).long)}</span>`
+  ).join("");
+  const header = [
+    '<header class="dash"><div class="bar top">',
+    `<div class="brand">${LOGO_IMG}<h1>ds-bridge report \xB7 <span class="project">${project}</span></h1></div>`,
+    hasTimeline ? timelineNav(stops) : "<div></div>",
+    `<div class="bar-meta">${viewLabel}${asOf}<span class="generated">Generated ${generatedAt}</span></div>`,
+    "</div></header>"
+  ].join("");
+  const bodies = hasTimeline ? [
+    ...past.map(
+      (state, i) => `<div class="wrap tl-state tl-s${i}"><p class="tl-note">You are viewing this dashboard as it was at the end of <strong>${escapeHtml(dayLabels(state.day).long)}</strong>. The parity grid and component health come from the current registry, not from history.</p>${stateBody(state.data)}</div>`
+    ),
+    `<div class="wrap tl-state tl-s${past.length}">${stateBody(data)}</div>`
+  ] : [`<div class="wrap">${stateBody(data)}</div>`];
+  const body = [
+    hasTimeline ? timelineRadios(stops) : "",
+    header,
+    ...bodies
+  ].join("");
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    `<title>ds-bridge report \xB7 ${project}</title>`,
+    `<style>${STYLE}${HEADER_STYLE}${hasTimeline ? `${TIMELINE_STYLE}${timelineStyle(stops)}` : ""}</style>`,
+    "</head>",
+    "<body>",
+    body,
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
+// src/render/html/index.ts
+function renderIndex(entries) {
+  const cards = entries.length > 0 ? entries.map(
+    (entry) => [
+      '<section class="panel">',
+      `<h2><a href="${escapeHtml(entry.href)}">${escapeHtml(entry.name)}</a></h2>`,
+      "</section>"
+    ].join("")
+  ).join("") : [
+    '<section class="panel">',
+    '<div class="empty">',
+    '<span class="empty-title">No dashboards published</span>',
+    "<span>Configure <code>publish</code> or pass <code>--dashboards</code>.</span>",
+    "</div>",
+    "</section>"
+  ].join("");
+  const body = [
+    '<div class="wrap">',
+    '<header class="dash">',
+    "<h1>ds-bridge dashboards</h1>",
+    "</header>",
+    '<div class="grid">',
+    cards,
+    "</div>",
+    "</div>"
+  ].join("");
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    "<title>ds-bridge dashboards</title>",
+    `<style>${STYLE}</style>`,
+    "</head>",
+    "<body>",
+    body,
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
+// src/render/html/manager.ts
+var PAGE_STYLE = `
+.page { max-width: 960px; }
+.page .grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
+ol.ranked { margin: 0; padding-left: 20px; font-size: 14px; }
+ol.ranked li { padding: 4px 0; }
+.empty-line { color: var(--text-subtle); font-size: 13px; margin: 0; }
+@media print {
+	body { background: #ffffff; }
+	header.dash { background: #ffffff; color: var(--text); border-bottom: 1px solid var(--border); }
+	header.dash .generated { color: var(--text-subtle); }
+	section.panel, .kpi { break-inside: avoid; }
+}
+`.trim();
+function emptyLine(text2) {
+  return `<p class="empty-line">${escapeHtml(text2)}</p>`;
+}
+function ranked(items, empty) {
+  if (items.length === 0) return emptyLine(empty);
+  return `<ol class="ranked">${items.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`;
+}
+var STATUS = {
+  green: { text: "On track", fill: TONE.ok },
+  amber: { text: "At risk", fill: TONE.warn },
+  red: { text: "Off track", fill: TONE.error },
+  unknown: { text: "Not measured", fill: TONE.neutral }
+};
+function days(n) {
+  return `${n} ${n === 1 ? "day" : "days"}`;
+}
+function age(n) {
+  if (n === void 0) return "age unknown";
+  return n === 0 ? "today" : `${n}d ago`;
+}
+var FRAMES_SHOWN = 10;
+function renderManagerHtml(report) {
+  const h = report.headline;
+  const project = escapeHtml(report.project);
+  const tiles = [
+    kpiTile(
+      "System score",
+      h.score === void 0 ? void 0 : String(h.score.current),
+      h.score === void 0 ? void 0 : toneFor(h.score.current),
+      scoreChangeText(h, report.windowDays) ?? "out of 100"
+    ),
+    kpiTile(
+      "On-system usage",
+      h.onSystem === void 0 ? void 0 : `${h.onSystem.pct}%`,
+      h.onSystem === void 0 ? void 0 : toneFor(h.onSystem.pct),
+      onSystemChangeText(h) ?? "tokens vs literals"
+    ),
+    kpiTile(
+      "Component import coverage",
+      h.importCoverage === void 0 ? void 0 : `${h.importCoverage.pct}%`,
+      h.importCoverage === void 0 ? void 0 : toneFor(h.importCoverage.pct),
+      h.importCoverage === void 0 ? void 0 : `${h.importCoverage.imported} of ${h.importCoverage.total} components`
+    ),
+    kpiTile(
+      "Consistency",
+      h.consistency === void 0 ? void 0 : String(h.consistency),
+      h.consistency === void 0 ? void 0 : toneFor(h.consistency),
+      "out of 100"
+    ),
+    kpiTile(
+      "Design debt",
+      h.debt === void 0 ? void 0 : `${h.debt.pct}/100`,
+      h.debt === void 0 ? void 0 : debtTone(h.debt.pct),
+      h.debt === void 0 ? void 0 : `${h.debt.level} \xB7 lower is better`
+    ),
+    kpiTile(
+      "Handoff readiness",
+      h.handoff === void 0 ? void 0 : `${h.handoff.ready}/${h.handoff.frames}`,
+      h.handoff === void 0 ? void 0 : toneFor(100 * h.handoff.ready / h.handoff.frames),
+      "frames at the readiness bar"
+    )
+  ].join("");
+  const targets = report.targets.length === 0 ? emptyLine(
+    "No targets set. Add metric_targets to .ds-bridge.json to track goals."
+  ) : tableHtml(
+    ["Target", "Now", "Goal", "Status"],
+    report.targets.map((t) => {
+      const status = STATUS[t.band];
+      const badge2 = {
+        html: `<span class="badge" style="background:${status.fill};color:#ffffff">${escapeHtml(status.text)}</span>`
+      };
+      return [
+        targetLabel(t.metric),
+        targetValue(t.metric, t.measured),
+        `${targetOp(t.op)} ${targetValue(t.metric, t.target)}`,
+        badge2
+      ];
+    })
+  );
+  const shownFrames = report.frames.slice(0, FRAMES_SHOWN);
+  const frames = report.frames.length === 0 ? emptyLine(
+    "No handoff checks yet. Run ds-bridge handoff <frame-url> to track frame readiness."
+  ) : [
+    tableHtml(
+      ["Frame", "Readiness", "Pass rate", "Runs"],
+      shownFrames.map((f3) => [
+        frameLabel(f3),
+        String(f3.latest),
+        `${f3.passRate}%`,
+        String(f3.runs)
+      ])
+    ),
+    report.frames.length > shownFrames.length ? `<div class="meta">\u2026 and ${escapeHtml(String(report.frames.length - shownFrames.length))} more frames</div>` : ""
+  ].join("");
+  const { measured, stale, never } = report.coverage;
+  const coverageItems = [];
+  if (measured.length > 0) {
+    coverageItems.push(
+      `<li><span class="date">Measured</span><span class="detail">${escapeHtml(measured.map((m) => `${kindLabel(m.kind)} (${age(m.ageDays)})`).join(", "))}</span></li>`
+    );
+  }
+  if (stale.length > 0) {
+    coverageItems.push(
+      `<li><span class="date">Stale</span><span class="detail">${escapeHtml(stale.map((m) => `${kindLabel(m.kind)} (${age(m.ageDays)})`).join(", "))}</span></li>`
+    );
+  }
+  if (never.length > 0) {
+    coverageItems.push(
+      `<li><span class="date">Never measured</span><span class="detail">${escapeHtml(never.map(kindLabel).join(", "))}</span></li>`
+    );
+  }
+  const coverage = coverageItems.length === 0 ? emptyLine("No checks recorded yet. Run ds-bridge record.") : `<ul class="calendar stack">${coverageItems.join("")}</ul>`;
+  const body = [
+    '<header class="dash"><div class="bar">',
+    `<h1>Design system report \xB7 <span class="project">${project}</span></h1>`,
+    `<span class="generated">${escapeHtml(readableInstant(report.generatedAt))} \xB7 last ${escapeHtml(days(report.windowDays))}</span>`,
+    "</div></header>",
+    '<div class="wrap page">',
+    `<div class="kpis">${tiles}</div>`,
+    '<div class="grid">',
+    panel("Top risks", ranked(report.risks, "No risks flagged.")),
+    panel("Next actions", ranked(report.actions, "Nothing urgent.")),
+    panel("Targets", targets),
+    panel("Handoff readiness by frame", frames),
+    panel("Data coverage", coverage),
+    "</div>",
+    h.debt !== void 0 ? `<div class="meta">${escapeHtml(DEBT_INDEX_NOTE)}</div>` : "",
+    '<div class="meta">Generated by ds-bridge (report --format exec-html) from .ds-bridge/history.jsonl. Numbers marked \u201Cnot measured\u201D were never recorded; they are not zero.</div>',
+    "</div>"
+  ].join("");
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    `<title>Design system report \xB7 ${project}</title>`,
+    `<style>${STYLE}
+${PAGE_STYLE}</style>`,
+    "</head>",
+    "<body>",
+    body,
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
+// src/render/html/snapshot.ts
+var SNAPSHOT_SENTINEL = "__GENERATED_AT__";
+function normalizeSnapshot(html) {
+  return html.replace(
+    /(<span class="generated">Generated )[^<]*(<\/span>)/,
+    `$1${SNAPSHOT_SENTINEL}$2`
+  );
+}
+
+// src/render/markdown/text.ts
+var ACTIVE = /[\\`*_[\]<>|~]/g;
+function mdText(text2) {
+  return text2.replace(/\s*\r?\n\s*/g, " ").replace(ACTIVE, (c2) => `\\${c2}`);
+}
+
+// src/render/markdown/manager.ts
+var NOT_MEASURED = "not measured";
+var NO_CHANGE = "\u2014";
+function row(cells) {
+  return `| ${cells.map(mdText).join(" | ")} |`;
+}
+function table(header, rows) {
+  return [row(header), row(header.map(() => "---")), ...rows.map(row)];
+}
+function days2(n) {
+  return `${n} ${n === 1 ? "day" : "days"}`;
+}
+function headlineRows(report) {
+  const h = report.headline;
+  const onSystem = h.onSystem;
+  const coverage = h.importCoverage;
+  const handoff = h.handoff;
+  return [
+    [
+      "System score",
+      h.score === void 0 ? NOT_MEASURED : `${h.score.current}/100`,
+      scoreChangeText(h, report.windowDays) ?? NO_CHANGE
+    ],
+    [
+      "On-system usage",
+      onSystem === void 0 ? NOT_MEASURED : `${onSystem.pct}%`,
+      onSystemChangeText(h) ?? NO_CHANGE
+    ],
+    [
+      "Component import coverage",
+      coverage === void 0 ? NOT_MEASURED : `${coverage.pct}% (${coverage.imported} of ${coverage.total})`,
+      NO_CHANGE
+    ],
+    [
+      "Consistency",
+      h.consistency === void 0 ? NOT_MEASURED : `${h.consistency}/100`,
+      NO_CHANGE
+    ],
+    [
+      "Design debt",
+      h.debt === void 0 ? NOT_MEASURED : `${h.debt.pct}/100 (${h.debt.level})`,
+      NO_CHANGE
+    ],
+    [
+      "Handoff readiness",
+      handoff === void 0 ? NOT_MEASURED : `${handoff.ready} of ${handoff.frames} ${handoff.frames === 1 ? "frame" : "frames"} ready`,
+      NO_CHANGE
+    ]
+  ];
+}
+var STATUS2 = {
+  green: "On track",
+  amber: "At risk",
+  red: "Off track",
+  unknown: "Not measured"
+};
+function numbered(items, empty) {
+  if (items.length === 0) return [empty];
+  return items.map((text2, i) => `${i + 1}. ${mdText(text2)}`);
+}
+function age2(n) {
+  if (n === void 0) return "age unknown";
+  return n === 0 ? "today" : `${n}d ago`;
+}
+var FRAMES_SHOWN2 = 10;
+function renderManagerMarkdown(report) {
+  const out = [
+    `# Design system report: ${mdText(report.project)}`,
+    "",
+    `Report date ${report.generatedAt.slice(0, 10)} \xB7 changes over the last ${days2(report.windowDays)}`,
+    "",
+    ...table(["Metric", "Now", "Change"], headlineRows(report)),
+    ""
+  ];
+  const trend = report.headline.score?.trend ?? [];
+  if (trend.length >= 2) {
+    out.push(`Score trend: ${sparkline(trend)} (${trend.length} runs)`, "");
+  }
+  out.push("## Targets", "");
+  if (report.targets.length === 0) {
+    out.push(
+      "No targets set. Add `metric_targets` to `.ds-bridge.json` to track goals."
+    );
+  } else {
+    out.push(
+      ...table(
+        ["Target", "Now", "Goal", "Status"],
+        report.targets.map((t) => [
+          targetLabel(t.metric),
+          targetValue(t.metric, t.measured),
+          `${targetOp(t.op)} ${targetValue(t.metric, t.target)}`,
+          STATUS2[t.band]
+        ])
+      )
+    );
+  }
+  out.push("");
+  out.push(
+    "## Top risks",
+    "",
+    ...numbered(report.risks, "No risks flagged."),
+    ""
+  );
+  out.push(
+    "## Next actions",
+    "",
+    ...numbered(report.actions, "Nothing urgent."),
+    ""
+  );
+  out.push("## Handoff readiness by frame", "");
+  if (report.frames.length === 0) {
+    out.push(
+      "No handoff checks yet. Run `ds-bridge handoff <frame-url>` to track frame readiness."
+    );
+  } else {
+    const shown = report.frames.slice(0, FRAMES_SHOWN2);
+    out.push(
+      ...table(
+        ["Frame", "Readiness", "Pass rate", "Runs"],
+        shown.map((f3) => [
+          frameLabel(f3),
+          String(f3.latest),
+          `${f3.passRate}%`,
+          String(f3.runs)
+        ])
+      )
+    );
+    if (report.frames.length > shown.length) {
+      out.push("", `\u2026 and ${report.frames.length - shown.length} more frames`);
+    }
+  }
+  out.push("");
+  out.push("## Data coverage", "");
+  const { measured, stale, never } = report.coverage;
+  if (measured.length + stale.length + never.length === 0) {
+    out.push("- No checks recorded yet. Run `ds-bridge record`.");
+  } else {
+    if (measured.length > 0) {
+      out.push(
+        `- Measured: ${measured.map((m) => `${kindLabel(m.kind)} (${age2(m.ageDays)})`).join(", ")}`
+      );
+    }
+    if (stale.length > 0) {
+      out.push(
+        `- Stale: ${stale.map((m) => `${kindLabel(m.kind)} (${age2(m.ageDays)})`).join(", ")}`
+      );
+    }
+    if (never.length > 0) {
+      out.push(`- Never measured: ${never.map(kindLabel).join(", ")}`);
+    }
+  }
+  out.push("");
+  if (report.headline.debt !== void 0) {
+    out.push(`_${DEBT_INDEX_NOTE}_`, "");
+  }
+  out.push(
+    '_Generated by ds-bridge (`report --format exec`) from `.ds-bridge/history.jsonl`. Numbers marked "not measured" were never recorded; they are not zero._',
+    ""
+  );
+  return out.join("\n");
+}
+
+// src/render/terminal/dashboard.ts
+function emptyState3(command) {
+  return `No data yet \u2014 run \`ds-bridge ${command}\` to populate this section.`;
+}
+function panel2(title, body) {
+  return `${title}
+${"\u2500".repeat([...title].length)}
+${body}`;
+}
+function systemScoreTerminalSection(data, color) {
+  const score = data.systemScore;
+  if (score === void 0) {
+    return panel2("System score", emptyState3("report"));
+  }
+  const COMPONENT_LABEL3 = {
+    drift: "drift",
+    lint: "lint",
+    readiness: "readiness",
+    a11y: "a11y",
+    adoption: "on-system",
+    parity: "parity"
+  };
+  const gauge = renderGauge(score.current, {
+    label: "System score",
+    width: 24,
+    color
+  });
+  const trend = sparkline(score.trend.map((point) => point.score));
+  const legend = renderTable(
+    ["Component", "Sub-score", "Weight"],
+    score.components.map((c2) => [
+      COMPONENT_LABEL3[c2.kind] ?? c2.kind,
+      String(c2.score),
+      String(c2.weight)
+    ]),
+    { color }
+  );
+  return panel2("System score", [gauge, trend, legend].join("\n"));
+}
+function driftTrendTerminalSection(data, _color) {
+  const trend = data.driftTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Drift trend", emptyState3("tokens check"));
+  }
+  const breaking = sparkline(trend.map((point) => point.breaking));
+  const additive = sparkline(trend.map((point) => point.additive));
+  const cosmetic = sparkline(trend.map((point) => point.cosmetic));
+  const dateRange = trend.length > 0 ? `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}` : "";
+  return panel2(
+    "Drift trend",
+    [
+      `Breaking ${breaking}`,
+      `Additive ${additive}`,
+      `Cosmetic ${cosmetic}`,
+      `Breaking \xB7 Additive \xB7 Cosmetic over ${dateRange}`
+    ].join("\n")
+  );
+}
+function lintSummaryTerminalSection(data, color) {
+  const lint = data.lintSummary;
+  if (lint === void 0) {
+    return panel2("Lint violations", emptyState3("lint"));
+  }
+  const bars = renderBarChart(
+    [
+      { label: "Exact", value: lint.byKind.exact },
+      { label: "Near", value: lint.byKind.near },
+      { label: "Off-system", value: lint.byKind.offSystem }
+    ],
+    { width: 24, color }
+  );
+  const offenders = lint.topOffenders.length > 0 ? lint.topOffenders.map((o) => `${o.file}  ${o.count}`).join("\n") : "";
+  const body = offenders === "" ? bars : `${bars}
+${offenders}`;
+  return panel2("Lint violations", body);
+}
+function readinessTerminalSection(data, color) {
+  const readiness = data.readiness;
+  if (readiness === void 0) {
+    return panel2("Readiness", emptyState3("handoff <frame-url>"));
+  }
+  const gauge = renderGauge(readiness.score, {
+    label: "Readiness",
+    width: 24,
+    color
+  });
+  const deductions = readiness.deductions.length > 0 ? readiness.deductions.map((d) => `${d.reason}  -${d.points}`).join("\n") : "";
+  const lines = [gauge, readiness.frameName];
+  if (deductions !== "") {
+    lines.push(deductions);
+  }
+  return panel2("Readiness", lines.join("\n"));
+}
+function parityTerminalSection(data, color) {
+  const parity = data.parity;
+  if (parity === void 0 || parity.rows.length === 0) {
+    return panel2("Parity matrix", emptyState3("parity"));
+  }
+  const STATUS_CELL = {
+    ok: "ok",
+    "prop-mismatch": "warn",
+    "missing-in-code": "fail",
+    "missing-in-figma": "fail"
+  };
+  const rows = parity.rows.map((row2) => ({
+    label: row2.component,
+    cells: row2.cells.map((cell) => STATUS_CELL[cell.status])
+  }));
+  const body = [renderMatrix(rows, parity.columns, { color })];
+  if (parity.columns.length > 0) {
+    body.push(`Columns: ${parity.columns.join(" \xB7 ")}`);
+  }
+  return panel2("Parity matrix", body.join("\n"));
+}
+function a11yTerminalSection(data, color) {
+  const a11y = data.a11y;
+  if (a11y === void 0 || a11y.modes.length === 0) {
+    return panel2("Contrast (a11y)", emptyState3("a11y"));
+  }
+  const bars = a11y.modes.map((m) => ({
+    label: m.mode,
+    value: m.failed
+  }));
+  const tallies = a11y.modes.map(
+    (m) => `${m.mode}  ${m.passed} passed \xB7 ${m.failed} failed`
+  );
+  const body = [
+    `Failures by mode \xB7 level ${a11y.level}`,
+    renderBarChart(bars, { width: 24, color }),
+    ...tallies
+  ].join("\n");
+  return panel2("Contrast (a11y)", body);
+}
+function impactTerminalSection(data, color) {
+  const impact = data.impact;
+  if (impact === void 0) {
+    return panel2("Change impact", emptyState3("impact"));
+  }
+  const bars = [
+    { label: "Breaking", value: impact.breaking },
+    { label: "Additive", value: impact.additive },
+    { label: "Cosmetic", value: impact.cosmetic }
+  ];
+  const sites = impact.touchedCallSites;
+  const radius = `Touches ${sites} call site${sites === 1 ? "" : "s"}`;
+  const body = [renderBarChart(bars, { width: 24, color }), radius].join("\n");
+  return panel2("Change impact", body);
+}
+function adoptionTrendTerminalSection(data, _color) {
+  const trend = data.adoptionTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Adoption trend", emptyState3("lint <dir>"));
+  }
+  const spark = sparkline(trend.map((point) => point.pct));
+  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
+  const body = [
+    `on-system %  ${spark}`,
+    `On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)`
+  ].join("\n");
+  return panel2("Adoption trend", body);
+}
+function importCoverageTerminalSection(data, color) {
+  const coverage = data.importCoverage;
+  if (coverage === void 0) {
+    return panel2("Import coverage", emptyState3("adoption"));
+  }
+  const { imported, total, uncovered, uncoveredTotal } = coverage;
+  const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
+  const lines = [];
+  lines.push(renderGauge(pct5, { label: "Import coverage", width: 24, color }));
+  lines.push(
+    `${imported}/${total} registry components imported \xB7 resolved .tsx imports only (a floor)`
+  );
+  if (uncovered.length > 0) {
+    for (const name of uncovered) {
+      lines.push(`\u2022 ${name}`);
+    }
+  }
+  if (uncoveredTotal > uncovered.length) {
+    lines.push(`\u2026 and ${uncoveredTotal - uncovered.length} more`);
+  }
+  return panel2("Import coverage", lines.join("\n"));
+}
+function leaderboardTerminalSection(data, color) {
+  const rows = data.leaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Adoption leaderboard", emptyState3("lint <dir>"));
+  }
+  const onSystemPct4 = (refs, literals) => {
+    const total = refs + literals;
+    return total === 0 ? 0 : Math.round(refs / total * 100);
+  };
+  const bars = rows.map((row2) => ({
+    label: row2.dir,
+    value: onSystemPct4(row2.refs, row2.literals)
+  }));
+  const lines = [];
+  lines.push("On-system % by directory, worst-first \xB7 css/scss values only");
+  lines.push(renderBarChart(bars, { width: 24, color }));
+  return panel2("Adoption leaderboard", lines.join("\n"));
+}
+function libraryHealthTerminalSection(data, color) {
+  const health = data.libraryHealth;
+  if (health === void 0) {
+    return panel2("Library health", emptyState3("library-health"));
+  }
+  const { totals } = health;
+  const bars = [
+    { label: "Override hotspots", value: totals.overrideHotspots },
+    { label: "Deprecated usage", value: totals.deprecatedUsage },
+    { label: "Detached candidates", value: totals.detachedCandidates }
+  ];
+  const lines = [];
+  lines.push(renderBarChart(bars, { width: 24, color }));
+  lines.push(
+    `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
+  );
+  if (health.overrideHotspots.length > 0) {
+    for (const h of health.overrideHotspots) {
+      lines.push(`\u2022 ${h.name} (${h.overrideCount})`);
+    }
+  }
+  return panel2("Library health", lines.join("\n"));
+}
+function breakingCalendarTerminalSection(data, color) {
+  const calendar = data.breakingCalendar;
+  if (calendar === void 0 || calendar.entries.length === 0) {
+    return panel2("Breaking calendar", emptyState3("tokens check"));
+  }
+  const BREAKING_SOURCE_LABEL2 = {
+    tokens: "tokens",
+    figma: "figma"
+  };
+  const rows = calendar.entries.map((entry) => {
+    const detail = entry.detail ?? `${entry.count}`;
+    return [entry.date, BREAKING_SOURCE_LABEL2[entry.source], detail];
+  });
+  const lines = [];
+  lines.push(
+    `${calendar.total} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first`
+  );
+  lines.push(renderTable(["Date", "Source", "Detail"], rows, { color }));
+  return panel2("Breaking calendar", lines.join("\n"));
+}
+function changeFrequencyTerminalSection(data, color) {
+  const frequency = data.changeFrequency;
+  if (frequency === void 0 || frequency.byKind.length === 0) {
+    return panel2("Change frequency", emptyState3("tokens check"));
+  }
+  const items = frequency.byKind.map((bucket) => ({
+    label: bucket.kind,
+    value: bucket.count
+  }));
+  const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `Records per kind \xB7 ${frequency.windowFirst} \u2192 ${frequency.windowLast}` : "Records per kind";
+  const body = [window, renderBarChart(items, { width: 24, color })].join("\n");
+  return panel2("Change frequency", body);
+}
+function targetsTerminalSection(data, color) {
+  const targets = data.targets;
+  if (targets === void 0 || targets.length === 0) {
+    return panel2("Targets / SLAs", emptyState3("report"));
+  }
+  const COMPONENT_LABEL3 = {
+    drift: "drift",
+    lint: "lint",
+    readiness: "readiness",
+    a11y: "a11y",
+    adoption: "on-system",
+    parity: "parity"
+  };
+  const bandLevel2 = (band) => band === "green" ? "ok" : band === "amber" ? "warn" : band === "red" ? "error" : "info";
+  const rows = targets.map((verdict) => [
+    COMPONENT_LABEL3[verdict.metric] ?? verdict.metric,
+    verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
+    `${verdict.op} ${verdict.target}`,
+    severityColor(bandLevel2(verdict.band), verdict.band, { color })
+  ]);
+  const table3 = renderTable(["Metric", "Measured", "Target", "Status"], rows, {
+    color
+  });
+  const legend = [
+    "green = meets target",
+    "amber = near target",
+    "red = misses target",
+    "unknown = not measured"
+  ].join("  \xB7  ");
+  return panel2("Targets / SLAs", [table3, legend].join("\n"));
+}
+function parityTrendTerminalSection(data, _color) {
+  const trend = data.parityTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Parity trend", emptyState3("registry build"));
+  }
+  const values = trend.map((point) => point.pct);
+  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
+  const body = [
+    `parity %  ${sparkline(values)}`,
+    `Component parity pass-% over ${dateRange}`
+  ].join("\n");
+  return panel2("Parity trend", body);
+}
+function componentHealthTerminalSection(data, color) {
+  const rows = data.componentHealth;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Component health", emptyState3("registry build"));
+  }
+  const tableRows = rows.map((row2) => [
+    row2.component,
+    String(row2.healthScore),
+    row2.issues.length > 0 ? row2.issues.join(", ") : "no issues"
+  ]);
+  const table3 = renderTable(["Component", "Health", "Issues"], tableRows, {
+    color
+  });
+  const body = ["Composite health per component, worst-first", table3].join(
+    "\n"
+  );
+  return panel2("Component health", body);
+}
+function libraryHealthTrendTerminalSection(data, _color) {
+  const trend = data.libraryHealthTrend;
+  if (trend === void 0 || trend.length === 0) {
+    return panel2("Library health trend", emptyState3("library-health"));
+  }
+  const overrides = sparkline(trend.map((p4) => p4.overrides));
+  const deprecated = sparkline(trend.map((p4) => p4.deprecated));
+  const detached = sparkline(trend.map((p4) => p4.detached));
+  const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
+  const detachedCaveat = "Detached: \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.";
+  const body = [
+    `Overrides  ${overrides}`,
+    `Deprecated ${deprecated}`,
+    `Detached   ${detached}`,
+    `over ${dateRange}`,
+    detachedCaveat
+  ].join("\n");
+  return panel2("Library health trend", body);
+}
+function migrationChecklistTerminalSection(data, color) {
+  const checklist = data.migrationChecklist;
+  if (checklist === void 0 || checklist.sites.length === 0) {
+    return panel2("Migration checklist", emptyState3("impact --checklist"));
+  }
+  const headers = ["site", "subject", "from \u2192 to"];
+  const rows = checklist.sites.map((site) => [
+    `${site.file}:${site.line}`,
+    site.subject,
+    `${site.from} \u2192 ${site.to}`
+  ]);
+  const count = checklist.sites.length;
+  const meta = `${count} call site${count === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to`;
+  const overflow = checklist.truncated ? "\u2026 and more sites beyond the cap" : "";
+  const mapUsageCaveat = "mapUsage scans resolved .tsx imports only, so the number is a floor.";
+  const body = [
+    meta,
+    renderTable(headers, rows, { color }),
+    ...overflow !== "" ? [overflow] : [],
+    mapUsageCaveat
+  ].join("\n");
+  return panel2("Migration checklist", body);
+}
+function scoreVelocityTerminalSection(data, color) {
+  const velocity = data.scoreVelocity;
+  if (velocity === void 0) {
+    return panel2("Score velocity", emptyState3("report"));
+  }
+  const { delta, windowDays, direction, regressionStreak } = velocity;
+  const ARROW = {
+    up: "\u25B2",
+    down: "\u25BC",
+    flat: "\u25AC"
+  };
+  const arrow3 = ARROW[direction];
+  const signedDelta2 = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
+  const streakText = regressionStreak > 0 ? severityColor("warn", `${regressionStreak}-decline streak`, { color }) : "0-decline streak";
+  const headline2 = `${arrow3} ${signedDelta2} over ${windowDays} day${windowDays === 1 ? "" : "s"}`;
+  const body = [headline2, `${direction} \xB7 ${streakText}`].join("\n");
+  return panel2("Score velocity", body);
+}
+function ownershipLeaderboardTerminalSection(data, color) {
+  const rows = data.ownershipLeaderboard;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Ownership leaderboard", emptyState3("lint"));
+  }
+  const bars = rows.map((row2) => ({ label: row2.owner, value: row2.pct }));
+  const labels = rows.map(
+    (row2) => `${row2.owner}: ${row2.pct}% \xB7 ${row2.refs} refs / ${row2.literals} literals`
+  ).join("\n");
+  const body = [
+    "On-system % by owner, worst-first \xB7 css/scss values only",
+    renderBarChart(bars, { width: 24, color }),
+    labels
+  ].join("\n");
+  return panel2("Ownership leaderboard", body);
+}
+function audienceChangelogTerminalSection(data, color) {
+  const changelog = data.audienceChangelog;
+  if (changelog === void 0 || changelog.slices.length === 0) {
+    return panel2("Changelog by audience", emptyState3("changelog"));
+  }
+  const headers = ["audience", "breaking", "additive", "cosmetic", "recent"];
+  const rows = changelog.slices.map((slice) => [
+    slice.audience,
+    String(slice.breaking),
+    String(slice.additive),
+    String(slice.cosmetic),
+    slice.recent.length > 0 ? slice.recent.join(", ") : "No recent entries"
+  ]);
+  return panel2("Changelog by audience", renderTable(headers, rows, { color }));
+}
+function frameImplementabilityTerminalSection(data, color) {
+  const frame = data.frameImplementability;
+  if (frame === void 0) {
+    return panel2("Frame implementability", emptyState3("frame-impl"));
+  }
+  const { pct: pct5, resolved, total, gaps } = frame;
+  const gauge = renderGauge(pct5, {
+    label: "Frame implementability",
+    width: 24,
+    color
+  });
+  const meta = `${resolved}/${total} requirements resolve to the system`;
+  const body = [gauge, meta];
+  if (gaps.length > 0) {
+    body.push(
+      renderBarChart(
+        gaps.map((gap) => ({ label: gap.reason, value: gap.count })),
+        { width: 24, color }
+      )
+    );
+  }
+  return panel2("Frame implementability", body.join("\n"));
+}
+function releaseReadinessTerminalSection(data, color) {
+  const readiness = data.releaseReadiness;
+  if (readiness === void 0 || readiness.checks.length === 0) {
+    return panel2("Release readiness", emptyState3("release-check"));
+  }
+  const verdict = readiness.go ? severityColor("ok", "GO", { color }) : severityColor("error", "NO-GO", { color });
+  const headers = ["check", "pass", "detail"];
+  const rows = readiness.checks.map((check) => [
+    check.name,
+    check.pass ? severityColor("ok", "\u2713", { color }) : severityColor("error", "\u2717", { color }),
+    check.detail !== void 0 && check.detail.length > 0 ? check.detail : ""
+  ]);
+  return panel2(
+    "Release readiness",
+    [verdict, renderTable(headers, rows, { color })].join("\n")
+  );
+}
+function dataFreshnessTerminalSection(data, color) {
+  const rows = data.dataFreshness;
+  if (rows === void 0 || rows.length === 0) {
+    return panel2("Data freshness", emptyState3("report"));
+  }
+  const BAND_SEVERITY = {
+    green: "ok",
+    amber: "warn",
+    red: "error",
+    unknown: "info"
+  };
+  const ageLabel = (row2) => {
+    if (row2.ageDays === void 0) return "never";
+    if (row2.ageDays === 0) return "today";
+    return `${row2.ageDays}d ago`;
+  };
+  const headers = ["kind", "lastRun", "age", "band"];
+  const tableRows = rows.map((row2) => [
+    row2.kind,
+    row2.lastRun ?? "never",
+    ageLabel(row2),
+    severityColor(BAND_SEVERITY[row2.band], row2.band, { color })
+  ]);
+  return panel2(
+    "Data freshness",
+    [
+      "Measurement age per check-kind \xB7 band signals trust",
+      renderTable(headers, tableRows, { color })
+    ].join("\n")
+  );
+}
+function executiveTerminalSection(data, _color) {
+  const exec = data.executive;
+  if (exec === void 0) {
+    return panel2("Executive summary", emptyState3("record"));
+  }
+  const row2 = (label, value2) => `${label.padEnd(17)}${value2 ?? "\u2014"}`;
+  const lines = [
+    row2(
+      "System score",
+      exec.health === void 0 ? void 0 : String(exec.health)
+    ),
+    row2(
+      "Import coverage",
+      exec.adoption === void 0 ? void 0 : `${exec.adoption}%`
+    ),
+    row2(
+      "Consistency",
+      exec.consistency === void 0 ? void 0 : String(exec.consistency)
+    ),
+    row2(
+      "Design debt",
+      exec.debt === void 0 ? void 0 : `${exec.debt}/100`
+    )
+  ];
+  const trend = exec.trend ?? [];
+  if (trend.length >= 2) {
+    lines.push(`${"Trend".padEnd(17)}${sparkline(trend.map((p4) => p4.score))}`);
+  }
+  return panel2("Executive summary", lines.join("\n"));
+}
+function consistencyTerminalSection(data, color) {
+  const consistency = data.consistency;
+  if (consistency === void 0) {
+    return panel2("Consistency", emptyState3("lint <dir>"));
+  }
+  const gauge = renderGauge(consistency.score, {
+    label: "Consistency",
+    width: 24,
+    color
+  });
+  const table3 = renderTable(
+    ["Signal", "Score", "Weight"],
+    consistency.components.map((c2) => [
+      c2.kind,
+      String(c2.score),
+      String(c2.weight)
+    ]),
+    { color }
+  );
+  return panel2(
+    "Consistency",
+    [
+      gauge,
+      table3,
+      "overrides is a documented-opinion penalty (8 per hotspot)"
+    ].join("\n")
+  );
+}
+function designDebtTerminalSection(data, color) {
+  const debt = data.debt;
+  if (debt === void 0) {
+    return panel2("Design debt", emptyState3("lint <dir>"));
+  }
+  const LEVEL_SEVERITY = { low: "ok", medium: "warn", high: "error" };
+  const headline2 = `${debt.pct}/100 \xB7 ${severityColor(LEVEL_SEVERITY[debt.level], debt.level, { color })}`;
+  if (debt.items.length === 0) return panel2("Design debt", headline2);
+  const shown = debt.items.slice(0, 8);
+  const table3 = renderTable(
+    ["Subject", "Kind", "Count", "Recommendation"],
+    shown.map((i) => [i.subject, i.kind, String(i.count), i.recommendation]),
+    { color }
+  );
+  const more = debt.items.length > shown.length ? [`\u2026 and ${debt.items.length - shown.length} more`] : [];
+  return panel2("Design debt", [headline2, table3, ...more].join("\n"));
+}
+function libraryHotspotsTrendTerminalSection(data, _color) {
+  const trend = data.libraryHotspotsTrend;
+  if (trend === void 0 || trend.rows.length === 0) {
+    return panel2("Library hotspots trend", emptyState3("library-health"));
+  }
+  const lines = [`Top components per signal \xB7 ${dateSpan(trend.dates)}`];
+  for (const signal of SIGNAL_ORDER) {
+    const rows = trend.rows.filter((r2) => r2.signal === signal);
+    if (rows.length === 0) continue;
+    const width = Math.max(...rows.map((r2) => displayWidth2(r2.name)));
+    lines.push("", SIGNAL_LABEL[signal]);
+    for (const row2 of rows) {
+      lines.push(`  ${padToWidth(row2.name, width)}  ${hotspotDetail(row2)}`);
+    }
+  }
+  return panel2("Library hotspots trend", lines.join("\n"));
+}
+function frameReadinessTrendTerminalSection(data, _color) {
+  const trend = data.frameReadinessTrend;
+  if (trend === void 0 || trend.frames.length === 0) {
+    return panel2("Frame readiness trend", emptyState3("handoff <frame-url>"));
+  }
+  const names = trend.frames.map(
+    (f3) => f3.frameName === "" ? f3.key : f3.frameName
+  );
+  const width = Math.max(...names.map((n) => displayWidth2(n)));
+  const lines = [
+    belowGateMeta(trend),
+    ...trend.frames.map(
+      (frame, i) => `  ${padToWidth(names[i] ?? "", width)}  ${frameDetail(frame)}`
+    )
+  ];
+  const more = frameOverflow(trend);
+  if (more !== void 0) lines.push(more);
+  return panel2("Frame readiness trend", lines.join("\n"));
+}
+function handoffPassRateTerminalSection(data, _color) {
+  const rate = data.handoffPassRate;
+  if (rate === void 0 || rate.frames === 0) {
+    return panel2("Handoff pass rate", emptyState3("handoff <frame-url>"));
+  }
+  const lines = [`${rate.pct}% \xB7 ${passRateSub(rate)}`];
+  const line = passRateTrendLine(rate);
+  if (line !== void 0) lines.push(line);
+  return panel2("Handoff pass rate", lines.join("\n"));
+}
+var SECTION_RENDERERS_TERMINAL = {
+  "system-score": systemScoreTerminalSection,
+  "drift-trend": driftTrendTerminalSection,
+  "lint-summary": lintSummaryTerminalSection,
+  readiness: readinessTerminalSection,
+  parity: parityTerminalSection,
+  a11y: a11yTerminalSection,
+  impact: impactTerminalSection,
+  "adoption-trend": adoptionTrendTerminalSection,
+  "import-coverage": importCoverageTerminalSection,
+  leaderboard: leaderboardTerminalSection,
+  "library-health": libraryHealthTerminalSection,
+  "breaking-calendar": breakingCalendarTerminalSection,
+  "change-frequency": changeFrequencyTerminalSection,
+  targets: targetsTerminalSection,
+  "parity-trend": parityTrendTerminalSection,
+  "component-health": componentHealthTerminalSection,
+  "library-health-trend": libraryHealthTrendTerminalSection,
+  "migration-checklist": migrationChecklistTerminalSection,
+  "score-velocity": scoreVelocityTerminalSection,
+  "ownership-leaderboard": ownershipLeaderboardTerminalSection,
+  "audience-changelog": audienceChangelogTerminalSection,
+  "frame-implementability": frameImplementabilityTerminalSection,
+  "release-readiness": releaseReadinessTerminalSection,
+  "data-freshness": dataFreshnessTerminalSection,
+  consistency: consistencyTerminalSection,
+  "design-debt": designDebtTerminalSection,
+  executive: executiveTerminalSection,
+  "library-hotspots-trend": libraryHotspotsTrendTerminalSection,
+  "frame-readiness-trend": frameReadinessTrendTerminalSection,
+  "handoff-pass-rate": handoffPassRateTerminalSection
+};
+function renderTerminalDashboard(data, selection, opts) {
+  const headerLines = [`ds-bridge report \xB7 ${data.project}`];
+  if (opts.viewLabel !== void 0) headerLines.push(`View: ${opts.viewLabel}`);
+  headerLines.push(`Generated ${opts.generatedAt}`);
+  const header = headerLines.join("\n");
+  const sections = selection.map(
+    (id) => SECTION_RENDERERS_TERMINAL[id](data, opts.color)
+  );
+  return terminalSafe([header, ...sections].join("\n\n"));
+}
+
+// src/cli-commands/report.ts
+function managerContrast(a11y) {
+  if (a11y === void 0) return void 0;
+  let failed = 0;
+  const modes2 = [];
+  for (const m of a11y.modes) {
+    if (typeof m.failed === "number" && m.failed > 0) {
+      failed += m.failed;
+      modes2.push(m.mode);
+    }
+  }
+  return { failed, level: a11y.level, modes: modes2 };
+}
+function storedScorePoints(replayed, nowIso, windowDays) {
+  const nowMs = Date.parse(nowIso);
+  const startMs = Number.isNaN(nowMs) ? Number.NEGATIVE_INFINITY : nowMs - windowDays * 24 * 60 * 60 * 1e3;
+  const out = [];
+  for (const entry of replayed) {
+    if (entry.kind !== "score") continue;
+    const r2 = entry.record;
+    if (typeof r2.at !== "string") continue;
+    if (typeof r2.score !== "number" || !Number.isFinite(r2.score)) continue;
+    const atMs = Date.parse(r2.at);
+    if (Number.isNaN(atMs) || atMs < startMs || atMs > nowMs) continue;
+    out.push({ date: r2.at.slice(0, 10), score: r2.score });
+  }
+  return out;
+}
+function runManagerReport(format, stateDir, options, selection, data, windowDays) {
+  const replayed = replayHistory(readHistoryText(stateDir));
+  const frames = readinessByFrame(replayed, selection.readinessThreshold);
+  const lastDrift = data.driftTrend?.[data.driftTrend.length - 1];
+  const contrast = managerContrast(data.a11y);
+  const scorePoints = storedScorePoints(replayed, data.generatedAt, windowDays);
+  const report = buildManagerReport({
+    project: data.project,
+    generatedAt: data.generatedAt,
+    windowDays,
+    readinessThreshold: selection.readinessThreshold,
+    ...data.systemScore !== void 0 ? { systemScore: data.systemScore } : {},
+    ...data.scoreVelocity !== void 0 ? { scoreVelocity: data.scoreVelocity } : {},
+    ...data.adoptionTrend !== void 0 ? { adoptionTrend: data.adoptionTrend } : {},
+    ...data.importCoverage !== void 0 ? { importCoverage: data.importCoverage } : {},
+    ...data.targets !== void 0 ? { targets: data.targets } : {},
+    ...data.consistency !== void 0 ? { consistency: data.consistency } : {},
+    ...data.debt !== void 0 ? { debt: data.debt } : {},
+    ...data.dataFreshness !== void 0 ? { dataFreshness: data.dataFreshness } : {},
+    frames,
+    ...lastDrift !== void 0 ? {
+      breakingDrift: lastDrift.breaking,
+      tokenGaps: {
+        missing: lastDrift.additive,
+        orphan: lastDrift.cosmetic
+      }
+    } : {},
+    ...contrast !== void 0 ? { contrast } : {},
+    ...scorePoints.length > 0 ? { scorePoints } : {}
+  });
+  if (format === "exec") {
+    const markdown = renderManagerMarkdown(report);
+    if (options.out !== void 0) {
+      const outPath2 = resolve15(options.out);
+      const written2 = writeDashboard(outPath2, markdown);
+      if (written2.kind === "error") {
+        failReport(written2.message);
+        return;
+      }
+      process.stdout.write(`${outPath2}
+`);
+    } else {
+      process.stdout.write(markdown);
+    }
+    process.exitCode = 0;
+    return;
+  }
+  const outPath = options.out !== void 0 ? resolve15(options.out) : join28(stateDir, "reports", "exec.html");
+  const written = writeDashboard(outPath, renderManagerHtml(report));
+  if (written.kind === "error") {
+    failReport(written.message);
+    return;
+  }
+  process.stdout.write(`${outPath}
+`);
+  if (options.open) openReport(outPath, process.env);
+  process.exitCode = 0;
+}
+function writeDashboard(outPath, html) {
+  try {
+    mkdirSync10(dirname9(outPath), { recursive: true });
+    writeFileSync13(outPath, html, "utf8");
+    return { kind: "ok" };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not write report to "${outPath}": ${detail}`
+    };
+  }
+}
+function openerCommand(env) {
+  const override = env.DS_BRIDGE_OPEN_CMD;
+  if (override !== void 0 && override.trim() !== "") return override;
+  return platform === "darwin" ? "open" : "xdg-open";
+}
+function openReport(filePath, env) {
+  const command = openerCommand(env);
+  try {
+    const child = spawn(command, [filePath], {
+      stdio: "ignore",
+      detached: false
+    });
+    child.on("error", (error) => {
+      process.stderr.write(
+        `warning: could not open report with "${command}": ${error.message}
+`
+      );
+    });
+    child.unref();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      `warning: could not open report with "${command}": ${detail}
+`
+    );
+  }
+}
+function failReport(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function runMarkdownReport(targetDir, options, selection) {
+  const weightProfile = resolveWeightProfile(
+    selection.viewName,
+    selection.scoreWeights,
+    selection.scoreWeightsByView
+  );
+  const stateDir = join28(targetDir, ".ds-bridge");
+  const currentText = readHistoryText(stateDir);
+  const currentRecords = replayHistory(currentText);
+  let baseText;
+  let noBaseline = false;
+  const baseLabel = options.delta;
+  if (options.delta !== void 0) {
+    const outcome = readFileAtRef({
+      ref: options.delta,
+      path: join28(".ds-bridge", "history.jsonl"),
+      cwd: targetDir,
+      exec: spawnGitExec
+    });
+    if (outcome.kind === "git-error") {
+      failReport(`Could not read "${options.delta}": ${outcome.message}`);
+      return;
+    }
+    if (outcome.kind === "missing") {
+      noBaseline = true;
+    } else {
+      baseText = outcome.text;
+    }
+  }
+  const effectiveWeights = weightProfile.weights;
+  const model = buildScorecard(currentText, baseText, effectiveWeights);
+  if (model.kind === "no-data") {
+    failReport(
+      "No design-system history yet \u2014 run a check (e.g. ds-bridge tokens-check) to populate the scorecard."
+    );
+    return;
+  }
+  const generatedAt = renderInstant();
+  const systemScore = computeSystemScore(currentText, effectiveWeights);
+  const parsedWindow = parseVelocityWindow(options.velocityWindow);
+  const velocityWindowDays = (parsedWindow.kind === "ok" ? parsedWindow.days : void 0) ?? selection.scoreVelocityWindow;
+  const ownership = resolveOwnership(
+    targetDir,
+    selection.ownership,
+    selection.ownershipFile
+  );
+  const blocks = {};
+  const targets = computeTargets(
+    currentRecords,
+    selection.metricTargets,
+    systemScore?.current
+  );
+  if (targets.length > 0) blocks.targets = targets;
+  const dataFreshness = computeDataFreshness(
+    currentRecords,
+    generatedAt,
+    selection.freshnessThresholds
+  );
+  if (dataFreshness.length > 0) blocks.dataFreshness = dataFreshness;
+  const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
+  if (scoreVelocity !== void 0) blocks.scoreVelocity = scoreVelocity;
+  const ownershipLeaderboard = computeOwnershipLeaderboard(
+    currentRecords,
+    ownership
+  );
+  if (ownershipLeaderboard.length > 0) {
+    blocks.ownershipLeaderboard = ownershipLeaderboard;
+  }
+  const migrationChecklist = computeMigrationChecklist(
+    currentRecords,
+    selection.migrationSitesCap
+  );
+  if (migrationChecklist.sites.length > 0) {
+    blocks.migrationChecklist = migrationChecklist;
+  }
+  const libraryHealthTrend = computeLibraryHealthTrend(currentRecords);
+  if (libraryHealthTrend.length > 0)
+    blocks.libraryHealthTrend = libraryHealthTrend;
+  const audienceChangelog = computeAudienceChangelog(currentRecords);
+  if (audienceChangelog.slices.length > 0) {
+    blocks.audienceChangelog = audienceChangelog;
+  }
+  let baseBlocks;
+  if (baseText !== void 0) {
+    const baseRecords = replayHistory(baseText);
+    const b = {};
+    const baseFreshness = buildFreshness(
+      baseRecords,
+      generatedAt,
+      selection.freshnessThresholds
+    );
+    if (baseFreshness.length > 0) b.dataFreshness = baseFreshness;
+    const baseLht = buildLibraryHealthTrend(baseRecords);
+    if (baseLht.length > 0) b.libraryHealthTrend = baseLht;
+    if (ownership !== void 0) {
+      const baseOwners = rollupByOwner(
+        byDirectoryFromRecords(baseRecords),
+        ownership
+      );
+      if (baseOwners.length > 0) b.ownershipLeaderboard = baseOwners;
+    }
+    baseBlocks = b;
+  }
+  const markdown = renderScorecardMarkdown(model, {
+    ...baseLabel !== void 0 ? { baseLabel } : {},
+    ...noBaseline ? { noBaseline: true } : {},
+    artifacts: selection.artifacts,
+    blocks,
+    ...baseBlocks !== void 0 ? { baseBlocks } : {}
+  });
+  if (options.out !== void 0) {
+    const outPath = resolve15(options.out);
+    const written = writeDashboard(outPath, markdown);
+    if (written.kind === "error") {
+      failReport(written.message);
+      return;
+    }
+    process.stdout.write(`${outPath}
+`);
+  } else {
+    process.stdout.write(markdown);
+  }
+  if (options.gate) {
+    const score = scoreFromHistory(currentText, effectiveWeights);
+    const verdicts = computeTargets(
+      currentRecords,
+      selection.metricTargets,
+      score.kind === "ok" ? score.current : void 0
+    );
+    if (verdicts.some((v) => v.band === "red")) {
+      process.exitCode = 1;
+      return;
+    }
+  }
+  process.exitCode = 0;
+}
+function readPublishConfig(targetDir) {
+  const configPath = join28(targetDir, ".ds-bridge.json");
+  if (!existsSync22(configPath)) return void 0;
+  try {
+    const projectFileText = readFileSync24(configPath, "utf8");
+    const resolved = resolveConfig({ projectFileText });
+    return resolved.kind === "ok" ? resolved.config.publish : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function resolvePublishNames(targetDir, options) {
+  if (options.dashboards !== void 0) {
+    return options.dashboards.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+  }
+  if (options.allDashboards === true) {
+    return listDashboards(targetDir).filter((e4) => e4.hasShared).map((e4) => e4.name);
+  }
+  return readPublishConfig(targetDir) ?? [];
+}
+function runSiteReport(targetDir, options, selection, data, weightProfile, mode, timeline = []) {
+  const stateDir = join28(targetDir, ".ds-bridge");
+  const snapshot = mode === "snapshot";
+  const suffix = snapshot ? ".snapshot.html" : ".html";
+  const transform = snapshot ? normalizeSnapshot : (html) => html;
+  const outDir = options.out !== void 0 ? resolve15(options.out) : join28(stateDir, snapshot ? "snapshots" : "reports");
+  const names = resolvePublishNames(targetDir, options);
+  const entries = [];
+  const writePage = (name, html) => {
+    const written = writeDashboard(
+      join28(outDir, `${name}${suffix}`),
+      transform(html)
+    );
+    if (written.kind === "error") {
+      failReport(written.message);
+      return false;
+    }
+    entries.push({ name, href: `./${name}${suffix}` });
+    return true;
+  };
+  if (names.length === 0) {
+    const name = selection.viewLabel ?? "dashboard";
+    const html = renderDashboard(data, selection.artifacts, {
+      viewLabel: name,
+      weightProfile: {
+        source: weightProfile.source,
+        ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
+      },
+      timeline
+    });
+    if (!writePage(name, html)) return;
+  } else {
+    for (const name of names) {
+      const read = readDashboardFile(targetDir, name);
+      if (read.kind === "not-found") {
+        failReport(`Unknown dashboard "${name}" in the publish set.`);
+        return;
+      }
+      if (read.kind === "invalid") {
+        failReport(`Dashboard "${name}" is invalid: ${read.message}`);
+        return;
+      }
+      const sel = read.dashboard.selection;
+      const outcome = resolveView(
+        sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
+        {}
+      );
+      if (outcome.kind !== "ok") {
+        failReport(`Dashboard "${name}" has an unresolvable selection.`);
+        return;
+      }
+      const html = renderDashboard(data, outcome.artifacts, {
+        viewLabel: name,
+        timeline
+      });
+      if (!writePage(name, html)) return;
+    }
+  }
+  const indexName = snapshot ? "index.snapshot.html" : "index.html";
+  const indexWritten = writeDashboard(
+    join28(outDir, indexName),
+    transform(renderIndex(entries))
+  );
+  if (indexWritten.kind === "error") {
+    failReport(indexWritten.message);
+    return;
+  }
+  process.stdout.write(`${outDir}
+`);
+  process.exitCode = 0;
+}
+function runReport(path, options) {
+  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal" && options.format !== "site" && options.format !== "exec" && options.format !== "exec-html" && options.format !== "json") {
+    failReport(
+      `Unknown --format "${options.format}". Expected "html", "md", "terminal", "site", "exec", "exec-html", or "json".`
+    );
+    return;
+  }
+  const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
+  if (velocityWindowFlag.kind === "error") {
+    failReport(velocityWindowFlag.message);
+    return;
+  }
+  const targetDir = resolve15(path);
+  if (!existsSync22(targetDir) || !statSync14(targetDir).isDirectory()) {
+    failReport(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const selection = resolveSelection(targetDir, options);
+  if ("kind" in selection) {
+    failReport(selection.message);
+    return;
+  }
+  const format = options.format ?? selection.reportType ?? "html";
+  if (format !== "html" && format !== "md" && format !== "terminal" && format !== "site" && format !== "exec" && format !== "exec-html" && format !== "json") {
+    failReport(
+      `report_type "${format}" is not a supported render target \u2014 pass --format html|md|terminal|site|exec|exec-html|json.`
+    );
+    return;
+  }
+  if (options.delta !== void 0 && format !== "md") {
+    failReport("--delta requires --format md.");
+    return;
+  }
+  if (options.open && format !== "html" && format !== "exec-html") {
+    failReport(
+      `--open is not valid with --format ${format} (there is no file to open).`
+    );
+    return;
+  }
+  if (options.gate && format !== "md") {
+    failReport(
+      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
+    );
+    return;
+  }
+  if (options.snapshot && format !== "html" && format !== "site") {
+    failReport(
+      `--snapshot renders HTML snapshots \u2014 not valid with --format ${format}.`
+    );
+    return;
+  }
+  if (format === "md") {
+    runMarkdownReport(targetDir, options, selection);
+    return;
+  }
+  const { data, stateDir, generatedAt, velocityWindowDays, weightProfile } = assembleReportData(targetDir, selection, velocityWindowFlag.days);
+  if (format === "json") {
+    const text2 = `${JSON.stringify(
+      reportJsonDocument(data, selection.artifacts, selection.viewLabel),
+      null,
+      2
+    )}
+`;
+    if (options.out !== void 0) {
+      const outPath2 = resolve15(options.out);
+      const written2 = writeDashboard(outPath2, text2);
+      if (written2.kind === "error") {
+        failReport(written2.message);
+        return;
+      }
+      process.stdout.write(`${outPath2}
+`);
+    } else {
+      process.stdout.write(text2);
+    }
+    process.exitCode = 0;
+    return;
+  }
+  if (format === "exec" || format === "exec-html") {
+    runManagerReport(
+      format,
+      stateDir,
+      options,
+      selection,
+      data,
+      velocityWindowDays
+    );
+    return;
+  }
+  if (options.snapshot === true) {
+    runSiteReport(
+      targetDir,
+      options,
+      selection,
+      data,
+      weightProfile,
+      "snapshot"
+    );
+    return;
+  }
+  const pastStates = () => options.timeline === false ? [] : assemblePastStates(targetDir, selection, velocityWindowFlag.days);
+  if (format === "site") {
+    runSiteReport(
+      targetDir,
+      options,
+      selection,
+      data,
+      weightProfile,
+      "live",
+      pastStates()
+    );
+    return;
+  }
+  if (format === "terminal") {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    const text2 = renderTerminalDashboard(data, selection.artifacts, {
+      generatedAt,
+      color,
+      ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
+    });
+    if (options.out !== void 0) {
+      const outPath2 = resolve15(options.out);
+      const written2 = writeDashboard(outPath2, text2);
+      if (written2.kind === "error") {
+        failReport(written2.message);
+        return;
+      }
+      process.stdout.write(`${outPath2}
+`);
+    } else {
+      process.stdout.write(`${text2}
+`);
+    }
+    process.exitCode = 0;
+    return;
+  }
+  const html = renderDashboard(data, selection.artifacts, {
+    timeline: pastStates(),
+    ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {},
+    // Caption the system-score section ONLY for a `view`-source profile; the
+    // renderer renders nothing for project/default (golden-neutral).
+    weightProfile: {
+      source: weightProfile.source,
+      ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
+    }
+  });
+  const outPath = options.out !== void 0 ? resolve15(options.out) : join28(stateDir, "reports", "dashboard.html");
+  const written = writeDashboard(outPath, html);
+  if (written.kind === "error") {
+    failReport(written.message);
+    return;
+  }
+  process.stdout.write(`${outPath}
+`);
+  if (options.open) {
+    openReport(outPath, process.env);
+  }
+  process.exitCode = 0;
+}
+function registerReportCommand(program2) {
+  program2.command("report").description("Render an offline HTML dashboard from the project history").argument("[path]", "project directory to report on", ".").option(
+    "--view <preset>",
+    "render a preset: ds-designer | ds-manager | ds-engineer | product-designer | product-manager | product-engineer | everything | exec | org"
+  ).option(
+    "--artifacts <ids>",
+    "render a custom comma-separated artifact list (mutually exclusive with --view)"
+  ).option(
+    "--format <format>",
+    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY) | terminal | site | exec (the paste-ready markdown DS-manager one-pager) | exec-html (the same one-pager as offline HTML, default .ds-bridge/reports/exec.html) | json (the full ReportData, versioned \u2014 schemas/report.v1.schema.json). A saved --dashboard's report_type defaults it."
+  ).option(
+    "--delta <ref>",
+    "compare against the base ref's committed history (requires --format md)"
+  ).option(
+    "--gate",
+    "exit 1 when a metric_targets verdict is red (requires --format md; CI gate, C1)",
+    false
+  ).option(
+    "--velocity-window <window>",
+    "score-velocity look-back window as <N>d|<N>w (C8; overrides score_velocity_window, default 30d)"
+  ).option(
+    "--dashboard <name>",
+    "render a saved dashboard from dashboards/<name>.json (mutually exclusive with --view/--artifacts)"
+  ).option(
+    "--dashboards <names>",
+    "with --format site: the comma-separated publish set (saved dashboard names)"
+  ).option(
+    "--all-dashboards",
+    "with --format site: publish every committed (non-.local) saved dashboard",
+    false
+  ).option(
+    "--snapshot",
+    "write normalized committed HTML snapshots to .ds-bridge/snapshots/ (M12.1)",
+    false
+  ).option(
+    "--no-timeline",
+    "html/site: leave out the header timeline of earlier days (smaller file)"
+  ).option(
+    "--out <file>",
+    "output file (default <path>/.ds-bridge/reports/dashboard.html; exec-html \u2192 .ds-bridge/reports/exec.html; with --format md|exec|json, writes to the file instead of stdout)"
+  ).option(
+    "--open",
+    'open the report after writing (override the opener with the DS_BRIDGE_OPEN_CMD env var; defaults to "open" on macOS, "xdg-open" elsewhere)',
+    false
+  ).action((path, options) => {
+    runReport(path, options);
+  });
+}
+
 // src/cli-commands/rollup.ts
-import { existsSync as existsSync22, mkdirSync as mkdirSync11, readFileSync as readFileSync24, writeFileSync as writeFileSync14 } from "fs";
-import { basename as basename2, dirname as dirname10, join as join28, resolve as resolve15 } from "path";
+import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync26, writeFileSync as writeFileSync14 } from "fs";
+import { basename as basename2, dirname as dirname10, join as join30, resolve as resolve16 } from "path";
 
 // src/engines/rollup/rollup.ts
 var ROLLUP_SCHEMA = "ds-bridge/rollup";
@@ -25510,9 +25580,9 @@ function pooledOnSystem(repos) {
   }
   return total > 0 ? Math.round(100 * refs / total) : void 0;
 }
-function latestAdoption(text2) {
+function latestAdoption(records) {
   let latest;
-  for (const { kind, record } of replayHistory(text2)) {
+  for (const { kind, record } of records) {
     if (kind !== "lint") continue;
     const adoption = asRecord4(record.adoption);
     if (adoption === void 0) continue;
@@ -25523,8 +25593,7 @@ function latestAdoption(text2) {
   }
   return latest;
 }
-function freshnessOf(text2, nowIso) {
-  const records = replayHistory(text2);
+function freshnessOf(records, nowIso) {
   let lastAt;
   for (const r2 of records) {
     if (r2.at !== void 0 && (lastAt === void 0 || r2.at > lastAt)) {
@@ -25551,9 +25620,9 @@ function freshnessOf(text2, nowIso) {
   }
   return out;
 }
-function latestEnvelope(text2) {
+function latestEnvelope(records) {
   const out = {};
-  for (const { envelope } of replayHistory(text2)) {
+  for (const { envelope } of records) {
     if (envelope === void 0) continue;
     if (envelope.git != null) {
       out.git = { branch: envelope.git.branch, sha: envelope.git.sha };
@@ -25598,8 +25667,9 @@ function summarizeRepo(input, nowIso) {
       "v1 history (no envelope): commit/branch unknown \u2014 run ds-bridge history migrate."
     );
   }
-  Object.assign(base, latestEnvelope(text2));
-  base.freshness = freshnessOf(text2, nowIso);
+  const records = replayHistory(text2);
+  Object.assign(base, latestEnvelope(records));
+  base.freshness = freshnessOf(records, nowIso);
   const score = scoreFromHistory(text2, DEFAULT_WEIGHTS);
   if (score.kind === "no-data") {
     base.notes.push(
@@ -25624,7 +25694,7 @@ function summarizeRepo(input, nowIso) {
       }
     }
   }
-  const adoption = latestAdoption(text2);
+  const adoption = latestAdoption(records);
   if (adoption !== void 0) {
     const size = adoption.refs + adoption.literals;
     if (size > 0) {
@@ -25823,9 +25893,9 @@ function parseRollupConfig(text2) {
 }
 
 // src/io/rollup-sources.ts
-import { readFileSync as readFileSync23, statSync as statSync15 } from "fs";
-import { join as join27 } from "path";
-var HISTORY_REL = join27(".ds-bridge", "history.jsonl");
+import { readFileSync as readFileSync25, statSync as statSync15 } from "fs";
+import { join as join29 } from "path";
+var HISTORY_REL = join29(".ds-bridge", "history.jsonl");
 var RECORD_HINT = "run ds-bridge record there to start one.";
 function kindOf(path) {
   try {
@@ -25838,7 +25908,7 @@ function kindOf(path) {
 }
 function readText2(file, label) {
   try {
-    return { kind: "ok", text: readFileSync23(file, "utf8") };
+    return { kind: "ok", text: readFileSync25(file, "utf8") };
   } catch (error) {
     const code = error.code;
     const detail = code ?? (error instanceof Error ? error.message : String(error));
@@ -25875,7 +25945,7 @@ function loadRollupSource(spec, exec) {
   }
   if (kind === "file") return readText2(spec.path, label);
   if (kind === "dir") {
-    const file = join27(spec.path, HISTORY_REL);
+    const file = join29(spec.path, HISTORY_REL);
     if (kindOf(file) !== "file") {
       return {
         kind: "missing",
@@ -25975,40 +26045,26 @@ ul.notes { margin: 0; padding-left: 20px; font-size: 13px; }
 	section.panel, .kpi { break-inside: avoid; }
 }
 `.trim();
-function panel4(title, body) {
-  return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
-}
 function kpi(label, value2, sub, toned = true) {
-  const tone = toned && value2 !== void 0 && /^\d+/.test(value2) ? ` ${toneFor(Number.parseInt(value2, 10))}` : "";
-  return [
-    `<div class="kpi${tone}">`,
-    `<span class="kpi-label">${escapeHtml(label)}</span>`,
-    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
-    `<span class="kpi-sub">${escapeHtml(value2 === void 0 ? "not measured" : sub)}</span>`,
-    "</div>"
-  ].join("");
+  const tone = toned && value2 !== void 0 && /^\d+/.test(value2) ? toneFor(Number.parseInt(value2, 10)) : void 0;
+  return kpiTile(label, value2, tone, sub);
 }
-function tableHtml2(headers, rows) {
-  const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
-  const body = rows.map(
-    (r2) => `<tr>${r2.map((c2) => `<td>${escapeHtml(c2)}</td>`).join("")}</tr>`
-  ).join("");
-  return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
-}
+var TREND_SERIES_MAX = 5;
 function trendSeries(model) {
+  const trended = model.repos.filter((r2) => r2.trend.length >= 2);
+  const shown = trended.slice(0, TREND_SERIES_MAX);
+  const hidden = trended.length - shown.length;
   const dates = [
-    ...new Set(
-      model.repos.filter((r2) => r2.trend.length >= 2).flatMap((r2) => r2.trend.map((p4) => p4.date))
-    )
+    ...new Set(shown.flatMap((r2) => r2.trend.map((p4) => p4.date)))
   ].sort();
   const index = new Map(dates.map((d, i) => [d, i]));
-  const series = model.repos.filter((r2) => r2.trend.length >= 2).map((r2) => ({
+  const series = shown.map((r2) => ({
     label: r2.name,
     points: r2.trend.map((p4) => ({ x: index.get(p4.date) ?? 0, y: p4.score }))
   }));
   const first = dates[0];
   const last = dates[dates.length - 1];
-  return first !== void 0 && last !== void 0 ? { series, xLabels: [first, last] } : { series };
+  return first !== void 0 && last !== void 0 ? { series, hidden, xLabels: [first, last] } : { series, hidden };
 }
 function renderRollupHtml(model) {
   const a = model.aggregate;
@@ -26051,23 +26107,24 @@ function renderRollupHtml(model) {
       })),
       { width: 520, max: 100 }
     );
-    const { series, xLabels } = trendSeries(model);
+    const { series, hidden, xLabels } = trendSeries(model);
+    const moreNote = hidden > 0 ? `<div class="meta">Showing the ${series.length} highest-ranked repos; ${hidden} more in the Repos table.</div>` : "";
     parts.push(
       '<div class="grid">',
-      panel4("Ranked System Score", `<div class="chart">${bars}</div>`),
-      panel4(
+      panel("Ranked System Score", `<div class="chart">${bars}</div>`),
+      panel(
         "Score trends",
-        series.length === 0 ? `<p class="empty-line">${escapeHtml(NO_TRENDS_TEXT)}</p>` : `<div class="chart">${lineChart(series, { width: 520, height: 220, ...xLabels !== void 0 ? { xLabels } : {} })}</div>`
+        series.length === 0 ? `<p class="empty-line">${escapeHtml(NO_TRENDS_TEXT)}</p>` : `<div class="chart">${lineChart(series, { width: 520, height: 220, ...xLabels !== void 0 ? { xLabels } : {} })}</div>${moreNote}`
       ),
       "</div>",
-      panel4("Repos", tableHtml2(TABLE_HEADERS, model.repos.map(repoCells))),
-      panel4("Aggregate", tableHtml2(["Aggregate", "Value"], aggregateLines(a)))
+      panel("Repos", tableHtml(TABLE_HEADERS, model.repos.map(repoCells))),
+      panel("Aggregate", tableHtml(["Aggregate", "Value"], aggregateLines(a)))
     );
     if (a.byTeam !== void 0) {
       parts.push(
-        panel4(
+        panel(
           "By team",
-          tableHtml2(
+          tableHtml(
             ["Team", "Repos", "Scored", "Mean score", "Pooled on-system"],
             a.byTeam.map((t) => [
               t.team,
@@ -26086,7 +26143,7 @@ function renderRollupHtml(model) {
       )
     );
     if (notes.length > 0) {
-      parts.push(panel4("Notes", `<ul class="notes">${notes.join("")}</ul>`));
+      parts.push(panel("Notes", `<ul class="notes">${notes.join("")}</ul>`));
     }
   }
   parts.push(
@@ -26112,14 +26169,11 @@ ${PAGE_STYLE2}</style>`,
 }
 
 // src/render/markdown/rollup.ts
-function cell2(value2) {
-  return value2.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
-}
 function table2(headers, rows) {
   return [
-    `| ${headers.map(cell2).join(" | ")} |`,
+    `| ${headers.map(mdText).join(" | ")} |`,
     `|${headers.map(() => " --- ").join("|")}|`,
-    ...rows.map((r2) => `| ${r2.map(cell2).join(" | ")} |`)
+    ...rows.map((r2) => `| ${r2.map(mdText).join(" | ")} |`)
   ];
 }
 function renderRollupMarkdown(model) {
@@ -26162,7 +26216,7 @@ function renderRollupMarkdown(model) {
     );
   }
   const notes = model.repos.flatMap(
-    (r2) => r2.notes.map((n) => `- **${cell2(r2.name)}**: ${n}`)
+    (r2) => r2.notes.map((n) => `- **${mdText(r2.name)}**: ${mdText(n)}`)
   );
   if (notes.length > 0) out.push("### Notes", "", ...notes, "");
   out.push(`_${WEIGHTS_NOTE} ${DRILL_DOWN_NOTE}_`);
@@ -26175,8 +26229,8 @@ function renderRollupTerm(model) {
   const lines = [headline(model), ""];
   if (model.repos.length === 0) {
     lines.push(EMPTY_TEXT);
-    return `${lines.join("\n")}
-`;
+    return terminalSafe(`${lines.join("\n")}
+`);
   }
   const pairs = aggregateLines(model.aggregate);
   const width = Math.max(...pairs.map(([label]) => label.length));
@@ -26229,8 +26283,8 @@ function renderRollupTerm(model) {
     lines.push("", "Notes", ...notes);
   }
   lines.push("", WEIGHTS_NOTE, DRIFT_LEGEND);
-  return `${lines.join("\n")}
-`;
+  return terminalSafe(`${lines.join("\n")}
+`);
 }
 
 // src/cli-commands/rollup.ts
@@ -26245,15 +26299,15 @@ function configBase(configPath) {
   return basename2(dir) === ".ds-bridge" ? dirname10(dir) : dir;
 }
 function specFor(raw, base) {
-  const spec = parseSourceArg(raw, (p4) => existsSync22(resolve15(base, p4)));
-  const out = { path: resolve15(base, spec.path), label: spec.path };
+  const spec = parseSourceArg(raw, (p4) => existsSync23(resolve16(base, p4)));
+  const out = { path: resolve16(base, spec.path), label: spec.path };
   if (spec.ref !== void 0) out.ref = spec.ref;
   return out;
 }
 function loadConfig(path) {
   let text2;
   try {
-    text2 = readFileSync24(path, "utf8");
+    text2 = readFileSync26(path, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail18(`Could not read rollup config ${path}: ${detail}`);
@@ -26282,8 +26336,8 @@ function runRollup(sources, options) {
   }
   const cwd5 = process.cwd();
   const pending = [];
-  const defaultConfig = join28(cwd5, ".ds-bridge", "rollup.json");
-  const configPath = options.config !== void 0 ? resolve15(options.config) : sources.length === 0 && existsSync22(defaultConfig) ? defaultConfig : void 0;
+  const defaultConfig = join30(cwd5, ".ds-bridge", "rollup.json");
+  const configPath = options.config !== void 0 ? resolve16(options.config) : sources.length === 0 && existsSync23(defaultConfig) ? defaultConfig : void 0;
   if (configPath !== void 0) {
     const entries = loadConfig(configPath);
     if (entries === void 0) return;
@@ -26313,7 +26367,7 @@ function runRollup(sources, options) {
     process.exitCode = 0;
     return;
   }
-  const outPath = resolve15(options.out);
+  const outPath = resolve16(options.out);
   try {
     mkdirSync11(dirname10(outPath), { recursive: true });
     writeFileSync14(outPath, rendered, "utf8");
@@ -26346,14 +26400,14 @@ function registerRollupCommand(program2) {
 
 // src/cli-commands/tokens.ts
 import {
-  existsSync as existsSync23,
+  existsSync as existsSync24,
   mkdirSync as mkdirSync12,
   readdirSync as readdirSync4,
-  readFileSync as readFileSync25,
+  readFileSync as readFileSync27,
   statSync as statSync16,
   writeFileSync as writeFileSync15
 } from "fs";
-import { isAbsolute as isAbsolute4, join as join29, relative as relative2, resolve as resolve16, sep as sep4 } from "path";
+import { isAbsolute as isAbsolute4, join as join31, relative as relative2, resolve as resolve17, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -26543,10 +26597,10 @@ function scanTsTheme(content) {
         const value2 = parseString();
         if (value2 !== void 0) values.push({ name, raw: value2 });
       } else {
-        const num5 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
-        if (num5 !== null) {
-          values.push({ name, raw: num5[0] });
-          i += num5[0].length;
+        const num4 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
+        if (num4 !== null) {
+          values.push({ name, raw: num4[0] });
+          i += num4[0].length;
         } else {
           warnings.push(`non-literal value for "${name}" \u2014 skipped`);
           skipExpression();
@@ -26591,7 +26645,7 @@ function renderTerm14(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync25(filePath, "utf8");
+    raw = readFileSync27(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -26668,7 +26722,7 @@ function walkOutputFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join29(dir, entry.name);
+    const full = join31(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS4.has(entry.name)) continue;
       walkOutputFiles(full, acc);
@@ -26695,7 +26749,7 @@ function collectTokenCandidates3(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join29(dir, entry.name);
+    const full = join31(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS4.has(entry.name)) continue;
       collectTokenCandidates3(
@@ -26712,7 +26766,7 @@ function collectTokenCandidates3(dir, insideTokenDir, acc) {
 function detectFileFormat4(absPath) {
   let raw;
   try {
-    raw = readFileSync25(absPath, "utf8");
+    raw = readFileSync27(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -26736,8 +26790,8 @@ function discoverFirstTokenSource3(root) {
 }
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve16(process.cwd(), flagTokens);
-    if (!existsSync23(abs2)) {
+    const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve17(process.cwd(), flagTokens);
+    if (!existsSync24(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -26745,11 +26799,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join29(targetDir, ".ds-bridge.json");
-  if (existsSync23(configPath)) {
+  const configPath = join31(targetDir, ".ds-bridge.json");
+  if (existsSync24(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync25(configPath, "utf8");
+      projectFileText = readFileSync27(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -26757,8 +26811,8 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute4(src) ? src : resolve16(targetDir, src);
-        if (existsSync23(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute4(src) ? src : resolve17(targetDir, src);
+        if (existsSync24(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -26777,7 +26831,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync25(tokenPath, "utf8");
+    raw = readFileSync27(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -26824,10 +26878,10 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    if (resolve16(file) === resolve16(tokenSourcePath)) continue;
+    if (resolve17(file) === resolve17(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync25(file, "utf8");
+      content = readFileSync27(file, "utf8");
     } catch {
       continue;
     }
@@ -26920,10 +26974,10 @@ function appendHistory(stateDir, record) {
   appendHistoryRecord(stateDir, record);
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join29(stateDir, "history.jsonl");
+  const historyPath = join31(stateDir, "history.jsonl");
   let text2;
   try {
-    text2 = readFileSync25(historyPath, "utf8");
+    text2 = readFileSync27(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -26955,10 +27009,10 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join29(stateDir, "reports");
+  const reportsDir = join31(stateDir, "reports");
   mkdirSync12(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join29(reportsDir, `tokens-${date}.html`);
+  const reportPath = join31(reportsDir, `tokens-${date}.html`);
   writeFileSync15(reportPath, html, "utf8");
   return reportPath;
 }
@@ -26975,8 +27029,8 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve16(path);
-  if (!existsSync23(targetDir) || !statSync16(targetDir).isDirectory()) {
+  const targetDir = resolve17(path);
+  if (!existsSync24(targetDir) || !statSync16(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -26990,8 +27044,8 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve16(options.outputs) : targetDir;
-  if (!existsSync23(outputsDir) || !statSync16(outputsDir).isDirectory()) {
+  const outputsDir = options.outputs !== void 0 ? resolve17(options.outputs) : targetDir;
+  if (!existsSync24(outputsDir) || !statSync16(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -27003,7 +27057,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join29(targetDir, ".ds-bridge");
+  const stateDir = join31(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -27091,7 +27145,7 @@ function buildProgram() {
   registerRollupCommand(program2);
   return program2;
 }
-loadDotenvInto(join30(process.cwd(), ".ds-bridge.env"), process.env);
+loadDotenvInto(join32(process.cwd(), ".ds-bridge.env"), process.env);
 buildProgram().parse();
 export {
   buildProgram
