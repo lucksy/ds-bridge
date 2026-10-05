@@ -193,5 +193,6 @@ and ignore the transient lock file in `.gitignore`:
 ```
 
 `ds-bridge history stats` shows what is in the file, `ds-bridge history compact`
-removes identical consecutive records (keeping the latest), and `ds-bridge
-history migrate` upgrades v1 lines to the v2 envelope.
+removes the copies inside a run of identical consecutive records (keeping the
+first and the last, so a flat stretch keeps its start), and `ds-bridge history
+migrate` upgrades v1 lines to the v2 envelope.

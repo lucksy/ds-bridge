@@ -419,7 +419,7 @@ export function registerHistoryCommand(program: Command): void {
 	history
 		.command("compact")
 		.description(
-			"Drop identical consecutive same-kind records (latest kept); atomic, locked",
+			"Drop the copies inside a run of identical consecutive records (first and last kept); atomic, locked",
 		)
 		.argument("[path]", "project directory", ".")
 		.option(

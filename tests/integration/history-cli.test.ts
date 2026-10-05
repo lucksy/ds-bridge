@@ -156,22 +156,24 @@ describe("ds-bridge history compact", () => {
 			"json",
 		]);
 		expect(code).toBe(0);
+		// Three identical handoff runs keep their first and last (the middle goes).
 		expect(JSON.parse(stdout)).toMatchObject({
-			removed: 2,
+			removed: 1,
 			before: 4,
-			after: 2,
+			after: 3,
 			dryRun: true,
 		});
 		expect(await readFile(path, "utf8")).toBe(before);
 	});
 
-	it("rewrites the file (latest duplicate kept) and is idempotent", async () => {
+	it("rewrites the file (first and last duplicate kept) and is idempotent", async () => {
 		const dir = await freshTmp("ds-hist-compact-");
 		const path = await seed(dir, DUPES);
 		expect((await runCli(["history", "compact", dir])).code).toBe(0);
 		const lines = (await readFile(path, "utf8")).trim().split("\n");
-		expect(lines).toHaveLength(2);
-		expect(lines[0]).toContain("2026-01-03");
+		expect(lines).toHaveLength(3);
+		expect(lines[0]).toContain("2026-01-01");
+		expect(lines[1]).toContain("2026-01-03");
 		const again = await runCli(["history", "compact", dir, "--format", "json"]);
 		expect(JSON.parse(again.stdout)).toMatchObject({ removed: 0 });
 	});

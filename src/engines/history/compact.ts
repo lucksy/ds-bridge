@@ -7,9 +7,13 @@
 // into each other. Kinds without a frame/file (lint, tokens…) have one subject.
 //
 // Dedupe: a run of IDENTICAL consecutive records of the same subject (other
-// subjects in between do not break it) collapses to its LATEST member. "Identical" compares the payload only: the envelope keys (`v`, `at`,
-// `source`, `git`, `tool`, `runId`) are ignored and key order does not matter.
-// Keeping the latest leaves every last-wins reader and data freshness unchanged.
+// subjects in between do not break it) keeps its FIRST and LAST member and
+// drops the copies in between. "Identical" compares the payload only: the
+// envelope keys (`v`, `at`, `source`, `git`, `tool`, `runId`) are ignored and
+// key order does not matter. Keeping the last leaves every last-wins reader and
+// data freshness unchanged; keeping the first keeps where a plateau began, so a
+// metric that stayed flat for 30 days still has a point 30 days back for
+// "since" and window readers (velocity, digest --since, export --since).
 //
 // `keepPerDay` then keeps the last surviving record per subject per UTC day (dated
 // records only). Corrupt, kindless and dateless lines are never dropped — data
@@ -91,15 +95,19 @@ export function compactHistory(
 		.map(parseEntry);
 	const keep = entries.map(() => true);
 
-	// 1) Dedupe identical consecutive same-subject records → keep the latest.
-	const lastBySubject = new Map<string, number>();
+	// 1) Dedupe identical consecutive same-subject records → keep the first and
+	//    the last of each run; drop the ones in between.
+	const runBySubject = new Map<string, { first: number; last: number }>();
 	entries.forEach((entry, index) => {
 		if (entry.subject === undefined) return;
-		const prev = lastBySubject.get(entry.subject);
-		if (prev !== undefined && entries[prev]?.identity === entry.identity) {
-			keep[prev] = false;
+		const run = runBySubject.get(entry.subject);
+		if (run !== undefined && entries[run.last]?.identity === entry.identity) {
+			// The run grows: its previous last is now a middle copy.
+			if (run.last !== run.first) keep[run.last] = false;
+			run.last = index;
+			return;
 		}
-		lastBySubject.set(entry.subject, index);
+		runBySubject.set(entry.subject, { first: index, last: index });
 	});
 
 	// 2) Optionally keep the last surviving record per subject per UTC day.
