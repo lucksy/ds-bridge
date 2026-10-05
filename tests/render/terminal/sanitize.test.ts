@@ -18,11 +18,11 @@ const ESC = "\u001b";
 const OSC52 = `${ESC}]52;c;ZXZpbA==\u0007`; // clipboard write
 const TITLE = `${ESC}]0;pwned\u0007`; // window title
 const CURSOR = `${ESC}[2A${ESC}[2K`; // up two lines, erase line
-const hasControl = (s: string) =>
-	// any C0/C1 control except \n and the ESC that starts an SGR `ESC[…m`
-	/[\u0000-\u0009\u000b-\u001a\u001c-\u001f\u007f-\u009f]|\u001b(?!\[[0-9;]*m)/.test(
-		s,
-	);
+// Any C0/C1 control except \n, and any ESC that does not start an SGR `ESC[…m`.
+const CONTROL_LEFT =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: detecting control characters is the point.
+	/[\u0000-\u0009\u000b-\u001a\u001c-\u001f\u007f-\u009f]|\u001b(?!\[[0-9;]*m)/;
+const hasControl = (s: string) => CONTROL_LEFT.test(s);
 
 describe("terminalSafe / terminalCell", () => {
 	it("drops OSC, CSI cursor moves, CR and BEL; keeps SGR colour and newlines", () => {

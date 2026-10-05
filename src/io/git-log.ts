@@ -188,14 +188,15 @@ export function readFileAtRef(input: ReadFileAtRefInput): ReadFileAtRefResult {
 	return { kind: "ok", text: showRun.stdout };
 }
 
+// biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point.
+const UNSAFE_REF_CHAR = /[\s:\u0000-\u001f\u007f]/;
+
 /**
  * A ref safe to pass to git as a revision: non-empty, not option-like (no
  * leading "-"), and free of whitespace, ":" and control characters.
  */
 export function isSafeRef(ref: string): boolean {
-	return (
-		ref !== "" && !ref.startsWith("-") && !/[\s:\u0000-\u001f\u007f]/.test(ref)
-	);
+	return ref !== "" && !ref.startsWith("-") && !UNSAFE_REF_CHAR.test(ref);
 }
 
 /** stdout cap for one git run (256 MiB) — well above any realistic history. */
