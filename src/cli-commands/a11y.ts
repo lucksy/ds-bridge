@@ -13,13 +13,7 @@
 // State: a DIRECTORY run appends one a11y line to .ds-bridge/history.jsonl for
 // the dashboard (T7.22); a single-file run stays side-effect-free. HTML lives
 // in `ds-bridge report`.
-import {
-	appendFileSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	statSync,
-} from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Command } from "commander";
 import {
@@ -38,6 +32,7 @@ import type {
 	TokenSourceFormat,
 } from "../engines/tokens/types.js";
 import { discoverTokenSources } from "../io/discover-tokens.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderTable,
 	type Severity,
@@ -372,12 +367,7 @@ function appendA11yHistory(targetDir: string, report: AuditReport): void {
 		level: report.level,
 		modes: modeTallies(report),
 	};
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 async function runA11y(path: string, options: A11yOptions): Promise<void> {

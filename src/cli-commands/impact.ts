@@ -30,13 +30,7 @@
 //   2  operational error (missing token / file key, API error, bad flag)
 //
 // NO history.jsonl writing and NO dashboard/HTML — that is the shared T7.22 task.
-import {
-	appendFileSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { cwd, env as processEnv } from "node:process";
 import { fileURLToPath } from "node:url";
@@ -54,6 +48,7 @@ import {
 } from "../engines/registry/scan-figma.js";
 import { createFigmaClient, type FigmaResult } from "../io/figma/client.js";
 import { resolveFileKey } from "../io/figma/file-key.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderTable,
 	severityColor,
@@ -350,12 +345,7 @@ function appendImpactHistory(
 		...(sites.length > 0 ? { sites } : {}),
 		...(truncated ? { sitesTruncated: true } : {}),
 	};
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /**

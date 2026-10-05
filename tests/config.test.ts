@@ -1577,3 +1577,49 @@ describe("publish config key", () => {
 		if (out.kind === "ok") expect(out.config.publish).toBeUndefined();
 	});
 });
+
+// ─── H14 — `tracked_frames` (SPEC-history-v2 §9.1) ──────────────────────────
+describe("tracked_frames config key (H14)", () => {
+	const URL_A =
+		"https://www.figma.com/design/ABcdEFghIJklMNopQRstUV/Demo?node-id=1-2";
+	const URL_B = "https://www.figma.com/file/ABcdEFghIJklMNopQRstUV/Demo";
+
+	it("accepts an array of Figma frame URLs, in order", () => {
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({ tracked_frames: [URL_A, URL_B] }),
+		});
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok")
+			expect(out.config.trackedFrames).toEqual([URL_A, URL_B]);
+	});
+
+	it("accepts an empty array (nothing tracked)", () => {
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({ tracked_frames: [] }),
+		});
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok") expect(out.config.trackedFrames).toEqual([]);
+	});
+
+	it("is undefined when absent", () => {
+		const out = resolveConfig({ projectFileText: JSON.stringify({}) });
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok") expect(out.config.trackedFrames).toBeUndefined();
+	});
+
+	it("rejects a non-array, a non-string entry and a non-Figma URL, naming the entry", () => {
+		for (const bad of [
+			"https://www.figma.com/design/X/Y",
+			[3],
+			[""],
+			["https://example.com/not-figma"],
+		]) {
+			const out = resolveConfig({
+				projectFileText: JSON.stringify({ tracked_frames: bad }),
+			});
+			expect(out.kind).toBe("invalid-project-file");
+			if (out.kind === "invalid-project-file")
+				expect(out.message).toContain("tracked_frames");
+		}
+	});
+});

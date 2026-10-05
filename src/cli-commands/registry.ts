@@ -16,7 +16,6 @@
 //   resolve — 0 confident match · 1 candidates OR not-found · 2 operational
 //             error (missing registry → "run registry build first", bad path).
 import {
-	appendFileSync,
 	existsSync,
 	mkdirSync,
 	readFileSync,
@@ -37,6 +36,7 @@ import {
 import type { CodeComponent } from "../engines/registry/scan-code.js";
 import { buildFigmaComponentModel } from "../engines/registry/scan-figma.js";
 import { createFigmaClient, type FigmaResult } from "../io/figma/client.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import { missingFigmaTokenMessage } from "./figma-auth-help.js";
 
 /**
@@ -268,12 +268,7 @@ function appendParityHistory(
 	record: ParityHistoryRecord,
 ): void {
 	try {
-		mkdirSync(stateDir, { recursive: true });
-		appendFileSync(
-			join(stateDir, "history.jsonl"),
-			`${JSON.stringify(record)}\n`,
-			"utf8",
-		);
+		appendHistoryRecord(stateDir, record);
 	} catch {
 		// Non-fatal: the registry itself was already written successfully.
 	}

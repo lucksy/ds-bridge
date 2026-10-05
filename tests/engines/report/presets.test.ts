@@ -32,6 +32,11 @@ describe("PRESETS", () => {
 			"component-health",
 			"library-health-trend",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"library-hotspots-trend",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 		]);
 	});
 
@@ -52,6 +57,11 @@ describe("PRESETS", () => {
 			"score-velocity",
 			"ownership-leaderboard",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"executive",
+			"library-hotspots-trend",
+			"handoff-pass-rate",
 		]);
 	});
 
@@ -70,6 +80,8 @@ describe("PRESETS", () => {
 			"migration-checklist",
 			"release-readiness",
 			"data-freshness",
+			"consistency",
+			"design-debt",
 		]);
 	});
 
@@ -87,6 +99,8 @@ describe("PRESETS", () => {
 			"audience-changelog",
 			"frame-implementability",
 			"data-freshness",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 		]);
 	});
 
@@ -104,6 +118,10 @@ describe("PRESETS", () => {
 			"score-velocity",
 			"audience-changelog",
 			"data-freshness",
+			"consistency",
+			"executive",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 		]);
 	});
 
@@ -126,13 +144,43 @@ describe("PRESETS", () => {
 		]);
 	});
 
-	it("defines `everything` as all twenty-four artifacts in catalog order (system-score leads)", () => {
+	it("defines `everything` as all thirty artifacts in catalog order (system-score leads)", () => {
 		expect(PRESETS.everything).toEqual([...ALL_ARTIFACT_IDS]);
 		expect(PRESETS.everything[0]).toBe("system-score");
-		expect(PRESETS.everything).toHaveLength(24);
+		expect(PRESETS.everything).toHaveLength(30);
 	});
 
-	it("exports PRESET_NAMES as the seven view names (six personas + everything)", () => {
+	it("defines `exec` as the curated leadership view (SPEC-analytics §4 M-AN4)", () => {
+		expect(PRESETS.exec).toEqual([
+			"system-score",
+			"executive",
+			"adoption-trend",
+			"targets",
+			"breaking-calendar",
+		]);
+	});
+
+	it("defines `org` as the curated per-repo drill-down of the org rollup (SPEC-rollup §4)", () => {
+		expect(PRESETS.org).toEqual([
+			"system-score",
+			"score-velocity",
+			"executive",
+			"adoption-trend",
+			"targets",
+			"data-freshness",
+		]);
+	});
+
+	it("flags view `org` resolves the curated org drill-down", () => {
+		const outcome = resolveView({ view: "org" }, {});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind === "ok") {
+			expect(outcome.viewName).toBe("org");
+			expect(outcome.artifacts).toEqual([...PRESETS.org]);
+		}
+	});
+
+	it("exports PRESET_NAMES as the nine view names (six personas + everything + exec + org)", () => {
 		expect([...PRESET_NAMES].sort()).toEqual(
 			[
 				"ds-designer",
@@ -142,8 +190,12 @@ describe("PRESETS", () => {
 				"product-designer",
 				"product-engineer",
 				"product-manager",
+				"exec",
+				"org",
 			].sort(),
 		);
+		// Persona presets first, then the three non-persona views.
+		expect(PRESET_NAMES.slice(-3)).toEqual(["everything", "exec", "org"]);
 	});
 
 	it("references only real catalog artifact ids in every preset", () => {
@@ -168,6 +220,25 @@ describe("resolveView — default", () => {
 });
 
 describe("resolveView — precedence permutations", () => {
+	it("flags view `exec` resolves the curated leadership view", () => {
+		const outcome = resolveView({ view: "exec" }, {});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind === "ok") {
+			expect(outcome.source).toBe("flags");
+			expect(outcome.viewName).toBe("exec");
+			expect(outcome.artifacts).toEqual([...PRESETS.exec]);
+		}
+	});
+
+	it("project view `exec` applies when flags are empty", () => {
+		const outcome = resolveView({}, { view: "exec" });
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind === "ok") {
+			expect(outcome.source).toBe("project");
+			expect(outcome.artifacts[1]).toBe("executive");
+		}
+	});
+
 	it("flags view wins (flags-view)", () => {
 		const outcome = resolveView({ view: "ds-manager" }, {});
 		expect(outcome.kind).toBe("ok");

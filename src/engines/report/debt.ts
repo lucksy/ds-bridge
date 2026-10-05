@@ -55,6 +55,14 @@ export interface DebtInput {
 	/** Off-system literal count from the latest lint line (byKind.offSystem). */
 	offSystem?: number;
 	duplicates?: DuplicateCluster[];
+	/**
+	 * Aggregate fallback (SPEC-exec-report §3): a counts-only `library-health`
+	 * line's deprecated-usage total. Used ONLY when `deprecatedUsage` yields no
+	 * items — the itemized list always wins (no double count).
+	 */
+	deprecatedCount?: number;
+	/** Aggregate fallback: detached-candidate total, used only without a list. */
+	detachedCount?: number;
 }
 
 /** The rollup: a normalized debt %, a banded level, and the itemized list. */
@@ -85,6 +93,11 @@ function asNumber(value: unknown): number {
 /** A non-empty string, or undefined. */
 function nonEmptyString(value: unknown): string | undefined {
 	return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+/** Band a debt index (0–100) into its severity level (E8 — shared by labels). */
+export function debtLevel(pct: number): DebtLevel {
+	return bandLevel(pct);
 }
 
 /** Band a debt % into its severity level. */
@@ -123,6 +136,21 @@ export function buildDebt(input: DebtInput): DebtRollup {
 		});
 	}
 
+	// ── Deprecated aggregate fallback (counts-only library-health line) ──
+	const deprecatedCount = asNumber(input.deprecatedCount);
+	if (deprecatedCount > 0 && !rows.some((r) => r.item.kind === "deprecated")) {
+		rows.push({
+			magnitude: deprecatedCount,
+			item: {
+				kind: "deprecated",
+				subject: "deprecated components",
+				count: deprecatedCount,
+				weight: WEIGHT.deprecated,
+				recommendation: `Replace ${deprecatedCount} ${deprecatedCount === 1 ? "usage" : "usages"} of deprecated components (run ds-bridge library-health for the list)`,
+			},
+		});
+	}
+
 	// ── Detached candidates (one item each, HEURISTIC) ──
 	for (const candidate of input.detachedCandidates ?? []) {
 		if (candidate === null || typeof candidate !== "object") continue;
@@ -140,6 +168,21 @@ export function buildDebt(input: DebtInput): DebtRollup {
 		});
 	}
 
+	// ── Detached aggregate fallback (counts-only library-health line) ──
+	const detachedCount = asNumber(input.detachedCount);
+	if (detachedCount > 0 && !rows.some((r) => r.item.kind === "detached")) {
+		rows.push({
+			magnitude: detachedCount,
+			item: {
+				kind: "detached",
+				subject: "detached instances",
+				count: detachedCount,
+				weight: WEIGHT.detached,
+				recommendation: `Re-attach ${detachedCount} detached ${detachedCount === 1 ? "instance to its DS component" : "instances to their DS components"} (heuristic — verify)`,
+			},
+		});
+	}
+
 	// ── Off-system literals (one aggregate item) ──
 	const offSystem = asNumber(input.offSystem);
 	if (offSystem > 0) {
@@ -150,7 +193,7 @@ export function buildDebt(input: DebtInput): DebtRollup {
 				subject: "off-system values",
 				count: offSystem,
 				weight: WEIGHT["off-system"],
-				recommendation: `Tokenize ${offSystem} off-system values (run /ds-bridge:ds-lint --fix)`,
+				recommendation: `Replace ${offSystem} off-system ${offSystem === 1 ? "value" : "values"} with design tokens (run ds-bridge lint to list them)`,
 			},
 		});
 	}

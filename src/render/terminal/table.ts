@@ -26,12 +26,15 @@ function pad(value: string, width: number, alignRight: boolean): string {
  * treated as empty. Empty `rows` yields just the header framed by borders.
  *
  * The `color` option is accepted for a uniform render-primitive signature; the
- * frame and cells are currently emitted uncolored regardless.
+ * frame and cells are currently emitted uncolored regardless. `align` (opt-in,
+ * per column) forces `"right"` / `"left"`; `"auto"` or absent keeps the
+ * all-numeric detection — so a numeric column with a "—" placeholder can stay
+ * right-aligned when the caller says so.
  */
 export function renderTable(
 	headers: string[],
 	rows: string[][],
-	_opts: ColorOptions,
+	opts: ColorOptions & { align?: readonly ("left" | "right" | "auto")[] },
 ): string {
 	const columnCount = headers.length;
 
@@ -48,8 +51,14 @@ export function renderTable(
 
 	const numericColumn: boolean[] = [];
 	for (let c = 0; c < columnCount; c++) {
+		const forced = opts.align?.[c];
 		numericColumn.push(
-			rows.length > 0 && rows.every((row) => isNumericCell(cellAt(row, c))),
+			forced === "right"
+				? true
+				: forced === "left"
+					? false
+					: rows.length > 0 &&
+						rows.every((row) => isNumericCell(cellAt(row, c))),
 		);
 	}
 

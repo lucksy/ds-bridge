@@ -1,4 +1,4 @@
-// M6.1 — Persona presets + view resolution. Pure: the seven views — the SIX
+// M6.1 — Persona presets + view resolution. Pure: the eight views — the SIX
 // clean persona names (`Persona == PresetName`) plus the default `everything` —
 // and `resolveView`, which collapses the flags > project > default-`everything`
 // precedence chain into one ordered ArtifactId selection or a typed error. No
@@ -18,8 +18,12 @@ import {
 	type Persona,
 } from "./catalog.js";
 
-/** The seven view names — the six clean personas plus the default `everything`. */
-export type PresetName = Persona | "everything";
+/**
+ * The nine view names — the six clean personas, the default `everything`, the
+ * curated leadership view `exec` (SPEC-analytics §4 M-AN4) and the curated
+ * per-repo drill-down of the org rollup `org` (SPEC-rollup §4).
+ */
+export type PresetName = Persona | "everything" | "exec" | "org";
 
 /** A persona's full set: the catalog artifacts tagged for it, in catalog order. */
 function presetFor(persona: Persona): ArtifactId[] {
@@ -42,6 +46,27 @@ export const PRESETS = {
 	"product-manager": presetFor("product-manager"),
 	"product-engineer": presetFor("product-engineer"),
 	everything: [...ALL_ARTIFACT_IDS],
+	// The curated leadership view — an explicit list (NOT tag-derived), per
+	// SPEC-analytics §4: the score, the executive rollup, adoption, targets and
+	// what is breaking.
+	exec: [
+		"system-score",
+		"executive",
+		"adoption-trend",
+		"targets",
+		"breaking-calendar",
+	],
+	// The per-repo drill-down a manager opens from `ds-bridge rollup` (SPEC-rollup
+	// §4): an explicit list, comparable across repos — score, its velocity, the
+	// executive rollup, adoption, targets and whether the data is fresh.
+	org: [
+		"system-score",
+		"score-velocity",
+		"executive",
+		"adoption-trend",
+		"targets",
+		"data-freshness",
+	],
 } satisfies Record<PresetName, readonly ArtifactId[]>;
 
 /** Every preset name (the view-resolution lookup surface). */
@@ -67,7 +92,9 @@ export const PRESET_DESCRIPTIONS = {
 	"product-engineer":
 		"Builds product UI from the DS-code package; works a migration queue of breaking changes.",
 	everything:
-		"The full 24-artifact catalog — the no-setup escape for an unconfigured repo.",
+		"The full 30-artifact catalog — the no-setup escape for an unconfigured repo.",
+	exec: "Leadership one-glance: score, executive rollup (health · adoption · consistency · debt), adoption trend, targets, breaking changes.",
+	org: "Org rollup drill-down: one repo's score, velocity, executive rollup, adoption, targets and data freshness — open it from ds-bridge rollup.",
 } satisfies Record<PresetName, string>;
 
 /** Which layer of the precedence chain produced a successful selection. */
@@ -96,7 +123,7 @@ export type ResolveOutcome =
 	| { kind: "unknown-view"; view: string; suggestions: PresetName[] }
 	| { kind: "unknown-artifact"; id: string; suggestions: ArtifactId[] };
 
-/** Levenshtein edit distance — tiny and sufficient for the fixed seven-name set. */
+/** Levenshtein edit distance — tiny and sufficient for the fixed view-name set. */
 function editDistance(a: string, b: string): number {
 	const rows = a.length + 1;
 	const cols = b.length + 1;
@@ -124,7 +151,7 @@ function editDistance(a: string, b: string): number {
  * Nearest preset names for a user-supplied view string: prefix matches rank
  * first, then ascending edit distance (PRESET_NAMES order breaks ties).
  * Case-insensitive; nothing within distance 4 → no suggestions. Scoped to the
- * seven view names — catalog's `suggestArtifactIds` is for artifact ids only.
+ * eight view names — catalog's `suggestArtifactIds` is for artifact ids only.
  */
 function suggestViewNames(input: string, limit = 3): PresetName[] {
 	const needle = input.toLowerCase();

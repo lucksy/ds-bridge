@@ -71,13 +71,13 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
-		expect(parsed.artifacts).toHaveLength(24);
+		expect(parsed.artifacts).toHaveLength(30);
 		expect(parsed.artifacts.every((a) => a.enabled)).toBe(true);
 		expect(parsed.view.source).toBe("default");
 		expect(parsed.view.viewName).toBe("everything");
 	});
 
-	it("emits the twenty-four artifacts in catalog order with stable metadata", async () => {
+	it("emits the thirty artifacts in catalog order with stable metadata", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
@@ -106,6 +106,12 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"frame-implementability",
 			"release-readiness",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"executive",
+			"library-hotspots-trend",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 		]);
 		// system-score leads; drift-trend is second.
 		const score = parsed.artifacts[0];
@@ -138,6 +144,11 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"component-health",
 			"library-health-trend",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"library-hotspots-trend",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 		]);
 		expect(parsed.view.source).toBe("project");
 		expect(parsed.view.viewName).toBe("ds-designer");
@@ -158,7 +169,7 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		expect(parsed.view.viewName).toBeUndefined();
 	});
 
-	it("emits the seven presets with descriptions + artifact lists (M7.1)", async () => {
+	it("emits the nine presets with descriptions + artifact lists (M7.1, X3, R6)", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList & {
@@ -173,6 +184,8 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"product-manager",
 			"product-engineer",
 			"everything",
+			"exec",
+			"org",
 		]);
 		// Each carries a non-empty description + its full artifact id list.
 		for (const preset of parsed.presets) {
@@ -180,9 +193,27 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			expect(preset.artifacts.length).toBeGreaterThan(0);
 			expect(preset.artifacts[0]).toBe("system-score");
 		}
-		// `everything` is the 24-artifact catch-all.
+		// `persona` marks the six wizard options; `everything` (the escape) and
+		// `exec` (set with `dashboard set --view exec`) are not personas
+		// (SPEC-personas §2.4) — commands/dashboard.md filters on this flag.
+		const flagged = parsed.presets as unknown as {
+			name: string;
+			persona: boolean;
+		}[];
+		for (const preset of flagged) {
+			expect(typeof preset.persona).toBe("boolean");
+		}
+		expect(flagged.filter((p) => p.persona).map((p) => p.name)).toEqual([
+			"ds-designer",
+			"ds-manager",
+			"ds-engineer",
+			"product-designer",
+			"product-manager",
+			"product-engineer",
+		]);
+		// `everything` is the 30-artifact catch-all.
 		const everything = parsed.presets.find((p) => p.name === "everything");
-		expect(everything?.artifacts).toHaveLength(24);
+		expect(everything?.artifacts).toHaveLength(30);
 		// ds-designer names its real §3.2 set, not hand-prose.
 		const dsDesigner = parsed.presets.find((p) => p.name === "ds-designer");
 		expect(dsDesigner?.artifacts).toContain("component-health");
@@ -294,7 +325,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		await run(["dashboard", "set", "--view", "ds-designer", dir]);
 		const result = await run(["dashboard", "add", "impact", dir]);
 		expect(result.code).toBe(0);
-		// ds-designer's nine §3.2 artifacts → + impact (appended) = ten.
+		// ds-designer's fourteen artifacts (§3.2 + the X3 executive layer + the F5 trends) → + impact (appended) = fifteen.
 		const written = await readConfig();
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
@@ -306,6 +337,11 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 			"component-health",
 			"library-health-trend",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"library-hotspots-trend",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 			"impact",
 		]);
 		expect(written.dashboard_view).toBeUndefined();
@@ -326,7 +362,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "remove", "parity", dir]);
 		expect(result.code).toBe(0);
 		const written = await readConfig();
-		// ds-designer's nine §3.2 artifacts → drop parity = eight.
+		// ds-designer's fourteen artifacts → drop parity = thirteen.
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
 			"readiness",
@@ -336,6 +372,11 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 			"component-health",
 			"library-health-trend",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"library-hotspots-trend",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 		]);
 	});
 
@@ -380,7 +421,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 		expect(written.figma_file_key).toBe("ABC123");
 		expect(written.report_style).toBe("html");
 		expect(written.dashboard_view).toBeUndefined();
-		// ds-designer's nine §3.2 artifacts → + impact (appended)
+		// ds-designer's fourteen artifacts → + impact (appended)
 		expect(written.dashboard_artifacts).toEqual([
 			"system-score",
 			"readiness",
@@ -391,6 +432,11 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 			"component-health",
 			"library-health-trend",
 			"data-freshness",
+			"consistency",
+			"design-debt",
+			"library-hotspots-trend",
+			"frame-readiness-trend",
+			"handoff-pass-rate",
 			"impact",
 		]);
 		// order preserved: unrelated keys first, dashboard_artifacts at the end

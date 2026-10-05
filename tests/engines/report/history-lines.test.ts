@@ -135,3 +135,54 @@ describe("replayHistory — tolerance", () => {
 		expect(records[0]?.record).toEqual(rec);
 	});
 });
+
+// H2 — v1 + v2 read transparently (SPEC-history-v2 §3). A v2 line keeps `at` and
+// `kind` top-level, so it replays exactly like v1 plus an optional `envelope`.
+describe("replayHistory — v2 envelope (H2)", () => {
+	it("emits NO envelope property for a v1 record (output unchanged)", () => {
+		const records = replayHistory(
+			line({ at: "2026-06-01", kind: "lint", byKind: {} }),
+		);
+		expect(records[0]).toEqual({
+			kind: "lint",
+			at: "2026-06-01",
+			record: { at: "2026-06-01", kind: "lint", byKind: {} },
+		});
+		expect(records[0]).not.toHaveProperty("envelope");
+	});
+
+	it("emits the envelope for a v2 record, keeping kind/at/record", () => {
+		const rec = {
+			v: 2,
+			at: "2026-10-04T00:00:00.000Z",
+			kind: "lint",
+			source: "ci",
+			git: { sha: "abc", branch: "main", dirty: false },
+			tool: { version: "1.11.0" },
+			runId: "r-1",
+			byKind: { exact: 1 },
+		};
+		const records = replayHistory(line(rec));
+		expect(records[0]?.kind).toBe("lint");
+		expect(records[0]?.at).toBe("2026-10-04T00:00:00.000Z");
+		expect(records[0]?.record).toEqual(rec);
+		expect(records[0]?.envelope).toEqual({
+			v: 2,
+			source: "ci",
+			runId: "r-1",
+			git: { sha: "abc", branch: "main", dirty: false },
+			tool: { version: "1.11.0" },
+		});
+	});
+
+	it("reads a mixed v1/v2 file in order", () => {
+		const text = [
+			line({ at: "2026-06-01", kind: "lint", byKind: {} }),
+			line({ v: 2, at: "2026-06-02", kind: "a11y", source: "local" }),
+		].join("\n");
+		const records = replayHistory(text);
+		expect(records.map((r) => r.kind)).toEqual(["lint", "a11y"]);
+		expect(records[0]?.envelope).toBeUndefined();
+		expect(records[1]?.envelope?.v).toBe(2);
+	});
+});

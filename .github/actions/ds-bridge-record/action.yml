@@ -1,0 +1,194 @@
+# H8 — ds-bridge CI recorder (SPEC-history-v2 §4; PLAN-analytics-positioning §4
+# B-P0 #3, decisions §6.2/§6.3). Composite action:
+#
+#   push (default branch) → seed .ds-bridge/history.jsonl from the data branch,
+#                           `ds-bridge record --source ci`, publish the file back
+#                           to the data branch (git plumbing — main is never
+#                           written, the working tree is never committed).
+#   pull_request          → seed + record (NOT published), then — only with
+#                           `pr-comment: "true"` — one scorecard comment
+#                           (`report --format md --delta origin/<data-branch>`),
+#                           updated in place on later pushes. `gate: "true"` adds
+#                           `--gate` (metric_targets red → failed check).
+#   schedule              → recorded like a push (F8). `figma: "auto"` adds the
+#                           Figma checks only when FIGMA_TOKEN is set; `library-top`
+#                           sets how many components per signal are stored.
+#   mode: site            → seed + render only (no record, no publish): with
+#                           `site-dir` the dashboard site, plus — with
+#                           `digest: "true"` — the manager digest page
+#                           (`digest.html` + `digest.md`). Deploying to GitHub
+#                           Pages stays in the caller's workflow (it needs
+#                           `pages: write` + `id-token: write`).
+#
+# Needs: actions/checkout + actions/setup-node (node 22) before it; permissions
+# `contents: write` (publish) and `pull-requests: write` (comment).
+name: ds-bridge record
+description: Record design-system health with ds-bridge into a data branch; optionally comment the scorecard delta on pull requests.
+inputs:
+  path:
+    description: Project directory (holds .ds-bridge/), relative to the workspace.
+    default: "."
+  data-branch:
+    description: Branch that stores the CI history series. Never the default branch.
+    default: ds-bridge-data
+  mode:
+    description: "auto (push/schedule/dispatch → record, pull_request → check) | record | check | site (seed + render site-dir only)"
+    default: auto
+  figma:
+    description: '"true" also runs the Figma checks (needs FIGMA_TOKEN + a library file key in the env/config); "auto" runs them only when FIGMA_TOKEN is set (scheduled runs, forks without secrets).'
+    default: "false"
+  library-top:
+    description: Top N components per library-health signal stored in history for the hotspot trends (record --library-top, 0-100).
+    default: "10"
+  site-dir:
+    description: When set (modes record/site), render the dashboard site into this directory (report --format site).
+    default: ""
+  digest:
+    description: '"true" (with site-dir) also writes the manager digest page: digest --audience manager → <site-dir>/digest.html + digest.md.'
+    default: "false"
+  digest-since:
+    description: The digest window (digest --since), e.g. 30d for a monthly digest.
+    default: 30d
+  pr-comment:
+    description: '"true" posts/updates ONE scorecard comment on the pull request (opt-in).'
+    default: "false"
+  gate:
+    description: '"true" fails the pull-request run when a metric_targets verdict is red (report --gate).'
+    default: "false"
+  cli:
+    description: Path to the ds-bridge CLI bundle. Default the dist/cli.mjs shipped with this action's ref (release tags commit dist/).
+    default: ""
+  github-token:
+    description: Token for the PR comment (gh).
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve mode and paths
+      id: ctx
+      shell: bash
+      env:
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_CLI: ${{ inputs.cli }}
+        EVENT_NAME: ${{ github.event_name }}
+      run: |
+        set -euo pipefail
+        root="$(cd "$GITHUB_ACTION_PATH/../../.." && pwd)"
+        mode="$INPUT_MODE"
+        if [ "$mode" = "auto" ]; then
+          case "$EVENT_NAME" in
+            pull_request|pull_request_target) mode=check ;;
+            *) mode=record ;;
+          esac
+        fi
+        case "$mode" in record|check|site) ;; *) echo "::error::unknown mode '$mode'"; exit 1 ;; esac
+        cli="${INPUT_CLI:-$root/dist/cli.mjs}"
+        if [ ! -f "$cli" ]; then echo "::error::ds-bridge CLI not found at $cli (set the 'cli' input)"; exit 1; fi
+        {
+          echo "mode=$mode"
+          echo "cli=$cli"
+          echo "scripts=$root/scripts"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Seed history from the data branch
+      shell: bash
+      env:
+        SCRIPTS: ${{ steps.ctx.outputs.scripts }}
+        DATA_BRANCH: ${{ inputs.data-branch }}
+        PROJECT: ${{ inputs.path }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: |
+        node "$SCRIPTS/ci-data-branch.mjs" seed --branch "$DATA_BRANCH" \
+          --file "$PROJECT/.ds-bridge/history.jsonl" --default-branch "$DEFAULT_BRANCH"
+
+    - name: Record (ds-bridge record --source ci)
+      if: steps.ctx.outputs.mode != 'site'
+      shell: bash
+      env:
+        CLI: ${{ steps.ctx.outputs.cli }}
+        PROJECT: ${{ inputs.path }}
+        FIGMA: ${{ inputs.figma }}
+        LIBRARY_TOP: ${{ inputs.library-top }}
+      run: |
+        flag="--no-figma"
+        if [ "$FIGMA" = "true" ]; then flag="--figma"; fi
+        # auto: Figma checks only when the FIGMA_TOKEN secret reached this step.
+        if [ "$FIGMA" = "auto" ] && [ -n "${FIGMA_TOKEN:-}" ]; then flag="--figma"; fi
+        node "$CLI" record "$PROJECT" --source ci "$flag" --library-top "$LIBRARY_TOP"
+
+    - name: Publish history to the data branch
+      if: steps.ctx.outputs.mode == 'record'
+      shell: bash
+      env:
+        SCRIPTS: ${{ steps.ctx.outputs.scripts }}
+        DATA_BRANCH: ${{ inputs.data-branch }}
+        PROJECT: ${{ inputs.path }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: |
+        node "$SCRIPTS/ci-data-branch.mjs" publish --branch "$DATA_BRANCH" \
+          --file "$PROJECT/.ds-bridge/history.jsonl" --default-branch "$DEFAULT_BRANCH"
+
+    - name: Render the dashboard site (+ manager digest)
+      if: inputs.site-dir != '' && steps.ctx.outputs.mode != 'check'
+      shell: bash
+      env:
+        CLI: ${{ steps.ctx.outputs.cli }}
+        PROJECT: ${{ inputs.path }}
+        SITE_DIR: ${{ inputs.site-dir }}
+        DIGEST: ${{ inputs.digest }}
+        DIGEST_SINCE: ${{ inputs.digest-since }}
+      run: |
+        set -euo pipefail
+        node "$CLI" report "$PROJECT" --format site --out "$SITE_DIR"
+        if [ "$DIGEST" = "true" ]; then
+          node "$CLI" digest "$PROJECT" --audience manager --since "$DIGEST_SINCE" --format html --out "$SITE_DIR/digest.html"
+          node "$CLI" digest "$PROJECT" --audience manager --since "$DIGEST_SINCE" --out "$SITE_DIR/digest.md"
+        fi
+
+    - name: Scorecard comment (opt-in)
+      if: steps.ctx.outputs.mode == 'check' && inputs.pr-comment == 'true' && github.event.pull_request.number != ''
+      shell: bash
+      env:
+        CLI: ${{ steps.ctx.outputs.cli }}
+        PROJECT: ${{ inputs.path }}
+        DATA_BRANCH: ${{ inputs.data-branch }}
+        GATE: ${{ inputs.gate }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -uo pipefail
+        gate=()
+        if [ "$GATE" = "true" ]; then gate=(--gate); fi
+        # No data branch yet (first PR) → current-only scorecard, no delta.
+        delta=()
+        if git rev-parse --verify --quiet "origin/$DATA_BRANCH" > /dev/null; then
+          delta=(--delta "origin/$DATA_BRANCH")
+        fi
+        out="$RUNNER_TEMP/ds-bridge-scorecard.md"
+        node "$CLI" report "$PROJECT" --format md "${delta[@]}" "${gate[@]}" > "$out"
+        status=$?
+        marker='<!-- ds-bridge-scorecard -->'
+        body="$(printf '%s\n' "$marker"; cat "$out")"
+        id="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+          --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n1)"
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" > /dev/null
+        else
+          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" > /dev/null
+        fi
+        exit "$status"
+
+    - name: Scorecard gate (no comment)
+      if: steps.ctx.outputs.mode == 'check' && inputs.pr-comment != 'true' && inputs.gate == 'true'
+      shell: bash
+      env:
+        CLI: ${{ steps.ctx.outputs.cli }}
+        PROJECT: ${{ inputs.path }}
+        DATA_BRANCH: ${{ inputs.data-branch }}
+      run: |
+        delta=()
+        if git rev-parse --verify --quiet "origin/$DATA_BRANCH" > /dev/null; then
+          delta=(--delta "origin/$DATA_BRANCH")
+        fi
+        node "$CLI" report "$PROJECT" --format md "${delta[@]}" --gate >> "$GITHUB_STEP_SUMMARY"

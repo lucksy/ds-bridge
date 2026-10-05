@@ -1,0 +1,196 @@
+// R4 — HTML org rollup (SPEC-rollup §4). PURE: model in → one offline,
+// script-free, byte-stable page out, built from the dashboard STYLE and the
+// shared SVG charts (barChart of ranked scores, lineChart of score trends).
+// Every caller-supplied string is escaped.
+import type { RollupModel } from "../../engines/rollup/rollup.js";
+import {
+	aggregateLines,
+	EMPTY_TEXT,
+	headline,
+	NO_TRENDS_TEXT,
+	repoCells,
+	TABLE_HEADERS,
+	WEIGHTS_NOTE,
+} from "../rollup-cells.js";
+import {
+	barChart,
+	type LineSeries,
+	lineChart,
+	TONE,
+	toneFor,
+} from "./charts.js";
+import { escapeHtml, readableInstant, STYLE } from "./dashboard.js";
+
+const PAGE_STYLE = `
+.page { max-width: 1100px; }
+.empty-line { color: var(--text-subtle); font-size: 13px; margin: 0; }
+ul.notes { margin: 0; padding-left: 20px; font-size: 13px; }
+@media print {
+	body { background: #ffffff; }
+	section.panel, .kpi { break-inside: avoid; }
+}
+`.trim();
+
+function panel(title: string, body: string): string {
+	return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
+}
+
+function kpi(
+	label: string,
+	value: string | undefined,
+	sub: string,
+	toned = true,
+): string {
+	const tone =
+		toned && value !== undefined && /^\d+/.test(value)
+			? ` ${toneFor(Number.parseInt(value, 10))}`
+			: "";
+	return [
+		`<div class="kpi${tone}">`,
+		`<span class="kpi-label">${escapeHtml(label)}</span>`,
+		`<span class="kpi-value">${escapeHtml(value ?? "—")}</span>`,
+		`<span class="kpi-sub">${escapeHtml(value === undefined ? "not measured" : sub)}</span>`,
+		"</div>",
+	].join("");
+}
+
+function tableHtml(headers: readonly string[], rows: string[][]): string {
+	const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+	const body = rows
+		.map(
+			(r) => `<tr>${r.map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`,
+		)
+		.join("");
+	return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function trendSeries(model: RollupModel): {
+	series: LineSeries[];
+	xLabels?: [string, string];
+} {
+	const dates = [
+		...new Set(
+			model.repos
+				.filter((r) => r.trend.length >= 2)
+				.flatMap((r) => r.trend.map((p) => p.date)),
+		),
+	].sort();
+	const index = new Map(dates.map((d, i) => [d, i]));
+	const series = model.repos
+		// A one-point series draws nothing visible; trends need two runs.
+		.filter((r) => r.trend.length >= 2)
+		.map((r) => ({
+			label: r.name,
+			points: r.trend.map((p) => ({ x: index.get(p.date) ?? 0, y: p.score })),
+		}));
+	const first = dates[0];
+	const last = dates[dates.length - 1];
+	return first !== undefined && last !== undefined
+		? { series, xLabels: [first, last] }
+		: { series };
+}
+
+export function renderRollupHtml(model: RollupModel): string {
+	const a = model.aggregate;
+	const parts: string[] = [
+		'<header class="dash"><div class="bar">',
+		`<h1>Design system org rollup</h1>`,
+		`<span class="generated">${escapeHtml(readableInstant(model.generatedAt))} · ${escapeHtml(headline(model))}</span>`,
+		"</div></header>",
+		'<div class="wrap page">',
+	];
+	if (model.repos.length === 0) {
+		parts.push(`<p class="empty-line">${escapeHtml(EMPTY_TEXT)}</p>`);
+	} else {
+		parts.push(
+			`<div class="kpis">${[
+				kpi(
+					"Mean score",
+					a.meanScore === undefined ? undefined : String(a.meanScore),
+					`over ${a.scored} scored repo${a.scored === 1 ? "" : "s"}`,
+				),
+				kpi(
+					"Size-weighted score",
+					a.weightedScore === undefined ? undefined : String(a.weightedScore),
+					`${a.sized} sized repo${a.sized === 1 ? "" : "s"}`,
+				),
+				kpi(
+					"Pooled on-system",
+					a.weightedOnSystem === undefined
+						? undefined
+						: `${a.weightedOnSystem}%`,
+					"tokens vs literals, all repos",
+				),
+				kpi("Repos", String(a.repos), `${a.staleRepos} stale`, false),
+			].join("")}</div>`,
+		);
+		const scored = model.repos.filter((r) => r.score !== undefined);
+		const bars = barChart(
+			scored.map((r) => ({
+				label: r.name,
+				value: r.score as number,
+				color: TONE[toneFor(r.score as number)],
+			})),
+			{ width: 520, max: 100 },
+		);
+		const { series, xLabels } = trendSeries(model);
+		parts.push(
+			'<div class="grid">',
+			panel("Ranked System Score", `<div class="chart">${bars}</div>`),
+			panel(
+				"Score trends",
+				series.length === 0
+					? `<p class="empty-line">${escapeHtml(NO_TRENDS_TEXT)}</p>`
+					: `<div class="chart">${lineChart(series, { width: 520, height: 220, ...(xLabels !== undefined ? { xLabels } : {}) })}</div>`,
+			),
+			"</div>",
+			panel("Repos", tableHtml(TABLE_HEADERS, model.repos.map(repoCells))),
+			panel("Aggregate", tableHtml(["Aggregate", "Value"], aggregateLines(a))),
+		);
+		if (a.byTeam !== undefined) {
+			parts.push(
+				panel(
+					"By team",
+					tableHtml(
+						["Team", "Repos", "Scored", "Mean score", "Pooled on-system"],
+						a.byTeam.map((t) => [
+							t.team,
+							String(t.repos),
+							String(t.scored),
+							t.meanScore === undefined ? "—" : String(t.meanScore),
+							t.weightedOnSystem === undefined ? "—" : `${t.weightedOnSystem}%`,
+						]),
+					),
+				),
+			);
+		}
+		const notes = model.repos.flatMap((r) =>
+			r.notes.map(
+				(n) =>
+					`<li><strong>${escapeHtml(r.name)}</strong>: ${escapeHtml(n)}</li>`,
+			),
+		);
+		if (notes.length > 0) {
+			parts.push(panel("Notes", `<ul class="notes">${notes.join("")}</ul>`));
+		}
+	}
+	parts.push(
+		`<div class="meta">${escapeHtml(WEIGHTS_NOTE)} Generated by ds-bridge rollup from each repo's .ds-bridge/history.jsonl. “—” means never measured, not zero.</div>`,
+		"</div>",
+	);
+	return [
+		"<!DOCTYPE html>",
+		'<html lang="en">',
+		"<head>",
+		'<meta charset="utf-8" />',
+		'<meta name="viewport" content="width=device-width, initial-scale=1" />',
+		"<title>Design system org rollup</title>",
+		`<style>${STYLE}\n${PAGE_STYLE}</style>`,
+		"</head>",
+		"<body>",
+		parts.join(""),
+		"</body>",
+		"</html>",
+		"",
+	].join("\n");
+}

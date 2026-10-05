@@ -27,6 +27,17 @@ import type { Readable, Writable } from "node:stream";
 import { writeProjectConfig } from "../config.js";
 import { PRESET_NAMES, type PresetName } from "./../engines/report/presets.js";
 
+/**
+ * The views the persona setup wizard offers: the six personas + `everything`.
+ * The curated `exec` view (SPEC-exec-report §1.5) is not a persona — it is set
+ * with `dashboard set --view exec`, never through onboarding. Nor is the
+ * curated org-rollup drill-down `org` (SPEC-rollup §4).
+ */
+type WizardView = Exclude<PresetName, "exec" | "org">;
+const WIZARD_VIEWS: readonly WizardView[] = PRESET_NAMES.filter(
+	(name): name is WizardView => name !== "exec" && name !== "org",
+);
+
 /** The three producer personas (govern the DS library) vs. the three consumers. */
 const PRODUCER_PERSONAS = new Set<PresetName>([
 	"ds-designer",
@@ -41,7 +52,7 @@ const PRODUCER_PERSONAS = new Set<PresetName>([
  * — it is NOT persisted as a config key.
  */
 const PERSONA_AUDIENCE: Record<
-	Exclude<PresetName, "everything">,
+	Exclude<WizardView, "everything">,
 	"designers" | "developers" | "both"
 > = {
 	"ds-designer": "designers",
@@ -158,20 +169,20 @@ async function ask(
 async function pickPreset(
 	reader: LineReader,
 	output: Writable,
-): Promise<PresetName> {
+): Promise<WizardView> {
 	output.write("Pick a dashboard view:\n");
-	PRESET_NAMES.forEach((name, index) => {
+	WIZARD_VIEWS.forEach((name, index) => {
 		output.write(`  ${index + 1}) ${name}\n`);
 	});
 	for (;;) {
 		const answer = (await ask(reader, output, "View number: ")).trim();
 		const n = Number(answer);
-		if (Number.isInteger(n) && n >= 1 && n <= PRESET_NAMES.length) {
-			const picked = PRESET_NAMES[n - 1];
+		if (Number.isInteger(n) && n >= 1 && n <= WIZARD_VIEWS.length) {
+			const picked = WIZARD_VIEWS[n - 1];
 			if (picked !== undefined) return picked;
 		}
 		output.write(
-			`Please enter a number between 1 and ${PRESET_NAMES.length}.\n`,
+			`Please enter a number between 1 and ${WIZARD_VIEWS.length}.\n`,
 		);
 	}
 }
@@ -194,7 +205,7 @@ async function captureFileKeys(
 	reader: LineReader,
 	output: Writable,
 	cwd: string,
-	persona: Exclude<PresetName, "everything">,
+	persona: Exclude<WizardView, "everything">,
 ): Promise<Record<string, string> | undefined> {
 	if (PRODUCER_PERSONAS.has(persona)) {
 		const hasKey = isYes(

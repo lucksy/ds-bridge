@@ -32,7 +32,9 @@ Arguments received: `$ARGUMENTS`
      the command that fills them (drift ← `/ds-bridge:token-check`, lint ←
      `/ds-bridge:ds-lint`, readiness ← `/ds-bridge:handoff-qa`, parity ←
      `/ds-bridge:parity-audit`, a11y ← `/ds-bridge:a11y-check`, impact ←
-     `/ds-bridge:impact`).
+     `/ds-bridge:impact`). When several are empty, `/ds-bridge:record` fills
+     drift, lint, contrast and adoption (once a registry exists) in one batch,
+     and stores the system score with it.
 5. **Once only, and only when** `view.source` is `"default"`: mention that
    `/ds-bridge:dashboard --setup` composes a persona view (six personas plus the
    `everything` escape). This is stateless guidance — never nag, never persist
@@ -40,6 +42,11 @@ Arguments received: `$ARGUMENTS`
 6. To see the same history without leaving the session, `/ds-insights` opens
    the insights pane beside the transcript: score trends, and charts of the live
    Figma selection.
+7. **For managers**, mention once (only if the user asked about reporting,
+   leadership or a summary): `--view exec` renders the leadership dashboard;
+   `report --format exec` prints the paste-ready manager one-pager (Markdown)
+   and `--format exec-html` writes it as one offline page; `/ds-bridge:rollup`
+   ranks several repos side by side (local only).
 
 ### Mode 2 — compose (`--setup`)
 
@@ -49,9 +56,13 @@ hand-authored prose that could drift from the shipped presets.
 
 1. Run `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs dashboard list --format=json`
    to get the live catalog (ids, titles, personas), the current view, and the
-   **`presets`** array (each entry: `name`, `description`, `artifacts`).
+   **`presets`** array (each entry: `name`, `description`, `artifacts`,
+   `persona`).
 2. Ask the persona question with **AskUserQuestion** — **six** options, one per
-   persona preset (every `presets` entry whose `name` is not `everything`),
+   persona preset (every `presets` entry with `persona: true` — never
+   `everything`, `exec` or `org`; `exec` is the leadership view, set with
+   `dashboard set --view exec`; `org` is the per-repo drill-down of
+   `ds-bridge rollup`),
    using its `description` as the option text and naming a few of its
    `artifacts`. Add a **seventh "Not sure → everything (no setup)"** escape.
    There is **no `mixed` persona** — the escape is `everything`.

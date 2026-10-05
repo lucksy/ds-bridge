@@ -606,8 +606,8 @@ var require_help = __commonJS({
        * @param {string} str
        * @returns {number}
        */
-      displayWidth(str) {
-        return stripColor(str).length;
+      displayWidth(str4) {
+        return stripColor(str4).length;
       }
       /**
        * Style the title for displaying in the help. Called with 'Usage:', 'Options:', etc.
@@ -615,11 +615,11 @@ var require_help = __commonJS({
        * @param {string} str
        * @returns {string}
        */
-      styleTitle(str) {
-        return str;
+      styleTitle(str4) {
+        return str4;
       }
-      styleUsage(str) {
-        return str.split(" ").map((word) => {
+      styleUsage(str4) {
+        return str4.split(" ").map((word) => {
           if (word === "[options]") return this.styleOptionText(word);
           if (word === "[command]") return this.styleSubcommandText(word);
           if (word[0] === "[" || word[0] === "<")
@@ -627,46 +627,46 @@ var require_help = __commonJS({
           return this.styleCommandText(word);
         }).join(" ");
       }
-      styleCommandDescription(str) {
-        return this.styleDescriptionText(str);
+      styleCommandDescription(str4) {
+        return this.styleDescriptionText(str4);
       }
-      styleOptionDescription(str) {
-        return this.styleDescriptionText(str);
+      styleOptionDescription(str4) {
+        return this.styleDescriptionText(str4);
       }
-      styleSubcommandDescription(str) {
-        return this.styleDescriptionText(str);
+      styleSubcommandDescription(str4) {
+        return this.styleDescriptionText(str4);
       }
-      styleArgumentDescription(str) {
-        return this.styleDescriptionText(str);
+      styleArgumentDescription(str4) {
+        return this.styleDescriptionText(str4);
       }
-      styleDescriptionText(str) {
-        return str;
+      styleDescriptionText(str4) {
+        return str4;
       }
-      styleOptionTerm(str) {
-        return this.styleOptionText(str);
+      styleOptionTerm(str4) {
+        return this.styleOptionText(str4);
       }
-      styleSubcommandTerm(str) {
-        return str.split(" ").map((word) => {
+      styleSubcommandTerm(str4) {
+        return str4.split(" ").map((word) => {
           if (word === "[options]") return this.styleOptionText(word);
           if (word[0] === "[" || word[0] === "<")
             return this.styleArgumentText(word);
           return this.styleSubcommandText(word);
         }).join(" ");
       }
-      styleArgumentTerm(str) {
-        return this.styleArgumentText(str);
+      styleArgumentTerm(str4) {
+        return this.styleArgumentText(str4);
       }
-      styleOptionText(str) {
-        return str;
+      styleOptionText(str4) {
+        return str4;
       }
-      styleArgumentText(str) {
-        return str;
+      styleArgumentText(str4) {
+        return str4;
       }
-      styleSubcommandText(str) {
-        return str;
+      styleSubcommandText(str4) {
+        return str4;
       }
-      styleCommandText(str) {
-        return str;
+      styleCommandText(str4) {
+        return str4;
       }
       /**
        * Calculate the pad width from the maximum term length.
@@ -689,8 +689,8 @@ var require_help = __commonJS({
        * @param {string} str
        * @returns {boolean}
        */
-      preformatted(str) {
-        return /\n[^\S\r\n]/.test(str);
+      preformatted(str4) {
+        return /\n[^\S\r\n]/.test(str4);
       }
       /**
        * Format the "item", which consists of a term and description. Pad the term and wrap the description, indenting the following lines.
@@ -736,9 +736,9 @@ ${itemIndentStr}`);
        * @param {number} width
        * @returns {string}
        */
-      boxWrap(str, width) {
-        if (width < this.minWidthToWrap) return str;
-        const rawLines = str.split(/\r\n|\n/);
+      boxWrap(str4, width) {
+        if (width < this.minWidthToWrap) return str4;
+        const rawLines = str4.split(/\r\n|\n/);
         const chunkPattern = /[\s]*[^\s]+/g;
         const wrappedLines = [];
         rawLines.forEach((line) => {
@@ -766,9 +766,9 @@ ${itemIndentStr}`);
         return wrappedLines.join("\n");
       }
     };
-    function stripColor(str) {
+    function stripColor(str4) {
       const sgrPattern = /\x1b\[\d*(;\d*)*m/g;
-      return str.replace(sgrPattern, "");
+      return str4.replace(sgrPattern, "");
     }
     exports.Help = Help2;
     exports.stripColor = stripColor;
@@ -1040,9 +1040,9 @@ var require_option = __commonJS({
         return option.negate === (negativeValue === value2);
       }
     };
-    function camelcase(str) {
-      return str.split("-").reduce((str2, word) => {
-        return str2 + word[0].toUpperCase() + word.slice(1);
+    function camelcase(str4) {
+      return str4.split("-").reduce((str5, word) => {
+        return str5 + word[0].toUpperCase() + word.slice(1);
       });
     }
     function splitOptionFlags(flags) {
@@ -1225,14 +1225,14 @@ var require_command = __commonJS({
         this._showSuggestionAfterError = true;
         this._savedState = null;
         this._outputConfiguration = {
-          writeOut: (str) => process2.stdout.write(str),
-          writeErr: (str) => process2.stderr.write(str),
-          outputError: (str, write) => write(str),
+          writeOut: (str4) => process2.stdout.write(str4),
+          writeErr: (str4) => process2.stderr.write(str4),
+          outputError: (str4, write) => write(str4),
           getOutHelpWidth: () => process2.stdout.isTTY ? process2.stdout.columns : void 0,
           getErrHelpWidth: () => process2.stderr.isTTY ? process2.stderr.columns : void 0,
           getOutHasColors: () => useColor() ?? (process2.stdout.isTTY && process2.stdout.hasColors?.()),
           getErrHasColors: () => useColor() ?? (process2.stderr.isTTY && process2.stderr.hasColors?.()),
-          stripColor: (str) => stripColor(str)
+          stripColor: (str4) => stripColor(str4)
         };
         this._hidden = false;
         this._helpOption = void 0;
@@ -2956,18 +2956,18 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [description]
        * @return {(this | string | undefined)} `this` command for chaining, or version string if no arguments
        */
-      version(str, flags, description) {
-        if (str === void 0) return this._version;
-        this._version = str;
+      version(str4, flags, description) {
+        if (str4 === void 0) return this._version;
+        this._version = str4;
         flags = flags || "-V, --version";
         description = description || "output the version number";
         const versionOption = this.createOption(flags, description);
         this._versionOptionName = versionOption.attributeName();
         this._registerOption(versionOption);
         this.on("option:" + versionOption.name(), () => {
-          this._outputConfiguration.writeOut(`${str}
+          this._outputConfiguration.writeOut(`${str4}
 `);
-          this._exit(0, "commander.version", str);
+          this._exit(0, "commander.version", str4);
         });
         return this;
       }
@@ -2978,10 +2978,10 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {object} [argsDescription]
        * @return {(string|Command)}
        */
-      description(str, argsDescription) {
-        if (str === void 0 && argsDescription === void 0)
+      description(str4, argsDescription) {
+        if (str4 === void 0 && argsDescription === void 0)
           return this._description;
-        this._description = str;
+        this._description = str4;
         if (argsDescription) {
           this._argsDescription = argsDescription;
         }
@@ -2993,9 +2993,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [str]
        * @return {(string|Command)}
        */
-      summary(str) {
-        if (str === void 0) return this._summary;
-        this._summary = str;
+      summary(str4) {
+        if (str4 === void 0) return this._summary;
+        this._summary = str4;
         return this;
       }
       /**
@@ -3043,8 +3043,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [str]
        * @return {(string|Command)}
        */
-      usage(str) {
-        if (str === void 0) {
+      usage(str4) {
+        if (str4 === void 0) {
           if (this._usage) return this._usage;
           const args = this.registeredArguments.map((arg) => {
             return humanReadableArgName(arg);
@@ -3055,7 +3055,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
             this.registeredArguments.length ? args : []
           ).join(" ");
         }
-        this._usage = str;
+        this._usage = str4;
         return this;
       }
       /**
@@ -3064,9 +3064,9 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} [str]
        * @return {(string|Command)}
        */
-      name(str) {
-        if (str === void 0) return this._name;
-        this._name = str;
+      name(str4) {
+        if (str4 === void 0) return this._name;
+        this._name = str4;
         return this;
       }
       /**
@@ -3200,17 +3200,17 @@ Expecting one of '${allowedValues.join("', '")}'`);
         let hasColors;
         let helpWidth;
         if (error) {
-          baseWrite = (str) => this._outputConfiguration.writeErr(str);
+          baseWrite = (str4) => this._outputConfiguration.writeErr(str4);
           hasColors = this._outputConfiguration.getErrHasColors();
           helpWidth = this._outputConfiguration.getErrHelpWidth();
         } else {
-          baseWrite = (str) => this._outputConfiguration.writeOut(str);
+          baseWrite = (str4) => this._outputConfiguration.writeOut(str4);
           hasColors = this._outputConfiguration.getOutHasColors();
           helpWidth = this._outputConfiguration.getOutHelpWidth();
         }
-        const write = (str) => {
-          if (!hasColors) str = this._outputConfiguration.stripColor(str);
-          return baseWrite(str);
+        const write = (str4) => {
+          if (!hasColors) str4 = this._outputConfiguration.stripColor(str4);
+          return baseWrite(str4);
         };
         return { error, write, hasColors, helpWidth };
       }
@@ -3515,7 +3515,7 @@ var require_picocolors = __commonJS({
 
 // src/cli.ts
 import { createRequire } from "module";
-import { join as join24 } from "path";
+import { join as join30 } from "path";
 
 // node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
@@ -3535,14 +3535,8 @@ var {
 } = import_index.default;
 
 // src/cli-commands/a11y.ts
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  statSync
-} from "fs";
-import { join as join2, resolve as resolve4 } from "path";
+import { existsSync as existsSync2, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
+import { join as join3, resolve as resolve4 } from "path";
 
 // node_modules/culori/src/rgb/parseNumber.js
 var parseNumber = (color, len) => {
@@ -4002,8 +3996,8 @@ function identlike(chars) {
   }
   return { type: Tok.Ident, value: v };
 }
-function tokenize(str = "") {
-  let chars = str.trim();
+function tokenize(str4 = "") {
+  let chars = str4.trim();
   let tokens = [];
   let ch;
   _i = 0;
@@ -7522,7 +7516,7 @@ function parseTokensStudio(source) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve13 = (name, seen) => {
+  const resolve17 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -7548,7 +7542,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve13(target, new Set(seen).add(target));
+    const downstream = resolve17(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -7556,7 +7550,7 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve13(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve17(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
     const token = {
       name,
@@ -7823,6 +7817,308 @@ async function discoverTokenSources(rootDir, options) {
   return { kind: "ok", sources };
 }
 
+// src/io/history-writer.ts
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync
+} from "fs";
+import { dirname, join as join2 } from "path";
+import { fileURLToPath } from "url";
+
+// src/engines/history/envelope.ts
+var RESERVED_ENVELOPE_KEYS = /* @__PURE__ */ new Set([
+  "v",
+  "at",
+  "kind",
+  "source",
+  "git",
+  "tool",
+  "runId"
+]);
+function buildEnvelope(payload, meta) {
+  const at = typeof payload.at === "string" ? payload.at : meta.now;
+  const record = {
+    v: 2,
+    at,
+    kind: payload.kind,
+    source: meta.source,
+    git: meta.git,
+    tool: meta.tool
+  };
+  if (meta.runId !== void 0) record.runId = meta.runId;
+  for (const [key, value2] of Object.entries(payload)) {
+    if (RESERVED_ENVELOPE_KEYS.has(key)) continue;
+    record[key] = value2;
+  }
+  return record;
+}
+function parseSource(raw) {
+  return raw === "local" || raw === "ci" || raw === "hook" ? raw : void 0;
+}
+function resolveSource(flag, env) {
+  return flag ?? parseSource(env.DS_BRIDGE_SOURCE) ?? "local";
+}
+var MAX_RUN_ID_LENGTH = 128;
+function resolveRunId(env) {
+  const raw = env.DS_BRIDGE_RUN_ID;
+  if (raw === void 0) return void 0;
+  const trimmed = raw.trim();
+  if (trimmed === "" || trimmed.length > MAX_RUN_ID_LENGTH) return void 0;
+  return trimmed;
+}
+function parseGit(value2) {
+  if (typeof value2 !== "object" || value2 === null) return null;
+  const g = value2;
+  if (typeof g.sha !== "string") return null;
+  return {
+    sha: g.sha,
+    branch: typeof g.branch === "string" ? g.branch : null,
+    dirty: g.dirty === true
+  };
+}
+function parseTool(value2) {
+  if (typeof value2 !== "object" || value2 === null) return null;
+  const t = value2;
+  return typeof t.version === "string" ? { version: t.version } : null;
+}
+function envelopeOf(record) {
+  const v = record.v;
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 2) return void 0;
+  const env = { v };
+  const source = parseSource(
+    typeof record.source === "string" ? record.source : void 0
+  );
+  if (source !== void 0) env.source = source;
+  if (typeof record.runId === "string" && record.runId !== "") {
+    env.runId = record.runId;
+  }
+  if ("git" in record) env.git = parseGit(record.git);
+  if ("tool" in record) env.tool = parseTool(record.tool);
+  return env;
+}
+
+// src/io/git-log.ts
+import { spawnSync } from "child_process";
+var GIT_LOG_FIELD_SEP = "";
+var GIT_LOG_RECORD_SEP = "";
+var PRETTY_FORMAT = `--pretty=format:%H${GIT_LOG_FIELD_SEP}%aI${GIT_LOG_FIELD_SEP}%an${GIT_LOG_FIELD_SEP}%B${GIT_LOG_RECORD_SEP}`;
+function parseRecord(record) {
+  const fields = record.split(GIT_LOG_FIELD_SEP);
+  if (fields.length < 4) return void 0;
+  const [hash, dateIso, author, ...subjectParts] = fields;
+  if (hash === void 0 || hash === "" || dateIso === void 0 || author === void 0) {
+    return void 0;
+  }
+  const subject = subjectParts.join(GIT_LOG_FIELD_SEP).replace(/\n+$/, "");
+  return { hash, dateIso, author, subject };
+}
+function readGitLog(input) {
+  const args = ["log", `--since=${input.since}`, PRETTY_FORMAT];
+  const run = input.exec(args, input.cwd);
+  if (run.error !== void 0) {
+    return { kind: "git-unavailable", message: run.error };
+  }
+  if (run.status !== 0) {
+    return { kind: "not-a-repo" };
+  }
+  const commits = [];
+  for (const raw of run.stdout.split(GIT_LOG_RECORD_SEP)) {
+    const record = raw.replace(/^\n+/, "");
+    if (record.trim() === "") continue;
+    const commit = parseRecord(record);
+    if (commit !== void 0) commits.push(commit);
+  }
+  return { kind: "ok", commits };
+}
+function classifyGitFailure(run) {
+  if (run.error !== void 0) {
+    return { kind: "git-error", message: run.error };
+  }
+  const stderr = run.stderr;
+  if (stderr.includes("does not exist in") || stderr.includes("exists on disk, but not in")) {
+    return { kind: "missing", message: stderr };
+  }
+  return { kind: "git-error", message: stderr.trim() };
+}
+function readFileAtRef(input) {
+  const { ref, path, cwd: cwd5, exec } = input;
+  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd5);
+  if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
+    const { kind, message } = classifyGitFailure(prefixRun);
+    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  }
+  const prefix = prefixRun.stdout.trim();
+  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd5);
+  if (showRun.error !== void 0 || showRun.status !== 0) {
+    const { kind, message } = classifyGitFailure(showRun);
+    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  }
+  return { kind: "ok", text: showRun.stdout };
+}
+var GIT_MAX_BUFFER = 256 * 1024 * 1024;
+function spawnGitExec(args, cwd5) {
+  const run = spawnSync("git", args, {
+    cwd: cwd5,
+    encoding: "utf8",
+    maxBuffer: GIT_MAX_BUFFER
+  });
+  if (run.error !== void 0) {
+    return { status: -1, stdout: "", stderr: "", error: run.error.message };
+  }
+  return {
+    status: run.status ?? -1,
+    stdout: run.stdout ?? "",
+    stderr: run.stderr ?? ""
+  };
+}
+
+// src/io/history-writer.ts
+var HISTORY_FILE = "history.jsonl";
+var LOCK_FILE = "history.jsonl.lock";
+var DEFAULT_LOCK_TIMEOUT_MS = 2e3;
+var DEFAULT_LOCK_STALE_MS = 1e4;
+var LOCK_POLL_MS = 25;
+function historyFilePath(stateDir) {
+  return join2(stateDir, HISTORY_FILE);
+}
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+var cachedToolVersion;
+function resolveToolVersion() {
+  if (cachedToolVersion !== void 0) return cachedToolVersion;
+  cachedToolVersion = null;
+  try {
+    let dir = dirname(fileURLToPath(import.meta.url));
+    for (let depth = 0; depth < 6; depth += 1) {
+      const candidate = join2(dir, "package.json");
+      if (existsSync(candidate)) {
+        const pkg2 = JSON.parse(readFileSync(candidate, "utf8"));
+        if (pkg2.name === "ds-bridge" && typeof pkg2.version === "string") {
+          cachedToolVersion = pkg2.version;
+          break;
+        }
+      }
+      const parent = dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  } catch {
+    cachedToolVersion = null;
+  }
+  return cachedToolVersion;
+}
+function countsAsDirty(line) {
+  if (line.trim() === "") return false;
+  const path = line.slice(3);
+  return !path.split(" -> ").every((p4) => p4.includes(".ds-bridge/"));
+}
+function readGitContext(projectDir, exec = spawnGitExec, env = process.env) {
+  try {
+    const head = exec(["rev-parse", "HEAD"], projectDir);
+    if (head.error !== void 0 || head.status !== 0) return null;
+    const sha = head.stdout.trim();
+    if (sha === "") return null;
+    const ref = exec(["rev-parse", "--abbrev-ref", "HEAD"], projectDir);
+    let branch = ref.status === 0 && ref.error === void 0 ? ref.stdout.trim() : null;
+    if (branch === "HEAD" || branch === "") {
+      branch = (env.GITHUB_HEAD_REF !== void 0 && env.GITHUB_HEAD_REF !== "" ? env.GITHUB_HEAD_REF : void 0) ?? (env.GITHUB_REF_NAME !== void 0 && env.GITHUB_REF_NAME !== "" ? env.GITHUB_REF_NAME : void 0) ?? null;
+    }
+    const status = exec(
+      ["status", "--porcelain", "--untracked-files=no"],
+      projectDir
+    );
+    const dirty = status.status === 0 && status.error === void 0 ? status.stdout.split("\n").some(countsAsDirty) : false;
+    return { sha, branch, dirty };
+  } catch {
+    return null;
+  }
+}
+function acquireHistoryLock(stateDir, options = {}) {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
+  const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
+  const lockPath = join2(stateDir, LOCK_FILE);
+  const deadline = Date.now() + timeoutMs;
+  for (; ; ) {
+    try {
+      const fd = openSync(lockPath, "wx");
+      writeFileSync(fd, `${process.pid}
+`);
+      closeSync(fd);
+      return () => {
+        try {
+          unlinkSync(lockPath);
+        } catch {
+        }
+      };
+    } catch (error) {
+      const code = error.code;
+      if (code !== "EEXIST") return void 0;
+    }
+    try {
+      if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
+        unlinkSync(lockPath);
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    if (Date.now() >= deadline) return void 0;
+    sleepSync(LOCK_POLL_MS);
+  }
+}
+function appendHistoryRecord(stateDir, payload, options = {}) {
+  const env = options.env ?? process.env;
+  const runId = resolveRunId(env);
+  const record = buildEnvelope(payload, {
+    now: options.now !== void 0 ? options.now() : (/* @__PURE__ */ new Date()).toISOString(),
+    source: resolveSource(options.source, env),
+    git: readGitContext(dirname(stateDir), options.exec, env),
+    tool: (() => {
+      const version = options.toolVersion !== void 0 ? options.toolVersion : resolveToolVersion();
+      return version === null ? null : { version };
+    })(),
+    ...runId !== void 0 ? { runId } : {}
+  });
+  mkdirSync(stateDir, { recursive: true });
+  const release = acquireHistoryLock(stateDir, {
+    timeoutMs: options.lockTimeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS
+  });
+  try {
+    appendFileSync(
+      historyFilePath(stateDir),
+      `${JSON.stringify(record)}
+`,
+      "utf8"
+    );
+  } finally {
+    release?.();
+  }
+  return record;
+}
+function rewriteHistoryAtomic(stateDir, text2) {
+  const target = historyFilePath(stateDir);
+  const temp = join2(stateDir, `.${HISTORY_FILE}.tmp-${process.pid}`);
+  try {
+    writeFileSync(temp, text2, "utf8");
+    renameSync(temp, target);
+  } catch (error) {
+    try {
+      unlinkSync(temp);
+    } catch {
+    }
+    throw error;
+  }
+}
+
 // src/render/terminal/bar-chart.ts
 var import_picocolors = __toESM(require_picocolors(), 1);
 
@@ -7913,36 +8209,37 @@ function pad(value2, width, alignRight) {
   const filler = " ".repeat(gap);
   return alignRight ? filler + value2 : value2 + filler;
 }
-function renderTable(headers, rows, _opts) {
+function renderTable(headers, rows, opts) {
   const columnCount = headers.length;
-  const cellAt = (row, column) => row[column] ?? "";
+  const cellAt = (row2, column) => row2[column] ?? "";
   const widths = [];
   for (let c2 = 0; c2 < columnCount; c2++) {
     let width = displayWidth2(headers[c2] ?? "");
-    for (const row of rows) {
-      width = Math.max(width, displayWidth2(cellAt(row, c2)));
+    for (const row2 of rows) {
+      width = Math.max(width, displayWidth2(cellAt(row2, c2)));
     }
     widths.push(width);
   }
   const numericColumn = [];
   for (let c2 = 0; c2 < columnCount; c2++) {
+    const forced = opts.align?.[c2];
     numericColumn.push(
-      rows.length > 0 && rows.every((row) => isNumericCell(cellAt(row, c2)))
+      forced === "right" ? true : forced === "left" ? false : rows.length > 0 && rows.every((row2) => isNumericCell(cellAt(row2, c2)))
     );
   }
   const border = (left, mid, right) => left + widths.map((w) => "\u2500".repeat(w + 2)).join(mid) + right;
-  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell, c2) => {
+  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell3, c2) => {
     const right = alignNumeric && (numericColumn[c2] ?? false);
-    return ` ${pad(cell, widths[c2] ?? 0, right)} `;
+    return ` ${pad(cell3, widths[c2] ?? 0, right)} `;
   }).join("\u2502")}\u2502`;
   const lines = [];
   lines.push(border("\u250C", "\u252C", "\u2510"));
   lines.push(dataRow(headers, false));
   lines.push(border("\u251C", "\u253C", "\u2524"));
-  for (const row of rows) {
+  for (const row2 of rows) {
     lines.push(
       dataRow(
-        headers.map((_, c2) => cellAt(row, c2)),
+        headers.map((_, c2) => cellAt(row2, c2)),
         true
       )
     );
@@ -7970,9 +8267,9 @@ function glyphFor(status, color) {
 function renderMatrix(rows, columns, opts) {
   if (rows.length === 0) return "";
   const headers = ["", ...columns];
-  const tableRows = rows.map((row) => [
-    row.label,
-    ...row.cells.map((cell) => glyphFor(cell, opts.color))
+  const tableRows = rows.map((row2) => [
+    row2.label,
+    ...row2.cells.map((cell3) => glyphFor(cell3, opts.color))
   ]);
   return renderTable(headers, tableRows, { color: opts.color });
 }
@@ -8034,7 +8331,7 @@ function themeSubDocument(source, theme) {
 function loadModeMaps(tokenPath) {
   let raw;
   try {
-    raw = readFileSync(tokenPath, "utf8");
+    raw = readFileSync2(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -8095,10 +8392,10 @@ ${lines.join("\n")}`
 }
 async function resolveTokenPath(target) {
   const abs2 = resolve4(target);
-  if (!existsSync(abs2)) {
+  if (!existsSync2(abs2)) {
     return { kind: "error", message: `Path "${abs2}" does not exist.` };
   }
-  if (statSync(abs2).isFile()) return { kind: "ok", path: abs2 };
+  if (statSync2(abs2).isFile()) return { kind: "ok", path: abs2 };
   const discovered = await discoverTokenSources(abs2);
   if (discovered.kind === "explicit-not-found") {
     return {
@@ -8170,7 +8467,7 @@ function renderTerm(report, color) {
     const pair = `${finding.foreground} / ${finding.background}`;
     return [finding.mode, status, pair, findingDetail(finding)];
   });
-  const table = renderTable(["mode", "status", "pair", "detail"], rows, {
+  const table3 = renderTable(["mode", "status", "pair", "detail"], rows, {
     color
   });
   const { summary } = report;
@@ -8183,36 +8480,30 @@ function renderTerm(report, color) {
     `${summary.failed} of ${summary.total} pair(s) fail ${report.level} contrast` + (summary.unparseable > 0 ? ` (${summary.unparseable} unparseable).` : "."),
     { color }
   );
-  return [table, "", verdict].join("\n");
+  return [table3, "", verdict].join("\n");
 }
 function modeTallies(report) {
   const byMode = /* @__PURE__ */ new Map();
   for (const finding of report.findings) {
-    let tally2 = byMode.get(finding.mode);
-    if (tally2 === void 0) {
-      tally2 = { mode: finding.mode, passed: 0, failed: 0 };
-      byMode.set(finding.mode, tally2);
+    let tally3 = byMode.get(finding.mode);
+    if (tally3 === void 0) {
+      tally3 = { mode: finding.mode, passed: 0, failed: 0 };
+      byMode.set(finding.mode, tally3);
     }
-    if (finding.status === "pass") tally2.passed += 1;
-    else if (finding.status === "fail") tally2.failed += 1;
+    if (finding.status === "pass") tally3.passed += 1;
+    else if (finding.status === "fail") tally3.failed += 1;
   }
   return [...byMode.values()];
 }
 function appendA11yHistory(targetDir, report) {
-  const stateDir = join2(targetDir, ".ds-bridge");
+  const stateDir = join3(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "a11y",
     level: report.level,
     modes: modeTallies(report)
   };
-  mkdirSync(stateDir, { recursive: true });
-  appendFileSync(
-    join2(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
+  appendHistoryRecord(stateDir, record);
 }
 async function runA11y(path, options) {
   const format = options.format;
@@ -8242,7 +8533,7 @@ async function runA11y(path, options) {
   }
   const report = auditContrast(filtered.modes, { level });
   const resolvedTarget = resolve4(path);
-  if (existsSync(resolvedTarget) && statSync(resolvedTarget).isDirectory()) {
+  if (existsSync2(resolvedTarget) && statSync2(resolvedTarget).isDirectory()) {
     appendA11yHistory(resolvedTarget, report);
   }
   if (format === "json") {
@@ -8269,15 +8560,9 @@ function registerA11yCommand(program2) {
 }
 
 // src/cli-commands/adoption.ts
-import {
-  appendFileSync as appendFileSync2,
-  existsSync as existsSync2,
-  mkdirSync as mkdirSync2,
-  readFileSync as readFileSync2,
-  statSync as statSync2
-} from "fs";
-import { dirname, join as join3, resolve as resolve5 } from "path";
-import { fileURLToPath } from "url";
+import { existsSync as existsSync3, readFileSync as readFileSync3, statSync as statSync3 } from "fs";
+import { dirname as dirname2, join as join4, resolve as resolve5 } from "path";
+import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/engines/registry/coverage.ts
 var UNCOVERED_CAP = 20;
@@ -8316,8 +8601,8 @@ function fail2(message) {
   process.exitCode = 2;
 }
 function loadRegistry(targetDir) {
-  const registryPath = join3(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync2(registryPath)) {
+  const registryPath = join4(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync3(registryPath)) {
     fail2(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
     );
@@ -8325,7 +8610,7 @@ function loadRegistry(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync2(registryPath, "utf8");
+    raw = readFileSync3(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail2(
@@ -8346,16 +8631,16 @@ function loadRegistry(targetDir) {
 async function scanUsage(registry, projectDir) {
   const globals = globalThis;
   if (typeof globals.__filename !== "string") {
-    const filename = fileURLToPath(import.meta.url);
+    const filename = fileURLToPath2(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname(filename);
+    globals.__dirname = dirname2(filename);
   }
   const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
   const changedFigmaNames = registry.matches.map((m) => m.figmaName);
   return mapUsage({ registry, changedFigmaNames, projectDir });
 }
 function appendAdoptionHistory(targetDir, coverage) {
-  const stateDir = join3(targetDir, ".ds-bridge");
+  const stateDir = join4(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "adoption",
@@ -8363,13 +8648,7 @@ function appendAdoptionHistory(targetDir, coverage) {
     total: coverage.total,
     uncovered: coverage.uncovered
   };
-  mkdirSync2(stateDir, { recursive: true });
-  appendFileSync2(
-    join3(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
+  appendHistoryRecord(stateDir, record);
 }
 function renderTerm2(coverage, color) {
   const { imported, total, uncovered, uncoveredTotal } = coverage;
@@ -8414,7 +8693,7 @@ async function runAdoption(path, options) {
     return;
   }
   const targetDir = resolve5(path);
-  if (!existsSync2(targetDir) || !statSync2(targetDir).isDirectory()) {
+  if (!existsSync3(targetDir) || !statSync3(targetDir).isDirectory()) {
     fail2(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -8445,19 +8724,371 @@ function registerAdoptionCommand(program2) {
   });
 }
 
-// src/cli-commands/badge.ts
+// src/cli-commands/analytics.ts
+import { existsSync as existsSync7, mkdirSync as mkdirSync4, statSync as statSync5, writeFileSync as writeFileSync4 } from "fs";
+import { join as join8, resolve as resolve7 } from "path";
+
+// src/engines/report/debt.ts
+var WEIGHT = {
+  deprecated: 8,
+  detached: 5,
+  "off-system": 2,
+  duplicate: 6
+};
+var MEDIUM_AT = 25;
+var HIGH_AT = 60;
+function asNumber(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function nonEmptyString(value2) {
+  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
+}
+function debtLevel(pct5) {
+  return bandLevel(pct5);
+}
+function bandLevel(pct5) {
+  if (pct5 >= HIGH_AT) return "high";
+  if (pct5 >= MEDIUM_AT) return "medium";
+  return "low";
+}
+function buildDebt(input) {
+  const rows = [];
+  for (const group of input.deprecatedUsage ?? []) {
+    if (group === null || typeof group !== "object") continue;
+    const subject = nonEmptyString(group.componentName);
+    if (subject === void 0) continue;
+    const count = asNumber(group.count);
+    rows.push({
+      magnitude: count,
+      item: {
+        kind: "deprecated",
+        subject,
+        count,
+        weight: WEIGHT.deprecated,
+        recommendation: `Replace deprecated "${subject}" with its supported DS component`
+      }
+    });
+  }
+  const deprecatedCount = asNumber(input.deprecatedCount);
+  if (deprecatedCount > 0 && !rows.some((r2) => r2.item.kind === "deprecated")) {
+    rows.push({
+      magnitude: deprecatedCount,
+      item: {
+        kind: "deprecated",
+        subject: "deprecated components",
+        count: deprecatedCount,
+        weight: WEIGHT.deprecated,
+        recommendation: `Replace ${deprecatedCount} ${deprecatedCount === 1 ? "usage" : "usages"} of deprecated components (run ds-bridge library-health for the list)`
+      }
+    });
+  }
+  for (const candidate of input.detachedCandidates ?? []) {
+    if (candidate === null || typeof candidate !== "object") continue;
+    const subject = nonEmptyString(candidate.name);
+    if (subject === void 0) continue;
+    rows.push({
+      magnitude: 1,
+      item: {
+        kind: "detached",
+        subject,
+        count: 1,
+        weight: WEIGHT.detached,
+        recommendation: `Re-attach detached "${subject}" to its DS component (heuristic \u2014 verify)`
+      }
+    });
+  }
+  const detachedCount = asNumber(input.detachedCount);
+  if (detachedCount > 0 && !rows.some((r2) => r2.item.kind === "detached")) {
+    rows.push({
+      magnitude: detachedCount,
+      item: {
+        kind: "detached",
+        subject: "detached instances",
+        count: detachedCount,
+        weight: WEIGHT.detached,
+        recommendation: `Re-attach ${detachedCount} detached ${detachedCount === 1 ? "instance to its DS component" : "instances to their DS components"} (heuristic \u2014 verify)`
+      }
+    });
+  }
+  const offSystem = asNumber(input.offSystem);
+  if (offSystem > 0) {
+    rows.push({
+      magnitude: offSystem,
+      item: {
+        kind: "off-system",
+        subject: "off-system values",
+        count: offSystem,
+        weight: WEIGHT["off-system"],
+        recommendation: `Replace ${offSystem} off-system ${offSystem === 1 ? "value" : "values"} with design tokens (run ds-bridge lint to list them)`
+      }
+    });
+  }
+  for (const cluster of input.duplicates ?? []) {
+    if (cluster === null || typeof cluster !== "object") continue;
+    const subject = nonEmptyString(cluster.name);
+    if (subject === void 0) continue;
+    const implementations = asNumber(cluster.implementations);
+    if (implementations < 2) continue;
+    rows.push({
+      magnitude: implementations - 1,
+      item: {
+        kind: "duplicate",
+        subject,
+        count: implementations,
+        weight: WEIGHT.duplicate,
+        recommendation: `Merge ${implementations} implementations of "${subject}" into one DS component`
+      }
+    });
+  }
+  const raw = rows.reduce((sum, r2) => sum + r2.item.weight * r2.magnitude, 0);
+  const pct5 = Math.min(100, Math.round(raw));
+  const items = rows.sort((a, b) => {
+    const wa = a.item.weight * a.magnitude;
+    const wb = b.item.weight * b.magnitude;
+    if (wa !== wb) return wb - wa;
+    return a.item.subject < b.item.subject ? -1 : a.item.subject > b.item.subject ? 1 : 0;
+  }).map((r2) => r2.item);
+  return { pct: pct5, level: bandLevel(pct5), items };
+}
+
+// src/engines/report/analytics-artifacts.ts
+var ANALYTICS_DOMAINS = [
+  "figma",
+  "code",
+  "token",
+  "git",
+  "score"
+];
+var ANALYTICS_SCHEMA_VERSION = 1;
+var DOMAIN_OF = {
+  libraryHealth: "figma",
+  libraryHealthTrend: "figma",
+  libraryHotspotsTrend: "figma",
+  frameReadinessTrend: "figma",
+  handoffPassRate: "figma",
+  readiness: "figma",
+  frameImplementability: "figma",
+  lintSummary: "code",
+  leaderboard: "code",
+  adoptionTrend: "code",
+  importCoverage: "code",
+  parity: "code",
+  parityTrend: "code",
+  componentHealth: "code",
+  impact: "code",
+  migrationChecklist: "code",
+  driftTrend: "token",
+  a11y: "token",
+  breakingCalendar: "token",
+  changeFrequency: "git",
+  audienceChangelog: "git",
+  ownershipLeaderboard: "git",
+  scoreVelocity: "git",
+  systemScore: "score",
+  consistency: "score",
+  debt: "score",
+  executive: "score",
+  targets: "score",
+  dataFreshness: "score",
+  releaseReadiness: "score"
+};
+var ARTIFACT_FILE = {
+  figma: "figma-metrics.json",
+  code: "code-metrics.json",
+  token: "token-metrics.json",
+  git: "git-metrics.json",
+  score: "design-system-score.json"
+};
+var MERGED_ARTIFACT_FILE = "analytics.json";
+var DOMAIN_HINT = {
+  figma: "ds-bridge record --figma (per-frame readiness: ds-bridge handoff / ds-bridge frame-impl)",
+  code: "ds-bridge record",
+  token: "ds-bridge tokens check",
+  git: "ds-bridge changelog",
+  score: "ds-bridge record"
+};
+function isPresent(key, value2) {
+  if (value2 === void 0 || value2 === null) return false;
+  if (key === "dataFreshness") {
+    return value2.some((r2) => r2.band !== "unknown");
+  }
+  if (Array.isArray(value2)) return value2.length > 0;
+  if (key === "breakingCalendar") {
+    return value2.entries.length > 0;
+  }
+  if (key === "changeFrequency") {
+    return value2.byKind.length > 0;
+  }
+  if (key === "executive") return Object.keys(value2).length > 0;
+  return true;
+}
+function domainSlice(domain, data) {
+  const metrics = {};
+  for (const [key, owner] of Object.entries(DOMAIN_OF)) {
+    if (owner !== domain) continue;
+    const value2 = data[key];
+    if (isPresent(key, value2)) metrics[key] = value2;
+  }
+  return Object.keys(metrics).length > 0 ? { status: "ok", metrics } : { status: "no-data", metrics: {}, hint: DOMAIN_HINT[domain] };
+}
+function buildDomainArtifact(domain, data) {
+  return {
+    schema: `ds-bridge/analytics/${domain}`,
+    schemaVersion: ANALYTICS_SCHEMA_VERSION,
+    domain,
+    generatedAt: data.generatedAt,
+    project: data.project,
+    ...domainSlice(domain, data)
+  };
+}
+function buildAnalytics(data) {
+  const domains = {};
+  for (const domain of ANALYTICS_DOMAINS) {
+    domains[domain] = domainSlice(domain, data);
+  }
+  return {
+    schema: "ds-bridge/analytics",
+    schemaVersion: ANALYTICS_SCHEMA_VERSION,
+    generatedAt: data.generatedAt,
+    project: data.project,
+    ...data.executive !== void 0 && isPresent("executive", data.executive) ? { executive: data.executive } : {},
+    domains
+  };
+}
+function sortKeys(value2) {
+  if (Array.isArray(value2)) return value2.map(sortKeys);
+  if (typeof value2 === "object" && value2 !== null) {
+    const out = {};
+    for (const key of Object.keys(value2).sort()) {
+      out[key] = sortKeys(value2[key]);
+    }
+    return out;
+  }
+  return value2;
+}
+function stableStringify(value2) {
+  return `${JSON.stringify(sortKeys(value2), null, 2)}
+`;
+}
+function parseEmit(raw) {
+  if (raw === "all") {
+    return { kind: "ok", domains: [...ANALYTICS_DOMAINS], merged: true };
+  }
+  const domain = ANALYTICS_DOMAINS.find((d) => d === raw);
+  if (domain !== void 0)
+    return { kind: "ok", domains: [domain], merged: false };
+  return {
+    kind: "error",
+    message: `Unknown --emit "${raw}". Expected one of: ${ANALYTICS_DOMAINS.join(", ")}, all.`
+  };
+}
+function renderAnalyticsTerm(doc) {
+  const ex = doc.executive ?? {};
+  const nm = "not measured";
+  const measured = ex.health !== void 0 || ex.adoption !== void 0 || ex.consistency !== void 0 || ex.debt !== void 0;
+  const lines = [
+    `Design system analytics \u2014 ${doc.project} (${doc.generatedAt.slice(0, 10)})`,
+    "",
+    // E8 — the exec-report labels: import coverage (registry), not "adoption";
+    // debt as an index with its level, not a percentage.
+    `  ${"Health".padEnd(17)}${ex.health !== void 0 ? `${ex.health}/100` : nm}`,
+    `  ${"Import coverage".padEnd(17)}${ex.adoption !== void 0 ? `${ex.adoption}%` : `${nm} \u2014 run ds-bridge registry build, then ds-bridge record`}`,
+    `  ${"Consistency".padEnd(17)}${ex.consistency !== void 0 ? `${ex.consistency}/100` : nm}`,
+    `  ${"Debt".padEnd(17)}${ex.debt !== void 0 ? `${ex.debt}/100 (${debtLevel(ex.debt)})` : nm}`,
+    "",
+    "Domains:"
+  ];
+  for (const domain of ANALYTICS_DOMAINS) {
+    const slice = doc.domains[domain];
+    const label = domain.padEnd(7);
+    if (slice.status === "ok") {
+      const n = Object.keys(slice.metrics).length;
+      lines.push(`  ${label} ok (${n} section${n === 1 ? "" : "s"})`);
+    } else {
+      lines.push(
+        `  ${label} no data \u2014 run ${slice.hint ?? "ds-bridge record"}`
+      );
+    }
+  }
+  lines.push(
+    "",
+    measured ? "Write the JSON artifacts with `ds-bridge analytics --emit all` (to .ds-bridge/analytics/)." : "Nothing recorded yet \u2014 run ds-bridge record."
+  );
+  return `${lines.join("\n")}
+`;
+}
+
+// src/cli-commands/report.ts
+import { spawn } from "child_process";
 import {
-  existsSync as existsSync4,
+  existsSync as existsSync6,
   mkdirSync as mkdirSync3,
-  readFileSync as readFileSync4,
-  statSync as statSync3,
-  writeFileSync as writeFileSync2
+  readFileSync as readFileSync6,
+  statSync as statSync4,
+  writeFileSync as writeFileSync3
 } from "fs";
-import { dirname as dirname2, join as join5, resolve as resolve6 } from "path";
+import { basename, dirname as dirname3, join as join7, resolve as resolve6 } from "path";
+import { platform } from "process";
 
 // src/config.ts
-import { existsSync as existsSync3, readFileSync as readFileSync3, renameSync, writeFileSync } from "fs";
-import { join as join4 } from "path";
+import { existsSync as existsSync4, readFileSync as readFileSync4, renameSync as renameSync2, writeFileSync as writeFileSync2 } from "fs";
+import { join as join5 } from "path";
+
+// src/engines/handoff/parse-url.ts
+var KEY_PATH_TYPES = /* @__PURE__ */ new Set(["file", "design", "proto"]);
+function isFigmaHost(host) {
+  const lower = host.toLowerCase();
+  return lower === "figma.com" || lower.endsWith(".figma.com");
+}
+function normalizeNodeId(raw) {
+  let value2 = raw;
+  try {
+    value2 = decodeURIComponent(raw);
+  } catch {
+    value2 = raw;
+  }
+  if (value2.length === 0) return void 0;
+  return value2.replace(/-/g, ":");
+}
+var INVALID = (message) => ({
+  kind: "invalid-url",
+  message
+});
+function parseFigmaUrl(url) {
+  if (typeof url !== "string") return INVALID("URL must be a string.");
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return INVALID("URL is empty.");
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  let parsed;
+  try {
+    parsed = new URL(withScheme);
+  } catch {
+    return INVALID(`Not a parseable URL: "${url}".`);
+  }
+  if (!isFigmaHost(parsed.hostname)) {
+    return INVALID(`Not a figma.com URL: "${url}".`);
+  }
+  const segments3 = parsed.pathname.split("/").filter((s) => s.length > 0);
+  if (segments3.length === 0) {
+    return INVALID("Figma URL is missing a file key.");
+  }
+  const [pathType, ...rest] = segments3;
+  if (pathType === void 0 || !KEY_PATH_TYPES.has(pathType)) {
+    return INVALID(`Unsupported Figma URL path "/${pathType ?? ""}".`);
+  }
+  const keySegment = rest[0];
+  if (keySegment === void 0 || keySegment.length === 0) {
+    return INVALID("Figma URL is missing a file key.");
+  }
+  let fileKey = keySegment;
+  const branchKey = rest[2];
+  if (rest[1] === "branch" && branchKey !== void 0 && branchKey.length > 0) {
+    fileKey = branchKey;
+  }
+  const nodeIdRaw = parsed.searchParams.get("node-id");
+  const nodeId = nodeIdRaw === null ? void 0 : normalizeNodeId(nodeIdRaw);
+  return nodeId === void 0 ? { kind: "ok", fileKey } : { kind: "ok", fileKey, nodeId };
+}
 
 // src/engines/report/catalog.ts
 var ALL_PERSONAS = [
@@ -8623,6 +9254,49 @@ var CATALOG = [
     title: "Data freshness",
     personas: ALL_PERSONAS,
     reportDataKey: "dataFreshness"
+  },
+  // ─── Executive layer (AN5) — appended so `everything` keeps catalog order ──
+  {
+    id: "consistency",
+    title: "Consistency",
+    personas: ["ds-designer", "ds-manager", "ds-engineer", "product-manager"],
+    reportDataKey: "consistency"
+  },
+  {
+    id: "design-debt",
+    title: "Design debt",
+    personas: ["ds-designer", "ds-manager", "ds-engineer"],
+    reportDataKey: "debt"
+  },
+  {
+    id: "executive",
+    title: "Executive summary",
+    personas: ["ds-manager", "product-manager"],
+    reportDataKey: "executive"
+  },
+  // ─── Figma + per-frame trends (F5) — appended (everything keeps catalog order) ──
+  {
+    id: "library-hotspots-trend",
+    title: "Library hotspots trend",
+    personas: ["ds-designer", "ds-manager"],
+    reportDataKey: "libraryHotspotsTrend"
+  },
+  {
+    id: "frame-readiness-trend",
+    title: "Frame readiness trend",
+    personas: ["ds-designer", "product-designer", "product-manager"],
+    reportDataKey: "frameReadinessTrend"
+  },
+  {
+    id: "handoff-pass-rate",
+    title: "Handoff pass rate",
+    personas: [
+      "ds-designer",
+      "ds-manager",
+      "product-designer",
+      "product-manager"
+    ],
+    reportDataKey: "handoffPassRate"
   }
 ];
 var ALL_ARTIFACT_IDS = CATALOG.map((a) => a.id);
@@ -8668,6 +9342,34 @@ function lookupArtifact(id) {
   return { kind: "unknown", id, suggestions: suggestArtifactIds(id) };
 }
 
+// src/engines/report/history-lines.ts
+function asObject(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function replayHistory(text2) {
+  const records = [];
+  const lines = text2.split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = (lines[i] ?? "").trim();
+    if (trimmed === "") continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+    const record = asObject(parsed);
+    if (record === void 0) continue;
+    if (typeof record.kind !== "string") continue;
+    const entry = { kind: record.kind, record };
+    if (typeof record.at === "string") entry.at = record.at;
+    const envelope = envelopeOf(record);
+    if (envelope !== void 0) entry.envelope = envelope;
+    records.push(entry);
+  }
+  return records;
+}
+
 // src/engines/report/score.ts
 var DEFAULT_WEIGHTS = {
   drift: 25,
@@ -8697,7 +9399,7 @@ var COMPONENT_ORDER = [
   "adoption",
   "parity"
 ];
-function asNumber(value2) {
+function asNumber2(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
 function clamp01(value2) {
@@ -8732,16 +9434,16 @@ function validateWeights(raw) {
   return { kind: "ok", weights };
 }
 function driftScore(r2) {
-  const penalty = 25 * asNumber(r2.stale) + 10 * asNumber(r2.missing) + 5 * asNumber(r2.orphan);
+  const penalty = 25 * asNumber2(r2.stale) + 10 * asNumber2(r2.missing) + 5 * asNumber2(r2.orphan);
   return Math.max(0, 100 - penalty);
 }
 function lintScore(r2) {
   const byKind = typeof r2.byKind === "object" && r2.byKind !== null ? r2.byKind : {};
-  const penalty = 10 * asNumber(byKind.offSystem) + 5 * asNumber(byKind.near) + 2 * asNumber(byKind.exact);
+  const penalty = 10 * asNumber2(byKind.offSystem) + 5 * asNumber2(byKind.near) + 2 * asNumber2(byKind.exact);
   return Math.max(0, 100 - penalty);
 }
 function readinessScore(r2) {
-  return clamp01(asNumber(r2.score));
+  return clamp01(asNumber2(r2.score));
 }
 function a11yScore(r2) {
   const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
@@ -8750,8 +9452,8 @@ function a11yScore(r2) {
   for (const m of modes2) {
     if (typeof m === "object" && m !== null) {
       const mm = m;
-      passed += asNumber(mm.passed);
-      failed += asNumber(mm.failed);
+      passed += asNumber2(mm.passed);
+      failed += asNumber2(mm.failed);
     }
   }
   const total = passed + failed;
@@ -8761,19 +9463,19 @@ function a11yScore(r2) {
 function adoptionScore(record) {
   const adoption = typeof record.adoption === "object" && record.adoption !== null ? record.adoption : void 0;
   if (adoption === void 0) return void 0;
-  const refs = asNumber(adoption.refs);
-  const literals = asNumber(adoption.literals);
+  const refs = asNumber2(adoption.refs);
+  const literals = asNumber2(adoption.literals);
   const total = refs + literals;
   if (total <= 0) return void 0;
   return 100 * refs / total;
 }
 function parityScore(record) {
-  const total = asNumber(record.total);
+  const total = asNumber2(record.total);
   if (total <= 0) return void 0;
   if (typeof record.score === "number" && Number.isFinite(record.score)) {
     return clamp01(record.score);
   }
-  const ok = asNumber(record.ok);
+  const ok = asNumber2(record.ok);
   return clamp01(100 * ok / total);
 }
 function componentKindFor(historyKind) {
@@ -8837,17 +9539,7 @@ function combineScore(latest, weights) {
 function scoreFromHistory(text2, weights) {
   const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
   const entries = [];
-  const lines = text2.split("\n");
-  for (let i = 0; i < lines.length; i += 1) {
-    const trimmed = (lines[i] ?? "").trim();
-    if (trimmed === "") continue;
-    let record;
-    try {
-      record = JSON.parse(trimmed);
-    } catch {
-      continue;
-    }
-    if (typeof record !== "object" || record === null) continue;
+  for (const { record } of replayHistory(text2)) {
     const component = componentKindFor(record.kind);
     if (component === void 0) continue;
     const date = typeof record.at === "string" ? record.at.slice(0, 10) : void 0;
@@ -9153,6 +9845,32 @@ function parseProjectFile(text2) {
       names.push(entry);
     }
     values.publish = names;
+  }
+  if (obj.tracked_frames !== void 0) {
+    if (!Array.isArray(obj.tracked_frames)) {
+      return {
+        kind: "invalid",
+        message: "tracked_frames must be an array of Figma frame URLs"
+      };
+    }
+    const frames = [];
+    for (const entry of obj.tracked_frames) {
+      if (typeof entry !== "string" || entry.trim() === "") {
+        return {
+          kind: "invalid",
+          message: `tracked_frames must contain only Figma frame URLs, got ${JSON.stringify(entry)}`
+        };
+      }
+      const parsed = parseFigmaUrl(entry);
+      if (parsed.kind !== "ok") {
+        return {
+          kind: "invalid",
+          message: `tracked_frames has an invalid Figma URL ${JSON.stringify(entry)}: ${parsed.message}`
+        };
+      }
+      frames.push(entry);
+    }
+    values.trackedFrames = frames;
   }
   if (obj.score_weights !== void 0) {
     if (typeof obj.score_weights !== "object" || obj.score_weights === null || Array.isArray(obj.score_weights)) {
@@ -9536,7 +10254,8 @@ function resolveConfig(inputs) {
     ownershipFile: project.ownershipFile,
     componentAliases: project.componentAliases,
     migrationSitesCap: project.migrationSitesCap ?? DEFAULT_MIGRATION_SITES_CAP,
-    scoreVelocityWindow: project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW
+    scoreVelocityWindow: project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW,
+    trackedFrames: project.trackedFrames
   };
   return { kind: "ok", config, warnings };
 }
@@ -9610,14 +10329,14 @@ function atomicWriteJson(filePath, obj) {
   const text2 = `${JSON.stringify(obj, null, 2)}
 `;
   const tempPath = `${filePath}.${process.pid}.tmp`;
-  writeFileSync(tempPath, text2, "utf8");
-  renameSync(tempPath, filePath);
+  writeFileSync2(tempPath, text2, "utf8");
+  renameSync2(tempPath, filePath);
 }
 function writeProjectConfig(dir, patch) {
-  const filePath = join4(dir, PROJECT_FILE_NAME);
+  const filePath = join5(dir, PROJECT_FILE_NAME);
   let existing = {};
-  if (existsSync3(filePath)) {
-    const raw = JSON.parse(readFileSync3(filePath, "utf8"));
+  if (existsSync4(filePath)) {
+    const raw = JSON.parse(readFileSync4(filePath, "utf8"));
     if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
       existing = raw;
     }
@@ -9633,6713 +10352,77 @@ function writeProjectConfig(dir, patch) {
   atomicWriteJson(filePath, merged);
 }
 
-// src/engines/report/presets.ts
-function presetFor(persona) {
-  return CATALOG.filter(
-    (meta) => meta.personas.includes(persona)
-  ).map((meta) => meta.id);
-}
-var PRESETS = {
-  "ds-designer": presetFor("ds-designer"),
-  "ds-manager": presetFor("ds-manager"),
-  "ds-engineer": presetFor("ds-engineer"),
-  "product-designer": presetFor("product-designer"),
-  "product-manager": presetFor("product-manager"),
-  "product-engineer": presetFor("product-engineer"),
-  everything: [...ALL_ARTIFACT_IDS]
-};
-var PRESET_NAMES = Object.keys(PRESETS);
-var PRESET_DESCRIPTIONS = {
-  "ds-designer": "Authors the Figma library; needs it clean, handoff-ready, accessible, and in parity with code.",
-  "ds-manager": "DesignOps governance: health, adoption, targets, ownership, and release comms across teams.",
-  "ds-engineer": "Owns tokens\u2194code and Figma\u2194code parity; source of breaking changes; pre-publish gatekeeper.",
-  "product-designer": "Designs product screens by consuming the library; tracks what is safe to build on and when it breaks.",
-  "product-manager": "Delivery/risk owner; tracks adoption and upstream breakage against targets.",
-  "product-engineer": "Builds product UI from the DS-code package; works a migration queue of breaking changes.",
-  everything: "The full 24-artifact catalog \u2014 the no-setup escape for an unconfigured repo."
-};
-function editDistance4(a, b) {
-  const rows = a.length + 1;
-  const cols = b.length + 1;
-  const dist = Array.from({ length: rows * cols }, () => 0);
-  for (let i = 0; i < rows; i++) {
-    dist[i * cols] = i;
-  }
-  for (let j = 0; j < cols; j++) {
-    dist[j] = j;
-  }
-  for (let i = 1; i < rows; i++) {
-    for (let j = 1; j < cols; j++) {
-      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
-      dist[i * cols + j] = Math.min(
-        (dist[(i - 1) * cols + j] ?? 0) + 1,
-        (dist[i * cols + j - 1] ?? 0) + 1,
-        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
-      );
-    }
-  }
-  return dist[rows * cols - 1] ?? 0;
-}
-function suggestViewNames(input, limit = 3) {
-  const needle = input.toLowerCase();
-  const MAX_DISTANCE = 4;
-  return PRESET_NAMES.map((name, index) => ({
-    name,
-    index,
-    prefix: name.startsWith(needle),
-    distance: editDistance4(needle, name)
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
-    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.name);
-}
-function isPresetName(value2) {
-  return Object.hasOwn(PRESETS, value2);
-}
-function resolveSource(selection, source) {
-  const view = selection.view;
-  const requested = selection.artifacts !== void 0 && selection.artifacts.length > 0 ? selection.artifacts : void 0;
-  if (view !== void 0 && requested !== void 0) {
-    return { kind: "conflicting-selection", source };
-  }
-  if (view !== void 0) {
-    if (!isPresetName(view)) {
-      return {
-        kind: "unknown-view",
-        view,
-        suggestions: suggestViewNames(view)
-      };
-    }
-    return {
-      kind: "ok",
-      artifacts: [...PRESETS[view]],
-      source,
-      viewName: view,
-      notices: []
-    };
-  }
-  if (requested !== void 0) {
-    const seen = /* @__PURE__ */ new Set();
-    const ordered = [];
-    let duplicates = 0;
-    for (const id of requested) {
-      const outcome = lookupArtifact(id);
-      if (outcome.kind === "unknown") {
-        return {
-          kind: "unknown-artifact",
-          id: outcome.id,
-          suggestions: outcome.suggestions
-        };
-      }
-      const resolved = outcome.artifact.id;
-      if (seen.has(resolved)) {
-        duplicates += 1;
-        continue;
-      }
-      seen.add(resolved);
-      ordered.push(resolved);
-    }
-    const notices = duplicates > 0 ? [
-      `Removed ${duplicates} duplicate artifact id${duplicates === 1 ? "" : "s"} from the selection.`
-    ] : [];
-    return { kind: "ok", artifacts: ordered, source, notices };
-  }
-  return void 0;
-}
-function resolveView(flags, projectConfig) {
-  const fromFlags = resolveSource(flags, "flags");
-  if (fromFlags !== void 0) {
-    return fromFlags;
-  }
-  const fromProject = resolveSource(projectConfig, "project");
-  if (fromProject !== void 0) {
-    return fromProject;
-  }
-  return {
-    kind: "ok",
-    artifacts: [...PRESETS.everything],
-    source: "default",
-    viewName: "everything",
-    notices: []
-  };
-}
-
-// src/render/html/badge.ts
-var DEFAULT_LABEL = "ds-bridge";
-var LABEL_BG = "#404040";
-var TEXT_COLOR = "#ffffff";
-var BAND_GREEN = "#16a34a";
-var BAND_AMBER = "#d97706";
-var BAND_RED = "#dc2626";
-var CHAR_WIDTH = 7;
-var SEGMENT_PADDING = 10;
-var HEIGHT = 20;
-var FONT_SIZE = 11;
-function escapeXml(value2) {
-  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-function clamp2(value2, min, max) {
-  if (value2 < min) return min;
-  if (value2 > max) return max;
-  return value2;
-}
-function roundHalfUp2(value2) {
-  return Math.round(value2);
-}
-function bandFill(score) {
-  if (score >= 90) return BAND_GREEN;
-  if (score >= 70) return BAND_AMBER;
-  return BAND_RED;
-}
-function segmentWidth(text2) {
-  return text2.length * CHAR_WIDTH + SEGMENT_PADDING * 2;
-}
-function renderBadge(input) {
-  const label = input.label ?? DEFAULT_LABEL;
-  const display = roundHalfUp2(clamp2(input.score, 0, 100));
-  const valueText = `${display}/100`;
-  const fill = bandFill(display);
-  const labelW = segmentWidth(label);
-  const valueW = segmentWidth(valueText);
-  const totalW = labelW + valueW;
-  const safeLabel = escapeXml(label);
-  const safeValue = escapeXml(valueText);
-  const title = `${label} system score: ${valueText}`;
-  const labelMid = labelW / 2;
-  const valueMid = labelW + valueW / 2;
-  const textY = HEIGHT / 2 + FONT_SIZE / 2 - 2;
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${HEIGHT}" viewBox="0 0 ${totalW} ${HEIGHT}" role="img">`,
-    `<title>${escapeXml(title)}</title>`,
-    `<rect x="0" y="0" width="${labelW}" height="${HEIGHT}" fill="${LABEL_BG}" />`,
-    `<rect x="${labelW}" y="0" width="${valueW}" height="${HEIGHT}" fill="${fill}" />`,
-    `<text x="${labelMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeLabel}</text>`,
-    `<text x="${valueMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeValue}</text>`,
-    "</svg>"
-  ].join("");
-}
-
-// src/cli-commands/badge.ts
-function fail3(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function noDataMessage(historyPath) {
-  return [
-    `No system-score data in ${historyPath}.`,
-    "",
-    "The badge is computed by replaying the project history. Populate it first by",
-    "running a check that appends a history line, for example:",
-    "",
-    "  /ds-bridge:ds-lint        \u2014 DS-aware lint violations",
-    "  ds-bridge tokens check    \u2014 token drift (token-check)",
-    "",
-    "Then run `ds-bridge badge` again."
-  ].join("\n");
-}
-function readProjectConfigText(targetDir) {
-  const configPath = join5(targetDir, ".ds-bridge.json");
-  if (!existsSync4(configPath)) return void 0;
-  try {
-    return readFileSync4(configPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
-function runBadge(path, options) {
-  const targetDir = resolve6(path);
-  if (!existsSync4(targetDir) || !statSync3(targetDir).isDirectory()) {
-    fail3(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const stateDir = join5(targetDir, ".ds-bridge");
-  const historyPath = join5(stateDir, "history.jsonl");
-  let historyText;
-  try {
-    historyText = readFileSync4(historyPath, "utf8");
-  } catch {
-    fail3(noDataMessage(historyPath));
-    return;
-  }
-  const projectFileText = readProjectConfigText(targetDir);
-  let weightProfile = resolveWeightProfile(void 0, void 0, void 0);
-  if (projectFileText !== void 0) {
-    const resolved = resolveConfig({ projectFileText });
-    if (resolved.kind !== "ok") {
-      fail3(resolved.message);
-      return;
-    }
-    const cfg = resolved.config;
-    const view = resolveView(
-      {},
-      {
-        ...cfg.dashboardView !== void 0 ? { view: cfg.dashboardView } : {},
-        ...cfg.dashboardArtifacts !== void 0 ? { artifacts: cfg.dashboardArtifacts } : {}
-      }
-    );
-    const viewName = view.kind === "ok" && view.source !== "default" ? view.viewName : void 0;
-    weightProfile = resolveWeightProfile(
-      viewName,
-      cfg.scoreWeights,
-      cfg.scoreWeightsByView
-    );
-  }
-  const outcome = scoreFromHistory(historyText, weightProfile.weights);
-  if (outcome.kind === "no-data") {
-    fail3(noDataMessage(historyPath));
-    return;
-  }
-  const svg = renderBadge({ score: outcome.current });
-  const outPath = options.out !== void 0 ? resolve6(options.out) : join5(stateDir, "badge.svg");
-  try {
-    mkdirSync3(dirname2(outPath), { recursive: true });
-    writeFileSync2(outPath, svg, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail3(`Could not write badge to "${outPath}": ${detail}`);
-    return;
-  }
-  process.stdout.write(`${outPath}
-`);
-  process.exitCode = 0;
-}
-function registerBadgeCommand(program2) {
-  program2.command("badge").description(
-    "Render a self-contained system-score SVG badge from the project history"
-  ).argument("[path]", "project directory to badge", ".").option("--out <file>", "output file (default <path>/.ds-bridge/badge.svg)").action((path, options) => {
-    runBadge(path, options);
-  });
-}
-
-// src/cli-commands/changelog.ts
-import { appendFileSync as appendFileSync3, mkdirSync as mkdirSync4 } from "fs";
-import { join as join6 } from "path";
-import { cwd as processCwd } from "process";
-
-// src/engines/changelog/aggregate.ts
-var SOURCE_ORDER = {
-  figma: 0,
-  code: 1,
-  tokens: 2
-};
-var SEVERITY_ORDER = {
-  breaking: 0,
-  notable: 1,
-  minor: 2
-};
-var CONVENTIONAL_HEADER = /^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/;
-function toIso(value2) {
-  const ms = Date.parse(value2);
-  if (Number.isNaN(ms)) return value2;
-  return new Date(ms).toISOString();
-}
-function withinSince(dateIso, since) {
-  const at = Date.parse(dateIso);
-  const from = Date.parse(since);
-  if (Number.isNaN(at) || Number.isNaN(from)) return true;
-  return at >= from;
-}
-function valuePreview(token) {
-  const { value: value2 } = token;
-  if (typeof value2 === "string" || typeof value2 === "number")
-    return String(value2);
-  return JSON.stringify(value2);
-}
-function fromDiffEntry(entry, dateIso) {
-  const severity = entry.impact === "breaking" ? "breaking" : "notable";
-  switch (entry.kind) {
-    case "added":
-      return {
-        id: `tokens:added:${entry.token.name}`,
-        dateIso,
-        source: "tokens",
-        audience: "both",
-        severity,
-        title: `Token added: ${entry.token.name}`,
-        detail: `${entry.token.type} = ${valuePreview(entry.token)}`
-      };
-    case "removed":
-      return {
-        id: `tokens:removed:${entry.token.name}`,
-        dateIso,
-        source: "tokens",
-        audience: "both",
-        severity,
-        title: `Token removed: ${entry.token.name}`,
-        detail: `was ${entry.token.type} = ${valuePreview(entry.token)}`
-      };
-    case "renamed":
-      return {
-        id: `tokens:renamed:${entry.from.name}->${entry.to.name}`,
-        dateIso,
-        source: "tokens",
-        audience: "both",
-        severity,
-        title: `Token renamed: ${entry.from.name} \u2192 ${entry.to.name}`,
-        detail: `${entry.to.type} = ${valuePreview(entry.to)}`
-      };
-    case "value-changed":
-      return {
-        id: `tokens:value-changed:${entry.after.name}`,
-        dateIso,
-        source: "tokens",
-        audience: "both",
-        severity,
-        title: `Token changed: ${entry.after.name}`,
-        detail: `${valuePreview(entry.before)} \u2192 ${valuePreview(entry.after)}`
-      };
-    case "meta-changed": {
-      const meta = entry.after.description ?? entry.after.group;
-      return withDetail(
-        {
-          id: `tokens:meta-changed:${entry.after.name}`,
-          dateIso,
-          source: "tokens",
-          audience: "both",
-          severity,
-          title: `Token metadata changed: ${entry.after.name}`
-        },
-        meta
-      );
-    }
-  }
-}
-function withDetail(base, detail) {
-  return detail === void 0 ? base : { ...base, detail };
-}
-function fromCommit(commit) {
-  const lines = commit.subject.split("\n");
-  const header = (lines[0] ?? "").trim();
-  const hasBreakingFooter = /(^|\n)BREAKING CHANGE:/.test(commit.subject);
-  const match = CONVENTIONAL_HEADER.exec(header);
-  let severity = "minor";
-  let title = header;
-  if (match) {
-    const type = match[1];
-    const bang = match[3];
-    const subject = match[4] ?? header;
-    title = subject;
-    if (bang !== void 0 || hasBreakingFooter) {
-      severity = "breaking";
-    } else if (type === "feat") {
-      severity = "notable";
-    } else if (type === "fix") {
-      severity = "minor";
-    } else {
-      severity = "minor";
-    }
-  } else if (hasBreakingFooter) {
-    severity = "breaking";
-  }
-  return {
-    id: `code:${commit.hash}`,
-    dateIso: toIso(commit.dateIso),
-    source: "code",
-    audience: "developer",
-    severity,
-    title,
-    detail: commit.author
-  };
-}
-function fromVersion(version) {
-  const description = (version.description ?? "").trim();
-  return withDetail(
-    {
-      id: `figma:${version.id}`,
-      dateIso: toIso(version.created_at),
-      source: "figma",
-      audience: "designer",
-      severity: "notable",
-      title: (version.label ?? "").trim()
-    },
-    description === "" ? void 0 : description
-  );
-}
-function compareEntries(a, b) {
-  const dateDelta = Date.parse(b.dateIso) - Date.parse(a.dateIso);
-  if (dateDelta !== 0) return dateDelta;
-  const sourceDelta = SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
-  if (sourceDelta !== 0) return sourceDelta;
-  const sevDelta = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
-  if (sevDelta !== 0) return sevDelta;
-  if (a.title < b.title) return -1;
-  if (a.title > b.title) return 1;
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-}
-function aggregateChangelog(input) {
-  const entries = [];
-  for (const version of input.versions) {
-    if ((version.label ?? "").trim() === "") continue;
-    entries.push(fromVersion(version));
-  }
-  for (const commit of input.commits) {
-    entries.push(fromCommit(commit));
-  }
-  const tokenDate = toIso(input.since);
-  for (const entry of input.tokenDiff.entries) {
-    entries.push(fromDiffEntry(entry, tokenDate));
-  }
-  return entries.filter((entry) => withinSince(entry.dateIso, input.since)).sort(compareEntries);
-}
-
-// src/engines/changelog/render-md.ts
-var EMPTY = "# Changelog\n\n_No changes in the selected window._\n";
-var SECTIONS = [
-  { heading: "## For designers", audience: "designer" },
-  { heading: "## For developers", audience: "developer" }
-];
-function badge(severity) {
-  return `**[${severity}]**`;
-}
-function dateKey(entry) {
-  return entry.dateIso.slice(0, 10);
-}
-function escapeInline(text2) {
-  return text2.replace(/([\\*_`])/g, "\\$1");
-}
-function inSection(entry, sectionAudience) {
-  return entry.audience === sectionAudience || entry.audience === "both";
-}
-function renderItem(entry) {
-  const head = `- ${badge(entry.severity)} ${escapeInline(entry.title)}`;
-  if (entry.detail === void 0 || entry.detail.trim() === "") return head;
-  return `${head} \u2014 ${escapeInline(entry.detail)}`;
-}
-function renderSection(heading, entries) {
-  if (entries.length === 0) return void 0;
-  const lines = [heading, ""];
-  let currentDate;
-  for (const entry of entries) {
-    const date = dateKey(entry);
-    if (date !== currentDate) {
-      if (currentDate !== void 0) lines.push("");
-      lines.push(`### ${date}`, "");
-      currentDate = date;
-    }
-    lines.push(renderItem(entry));
-  }
-  lines.push("");
-  return lines.join("\n");
-}
-function renderChangelogMarkdown(entries, options) {
-  const wanted = options.audience;
-  const sectionBlocks = [];
-  for (const section of SECTIONS) {
-    if (wanted !== void 0 && wanted !== "both" && wanted !== section.audience) {
-      continue;
-    }
-    const sectionEntries = entries.filter(
-      (entry) => inSection(entry, section.audience)
-    );
-    const block = renderSection(section.heading, sectionEntries);
-    if (block !== void 0) sectionBlocks.push(block);
-  }
-  if (sectionBlocks.length === 0) return EMPTY;
-  return `# Changelog
-
-${sectionBlocks.join("\n")}`;
-}
-
-// src/io/figma/client.ts
-var DEFAULT_BASE_URL = "https://api.figma.com";
-var MAX_RETRIES = 3;
-var DEFAULT_RETRY_AFTER_SECONDS = 1;
-function defaultSleep(ms) {
-  return new Promise((resolve13) => setTimeout(resolve13, ms));
-}
-function joinIds(ids) {
-  return encodeURIComponent(ids.join(","));
-}
-function parseRetryAfter(headers) {
-  const raw = headers.get("Retry-After");
-  if (raw === null) return DEFAULT_RETRY_AFTER_SECONDS;
-  const seconds = Number.parseInt(raw, 10);
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS;
-}
-function mentionsScope(body) {
-  const text2 = typeof body === "string" ? body : JSON.stringify(body ?? "");
-  return /scope/i.test(text2);
-}
-function createFigmaClient(options) {
-  const fetchImpl = options.fetch ?? fetch;
-  const sleep = options.sleep ?? defaultSleep;
-  const jitter = options.jitter ?? Math.random;
-  const { token } = options;
-  const origin = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-  const BASE_URL = `${origin}/v1`;
-  const baseHeaders = { "X-Figma-Token": token };
-  async function request(url, init) {
-    let lastRetryAfter = DEFAULT_RETRY_AFTER_SECONDS;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
-      let response;
-      try {
-        response = await fetchImpl(url, init);
-      } catch (error) {
-        return {
-          kind: "network-error",
-          message: error instanceof Error ? error.message : String(error)
-        };
-      }
-      const { status } = response;
-      if (status === 429) {
-        lastRetryAfter = parseRetryAfter(response.headers);
-        if (attempt < MAX_RETRIES) {
-          await sleep(lastRetryAfter * 1e3 * (1 + jitter()));
-          continue;
-        }
-        return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
-      }
-      if (status === 401) return { kind: "auth-error" };
-      if (status === 403) {
-        let body;
-        try {
-          body = await response.json();
-        } catch {
-          body = await response.text().catch(() => "");
-        }
-        if (mentionsScope(body)) {
-          const message = typeof body === "object" && body !== null && "err" in body && typeof body.err === "string" ? body.err : "Token is missing a required scope.";
-          return { kind: "scope-error", message };
-        }
-        return { kind: "auth-error" };
-      }
-      if (status === 404) return { kind: "not-found" };
-      if (!response.ok) {
-        return {
-          kind: "network-error",
-          message: `Figma API responded with status ${status}.`
-        };
-      }
-      try {
-        const data = await response.json();
-        return { kind: "ok", data };
-      } catch (error) {
-        return {
-          kind: "network-error",
-          message: error instanceof Error ? error.message : String(error)
-        };
-      }
-    }
-    return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
-  }
-  function get(url) {
-    return request(url, { method: "GET", headers: { ...baseHeaders } });
-  }
-  return {
-    getMe() {
-      return get(`${BASE_URL}/me`);
-    },
-    getFile(key) {
-      return get(`${BASE_URL}/files/${key}`);
-    },
-    getFileNodes(key, ids) {
-      const url = `${BASE_URL}/files/${key}/nodes?ids=${joinIds(ids)}`;
-      return get(url);
-    },
-    getComponents(key) {
-      return get(
-        `${BASE_URL}/files/${key}/components`
-      );
-    },
-    getVersions(key) {
-      return get(`${BASE_URL}/files/${key}/versions`);
-    },
-    getComments(key) {
-      return get(`${BASE_URL}/files/${key}/comments`);
-    },
-    postComment(key, message, clientMeta) {
-      const body = clientMeta === void 0 ? { message } : { message, client_meta: clientMeta };
-      return request(`${BASE_URL}/files/${key}/comments`, {
-        method: "POST",
-        headers: {
-          ...baseHeaders,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
-    },
-    getImages(key, ids, opts) {
-      const parts = [`ids=${joinIds(ids)}`];
-      if (opts?.format !== void 0) parts.push(`format=${opts.format}`);
-      if (opts?.scale !== void 0) parts.push(`scale=${opts.scale}`);
-      if (opts?.svg_include_id !== void 0) {
-        parts.push(`svg_include_id=${opts.svg_include_id}`);
-      }
-      return get(
-        `${BASE_URL}/images/${key}?${parts.join("&")}`
-      );
-    }
-  };
-}
-
-// src/io/git-log.ts
-import { spawnSync } from "child_process";
-var GIT_LOG_FIELD_SEP = "";
-var GIT_LOG_RECORD_SEP = "";
-var PRETTY_FORMAT = `--pretty=format:%H${GIT_LOG_FIELD_SEP}%aI${GIT_LOG_FIELD_SEP}%an${GIT_LOG_FIELD_SEP}%B${GIT_LOG_RECORD_SEP}`;
-function parseRecord(record) {
-  const fields = record.split(GIT_LOG_FIELD_SEP);
-  if (fields.length < 4) return void 0;
-  const [hash, dateIso, author, ...subjectParts] = fields;
-  if (hash === void 0 || hash === "" || dateIso === void 0 || author === void 0) {
-    return void 0;
-  }
-  const subject = subjectParts.join(GIT_LOG_FIELD_SEP).replace(/\n+$/, "");
-  return { hash, dateIso, author, subject };
-}
-function readGitLog(input) {
-  const args = ["log", `--since=${input.since}`, PRETTY_FORMAT];
-  const run = input.exec(args, input.cwd);
-  if (run.error !== void 0) {
-    return { kind: "git-unavailable", message: run.error };
-  }
-  if (run.status !== 0) {
-    return { kind: "not-a-repo" };
-  }
-  const commits = [];
-  for (const raw of run.stdout.split(GIT_LOG_RECORD_SEP)) {
-    const record = raw.replace(/^\n+/, "");
-    if (record.trim() === "") continue;
-    const commit = parseRecord(record);
-    if (commit !== void 0) commits.push(commit);
-  }
-  return { kind: "ok", commits };
-}
-function classifyGitFailure(run) {
-  if (run.error !== void 0) {
-    return { kind: "git-error", message: run.error };
-  }
-  const stderr = run.stderr;
-  if (stderr.includes("does not exist in") || stderr.includes("exists on disk, but not in")) {
-    return { kind: "missing", message: stderr };
-  }
-  return { kind: "git-error", message: stderr.trim() };
-}
-function readFileAtRef(input) {
-  const { ref, path, cwd: cwd5, exec } = input;
-  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd5);
-  if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
-    const { kind, message } = classifyGitFailure(prefixRun);
-    return kind === "missing" ? { kind: "missing" } : { kind, message };
-  }
-  const prefix = prefixRun.stdout.trim();
-  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd5);
-  if (showRun.error !== void 0 || showRun.status !== 0) {
-    const { kind, message } = classifyGitFailure(showRun);
-    return kind === "missing" ? { kind: "missing" } : { kind, message };
-  }
-  return { kind: "ok", text: showRun.stdout };
-}
-function spawnGitExec(args, cwd5) {
-  const run = spawnSync("git", args, { cwd: cwd5, encoding: "utf8" });
-  if (run.error !== void 0) {
-    return { status: -1, stdout: "", stderr: "", error: run.error.message };
-  }
-  return {
-    status: run.status ?? -1,
-    stdout: run.stdout ?? "",
-    stderr: run.stderr ?? ""
-  };
-}
-
-// src/cli-commands/changelog.ts
-var DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
-function defaultSince(now) {
-  const ms = now.getTime() - 90 * 24 * 60 * 60 * 1e3;
-  return new Date(ms).toISOString().slice(0, 10);
-}
-var EMPTY_TOKEN_DIFF = { entries: [], unchanged: 0 };
-var HISTORY_RECENT_LIMIT = 12;
-function defaultDeps() {
-  return {
-    exec: spawnGitExec,
-    makeClient: (token) => createFigmaClient({
-      token,
-      baseUrl: process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE
-    }),
-    env: process.env,
-    cwd: processCwd(),
-    now: () => /* @__PURE__ */ new Date(),
-    stdout: (text2) => process.stdout.write(text2),
-    stderr: (text2) => process.stderr.write(text2)
-  };
-}
-function severityFor(severity) {
-  switch (severity) {
-    case "breaking":
-      return "error";
-    case "notable":
-      return "warn";
-    case "minor":
-      return "info";
-  }
-}
-function parseAudience(flag) {
-  switch (flag) {
-    case "designers":
-    case "designer":
-      return { kind: "ok", value: "designer" };
-    case "developers":
-    case "developer":
-      return { kind: "ok", value: "developer" };
-    case "both":
-      return { kind: "ok", value: "both" };
-    default:
-      return { kind: "error" };
-  }
-}
-function audienceMatches(entry, audience) {
-  if (audience === "both") return true;
-  return entry.audience === audience || entry.audience === "both";
-}
-function renderTerm3(entries, audience, color) {
-  if (entries.length === 0) {
-    return "No changes in the selected window.";
-  }
-  const lines = [`${entries.length} change(s):`, ""];
-  for (const entry of entries) {
-    const date = entry.dateIso.slice(0, 10);
-    const badge2 = severityColor(severityFor(entry.severity), entry.severity, {
-      color
-    });
-    const tag = `[${entry.source}/${entry.audience}]`;
-    const detail = entry.detail !== void 0 ? ` \u2014 ${entry.detail}` : "";
-    lines.push(`${date}  ${badge2}  ${tag} ${entry.title}${detail}`);
-  }
-  if (audience !== "both") {
-    lines.unshift(`(audience: ${audience})`, "");
-  }
-  return lines.join("\n");
-}
-async function fetchVersions(deps) {
-  const resolved = resolveConfig({ env: deps.env });
-  if (resolved.kind !== "ok") {
-    return { versions: [], note: `Figma side skipped: ${resolved.message}` };
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind !== "present" || config.figmaFileKey === void 0) {
-    return {
-      versions: [],
-      note: "Figma side skipped (no token / file key configured) \u2014 code + token changes only."
-    };
-  }
-  const client = deps.makeClient(config.figmaToken.value);
-  const result = await client.getVersions(config.figmaFileKey);
-  if (result.kind !== "ok") {
-    return {
-      versions: [],
-      note: `Figma side skipped (API ${result.kind}) \u2014 code + token changes only.`
-    };
-  }
-  return { versions: result.data.versions };
-}
-function breakingRank(severity) {
-  return severity === "breaking" ? 0 : 1;
-}
-function tally(counts, severity) {
-  counts[severity] += 1;
-}
-function buildChangelogHistoryRecord(entries, since, at) {
-  const designer = {
-    breaking: 0,
-    notable: 0,
-    minor: 0
-  };
-  const developer = {
-    breaking: 0,
-    notable: 0,
-    minor: 0
-  };
-  const both = { breaking: 0, notable: 0, minor: 0 };
-  for (const entry of entries) {
-    if (entry.audience === "designer") tally(designer, entry.severity);
-    else if (entry.audience === "developer") tally(developer, entry.severity);
-    else tally(both, entry.severity);
-  }
-  const recent = entries.map((entry, order) => ({ entry, order })).sort(
-    (a, b) => breakingRank(a.entry.severity) - breakingRank(b.entry.severity) || a.order - b.order
-  ).slice(0, HISTORY_RECENT_LIMIT).map(({ entry }) => ({
-    audience: entry.audience,
-    severity: entry.severity,
-    source: entry.source,
-    title: entry.title
-  }));
-  return {
-    at,
-    kind: "changelog",
-    since,
-    designer,
-    developer,
-    both,
-    recent
-  };
-}
-function appendChangelogHistory(deps, record) {
-  const stateDir = join6(deps.cwd, ".ds-bridge");
-  mkdirSync4(stateDir, { recursive: true });
-  appendFileSync3(
-    join6(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-async function runChangelog(options, deps) {
-  const format = options.format;
-  if (format !== "term" && format !== "json" && format !== "md") {
-    deps.stderr(
-      `Unknown --format "${options.format}". Expected "term", "json", or "md".
-`
-    );
-    process.exitCode = 2;
-    return;
-  }
-  const audience = parseAudience(options.audience);
-  if (audience.kind !== "ok") {
-    deps.stderr(
-      `Unknown --audience "${options.audience}". Expected "designers", "developers", or "both".
-`
-    );
-    process.exitCode = 2;
-    return;
-  }
-  const since = options.since ?? defaultSince(deps.now());
-  const log = readGitLog({ exec: deps.exec, cwd: deps.cwd, since });
-  if (log.kind === "git-unavailable") {
-    deps.stderr(`Could not run git: ${log.message}
-`);
-    process.exitCode = 2;
-    return;
-  }
-  if (log.kind === "not-a-repo") {
-    deps.stderr(
-      `"${deps.cwd}" is not a git repository (or git failed). Run inside a repo.
-`
-    );
-    process.exitCode = 2;
-    return;
-  }
-  const { versions, note } = await fetchVersions(deps);
-  if (note !== void 0 && format === "term") {
-    deps.stderr(`${note}
-`);
-  }
-  const all = aggregateChangelog({
-    versions,
-    commits: log.commits,
-    tokenDiff: EMPTY_TOKEN_DIFF,
-    since
-  });
-  const entries = all.filter((entry) => audienceMatches(entry, audience.value));
-  if (options.history) {
-    appendChangelogHistory(
-      deps,
-      buildChangelogHistoryRecord(all, since, deps.now().toISOString())
-    );
-  }
-  if (format === "json") {
-    deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}
-`);
-  } else if (format === "md") {
-    deps.stdout(renderChangelogMarkdown(entries, { audience: audience.value }));
-  } else {
-    const color = shouldColor(deps.env, Boolean(process.stdout.isTTY));
-    deps.stdout(`${renderTerm3(entries, audience.value, color)}
-`);
-  }
-  process.exitCode = 0;
-}
-function registerChangelogCommand(program2) {
-  program2.command("changelog").description(
-    "Audience-segmented changelog from git log, Figma versions, and token changes"
-  ).option(
-    "--since <date>",
-    "include changes since this date (default: 90 days ago)"
-  ).option("--audience <who>", "designers | developers | both", "both").option("--format <format>", "output format: term | json | md", "term").option(
-    "--no-history",
-    "do not append a changelog record to .ds-bridge/history.jsonl in the current directory"
-  ).action((options) => {
-    void runChangelog(options, defaultDeps());
-  });
-}
-
-// src/cli-commands/config.ts
-import {
-  appendFileSync as appendFileSync4,
-  chmodSync,
-  existsSync as existsSync5,
-  readFileSync as readFileSync6,
-  renameSync as renameSync2,
-  unlinkSync,
-  writeFileSync as writeFileSync3
-} from "fs";
-import { join as join7, resolve as resolvePath } from "path";
-import * as readline from "readline";
-
-// src/io/dotenv.ts
-import { readFileSync as readFileSync5 } from "fs";
-function parseDotenv(text2) {
-  const out = {};
-  for (const rawLine of text2.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "" || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
-    if (eq === -1) continue;
-    const key = line.slice(0, eq).trim();
-    if (key === "") continue;
-    out[key] = stripOneQuoteLayer(line.slice(eq + 1).trim());
-  }
-  return out;
-}
-function stripOneQuoteLayer(value2) {
-  if (value2.length < 2) return value2;
-  const first = value2[0];
-  const last = value2[value2.length - 1];
-  if ((first === '"' || first === "'") && first === last) {
-    return value2.slice(1, -1);
-  }
-  return value2;
-}
-function loadDotenvInto(filePath, env) {
-  let text2;
-  try {
-    text2 = readFileSync5(filePath, "utf8");
-  } catch {
-    return;
-  }
-  for (const [key, value2] of Object.entries(parseDotenv(text2))) {
-    const current = env[key];
-    if (current === void 0 || current === "") {
-      env[key] = value2;
-    }
-  }
-}
-
-// src/io/figma/verify.ts
-async function verifyConnection(opts) {
-  const client = createFigmaClient({
-    token: opts.token,
-    ...opts.baseUrl !== void 0 ? { baseUrl: opts.baseUrl } : {},
-    ...opts.fetchImpl !== void 0 ? { fetch: opts.fetchImpl } : {},
-    ...opts.sleep !== void 0 ? { sleep: opts.sleep } : {},
-    ...opts.jitter !== void 0 ? { jitter: opts.jitter } : {}
-  });
-  const lines = [];
-  const me = await client.getMe();
-  switch (me.kind) {
-    case "ok": {
-      const who = me.data.email ? `${me.data.handle} <${me.data.email}>` : me.data.handle;
-      lines.push(`\u2713 Token valid \u2014 authenticated as ${who}.`);
-      break;
-    }
-    case "auth-error":
-      lines.push(
-        "\u2717 Token rejected (401) \u2014 it is invalid, revoked, or mistyped."
-      );
-      return { ok: false, lines };
-    case "scope-error":
-      lines.push(`\u2717 Token is missing a required scope: ${me.message}`);
-      return { ok: false, lines };
-    case "rate-limited":
-      lines.push(
-        `\u2717 Rate-limited (429) on /v1/me \u2014 retry after ${me.retryAfterSeconds}s. A View-seat PAT is throttled this hard; create the token from a Dev or Full seat.`
-      );
-      return { ok: false, lines };
-    case "not-found":
-      lines.push(
-        "\u2717 Unexpected 404 from /v1/me \u2014 is FIGMA_API_BASE pointed somewhere odd?"
-      );
-      return { ok: false, lines };
-    case "network-error":
-      lines.push(`\u2717 Could not reach Figma: ${me.message}`);
-      return { ok: false, lines };
-  }
-  if (opts.fileKey === void 0 || opts.fileKey === "") {
-    lines.push(
-      "\u2139 No library file key set, so library read access wasn't checked. Set one with `config set-library <url|key>`."
-    );
-    return { ok: true, lines };
-  }
-  const file = await client.getFile(opts.fileKey);
-  switch (file.kind) {
-    case "ok":
-      lines.push(
-        `\u2713 Library readable \u2014 "${file.data.name}" (${opts.fileKey}). Your seat can read library content.`
-      );
-      return { ok: true, lines };
-    case "auth-error":
-      lines.push(
-        `\u26A0 Authenticated, but cannot read file ${opts.fileKey} (403) \u2014 the token lacks file_content:read or your seat can't access this file.`
-      );
-      return { ok: false, lines };
-    case "scope-error":
-      lines.push(
-        `\u26A0 Authenticated, but the token is missing a scope for file reads: ${file.message}`
-      );
-      return { ok: false, lines };
-    case "rate-limited":
-      lines.push(
-        `\u26A0 Authenticated, but reading the library was rate-limited (429, retry ${file.retryAfterSeconds}s) \u2014 the classic View-seat throttle. Use a Dev/Full-seat PAT.`
-      );
-      return { ok: false, lines };
-    case "not-found":
-      lines.push(
-        `\u26A0 Authenticated, but file ${opts.fileKey} was not found (404). Double-check the library file key.`
-      );
-      return { ok: false, lines };
-    case "network-error":
-      lines.push(
-        `\u26A0 Authenticated, but the library read failed: ${file.message}`
-      );
-      return { ok: false, lines };
-  }
-}
-
-// src/cli-commands/config.ts
-var ENV_FILE_NAME = ".ds-bridge.env";
-var PROJECT_FILE_NAME2 = ".ds-bridge.json";
-function fail4(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function maskToken(token) {
-  if (token.length <= 8) return "*".repeat(token.length);
-  const head = token.slice(0, 5);
-  const tail = token.slice(-4);
-  return `${head}\u2026${tail}`;
-}
-function serializeDotenv(map) {
-  return `${Object.entries(map).map(([key, value2]) => `${key}=${value2}`).join("\n")}
-`;
-}
-function writeEnvFileMerged(dir, updates) {
-  const filePath = join7(dir, ENV_FILE_NAME);
-  const existing = existsSync5(filePath) ? parseDotenv(readFileSync6(filePath, "utf8")) : {};
-  const merged = { ...existing, ...updates };
-  const text2 = serializeDotenv(merged);
-  const tempPath = join7(dir, `${ENV_FILE_NAME}.${process.pid}.tmp`);
-  try {
-    writeFileSync3(tempPath, text2, { encoding: "utf8", mode: 384 });
-    renameSync2(tempPath, filePath);
-  } catch (error) {
-    try {
-      if (existsSync5(tempPath)) unlinkSync(tempPath);
-    } catch {
-    }
-    throw error;
-  }
-  chmodSync(filePath, 384);
-}
-function runPersistToken(path) {
-  const env = process.env;
-  const token = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN ?? void 0;
-  if (token === void 0 || token === "") {
-    fail4(
-      "No Figma token in this session's environment, so nothing was written. Either add it directly to .ds-bridge.env (FIGMA_TOKEN=figd_\u2026, gitignored) \u2014 the durable path the CLI auto-loads on every run \u2014 or set it in the plugin dialog (`/plugin configure`) and run this in the SAME session (before a restart: Claude Code drops the sensitive value on restart, #62442)."
-    );
-    return;
-  }
-  const rawFileKey = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? void 0;
-  const fileKey = rawFileKey !== void 0 ? extractFigmaFileKey(rawFileKey) : void 0;
-  const targetDir = resolvePath(path);
-  const updates = { FIGMA_TOKEN: token };
-  if (fileKey !== void 0 && fileKey !== "") {
-    updates.FIGMA_DESIGN_SYSTEM_FILE = fileKey;
-  }
-  try {
-    writeEnvFileMerged(targetDir, updates);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Could not write ${join7(targetDir, ENV_FILE_NAME)}: ${detail}`);
-    return;
-  }
-  const savedKey = updates.FIGMA_DESIGN_SYSTEM_FILE !== void 0 ? " and the design-system file key" : "";
-  process.stdout.write(
-    `Saved Figma token (${maskToken(token)})${savedKey} to ${join7(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
-`
-  );
-  process.exitCode = 0;
-}
-function ensureGitignored(dir) {
-  const gitignorePath = join7(dir, ".gitignore");
-  let existing = "";
-  if (existsSync5(gitignorePath)) {
-    existing = readFileSync6(gitignorePath, "utf8");
-    if (existing.split(/\r?\n/).some((line) => line.trim() === ENV_FILE_NAME)) {
-      return false;
-    }
-  }
-  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
-  appendFileSync4(
-    gitignorePath,
-    `${prefix}# ds-bridge Figma token \u2014 never commit
-${ENV_FILE_NAME}
-`,
-    "utf8"
-  );
-  return true;
-}
-function detectFileKeyDefault(dir) {
-  const filePath = join7(dir, ENV_FILE_NAME);
-  if (existsSync5(filePath)) {
-    try {
-      const existing = parseDotenv(readFileSync6(filePath, "utf8"));
-      const fromFile = existing.FIGMA_DESIGN_SYSTEM_FILE;
-      if (fromFile !== void 0 && fromFile !== "") {
-        return extractFigmaFileKey(fromFile);
-      }
-    } catch {
-    }
-  }
-  const env = process.env;
-  const fromEnv = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE;
-  return fromEnv !== void 0 && fromEnv !== "" ? extractFigmaFileKey(fromEnv) : void 0;
-}
-function applyConnect(dir, token, fileKey) {
-  const updates = { FIGMA_TOKEN: token };
-  const trimmedKey = extractFigmaFileKey(fileKey);
-  if (trimmedKey !== "") updates.FIGMA_DESIGN_SYSTEM_FILE = trimmedKey;
-  writeEnvFileMerged(dir, updates);
-  const gitignoreUpdated = ensureGitignored(dir);
-  return {
-    envPath: join7(dir, ENV_FILE_NAME),
-    masked: maskToken(token),
-    fileKey: trimmedKey === "" ? void 0 : trimmedKey,
-    gitignoreUpdated
-  };
-}
-function promptHidden(question) {
-  return new Promise((resolve13) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-      terminal: true
-    });
-    let promptShown = false;
-    rl._writeToOutput = () => {
-      if (!promptShown) {
-        process.stdout.write(question);
-        promptShown = true;
-      }
-    };
-    rl.question(question, (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve13(answer.trim());
-    });
-  });
-}
-function promptLine(question) {
-  return new Promise((resolve13) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve13(answer.trim());
-    });
-  });
-}
-async function runConnect(path, verify) {
-  const targetDir = resolvePath(path);
-  if (!process.stdin.isTTY) {
-    const cliPath = process.argv[1] ?? "<path-to>/dist/cli.mjs";
-    fail4(
-      `\`config connect\` is interactive and needs a real terminal so it can prompt for your token without echoing it. Run it directly in your shell (not through Claude Code's tool runner):
-
-  node ${cliPath} config connect
-
-Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` instead, which is non-interactive.`
-    );
-    return;
-  }
-  process.stdout.write(
-    "Connect ds-bridge to Figma. The token is written to .ds-bridge.env (gitignored, mode 0600) and is never echoed or printed in full.\n\n"
-  );
-  const token = await promptHidden("Figma personal access token (hidden): ");
-  if (token === "") {
-    fail4("No token entered \u2014 nothing was written.");
-    return;
-  }
-  if (!token.startsWith("figd_") && !token.startsWith("figd-")) {
-    process.stdout.write(
-      "warning: that does not look like a Figma PAT (expected a figd_\u2026 value) \u2014 saving it anyway.\n"
-    );
-  }
-  const defaultKey = detectFileKeyDefault(targetDir);
-  const keyPrompt = defaultKey !== void 0 ? `Figma library file key [${defaultKey}]: ` : "Figma library file key (optional \u2014 Enter to skip): ";
-  const keyInput = await promptLine(keyPrompt);
-  const fileKey = keyInput !== "" ? keyInput : defaultKey ?? "";
-  let summary;
-  try {
-    summary = applyConnect(targetDir, token, fileKey);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Could not write ${join7(targetDir, ENV_FILE_NAME)}: ${detail}`);
-    return;
-  }
-  const ignoreNote = summary.gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.
-` : "";
-  const keyNote = summary.fileKey !== void 0 ? ` and library file key (${summary.fileKey})` : "";
-  process.stdout.write(
-    `
-${ignoreNote}Saved Figma token (${summary.masked})${keyNote} to ${summary.envPath} (mode 0600).
-
-Connected. Back in Claude Code, run /ds-bridge:ds-docs (or /ds-bridge:connect) \u2014 the CLI auto-loads .ds-bridge.env on every run.
-`
-  );
-  if (verify) {
-    await runVerify(token, summary.fileKey);
-    return;
-  }
-  process.exitCode = 0;
-}
-async function runVerify(token, fileKey) {
-  process.stdout.write("\nVerifying with Figma\u2026\n");
-  let result;
-  try {
-    const apiBase = process.env.FIGMA_API_BASE;
-    result = await verifyConnection({
-      token,
-      ...fileKey !== void 0 ? { fileKey } : {},
-      ...apiBase !== void 0 ? { baseUrl: apiBase } : {}
-    });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Verification could not run: ${detail}`);
-    return;
-  }
-  for (const line of result.lines) {
-    process.stdout.write(`  ${line}
-`);
-  }
-  process.exitCode = result.ok ? 0 : 2;
-}
-function readProjectObject(dir) {
-  const filePath = join7(dir, PROJECT_FILE_NAME2);
-  if (!existsSync5(filePath)) return {};
-  try {
-    const raw = JSON.parse(readFileSync6(filePath, "utf8"));
-    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
-      return raw;
-    }
-  } catch {
-  }
-  return {};
-}
-function readEnvFile(dir) {
-  const filePath = join7(dir, ENV_FILE_NAME);
-  if (!existsSync5(filePath)) return {};
-  try {
-    return parseDotenv(readFileSync6(filePath, "utf8"));
-  } catch {
-    return {};
-  }
-}
-function readProductFileKeys(dir) {
-  const raw = readProjectObject(dir).product_file_keys;
-  const out = {};
-  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
-    for (const [k4, v] of Object.entries(raw)) {
-      if (typeof v === "string") out[k4] = v;
-    }
-  }
-  return out;
-}
-function envBacking(envFile, env, key) {
-  const value2 = env[key];
-  if (value2 === void 0 || value2 === "") return void 0;
-  return envFile[key] === value2 ? "file" : "env";
-}
-function productSourceLabel(env, alias) {
-  const envKey = `FIGMA_PRODUCT_FILE_${alias.toUpperCase()}`;
-  const fromEnv = env[envKey];
-  return fromEnv !== void 0 && fromEnv !== "" ? `environment (${envKey})` : `${PROJECT_FILE_NAME2} (product_file_keys.${alias})`;
-}
-function renderRows(rows) {
-  const labelW = Math.max(...rows.map((r2) => r2.label.length));
-  const valueW = Math.max(...rows.map((r2) => r2.value.length));
-  return rows.map(
-    (r2) => `  ${r2.label.padEnd(labelW)}  ${r2.value.padEnd(valueW)}  \u2190 ${r2.source}`
-  );
-}
-function buildShowReport(dir) {
-  const env = process.env;
-  const projObj = readProjectObject(dir);
-  const envFile = readEnvFile(dir);
-  const projectFilePath = join7(dir, PROJECT_FILE_NAME2);
-  const projectFileText = existsSync5(projectFilePath) ? readFileSync6(projectFilePath, "utf8") : void 0;
-  const resolved = resolveConfig({
-    env,
-    ...projectFileText !== void 0 ? { projectFileText } : {}
-  });
-  if (resolved.kind === "invalid-project-file") {
-    return { kind: "invalid", message: resolved.message };
-  }
-  const cfg = resolved.config;
-  const tokenSource = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ? "plugin dialog (CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN, session-only)" : envBacking(envFile, env, "FIGMA_TOKEN") === "file" ? ENV_FILE_NAME : envBacking(envFile, env, "FIGMA_TOKEN") === "env" ? "environment (FIGMA_TOKEN)" : "\u2014";
-  const keyBacking = envBacking(envFile, env, "FIGMA_DESIGN_SYSTEM_FILE");
-  const librarySource = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ? "plugin dialog (CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY, session-only)" : keyBacking === "file" ? `${ENV_FILE_NAME} (FIGMA_DESIGN_SYSTEM_FILE)` : keyBacking === "env" ? "environment (FIGMA_DESIGN_SYSTEM_FILE)" : typeof projObj.figma_file_key === "string" ? `${PROJECT_FILE_NAME2} (figma_file_key)` : "\u2014";
-  const tokenSrcSource = env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ? "plugin dialog (session-only)" : typeof projObj.token_source === "string" ? PROJECT_FILE_NAME2 : "auto-detected at run time";
-  const reportSource = env.CLAUDE_PLUGIN_OPTION_REPORT_STYLE === cfg.reportStyle ? "plugin dialog (session-only)" : typeof projObj.report_style === "string" ? PROJECT_FILE_NAME2 : "default";
-  const readinessSource = env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD !== void 0 && Number(env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD) === cfg.readinessThreshold ? "plugin dialog (session-only)" : typeof projObj.readiness_threshold === "number" ? PROJECT_FILE_NAME2 : "default";
-  const core = renderRows([
-    {
-      label: "Figma token",
-      value: cfg.figmaToken.kind === "present" ? maskToken(cfg.figmaToken.value) : "\u2014 (not set)",
-      source: tokenSource
-    },
-    {
-      label: "Library file key",
-      value: cfg.figmaFileKey ?? "\u2014 (not set)",
-      source: librarySource
-    },
-    {
-      label: "Token source",
-      value: cfg.tokenSource ?? "\u2014 (auto-detect)",
-      source: tokenSrcSource
-    },
-    { label: "Report style", value: cfg.reportStyle, source: reportSource },
-    {
-      label: "Readiness gate",
-      value: String(cfg.readinessThreshold),
-      source: readinessSource
-    }
-  ]);
-  const lines = [
-    `ds-bridge configuration  (${dir})`,
-    "",
-    ...core,
-    ""
-  ];
-  const aliases = Object.keys(cfg.productFileKeys);
-  if (aliases.length === 0) {
-    lines.push(
-      "  Product files: none \u2014 add one with `config add-product <alias> <url>`."
-    );
-  } else {
-    lines.push(`  Product files (${aliases.length}):`);
-    lines.push(
-      ...renderRows(
-        aliases.map((alias) => ({
-          label: `  ${alias}`,
-          value: cfg.productFileKeys[alias] ?? "",
-          source: productSourceLabel(env, alias)
-        }))
-      )
-    );
-  }
-  for (const warning of resolved.warnings) {
-    lines.push("", `  \u26A0 ${warning}`);
-  }
-  return { kind: "ok", lines };
-}
-function runShow(path) {
-  const dir = resolvePath(path);
-  const report = buildShowReport(dir);
-  if (report.kind === "invalid") {
-    fail4(report.message);
-    return;
-  }
-  process.stdout.write(`${report.lines.join("\n")}
-`);
-  process.exitCode = 0;
-}
-function runSetLibrary(value2, path) {
-  const key = extractFigmaFileKey(value2);
-  if (key === "") {
-    fail4(
-      "Provide a Figma library URL or file key, e.g. `config set-library https://www.figma.com/design/<KEY>/...`"
-    );
-    return;
-  }
-  if (!/^[A-Za-z0-9]+$/.test(key)) {
-    process.stdout.write(
-      `warning: "${key}" doesn't look like a bare Figma file key (letters/digits only) \u2014 saving it anyway.
-`
-    );
-  }
-  const dir = resolvePath(path);
-  try {
-    writeProjectConfig(dir, { figma_file_key: key });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Could not write ${join7(dir, PROJECT_FILE_NAME2)}: ${detail}`);
-    return;
-  }
-  process.stdout.write(
-    `Set figma_file_key to ${key} in ${join7(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
-`
-  );
-  process.exitCode = 0;
-}
-function runAddProduct(alias, value2, path) {
-  const cleanAlias = alias.trim();
-  if (cleanAlias === "") {
-    fail4("Provide an alias, e.g. `config add-product web <url>`.");
-    return;
-  }
-  const key = extractFigmaFileKey(value2);
-  if (key === "") {
-    fail4(
-      `Provide a Figma URL or file key for "${cleanAlias}", e.g. \`config add-product web https://www.figma.com/design/<KEY>/...\``
-    );
-    return;
-  }
-  const dir = resolvePath(path);
-  const existing = readProductFileKeys(dir);
-  const merged = { ...existing, [cleanAlias]: key };
-  try {
-    writeProjectConfig(dir, { product_file_keys: merged });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail4(`Could not write ${join7(dir, PROJECT_FILE_NAME2)}: ${detail}`);
-    return;
-  }
-  const verb = Object.hasOwn(existing, cleanAlias) ? "Updated" : "Registered";
-  process.stdout.write(
-    `${verb} product file "${cleanAlias}" \u2192 ${key} in ${join7(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
-`
-  );
-  process.exitCode = 0;
-}
-function runList(path) {
-  const dir = resolvePath(path);
-  const env = process.env;
-  const projectFilePath = join7(dir, PROJECT_FILE_NAME2);
-  const projectFileText = existsSync5(projectFilePath) ? readFileSync6(projectFilePath, "utf8") : void 0;
-  const resolved = resolveConfig({
-    env,
-    ...projectFileText !== void 0 ? { projectFileText } : {}
-  });
-  if (resolved.kind === "invalid-project-file") {
-    fail4(resolved.message);
-    return;
-  }
-  const cfg = resolved.config;
-  const lines = [
-    `Library (default):  ${cfg.figmaFileKey ?? "\u2014 (not set \u2014 `config set-library <url|key>`)"}`,
-    ""
-  ];
-  const aliases = Object.keys(cfg.productFileKeys);
-  if (aliases.length === 0) {
-    lines.push(
-      "Product files: none \u2014 add one with `config add-product <alias> <url>`."
-    );
-  } else {
-    lines.push(`Product files (${aliases.length}):`);
-    lines.push(
-      ...renderRows(
-        aliases.map((alias) => ({
-          label: alias,
-          value: cfg.productFileKeys[alias] ?? "",
-          source: productSourceLabel(env, alias)
-        }))
-      )
-    );
-  }
-  process.stdout.write(`${lines.join("\n")}
-`);
-  process.exitCode = 0;
-}
-function registerConfigCommand(program2) {
-  const config = program2.command("config").description("Manage ds-bridge project configuration");
-  config.command("persist-token").description(
-    "Save this session's Figma token to .ds-bridge.env (gitignored, 0600) so it survives a restart (opt-in fix for Claude Code #62442)"
-  ).argument("[path]", "project directory to write .ds-bridge.env into", ".").action((path) => {
-    runPersistToken(path);
-  });
-  config.command("connect").description(
-    "Interactively connect Figma: prompt for the token (hidden input) and write .ds-bridge.env (gitignored, 0600). Run it in your own terminal."
-  ).argument("[path]", "project directory to write .ds-bridge.env into", ".").option(
-    "--verify",
-    "after writing, ping Figma (/v1/me + a library read) to confirm the token works"
-  ).action((path, options) => {
-    void runConnect(path, options.verify === true);
-  });
-  config.command("show").description(
-    "Print the effective ds-bridge config (token masked) and which source won each value"
-  ).argument("[path]", "project directory to read config from", ".").action((path) => {
-    runShow(path);
-  });
-  config.command("set-library").description(
-    "Write the design-system library file key (a URL or bare key) to the committed .ds-bridge.json (figma_file_key) \u2014 shared by the whole team"
-  ).argument("<url-or-key>", "Figma library file URL or bare file key").argument("[path]", "project directory whose .ds-bridge.json to write", ".").action((urlOrKey, path) => {
-    runSetLibrary(urlOrKey, path);
-  });
-  config.command("add-product").description(
-    "Register a product/consumer Figma file under an alias in .ds-bridge.json (product_file_keys); target it later with --file-key <alias>"
-  ).argument("<alias>", "short alias, e.g. web | mobile | admin").argument("<url-or-key>", "the product Figma file URL or bare file key").argument("[path]", "project directory whose .ds-bridge.json to write", ".").action((alias, urlOrKey, path) => {
-    runAddProduct(alias, urlOrKey, path);
-  });
-  config.command("list").description(
-    "List the targetable file keys: the library default and every product alias"
-  ).argument("[path]", "project directory to read config from", ".").action((path) => {
-    runList(path);
-  });
-}
-
-// src/cli-commands/dashboard.ts
-import { appendFileSync as appendFileSync5, existsSync as existsSync7, readFileSync as readFileSync9, unlinkSync as unlinkSync2 } from "fs";
-import { join as join10, resolve as resolvePath2 } from "path";
-
-// src/engines/report/nl-match.ts
-function tokenize2(phrase) {
-  return (phrase.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
-    (t) => t.length >= 3
-  );
-}
-function matchPhrase(phrase) {
-  const tokens = tokenize2(phrase);
-  if (tokens.length === 0) return [];
-  const matches = [];
-  for (const meta of CATALOG) {
-    const haystack = `${meta.id} ${meta.title}`.toLowerCase();
-    let score = 0;
-    for (const token of tokens) {
-      if (haystack.includes(token)) {
-        score += 2;
-      } else if (suggestArtifactIds(token, 3).includes(meta.id)) {
-        score += 1;
-      }
-    }
-    if (score > 0) matches.push({ id: meta.id, title: meta.title, score });
-  }
-  return matches.sort((a, b) => b.score - a.score);
-}
-
-// src/io/dashboards.ts
-import { existsSync as existsSync6, mkdirSync as mkdirSync5, readdirSync, readFileSync as readFileSync7 } from "fs";
-import { join as join8 } from "path";
-var DASHBOARDS_DIR = "dashboards";
-var REPORT_TYPES = ["html", "md", "terminal", "site"];
-function dashboardPath(dir, name, local) {
-  const suffix = local ? ".local.json" : ".json";
-  return join8(dir, DASHBOARDS_DIR, `${name}${suffix}`);
-}
-function writeDashboardFile(dir, name, selection, opts = {}) {
-  mkdirSync5(join8(dir, DASHBOARDS_DIR), { recursive: true });
-  const obj = { name };
-  if (selection.view !== void 0) obj.view = selection.view;
-  if (selection.artifacts !== void 0)
-    obj.artifacts = [...selection.artifacts];
-  const meta = opts.meta;
-  if (meta?.persona !== void 0) obj.persona = meta.persona;
-  if (meta?.report_type !== void 0) obj.report_type = meta.report_type;
-  if (meta?.audience !== void 0) obj.audience = meta.audience;
-  if (meta?.score_weights !== void 0) obj.score_weights = meta.score_weights;
-  atomicWriteJson(dashboardPath(dir, name, opts.local ?? false), obj);
-}
-function parseDashboard(text2, fallbackName) {
-  const selectionOutcome = parseSelectionFile(text2);
-  if (selectionOutcome.kind === "invalid") {
-    return { kind: "invalid", message: selectionOutcome.message };
-  }
-  const obj = JSON.parse(text2);
-  const selection = selectionOutcome.kind === "view" ? { kind: "view", view: selectionOutcome.view } : { kind: "artifacts", artifacts: selectionOutcome.artifacts };
-  const dashboard = {
-    name: typeof obj.name === "string" && obj.name !== "" ? obj.name : fallbackName,
-    selection
-  };
-  if (obj.report_type !== void 0) {
-    if (!REPORT_TYPES.includes(obj.report_type)) {
-      return {
-        kind: "invalid",
-        message: `report_type must be one of ${REPORT_TYPES.join(", ")}`
-      };
-    }
-    dashboard.reportType = obj.report_type;
-  }
-  if (obj.audience !== void 0) {
-    if (typeof obj.audience !== "string") {
-      return { kind: "invalid", message: "audience must be a string" };
-    }
-    dashboard.audience = obj.audience;
-  }
-  if (obj.persona !== void 0) {
-    if (typeof obj.persona !== "string") {
-      return { kind: "invalid", message: "persona must be a string" };
-    }
-    dashboard.persona = obj.persona;
-  }
-  if (obj.score_weights !== void 0) {
-    const weights = validateWeights(obj.score_weights);
-    if (weights.kind !== "ok") {
-      return {
-        kind: "invalid",
-        message: `score_weights is invalid (${weights.kind}${"key" in weights ? `: ${weights.key}` : ""})`
-      };
-    }
-    dashboard.scoreWeights = obj.score_weights;
-  }
-  return { kind: "ok", dashboard };
-}
-function readDashboardFile(dir, name) {
-  const localPath = dashboardPath(dir, name, true);
-  const sharedPath = dashboardPath(dir, name, false);
-  const path = existsSync6(localPath) ? localPath : existsSync6(sharedPath) ? sharedPath : void 0;
-  if (path === void 0) return { kind: "not-found" };
-  let text2;
-  try {
-    text2 = readFileSync7(path, "utf8");
-  } catch {
-    return { kind: "not-found" };
-  }
-  return parseDashboard(text2, name);
-}
-function listDashboards(dir) {
-  let files;
-  try {
-    files = readdirSync(join8(dir, DASHBOARDS_DIR));
-  } catch {
-    return [];
-  }
-  const byName2 = /* @__PURE__ */ new Map();
-  const entryFor = (name) => {
-    const existing = byName2.get(name);
-    if (existing !== void 0) return existing;
-    const created = { name, hasShared: false, hasLocal: false };
-    byName2.set(name, created);
-    return created;
-  };
-  for (const file of files) {
-    if (file.endsWith(".local.json")) {
-      entryFor(file.slice(0, -".local.json".length)).hasLocal = true;
-    } else if (file.endsWith(".json")) {
-      entryFor(file.slice(0, -".json".length)).hasShared = true;
-    }
-  }
-  return [...byName2.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
-
-// src/cli-commands/dashboard-wizard.ts
-import { readFileSync as readFileSync8 } from "fs";
-import { join as join9 } from "path";
-import { createInterface as createInterface2 } from "readline/promises";
-var PRODUCER_PERSONAS = /* @__PURE__ */ new Set([
-  "ds-designer",
-  "ds-manager",
-  "ds-engineer"
-]);
-var PERSONA_AUDIENCE = {
-  "ds-designer": "designers",
-  "ds-manager": "both",
-  "ds-engineer": "developers",
-  "product-designer": "designers",
-  "product-manager": "both",
-  "product-engineer": "developers"
-};
-var PROJECT_FILE_NAME3 = ".ds-bridge.json";
-function readExistingProductFileKeys(dir) {
-  try {
-    const raw = JSON.parse(
-      readFileSync8(join9(dir, PROJECT_FILE_NAME3), "utf8")
-    );
-    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
-      const pfk = raw.product_file_keys;
-      if (typeof pfk === "object" && pfk !== null && !Array.isArray(pfk)) {
-        const out = {};
-        for (const [alias, key] of Object.entries(pfk)) {
-          if (typeof key === "string") out[alias] = key;
-        }
-        return out;
-      }
-    }
-  } catch {
-  }
-  return {};
-}
-var LineReader = class {
-  queue = [];
-  waiting;
-  closed = false;
-  constructor(rl) {
-    rl.on("line", (line) => {
-      if (this.waiting !== void 0) {
-        const { resolve: resolve13 } = this.waiting;
-        this.waiting = void 0;
-        resolve13(line);
-      } else {
-        this.queue.push(line);
-      }
-    });
-    rl.on("close", () => {
-      this.closed = true;
-      if (this.waiting !== void 0) {
-        const { reject } = this.waiting;
-        this.waiting = void 0;
-        reject(new EofError());
-      }
-    });
-  }
-  /** Resolve with the next line, or reject with {@link EofError} at end of input. */
-  next() {
-    const buffered = this.queue.shift();
-    if (buffered !== void 0) return Promise.resolve(buffered);
-    if (this.closed) return Promise.reject(new EofError());
-    return new Promise((resolve13, reject) => {
-      this.waiting = { resolve: resolve13, reject };
-    });
-  }
-};
-var EofError = class extends Error {
-};
-async function ask(reader, output, prompt) {
-  output.write(prompt);
-  return reader.next();
-}
-async function pickPreset(reader, output) {
-  output.write("Pick a dashboard view:\n");
-  PRESET_NAMES.forEach((name, index) => {
-    output.write(`  ${index + 1}) ${name}
-`);
-  });
-  for (; ; ) {
-    const answer = (await ask(reader, output, "View number: ")).trim();
-    const n = Number(answer);
-    if (Number.isInteger(n) && n >= 1 && n <= PRESET_NAMES.length) {
-      const picked = PRESET_NAMES[n - 1];
-      if (picked !== void 0) return picked;
-    }
-    output.write(
-      `Please enter a number between 1 and ${PRESET_NAMES.length}.
-`
-    );
-  }
-}
-function isYes(answer) {
-  const a = answer.trim().toLowerCase();
-  return a === "y" || a === "yes";
-}
-async function captureFileKeys(reader, output, cwd5, persona) {
-  if (PRODUCER_PERSONAS.has(persona)) {
-    const hasKey = isYes(
-      await ask(
-        reader,
-        output,
-        "Is your DS library file key configured (FIGMA_DESIGN_SYSTEM_FILE / figma_file_key)? (y/N) "
-      )
-    );
-    if (!hasKey) {
-      output.write(
-        "Heads up: library-health, parity, a11y, impact, and docs stay empty until figma_file_key is set.\n"
-      );
-    }
-    return void 0;
-  }
-  const alias = (await ask(
-    reader,
-    output,
-    "Name an alias for your product Figma file (e.g. web), or leave blank to skip: "
-  )).trim();
-  if (alias === "") return void 0;
-  const key = (await ask(reader, output, `Figma file key for "${alias}": `)).trim();
-  if (key === "") {
-    output.write("No file key entered \u2014 skipping the product file pin.\n");
-    return void 0;
-  }
-  return { ...readExistingProductFileKeys(cwd5), [alias]: key };
-}
-async function runSetupWizard(deps) {
-  const { input, output, cwd: cwd5, isTTY } = deps;
-  if (!isTTY) {
-    output.write(
-      "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` instead.\n"
-    );
-    return { exitCode: 2 };
-  }
-  const rl = createInterface2({ input, output });
-  const reader = new LineReader(rl);
-  try {
-    const preset = await pickPreset(reader, output);
-    if (preset === "everything") {
-      output.write(
-        "`everything` needs no setup \u2014 an unconfigured repo already renders the full catalog.\n"
-      );
-      return { exitCode: 0 };
-    }
-    const productFileKeys = await captureFileKeys(reader, output, cwd5, preset);
-    const confirmed = isYes(
-      await ask(reader, output, `Save the "${preset}" view? (y/N) `)
-    );
-    if (!confirmed) {
-      output.write("No changes made.\n");
-      return { exitCode: 0 };
-    }
-    writeProjectConfig(cwd5, {
-      dashboard_view: preset,
-      dashboard_artifacts: void 0,
-      dashboard_default: void 0,
-      ...productFileKeys !== void 0 ? { product_file_keys: productFileKeys } : {}
-    });
-    output.write(`Saved. Your dashboard view is now "${preset}".
-`);
-    output.write(
-      `Default --audience for ${preset}: ${PERSONA_AUDIENCE[preset]} (changelog/digest).
-`
-    );
-    output.write("Render it now? ds-bridge report --open\n");
-    return { exitCode: 0 };
-  } catch (error) {
-    if (error instanceof EofError) {
-      output.write("\nAborted \u2014 no changes made.\n");
-      return { exitCode: 2 };
-    }
-    throw error;
-  } finally {
-    rl.close();
-  }
-}
-
-// src/cli-commands/dashboard.ts
-function fail5(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-var PROJECT_FILE_NAME4 = ".ds-bridge.json";
-function readSelection(targetDir) {
-  const configPath = join10(targetDir, PROJECT_FILE_NAME4);
-  let projectFileText;
-  if (existsSync7(configPath)) {
-    try {
-      projectFileText = readFileSync9(configPath, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      return {
-        kind: "error",
-        message: `Could not read ${PROJECT_FILE_NAME4} at "${configPath}": ${detail}`
-      };
-    }
-  }
-  const resolved = resolveConfig(
-    projectFileText !== void 0 ? { projectFileText } : {}
-  );
-  if (resolved.kind === "invalid-project-file") {
-    return { kind: "error", message: resolved.message };
-  }
-  const { dashboardView, dashboardArtifacts } = resolved.config;
-  const projectSelection = {};
-  if (dashboardView !== void 0) projectSelection.view = dashboardView;
-  if (dashboardArtifacts !== void 0)
-    projectSelection.artifacts = dashboardArtifacts;
-  const view = resolveView({}, projectSelection);
-  if (view.kind === "conflicting-selection") {
-    return {
-      kind: "error",
-      message: "dashboard_view and dashboard_artifacts are mutually exclusive \u2014 set one, not both"
-    };
-  }
-  if (view.kind === "unknown-view") {
-    const hint = view.suggestions.length > 0 ? ` \u2014 did you mean ${view.suggestions.join(", ")}?` : "";
-    return {
-      kind: "error",
-      message: `Unknown dashboard_view "${view.view}"${hint}`
-    };
-  }
-  if (view.kind === "unknown-artifact") {
-    const hint = view.suggestions.length > 0 ? ` \u2014 did you mean ${view.suggestions.join(", ")}?` : "";
-    return {
-      kind: "error",
-      message: `Unknown artifact id "${view.id}"${hint}`
-    };
-  }
-  return {
-    kind: "ok",
-    selection: {
-      artifacts: view.artifacts,
-      enabled: new Set(view.artifacts),
-      source: view.source,
-      viewName: view.viewName
-    }
-  };
-}
-function listPresets() {
-  return PRESET_NAMES.map((name) => ({
-    name,
-    description: PRESET_DESCRIPTIONS[name],
-    artifacts: [...PRESETS[name]]
-  }));
-}
-function toListJson(selection) {
-  const artifacts = CATALOG.map((meta) => ({
-    id: meta.id,
-    title: meta.title,
-    personas: [...meta.personas],
-    enabled: selection.enabled.has(meta.id)
-  }));
-  const view = { source: selection.source };
-  if (selection.viewName !== void 0) view.viewName = selection.viewName;
-  return { artifacts, presets: listPresets(), view };
-}
-function renderTerm4(data) {
-  const rows = data.artifacts.map((a) => [
-    a.enabled ? "\u2713" : " ",
-    a.id,
-    a.title,
-    a.personas.join(", ")
-  ]);
-  const table = renderTable(["on", "id", "title", "personas"], rows, {
-    color: false
-  });
-  const viewLabel = data.view.viewName !== void 0 ? `${data.view.viewName} (${data.view.source})` : data.view.source;
-  return [`View: ${viewLabel}`, table].join("\n");
-}
-function runList2(path, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail5(`Unknown --format "${options.format}". Expected "term" or "json".`);
-    return;
-  }
-  const targetDir = resolvePath2(path);
-  const selection = readSelection(targetDir);
-  if (selection.kind === "error") {
-    fail5(selection.message);
-    return;
-  }
-  const data = toListJson(selection.selection);
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(data, null, 2)}
-`);
-  } else {
-    process.stdout.write(`${renderTerm4(data)}
-`);
-  }
-  process.exitCode = 0;
-}
-function parseArtifacts(raw) {
-  const requested = raw.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
-  if (requested.length === 0) {
-    return {
-      kind: "error",
-      message: "--artifacts needs at least one artifact id (comma-separated)."
-    };
-  }
-  const seen = /* @__PURE__ */ new Set();
-  const ids = [];
-  for (const entry of requested) {
-    const outcome = lookupArtifact(entry);
-    if (outcome.kind === "unknown") {
-      const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
-      return {
-        kind: "error",
-        message: `Unknown artifact id "${entry}"${hint}`
-      };
-    }
-    if (!seen.has(outcome.artifact.id)) {
-      seen.add(outcome.artifact.id);
-      ids.push(outcome.artifact.id);
-    }
-  }
-  return { kind: "ok", ids };
-}
-function runSet(path, options) {
-  const hasView = options.view !== void 0;
-  const hasArtifacts = options.artifacts !== void 0;
-  if (hasView && hasArtifacts) {
-    fail5("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
-    return;
-  }
-  if (!hasView && !hasArtifacts) {
-    fail5(
-      "Specify a view or an artifact list: --view <preset> | --artifacts <a,b,\u2026>."
-    );
-    return;
-  }
-  const targetDir = resolvePath2(path);
-  if (hasView) {
-    const view = options.view;
-    const resolved = resolveView({ view }, {});
-    if (resolved.kind === "unknown-view") {
-      const hint = resolved.suggestions.length > 0 ? ` \u2014 did you mean ${resolved.suggestions.join(", ")}?` : "";
-      fail5(`Unknown view "${view}"${hint}`);
-      return;
-    }
-    writeProjectConfig(targetDir, {
-      dashboard_view: view,
-      dashboard_artifacts: void 0
-    });
-    process.stdout.write(`View set to "${view}".
-`);
-    process.exitCode = 0;
-    return;
-  }
-  const parsed = parseArtifacts(options.artifacts);
-  if (parsed.kind === "error") {
-    fail5(parsed.message);
-    return;
-  }
-  writeProjectConfig(targetDir, {
-    dashboard_artifacts: parsed.ids,
-    dashboard_view: void 0
-  });
-  process.stdout.write(`Artifacts set to ${parsed.ids.join(", ")}.
-`);
-  process.exitCode = 0;
-}
-var MATERIALIZE_NOTICE = "Your view is now an explicit list and will not auto-gain future preset artifacts.";
-function runEditDashboard(targetDir, name, id, mode) {
-  const read = readDashboardFile(targetDir, name);
-  if (read.kind === "not-found") {
-    failUnknownDashboard(targetDir, name);
-    return;
-  }
-  if (read.kind === "invalid") {
-    fail5(`Dashboard "${name}" is invalid: ${read.message}`);
-    return;
-  }
-  const sel = read.dashboard.selection;
-  const resolved = resolveView(
-    sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
-    {}
-  );
-  if (resolved.kind !== "ok") {
-    fail5(`Dashboard "${name}" has an unresolvable selection.`);
-    return;
-  }
-  const before = resolved.artifacts;
-  const present = before.includes(id);
-  if (mode === "add" && present) {
-    process.stdout.write(`"${id}" is already in "${name}" \u2014 no change.
-`);
-    process.exitCode = 0;
-    return;
-  }
-  if (mode === "remove" && !present) {
-    process.stdout.write(`"${id}" is not in "${name}" \u2014 no change.
-`);
-    process.exitCode = 0;
-    return;
-  }
-  const next = mode === "add" ? [...before, id] : before.filter((existing) => existing !== id);
-  const entry = listDashboards(targetDir).find((e4) => e4.name === name);
-  const local = entry !== void 0 && !entry.hasShared && entry.hasLocal;
-  writeDashboardFile(
-    targetDir,
-    name,
-    { artifacts: next },
-    { local, meta: metaFrom(read.dashboard) }
-  );
-  const verb = mode === "add" ? "Added" : "Removed";
-  process.stdout.write(
-    `${verb} "${id}" in "${name}". View: ${next.join(", ")}.
-`
-  );
-  process.exitCode = 0;
-}
-function runEdit(path, rawId, mode, dashboardName) {
-  const outcome = lookupArtifact(rawId);
-  if (outcome.kind === "unknown") {
-    const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
-    fail5(`Unknown artifact id "${rawId}"${hint}`);
-    return;
-  }
-  const id = outcome.artifact.id;
-  const targetDir = resolvePath2(path);
-  if (dashboardName !== void 0) {
-    runEditDashboard(targetDir, dashboardName, id, mode);
-    return;
-  }
-  const current = readSelection(targetDir);
-  if (current.kind === "error") {
-    fail5(current.message);
-    return;
-  }
-  const wasExplicitList = current.selection.source === "project" && current.selection.viewName === void 0;
-  const before = current.selection.artifacts;
-  const present = current.selection.enabled.has(id);
-  if (mode === "add" && present) {
-    process.stdout.write(`"${id}" is already in your view \u2014 no change.
-`);
-    process.exitCode = 0;
-    return;
-  }
-  if (mode === "remove" && !present) {
-    process.stdout.write(`"${id}" is not in your view \u2014 no change.
-`);
-    process.exitCode = 0;
-    return;
-  }
-  const next = mode === "add" ? [...before, id] : before.filter((existing) => existing !== id);
-  writeProjectConfig(targetDir, {
-    dashboard_artifacts: next,
-    dashboard_view: void 0
-  });
-  if (!wasExplicitList) {
-    process.stdout.write(`${MATERIALIZE_NOTICE}
-`);
-  }
-  const verb = mode === "add" ? "Added" : "Removed";
-  process.stdout.write(`${verb} "${id}". View: ${next.join(", ")}.
-`);
-  process.exitCode = 0;
-}
-function failUnknownDashboard(targetDir, name) {
-  const names = listDashboards(targetDir).map((e4) => e4.name);
-  const available = names.length > 0 ? ` Available: ${names.join(", ")}.` : " No saved dashboards in dashboards/.";
-  fail5(`Unknown dashboard "${name}".${available}`);
-}
-function metaFrom(dashboard) {
-  const meta = {};
-  if (dashboard.persona !== void 0) meta.persona = dashboard.persona;
-  if (dashboard.reportType !== void 0)
-    meta.report_type = dashboard.reportType;
-  if (dashboard.audience !== void 0) meta.audience = dashboard.audience;
-  if (dashboard.scoreWeights !== void 0) {
-    meta.score_weights = dashboard.scoreWeights;
-  }
-  return meta;
-}
-function ensureLocalGitignore(targetDir) {
-  const gitignorePath = join10(targetDir, ".gitignore");
-  const line = "dashboards/*.local.json";
-  let existing = "";
-  if (existsSync7(gitignorePath)) {
-    existing = readFileSync9(gitignorePath, "utf8");
-    if (existing.split(/\r?\n/).some((l) => l.trim() === line)) return;
-  }
-  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
-  appendFileSync5(gitignorePath, `${prefix}${line}
-`, "utf8");
-}
-function runSave(name, path, options) {
-  const targetDir = resolvePath2(path);
-  if (options.view !== void 0 && options.artifacts !== void 0) {
-    fail5("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
-    return;
-  }
-  let selection;
-  if (options.view !== void 0) {
-    const resolved = resolveView({ view: options.view }, {});
-    if (resolved.kind !== "ok") {
-      const hint = resolved.kind === "unknown-view" && resolved.suggestions.length > 0 ? ` \u2014 did you mean ${resolved.suggestions.join(", ")}?` : "";
-      fail5(`Unknown view "${options.view}"${hint}`);
-      return;
-    }
-    selection = options.freeze ? { artifacts: resolved.artifacts } : { view: options.view };
-  } else if (options.artifacts !== void 0) {
-    const parsed = parseArtifacts(options.artifacts);
-    if (parsed.kind === "error") {
-      fail5(parsed.message);
-      return;
-    }
-    selection = { artifacts: parsed.ids };
-  } else {
-    const current = readSelection(targetDir);
-    if (current.kind === "error") {
-      fail5(current.message);
-      return;
-    }
-    selection = current.selection.viewName !== void 0 && !options.freeze ? { view: current.selection.viewName } : { artifacts: current.selection.artifacts };
-  }
-  const local = options.local ?? false;
-  writeDashboardFile(targetDir, name, selection, { local });
-  if (local) ensureLocalGitignore(targetDir);
-  const where = `dashboards/${name}${local ? ".local" : ""}.json`;
-  const kind = "view" in selection ? `live preset "${selection.view}"` : "frozen list";
-  process.stdout.write(`Saved dashboard "${name}" (${kind}) to ${where}.
-`);
-  process.exitCode = 0;
-}
-function runLoad(name, path) {
-  const targetDir = resolvePath2(path);
-  const read = readDashboardFile(targetDir, name);
-  if (read.kind === "not-found") {
-    failUnknownDashboard(targetDir, name);
-    return;
-  }
-  if (read.kind === "invalid") {
-    fail5(`Dashboard "${name}" is invalid: ${read.message}`);
-    return;
-  }
-  writeProjectConfig(targetDir, {
-    dashboard_default: name,
-    dashboard_view: void 0,
-    dashboard_artifacts: void 0
-  });
-  process.stdout.write(`Default dashboard set to "${name}".
-`);
-  process.exitCode = 0;
-}
-function runLs(path) {
-  const targetDir = resolvePath2(path);
-  const entries = listDashboards(targetDir);
-  if (entries.length === 0) {
-    process.stdout.write("No saved dashboards in dashboards/.\n");
-    process.exitCode = 0;
-    return;
-  }
-  for (const e4 of entries) {
-    const marker = e4.hasShared && e4.hasLocal ? "shared + personal" : e4.hasShared ? "shared (committed)" : "personal (local)";
-    process.stdout.write(`${e4.name}  (${marker})
-`);
-  }
-  process.exitCode = 0;
-}
-function runRm(name, path, options) {
-  const targetDir = resolvePath2(path);
-  const file = join10(
-    targetDir,
-    "dashboards",
-    `${name}${options.local ? ".local" : ""}.json`
-  );
-  if (!existsSync7(file)) {
-    failUnknownDashboard(targetDir, name);
-    return;
-  }
-  unlinkSync2(file);
-  process.stdout.write(`Removed dashboard "${name}".
-`);
-  process.exitCode = 0;
-}
-function runSuggest(phrase) {
-  const matches = matchPhrase(phrase);
-  if (matches.length === 0) {
-    process.stdout.write(`No artifacts matched "${phrase}".
-`);
-    process.exitCode = 0;
-    return;
-  }
-  for (const m of matches) {
-    process.stdout.write(`${m.id}	${m.title}
-`);
-  }
-  const ids = matches.map((m) => m.id).join(",");
-  process.stdout.write(
-    `
-Save with: dashboard save <name> --artifacts ${ids}
-`
-  );
-  process.exitCode = 0;
-}
-async function runSetup(path) {
-  const isTTY = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
-  if (!isTTY) {
-    fail5(
-      "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead."
-    );
-    return;
-  }
-  const targetDir = resolvePath2(path);
-  const outcome = await runSetupWizard({
-    input: process.stdin,
-    output: process.stdout,
-    cwd: targetDir,
-    isTTY
-  });
-  process.exitCode = outcome.exitCode;
-}
-function registerDashboardCommand(program2) {
-  const dashboard = program2.command("dashboard").description(
-    "Compose the report dashboard: list / set / add / remove artifacts"
-  );
-  dashboard.command("list").description(
-    "List the artifact catalog with an enabled marker for the resolved view"
-  ).argument("[path]", "project directory holding .ds-bridge.json", ".").option("--format <format>", "output format: term | json", "term").action((path, options) => {
-    runList2(path, options);
-  });
-  dashboard.command("set").description(
-    "Persist the dashboard view: --view <preset> XOR --artifacts <a,b,\u2026>"
-  ).argument("[path]", "project directory holding .ds-bridge.json", ".").option("--view <preset>", "persona preset name").option("--artifacts <ids>", "comma-separated explicit artifact ids").action((path, options) => {
-    runSet(path, options);
-  });
-  dashboard.command("add").description(
-    "Add an artifact to the view (materializes the current preset first)"
-  ).argument("<artifact>", "artifact id to add").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
-    "--dashboard <name>",
-    "edit a saved dashboard instead of the project view"
-  ).action(
-    (artifact, path, options) => {
-      runEdit(path, artifact, "add", options.dashboard);
-    }
-  );
-  dashboard.command("remove").description(
-    "Remove an artifact from the view (materializes the current preset first)"
-  ).argument("<artifact>", "artifact id to remove").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
-    "--dashboard <name>",
-    "edit a saved dashboard instead of the project view"
-  ).action(
-    (artifact, path, options) => {
-      runEdit(path, artifact, "remove", options.dashboard);
-    }
-  );
-  dashboard.command("save").description(
-    "Save a named dashboard (live preset by default; --freeze materializes)"
-  ).argument("<name>", "dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").option("--from-current", "save the project's current selection (default)").option("--view <preset>", "save a persona preset by name (kept live)").option(
-    "--artifacts <ids>",
-    "save an explicit comma-separated artifact list"
-  ).option(
-    "--freeze",
-    "materialize the resolved artifact list (not a live preset)"
-  ).option(
-    "--local",
-    "write a personal dashboards/<name>.local.json (gitignored)"
-  ).action((name, path, options) => {
-    runSave(name, path, options);
-  });
-  dashboard.command("load").description(
-    "Set a saved dashboard as the project default (dashboard_default)"
-  ).argument("<name>", "saved dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").action((name, path) => {
-    runLoad(name, path);
-  });
-  dashboard.command("ls").description("List saved dashboards with shared/personal markers").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
-    runLs(path);
-  });
-  dashboard.command("rm").description("Delete a saved dashboard").argument("<name>", "saved dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
-    "--local",
-    "delete the personal .local.json instead of the shared file"
-  ).action((name, path, options) => {
-    runRm(name, path, options);
-  });
-  dashboard.command("suggest").description(
-    "Suggest artifact ids for a free-text phrase (offline NL match, no LLM)"
-  ).argument("<phrase>", "free-text description of the dashboard you want").action((phrase) => {
-    runSuggest(phrase);
-  });
-  dashboard.command("setup").description("Interactive wizard to compose and persist a dashboard view").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
-    void runSetup(path);
-  });
-}
-
-// src/cli-commands/digest.ts
-import {
-  existsSync as existsSync8,
-  mkdirSync as mkdirSync6,
-  readFileSync as readFileSync10,
-  statSync as statSync4,
-  writeFileSync as writeFileSync4
-} from "fs";
-import { dirname as dirname3, join as join11, resolve as resolve7 } from "path";
-import { cwd as processCwd2 } from "process";
-
-// src/engines/report/history-lines.ts
-function asObject(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function replayHistory(text2) {
-  const records = [];
-  const lines = text2.split("\n");
-  for (let i = 0; i < lines.length; i += 1) {
-    const trimmed = (lines[i] ?? "").trim();
-    if (trimmed === "") continue;
-    let parsed;
-    try {
-      parsed = JSON.parse(trimmed);
-    } catch {
-      continue;
-    }
-    const record = asObject(parsed);
-    if (record === void 0) continue;
-    if (typeof record.kind !== "string") continue;
-    const entry = { kind: record.kind, record };
-    if (typeof record.at === "string") entry.at = record.at;
-    records.push(entry);
-  }
-  return records;
-}
-
-// src/engines/report/digest.ts
-var ACCEPTED_SINCE_FORMS = 'Expected an ISO date "YYYY-MM-DD" or a relative window "<N>d" / "<N>w".';
-var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-var RELATIVE = /^(\d+)([dw])$/;
-var MS_PER_DAY = 24 * 60 * 60 * 1e3;
-function parseSince(raw, nowIso) {
-  const value2 = raw ?? "7d";
-  const isoMatch = ISO_DATE.exec(value2);
-  if (isoMatch !== null) {
-    const ms = Date.parse(`${value2}T00:00:00.000Z`);
-    if (Number.isNaN(ms)) {
-      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    }
-    const roundTrip = new Date(ms).toISOString().slice(0, 10);
-    if (roundTrip !== value2) {
-      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    }
-    return { kind: "ok", sinceIso: `${value2}T00:00:00.000Z` };
-  }
-  const relMatch = RELATIVE.exec(value2);
-  if (relMatch !== null) {
-    const count = Number.parseInt(relMatch[1] ?? "", 10);
-    const unit = relMatch[2];
-    if (count <= 0) return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    const days = unit === "w" ? count * 7 : count;
-    const nowMs = Date.parse(nowIso);
-    if (Number.isNaN(nowMs)) {
-      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    }
-    return {
-      kind: "ok",
-      sinceIso: new Date(nowMs - days * MS_PER_DAY).toISOString()
-    };
-  }
-  return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-}
-var KIND_AUDIENCE = {
-  drift: "both",
-  lint: "developer",
-  "on-system": "both",
-  coverage: "both",
-  readiness: "designer",
-  a11y: "designer"
-};
-var MOVEMENT_ORDER = [
-  "drift",
-  "lint",
-  "on-system",
-  "coverage",
-  "readiness",
-  "a11y"
-];
-function asNumber2(value2) {
+// src/engines/history/readiness-frames.ts
+function str(value2) {
+  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
+}
+function num3(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function asRecord(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function pct(part, whole) {
-  if (whole <= 0) return void 0;
-  return Math.round(100 * part / whole);
-}
-function inAudience(tag, wanted) {
-  if (wanted === "both") return true;
-  return tag === wanted || tag === "both";
-}
-function absorb(side, kind, record) {
-  switch (kind) {
-    case "tokens-check":
-      side.tokensCheck = record;
-      break;
-    case "lint":
-      side.lint = record;
-      if (asRecord(record.adoption) !== void 0) side.adoption = record;
-      break;
-    case "adoption":
-      side.adoptionLine = record;
-      break;
-    case "handoff":
-      side.handoff = record;
-      break;
-    case "a11y":
-      side.a11y = record;
-      break;
-    default:
-      break;
+function frameKeyOf(record) {
+  const fileKey = str(record.fileKey);
+  const nodeId = str(record.nodeId);
+  if (fileKey !== void 0) {
+    return nodeId !== void 0 ? `${fileKey}:${nodeId}` : fileKey;
   }
+  return `name:${str(record.frameName) ?? ""}`;
 }
-function driftMetric(r2) {
-  return r2 === void 0 ? void 0 : asNumber2(r2.stale);
-}
-function lintMetric(r2) {
-  if (r2 === void 0) return void 0;
-  const byKind = asRecord(r2.byKind) ?? {};
-  return asNumber2(byKind.exact) + asNumber2(byKind.near) + asNumber2(byKind.offSystem);
-}
-function onSystemMetric(r2) {
-  const adoption = r2 === void 0 ? void 0 : asRecord(r2.adoption);
-  if (adoption === void 0) return void 0;
-  return pct(
-    asNumber2(adoption.refs),
-    asNumber2(adoption.refs) + asNumber2(adoption.literals)
-  );
-}
-function coverageMetric(r2) {
-  if (r2 === void 0) return void 0;
-  return pct(asNumber2(r2.imported), asNumber2(r2.total));
-}
-function readinessMetric(r2) {
-  return r2 === void 0 ? void 0 : asNumber2(r2.score);
-}
-function a11yMetric(r2) {
-  if (r2 === void 0) return void 0;
-  const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
-  let passed = 0;
-  let failed = 0;
-  for (const m of modes2) {
-    const mm = asRecord(m);
-    if (mm === void 0) continue;
-    passed += asNumber2(mm.passed);
-    failed += asNumber2(mm.failed);
+function frameKeyResolver(records) {
+  const keysByName = /* @__PURE__ */ new Map();
+  for (const { kind, record } of records) {
+    if (kind !== "handoff" || str(record.fileKey) === void 0) continue;
+    const name = str(record.frameName);
+    if (name === void 0) continue;
+    const keys = keysByName.get(name) ?? /* @__PURE__ */ new Set();
+    keys.add(frameKeyOf(record));
+    keysByName.set(name, keys);
   }
-  return pct(passed, passed + failed);
+  return (record) => {
+    const key = frameKeyOf(record);
+    if (str(record.fileKey) !== void 0) return key;
+    const keys = keysByName.get(str(record.frameName) ?? "");
+    return keys !== void 0 && keys.size === 1 ? keys.values().next().value ?? key : key;
+  };
 }
-var METRICS = {
-  drift: { slot: "tokensCheck", read: driftMetric },
-  lint: { slot: "lint", read: lintMetric },
-  "on-system": { slot: "adoption", read: onSystemMetric },
-  coverage: { slot: "adoptionLine", read: coverageMetric },
-  readiness: { slot: "handoff", read: readinessMetric },
-  a11y: { slot: "a11y", read: a11yMetric }
-};
-function directionOf(baseline, current) {
-  if (baseline === void 0) return "flat";
-  if (current > baseline) return "up";
-  if (current < baseline) return "down";
-  return "flat";
-}
-function buildDigest(text2, sinceIso, audience, readinessThreshold) {
-  const records = replayHistory(text2);
-  const before = {};
-  const inWindow = {};
-  let anyInWindow = false;
+function readinessByFrame(records, threshold) {
+  const keyOf = frameKeyResolver(records);
+  const rows = /* @__PURE__ */ new Map();
   for (const { kind, at, record } of records) {
-    if (at === void 0) continue;
-    if (at >= sinceIso) {
-      absorb(inWindow, kind, record);
-      anyInWindow = true;
-    } else {
-      absorb(before, kind, record);
-    }
-  }
-  if (!anyInWindow) {
-    return { kind: "quiet", sinceIso, audience };
-  }
-  const movements = [];
-  for (const kind of MOVEMENT_ORDER) {
-    const tag = KIND_AUDIENCE[kind];
-    if (!inAudience(tag, audience)) continue;
-    const { slot, read } = METRICS[kind];
-    const current = read(inWindow[slot]);
-    if (current === void 0) continue;
-    const baseline = read(before[slot]);
-    movements.push({
-      kind,
-      audience: tag,
-      ...baseline !== void 0 ? { baseline } : {},
-      current,
-      isNew: baseline === void 0,
-      direction: directionOf(baseline, current)
-    });
-  }
-  const candidates = [];
-  const driftStale = driftMetric(inWindow.tokensCheck);
-  if (driftStale !== void 0 && driftStale > 0) {
-    candidates.push({ command: "/ds-bridge:token-check", audience: "both" });
-  }
-  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber2(asRecord(inWindow.lint.byKind)?.offSystem);
-  if (offSystem !== void 0 && offSystem > 0) {
-    candidates.push({
-      command: "/ds-bridge:ds-lint --fix",
-      audience: "developer"
-    });
-  }
-  const readiness = readinessMetric(inWindow.handoff);
-  if (readiness !== void 0 && readiness < readinessThreshold) {
-    candidates.push({ command: "/ds-bridge:handoff-qa", audience: "designer" });
-  }
-  const a11yFailing = (() => {
-    if (inWindow.a11y === void 0) return false;
-    const modes2 = Array.isArray(inWindow.a11y.modes) ? inWindow.a11y.modes : [];
-    return modes2.some((m) => asNumber2(asRecord(m)?.failed) > 0);
-  })();
-  if (a11yFailing) {
-    candidates.push({ command: "/ds-bridge:a11y-check", audience: "designer" });
-  }
-  const coverage = coverageMetric(inWindow.adoptionLine);
-  if (coverage !== void 0 && coverage < 100) {
-    candidates.push({ command: "ds-bridge adoption", audience: "both" });
-  }
-  const actions = candidates.filter((a) => inAudience(a.audience, audience)).slice(0, 3);
-  return { kind: "ok", sinceIso, audience, movements, actions };
-}
-
-// src/engines/report/digest-md.ts
-var TITLE = "# Design-system digest";
-var SECTIONS2 = [
-  { heading: "## For designers", audience: "designer" },
-  { heading: "## For developers", audience: "developer" }
-];
-var MOVEMENT_LABEL = {
-  drift: "Drift",
-  lint: "Lint violations",
-  "on-system": "On-system",
-  coverage: "Import coverage",
-  readiness: "Readiness",
-  a11y: "Contrast"
-};
-var PERCENT_KINDS = /* @__PURE__ */ new Set([
-  "on-system",
-  "coverage",
-  "a11y"
-]);
-var ACTION_REASON = {
-  "/ds-bridge:token-check": "review breaking token drift",
-  "/ds-bridge:ds-lint --fix": "clear off-system lint violations",
-  "/ds-bridge:handoff-qa": "readiness is below the gate",
-  "/ds-bridge:a11y-check": "failing contrast pairs need a look",
-  "ds-bridge adoption": "import coverage is below 100%"
-};
-function arrow(row) {
-  if (row.isNew) return "\u2014";
-  switch (row.direction) {
-    case "up":
-      return "\u25B2";
-    case "down":
-      return "\u25BC";
-    case "flat":
-      return "=";
-  }
-}
-function value(kind, n) {
-  return PERCENT_KINDS.has(kind) ? `${n}%` : `${n}`;
-}
-function inSection2(rowAudience, sectionAudience) {
-  return rowAudience === sectionAudience || rowAudience === "both";
-}
-function renderMovement(row) {
-  const label = MOVEMENT_LABEL[row.kind];
-  const current = value(row.kind, row.current);
-  if (row.isNew) {
-    return `- ${label} ${arrow(row)} new ${current}`;
-  }
-  const baseline = value(row.kind, row.baseline ?? 0);
-  return `- ${label} ${arrow(row)} ${baseline} \u2192 ${current}`;
-}
-function renderSection2(heading, sectionAudience, movements) {
-  const lines = movements.filter((m) => inSection2(m.audience, sectionAudience));
-  if (lines.length === 0) return void 0;
-  return [heading, "", ...lines.map(renderMovement)].join("\n");
-}
-function renderAction(command, index) {
-  const reason = ACTION_REASON[command] ?? "see the docs";
-  return `${index + 1}. Run \`${command}\` \u2014 ${reason}`;
-}
-function renderDigestMarkdown(model) {
-  if (model.kind === "quiet") {
-    return `${TITLE}
-
-_Quiet week \u2014 no design-system movement since ${model.sinceIso}._
-`;
-  }
-  const blocks = [
-    TITLE,
-    `_Window: changes since ${model.sinceIso}._`
-  ];
-  for (const section of SECTIONS2) {
-    if (model.audience !== "both" && model.audience !== section.audience) {
-      continue;
-    }
-    const block = renderSection2(
-      section.heading,
-      section.audience,
-      model.movements
-    );
-    if (block !== void 0) blocks.push(block);
-  }
-  if (model.actions.length > 0) {
-    const actionLines = model.actions.map((a, i) => renderAction(a.command, i));
-    blocks.push(["## Actions", "", ...actionLines].join("\n"));
-  }
-  return `${blocks.join("\n\n")}
-`;
-}
-
-// src/cli-commands/digest.ts
-function defaultDeps2() {
-  return {
-    cwd: processCwd2(),
-    now: () => /* @__PURE__ */ new Date(),
-    stdout: (text2) => process.stdout.write(text2),
-    stderr: (text2) => process.stderr.write(text2)
-  };
-}
-function parseAudience2(flag) {
-  switch (flag) {
-    case "designers":
-    case "designer":
-      return { kind: "ok", value: "designer" };
-    case "developers":
-    case "developer":
-      return { kind: "ok", value: "developer" };
-    case "both":
-      return { kind: "ok", value: "both" };
-    default:
-      return { kind: "error" };
-  }
-}
-function readHistoryText(stateDir) {
-  try {
-    return readFileSync10(join11(stateDir, "history.jsonl"), "utf8");
-  } catch {
-    return "";
-  }
-}
-function resolveReadinessThreshold(targetDir) {
-  const configPath = join11(targetDir, ".ds-bridge.json");
-  let projectFileText;
-  if (existsSync8(configPath)) {
-    try {
-      projectFileText = readFileSync10(configPath, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      return {
-        kind: "error",
-        message: `Could not read ${configPath}: ${detail}`
-      };
-    }
-  }
-  const resolved = resolveConfig(
-    projectFileText !== void 0 ? { projectFileText } : {}
-  );
-  if (resolved.kind === "invalid-project-file") {
-    return { kind: "error", message: resolved.message };
-  }
-  return { kind: "ok", value: resolved.config.readinessThreshold };
-}
-function runDigest(path, options, deps) {
-  const audience = parseAudience2(options.audience);
-  if (audience.kind !== "ok") {
-    deps.stderr(
-      `Unknown --audience "${options.audience}". Expected "designers", "developers", or "both".
-`
-    );
-    process.exitCode = 2;
-    return;
-  }
-  const nowIso = deps.now().toISOString();
-  const since = parseSince(options.since, nowIso);
-  if (since.kind !== "ok") {
-    deps.stderr(`Invalid --since "${options.since}". ${since.message}
-`);
-    process.exitCode = 2;
-    return;
-  }
-  const targetDir = resolve7(deps.cwd, path);
-  if (!existsSync8(targetDir) || !statSync4(targetDir).isDirectory()) {
-    deps.stderr(`Path "${targetDir}" is not a directory.
-`);
-    process.exitCode = 2;
-    return;
-  }
-  const threshold = resolveReadinessThreshold(targetDir);
-  if (threshold.kind === "error") {
-    deps.stderr(`${threshold.message}
-`);
-    process.exitCode = 2;
-    return;
-  }
-  const stateDir = join11(targetDir, ".ds-bridge");
-  const text2 = readHistoryText(stateDir);
-  const model = buildDigest(
-    text2,
-    since.sinceIso,
-    audience.value,
-    threshold.value
-  );
-  const markdown = renderDigestMarkdown(model);
-  if (options.out !== void 0) {
-    const outPath = resolve7(deps.cwd, options.out);
-    try {
-      mkdirSync6(dirname3(outPath), { recursive: true });
-      writeFileSync4(outPath, markdown, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      deps.stderr(`Could not write digest to "${outPath}": ${detail}
-`);
-      process.exitCode = 2;
-      return;
-    }
-    deps.stdout(`${outPath}
-`);
-  } else {
-    deps.stdout(markdown);
-  }
-  process.exitCode = 0;
-}
-function registerDigestCommand(program2) {
-  program2.command("digest").description(
-    "Paste-anywhere markdown of what moved in a window, segmented by audience, ending in up to three concrete actions"
-  ).argument("[path]", "project directory to digest", ".").option(
-    "--since <window>",
-    'window start: an ISO date "YYYY-MM-DD" or a relative "<N>d" / "<N>w" (default 7d)'
-  ).option("--audience <who>", "designers | developers | both", "both").option(
-    "--out <file>",
-    "redirect the digest markdown to a file (and print the path) instead of stdout"
-  ).action((path, options) => {
-    runDigest(path, options, defaultDeps2());
-  });
-}
-
-// src/cli-commands/docs.ts
-import {
-  existsSync as existsSync9,
-  mkdirSync as mkdirSync7,
-  readFileSync as readFileSync11,
-  statSync as statSync5,
-  writeFileSync as writeFileSync5
-} from "fs";
-import { dirname as dirname4, join as join12, resolve as resolvePath3 } from "path";
-import { fileURLToPath as fileURLToPath2 } from "url";
-
-// src/engines/docs/merge.ts
-function byNameAsc2(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function indexCode(code) {
-  const byName2 = /* @__PURE__ */ new Map();
-  for (const component of code) {
-    if (!byName2.has(component.name)) byName2.set(component.name, component);
-  }
-  return byName2;
-}
-function indexFigma(figma) {
-  const byId = /* @__PURE__ */ new Map();
-  for (const model of figma) {
-    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
-  }
-  return byId;
-}
-function resolveCode(importPath, rich, figmaFallbackVariants) {
-  if (rich !== void 0) {
-    return {
-      importPath: rich.importPath,
-      props: rich.props,
-      variants: rich.variants
+    if (kind !== "handoff") continue;
+    const key = keyOf(record);
+    const prev = rows.get(key);
+    const fileKey = str(record.fileKey) ?? prev?.fileKey;
+    const nodeId = str(record.nodeId) ?? prev?.nodeId;
+    const frameName = str(record.frameName) ?? "";
+    const score = num3(record.score);
+    const row2 = {
+      key,
+      frameName,
+      ...fileKey !== void 0 ? { fileKey } : {},
+      ...nodeId !== void 0 ? { nodeId } : {},
+      latest: score,
+      ...at !== void 0 ? { at } : {},
+      runs: (prev?.runs ?? 0) + 1,
+      passes: (prev?.passes ?? 0) + (score >= threshold ? 1 : 0),
+      passRate: 0
     };
-  }
-  return {
-    importPath,
-    props: [],
-    variants: figmaFallbackVariants ?? {}
-  };
-}
-function mergeComponentDocs(input) {
-  const { registry } = input;
-  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
-  const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
-  const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
-  const codeByName = indexCode(input.code);
-  const figmaById = indexFigma(input.figma);
-  const docs = [];
-  for (const match of matches) {
-    const richCode = codeByName.get(match.codeName);
-    const richFigma = figmaById.get(match.nodeId);
-    const description = richFigma?.description ?? "";
-    const gaps = [];
-    if (description.length === 0) gaps.push("missing-figma-description");
-    docs.push({
-      name: match.codeName,
-      code: resolveCode(match.importPath, richCode),
-      figma: { nodeId: match.nodeId, description },
-      gaps
-    });
-  }
-  for (const entry of unmatchedCode) {
-    const richCode = codeByName.get(entry.name);
-    docs.push({
-      name: entry.name,
-      code: resolveCode(entry.importPath, richCode),
-      gaps: ["unmatched-in-figma"]
-    });
-  }
-  for (const entry of unmatchedFigma) {
-    const richFigma = figmaById.get(entry.nodeId);
-    const description = richFigma?.description ?? "";
-    const gaps = ["unmatched-in-code"];
-    if (description.length === 0) gaps.push("missing-figma-description");
-    docs.push({
-      name: entry.name,
-      // No code side: surface the figma variant axes so the doc is not empty.
-      code: resolveCode("", void 0, richFigma?.variantProps),
-      figma: { nodeId: entry.nodeId, description },
-      gaps
-    });
-  }
-  docs.sort((a, b) => byNameAsc2(a.name, b.name));
-  return docs;
-}
-
-// src/engines/docs/render-llms.ts
-var TOKEN_TYPE_ORDER = [
-  "color",
-  "dimension",
-  "fontFamily",
-  "fontWeight",
-  "duration",
-  "number",
-  "shadow",
-  "typography",
-  "other"
-];
-function signature(doc) {
-  const parts = doc.code.props.map(
-    (prop) => `${prop.name}${prop.required ? "" : "?"}: ${prop.type}`
-  );
-  return `(${parts.join(", ")})`;
-}
-function locationOf(doc) {
-  if (doc.code.importPath.length > 0) return doc.code.importPath;
-  if (doc.figma !== void 0) return `figma:${doc.figma.nodeId}`;
-  return "(no source)";
-}
-function statusTag(doc) {
-  if (doc.gaps.length === 0) return "[documented]";
-  return `[gaps: ${doc.gaps.join(", ")}]`;
-}
-function renderTokens(tokens) {
-  const total = tokens.tokens.length;
-  const head = ["## Tokens", "", `Format: ${tokens.format}`, `Total: ${total}`];
-  if (total === 0) {
-    return [...head, "", "_No tokens._"].join("\n");
-  }
-  const counts = /* @__PURE__ */ new Map();
-  for (const token of tokens.tokens) {
-    counts.set(token.type, (counts.get(token.type) ?? 0) + 1);
-  }
-  const lines = [];
-  for (const type of TOKEN_TYPE_ORDER) {
-    const count = counts.get(type);
-    if (count !== void 0 && count > 0) lines.push(`- ${type}: ${count}`);
-  }
-  return [...head, "", ...lines].join("\n");
-}
-function renderComponents(docs) {
-  const head = ["## Components"];
-  if (docs.length === 0) {
-    return [...head, "", "_No components._"].join("\n");
-  }
-  const lines = docs.map(
-    (doc) => `- ${doc.name}${signature(doc)} \u2014 ${locationOf(doc)} ${statusTag(doc)}`
-  );
-  return [...head, "", ...lines].join("\n");
-}
-function renderLlmsTxt(docs, tokens) {
-  const sections = [
-    "# Design System",
-    "> Machine-readable summary of the design system: tokens and components.",
-    renderTokens(tokens),
-    renderComponents(docs)
-  ];
-  return `${sections.join("\n\n")}
-`;
-}
-
-// src/engines/docs/render-mdx.ts
-function statusOf(doc) {
-  return doc.gaps.length > 0 ? "gaps" : "documented";
-}
-function escapeCell(text2) {
-  return text2.replace(/\|/g, "\\|");
-}
-function renderImport(doc) {
-  if (doc.code.importPath.length === 0) return void 0;
-  return [
-    "```tsx",
-    `import { ${doc.name} } from "${doc.code.importPath}";`,
-    "```"
-  ].join("\n");
-}
-function renderProps(doc) {
-  const { props } = doc.code;
-  if (props.length === 0) {
-    return ["## Props", "", "_No props documented._"].join("\n");
-  }
-  const rows = props.map(
-    (prop) => `| \`${escapeCell(prop.name)}\` | \`${escapeCell(prop.type)}\` | ${prop.required ? "yes" : "no"} |`
-  );
-  return [
-    "## Props",
-    "",
-    "| Prop | Type | Required |",
-    "| --- | --- | --- |",
-    ...rows
-  ].join("\n");
-}
-function renderVariants(doc) {
-  const axes = Object.keys(doc.code.variants).sort();
-  if (axes.length === 0) {
-    return ["## Variants", "", "_No variants._"].join("\n");
-  }
-  const lines = axes.map((axis) => {
-    const values = (doc.code.variants[axis] ?? []).map((value2) => `\`${value2}\``).join(", ");
-    return `- **${axis}**: ${values}`;
-  });
-  return ["## Variants", "", ...lines].join("\n");
-}
-function renderFigma(doc) {
-  const figma = doc.figma;
-  if (figma === void 0) return void 0;
-  const body = figma.description.length > 0 ? figma.description : "_No Figma description authored._";
-  return ["## Figma", "", body, "", `Node: \`${figma.nodeId}\``].join("\n");
-}
-function explainGap(gap) {
-  switch (gap) {
-    case "missing-figma-description":
-      return "The matched Figma component has no authored description.";
-    case "unmatched-in-figma":
-      return "The codebase has this component but the Figma library does not publish a match.";
-    case "unmatched-in-code":
-      return "Figma publishes this component but no code component matches it.";
-  }
-}
-function renderGaps(doc) {
-  if (doc.gaps.length === 0) return void 0;
-  const lines = doc.gaps.map((gap) => `> - ${explainGap(gap)}`);
-  return [
-    "> [!WARNING]",
-    "> This component has documentation gaps:",
-    ...lines
-  ].join("\n");
-}
-function renderComponentMdx(doc) {
-  const sections = [
-    ["---", `title: ${doc.name}`, `status: ${statusOf(doc)}`, "---"].join("\n"),
-    `# ${doc.name}`
-  ];
-  const importBlock = renderImport(doc);
-  if (importBlock !== void 0) sections.push(importBlock);
-  sections.push(renderProps(doc));
-  sections.push(renderVariants(doc));
-  const figmaBlock = renderFigma(doc);
-  if (figmaBlock !== void 0) sections.push(figmaBlock);
-  const gapsBlock = renderGaps(doc);
-  if (gapsBlock !== void 0) sections.push(gapsBlock);
-  return `${sections.join("\n\n")}
-`;
-}
-
-// src/cli-commands/docs.ts
-var EMPTY_TOKENS = { format: "w3c", tokens: [] };
-var PARSERS2 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
-function fail6(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function normalizeName(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-async function scanCode(targetDir) {
-  const globals = globalThis;
-  if (typeof globals.__filename !== "string") {
-    const filename = fileURLToPath2(import.meta.url);
-    globals.__filename = filename;
-    globals.__dirname = dirname4(filename);
-  }
-  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
-  return scanCodeComponents(targetDir);
-}
-function loadRegistry2(targetDir) {
-  const registryPath = join12(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync9(registryPath)) {
-    fail6(
-      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
-    );
-    return void 0;
-  }
-  let raw;
-  try {
-    raw = readFileSync11(registryPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail6(`Could not read registry "${registryPath}": ${detail}`);
-    return void 0;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail6(`Registry "${registryPath}" is not valid JSON: ${detail}`);
-    return void 0;
-  }
-}
-async function discoverTokens(targetDir) {
-  const outcome = await discoverTokenSources(targetDir);
-  if (outcome.kind !== "ok" || outcome.sources.length === 0) {
-    return EMPTY_TOKENS;
-  }
-  const source = outcome.sources[0];
-  if (source === void 0) return EMPTY_TOKENS;
-  let raw;
-  try {
-    raw = readFileSync11(source.path, "utf8");
-  } catch {
-    return EMPTY_TOKENS;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return EMPTY_TOKENS;
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") return EMPTY_TOKENS;
-  const result = PARSERS2[format](parsed);
-  return result.kind === "ok" ? result.map : EMPTY_TOKENS;
-}
-function mdxFileName(component) {
-  const safe = component.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return `${safe.length > 0 ? safe : "component"}.mdx`;
-}
-function hasRegistry(candidate) {
-  return existsSync9(
-    join12(resolvePath3(candidate), ".ds-bridge", "registry.json")
-  );
-}
-function disambiguate(component, path) {
-  if (component !== void 0 && component !== "" && path === "." && !hasRegistry(".") && hasRegistry(component)) {
-    return { component: void 0, path: component };
-  }
-  return { component, path };
-}
-function renderTerm5(result) {
-  const rows = result.pages.map((page) => [
-    page.component,
-    page.gaps.length === 0 ? "\u2014" : page.gaps.join(", ")
-  ]);
-  const table = renderTable(["component", "gaps"], rows, { color: false });
-  const gapTotal = result.pages.reduce((sum, p4) => sum + p4.gaps.length, 0);
-  const heading = `${result.pages.length} pages written to ${result.outDir}`;
-  const footer = `llms.txt: ${result.llmsPath} \xB7 ${gapTotal} gaps total`;
-  return [heading, "", table, "", footer].join("\n");
-}
-async function runDocs(rawComponent, rawPath, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail6(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const { component, path } = disambiguate(rawComponent, rawPath);
-  const targetDir = resolvePath3(path);
-  if (!existsSync9(targetDir) || !statSync5(targetDir).isDirectory()) {
-    fail6(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const registry = loadRegistry2(targetDir);
-  if (registry === void 0) return;
-  const code = await scanCode(targetDir);
-  const tokens = await discoverTokens(targetDir);
-  const allDocs = mergeComponentDocs({ registry, code, figma: [], tokens });
-  let docs = allDocs;
-  if (component !== void 0 && component !== "") {
-    const needle = normalizeName(component);
-    docs = allDocs.filter((doc) => normalizeName(doc.name) === needle);
-    if (docs.length === 0) {
-      const candidates = allDocs.map((doc) => doc.name).join(", ");
-      fail6(
-        `No component named "${component}" in the registry. Candidates: ${candidates.length > 0 ? candidates : "(none)"}.`
-      );
-      return;
-    }
-  }
-  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join12(targetDir, ".ds-bridge", "docs");
-  try {
-    mkdirSync7(outDir, { recursive: true });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail6(`Could not create output directory "${outDir}": ${detail}`);
-    return;
-  }
-  const pages = [];
-  for (const doc of docs) {
-    const fileName = mdxFileName(doc.name);
-    const pagePath = join12(outDir, fileName);
-    try {
-      writeFileSync5(pagePath, renderComponentMdx(doc), "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      fail6(`Could not write "${pagePath}": ${detail}`);
-      return;
-    }
-    pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
-  }
-  const llmsPath = join12(outDir, "llms.txt");
-  try {
-    writeFileSync5(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail6(`Could not write "${llmsPath}": ${detail}`);
-    return;
-  }
-  const result = { outDir, llmsPath, pages };
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}
-`);
-  } else {
-    process.stdout.write(`${renderTerm5(result)}
-`);
-  }
-  process.exitCode = 0;
-}
-function registerDocsCommand(program2) {
-  program2.command("docs").description(
-    "Generate component MDX docs + llms.txt from the saved registry and tokens"
-  ).argument("[component]", "filter to a single component by normalized name").argument(
-    "[path]",
-    "project directory holding .ds-bridge/registry.json",
-    "."
-  ).option("--out <dir>", "output directory (default .ds-bridge/docs)").option("--format <format>", "output format: term | json", "term").action(
-    (component, path, options) => {
-      void runDocs(component, path, options);
-    }
-  );
-}
-
-// src/cli-commands/frame-impl.ts
-import {
-  appendFileSync as appendFileSync6,
-  existsSync as existsSync10,
-  mkdirSync as mkdirSync8,
-  readdirSync as readdirSync2,
-  readFileSync as readFileSync12
-} from "fs";
-import { isAbsolute as isAbsolute2, join as join13, resolve as resolve8, sep as sep2 } from "path";
-import { cwd } from "process";
-
-// src/engines/handoff/parse-url.ts
-var KEY_PATH_TYPES = /* @__PURE__ */ new Set(["file", "design", "proto"]);
-function isFigmaHost(host) {
-  const lower = host.toLowerCase();
-  return lower === "figma.com" || lower.endsWith(".figma.com");
-}
-function normalizeNodeId(raw) {
-  let value2 = raw;
-  try {
-    value2 = decodeURIComponent(raw);
-  } catch {
-    value2 = raw;
-  }
-  if (value2.length === 0) return void 0;
-  return value2.replace(/-/g, ":");
-}
-var INVALID = (message) => ({
-  kind: "invalid-url",
-  message
-});
-function parseFigmaUrl(url) {
-  if (typeof url !== "string") return INVALID("URL must be a string.");
-  const trimmed = url.trim();
-  if (trimmed.length === 0) return INVALID("URL is empty.");
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  let parsed;
-  try {
-    parsed = new URL(withScheme);
-  } catch {
-    return INVALID(`Not a parseable URL: "${url}".`);
-  }
-  if (!isFigmaHost(parsed.hostname)) {
-    return INVALID(`Not a figma.com URL: "${url}".`);
-  }
-  const segments2 = parsed.pathname.split("/").filter((s) => s.length > 0);
-  if (segments2.length === 0) {
-    return INVALID("Figma URL is missing a file key.");
-  }
-  const [pathType, ...rest] = segments2;
-  if (pathType === void 0 || !KEY_PATH_TYPES.has(pathType)) {
-    return INVALID(`Unsupported Figma URL path "/${pathType ?? ""}".`);
-  }
-  const keySegment = rest[0];
-  if (keySegment === void 0 || keySegment.length === 0) {
-    return INVALID("Figma URL is missing a file key.");
-  }
-  let fileKey = keySegment;
-  const branchKey = rest[2];
-  if (rest[1] === "branch" && branchKey !== void 0 && branchKey.length > 0) {
-    fileKey = branchKey;
-  }
-  const nodeIdRaw = parsed.searchParams.get("node-id");
-  const nodeId = nodeIdRaw === null ? void 0 : normalizeNodeId(nodeIdRaw);
-  return nodeId === void 0 ? { kind: "ok", fileKey } : { kind: "ok", fileKey, nodeId };
-}
-
-// src/engines/tokens/normalize.ts
-function normalizeColor(raw) {
-  if (raw === "") return void 0;
-  const parsed = parse_default(raw);
-  if (parsed === void 0) return void 0;
-  const alpha = parsed.alpha ?? 1;
-  return alpha < 1 ? formatHex8(parsed) : formatHex(parsed);
-}
-var PX_RE = /^(-?\d+(?:\.\d+)?)px$/;
-var REM_RE = /^(-?\d+(?:\.\d+)?)rem$/;
-var UNITLESS_RE = /^(-?\d+(?:\.\d+)?)$/;
-function normalizeDimension(raw, options) {
-  const remBase = options?.remBase ?? 16;
-  if (typeof raw === "number") {
-    return Number.isFinite(raw) ? { px: raw } : void 0;
-  }
-  const trimmed = raw.trim();
-  const px = PX_RE.exec(trimmed);
-  if (px?.[1] !== void 0) return { px: Number(px[1]) };
-  const rem = REM_RE.exec(trimmed);
-  if (rem?.[1] !== void 0) return { px: Number(rem[1]) * remBase };
-  const unitless = UNITLESS_RE.exec(trimmed);
-  if (unitless?.[1] !== void 0) return { px: Number(unitless[1]) };
-  return void 0;
-}
-
-// src/engines/tokens/token-index.ts
-function canonicalValueKey(token) {
-  const { value: value2 } = token;
-  if (typeof value2 === "number") {
-    const dim2 = normalizeDimension(value2);
-    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
-  }
-  if (typeof value2 !== "string") return void 0;
-  const color = normalizeColor(value2);
-  if (color !== void 0) return color;
-  const dim = normalizeDimension(value2);
-  if (dim !== void 0) return `${dim.px}px`;
-  return value2;
-}
-var deltaE2000 = differenceCiede2000();
-function buildTokenIndex(tokens) {
-  const byName2 = /* @__PURE__ */ new Map();
-  const byValue = /* @__PURE__ */ new Map();
-  const colorTokens = [];
-  for (const token of tokens) {
-    byName2.set(token.name, token);
-    const key = canonicalValueKey(token);
-    if (key !== void 0) {
-      const bucket = byValue.get(key);
-      if (bucket === void 0) {
-        byValue.set(key, [token]);
-      } else {
-        bucket.push(token);
-      }
-    }
-    if (token.type === "color" && typeof token.value === "string") {
-      const parsed = parse_default(token.value);
-      if (parsed !== void 0) colorTokens.push({ token, parsed });
-    }
-  }
-  return {
-    byName: byName2,
-    byValue,
-    nearest(rawColor, options) {
-      const query = parse_default(rawColor);
-      if (query === void 0) return [];
-      return colorTokens.map(({ token, parsed }) => ({
-        token,
-        deltaE: deltaE2000(query, parsed)
-      })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
-    }
-  };
-}
-
-// src/engines/registry/persist.ts
-function round3(value2) {
-  if (!Number.isFinite(value2)) return 0;
-  return Math.round(value2 * 1e3) / 1e3;
-}
-function normalizeName2(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-function byNameAsc3(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function toRegistryFile(result, generatedAt) {
-  const matches = result.matches.map((m) => ({
-    codeName: m.code.name,
-    importPath: m.code.importPath,
-    figmaName: m.figma.name,
-    nodeId: m.figma.nodeId,
-    score: round3(m.score)
-  })).sort((a, b) => byNameAsc3(a.codeName, b.codeName));
-  const unmatchedCode = result.unmatchedCode.map((u) => ({
-    name: u.code.name,
-    importPath: u.code.importPath,
-    candidates: u.candidates.map((c2) => ({
-      figmaName: c2.figma.name,
-      nodeId: c2.figma.nodeId,
-      score: round3(c2.score)
-    }))
-  })).sort((a, b) => byNameAsc3(a.name, b.name));
-  const unmatchedFigma = result.unmatchedFigma.map((u) => ({
-    name: u.figma.name,
-    nodeId: u.figma.nodeId,
-    candidates: u.candidates.map((c2) => ({
-      codeName: c2.code.name,
-      score: round3(c2.score)
-    }))
-  })).sort((a, b) => byNameAsc3(a.name, b.name));
-  return {
-    schemaVersion: 1,
-    generatedAt,
-    matches,
-    unmatchedCode,
-    unmatchedFigma
-  };
-}
-function resolveEntry(registry, nodeNameOrId) {
-  const query = nodeNameOrId;
-  const normalizedQuery = normalizeName2(query);
-  for (const entry of registry.matches) {
-    if (entry.nodeId === query) return { kind: "match", entry };
-  }
-  for (const entry of registry.matches) {
-    if (entry.figmaName === query) return { kind: "match", entry };
-  }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.matches) {
-      if (normalizeName2(entry.figmaName) === normalizedQuery) {
-        return { kind: "match", entry };
-      }
-    }
-  }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.nodeId === query) {
-      return { kind: "candidates", entries: entry.candidates };
-    }
-  }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.name === query) {
-      return { kind: "candidates", entries: entry.candidates };
-    }
-  }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.unmatchedFigma) {
-      if (normalizeName2(entry.name) === normalizedQuery) {
-        return { kind: "candidates", entries: entry.candidates };
-      }
-    }
-  }
-  return { kind: "not-found" };
-}
-
-// src/engines/registry/gaps.ts
-var COLOR_NEAR_DELTA_E = 2.5;
-var DIMENSION_NEAR_PX = 1;
-var NEAR_LIMIT = 3;
-function pickPreferred(tokens) {
-  if (tokens.length === 0) return void 0;
-  const names = new Set(tokens.map((t) => t.name));
-  const semantic = tokens.find(
-    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
-  );
-  return semantic ?? tokens[0];
-}
-function resolveComponent(requirement, registry) {
-  const byId = resolveEntry(registry, requirement.nodeId);
-  const outcome = byId.kind === "not-found" ? resolveEntry(registry, requirement.name) : byId;
-  if (outcome.kind === "match") {
-    return {
-      requirement,
-      resolution: {
-        kind: "registry-match",
-        codeName: outcome.entry.codeName,
-        importPath: outcome.entry.importPath
-      }
-    };
-  }
-  if (outcome.kind === "candidates") {
-    const candidates = outcome.entries.map((c2) => c2.codeName);
-    const list = candidates.length > 0 ? ` (${candidates.join(", ")})` : "";
-    return {
-      requirement,
-      reason: "ambiguous-registry-match",
-      candidates,
-      suggestion: `Multiple code components could match "${requirement.name}"${list} \u2014 pick one with a designer/engineer, don't guess.`
-    };
-  }
-  return {
-    requirement,
-    reason: "no-registry-match",
-    candidates: [],
-    suggestion: `No code component matches "${requirement.name}" \u2014 build it or publish the Figma component, then rebuild the registry. Do not invent UI.`
-  };
-}
-function resolveColor(requirement, index) {
-  const canonical2 = normalizeColor(requirement.rawValue);
-  if (canonical2 === void 0) return noTokenMatch(requirement);
-  const exact = index.byValue.get(canonical2);
-  const preferred = pickPreferred(exact ?? []);
-  if (preferred !== void 0) {
-    return tokenExact(requirement, preferred.name);
-  }
-  const near = index.nearest(canonical2, {
-    maxDeltaE: COLOR_NEAR_DELTA_E,
-    limit: NEAR_LIMIT
-  });
-  if (near.length > 0) {
-    return nearTokenOnly(
-      requirement,
-      near.map((m) => m.token.name)
-    );
-  }
-  return noTokenMatch(requirement);
-}
-function resolveDimension(requirement, index) {
-  const dim = normalizeDimension(requirement.rawValue);
-  if (dim === void 0) return noTokenMatch(requirement);
-  const bucket = index.byValue.get(`${dim.px}px`);
-  const exact = bucket?.find((t) => t.type === "dimension");
-  if (exact !== void 0) return tokenExact(requirement, exact.name);
-  const near = [];
-  for (const token of index.byName.values()) {
-    if (token.type !== "dimension") continue;
-    const tokenDim = normalizeDimension(
-      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
-    );
-    if (tokenDim === void 0) continue;
-    const distance = Math.abs(dim.px - tokenDim.px);
-    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
-    near.push({ name: token.name, distance });
-  }
-  if (near.length === 0) return noTokenMatch(requirement);
-  near.sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.name < b.name ? -1 : a.name > b.name ? 1 : 0
-  );
-  return nearTokenOnly(
-    requirement,
-    near.slice(0, NEAR_LIMIT).map((n) => n.name)
-  );
-}
-function tokenExact(requirement, tokenName) {
-  return { requirement, resolution: { kind: "token-exact", tokenName } };
-}
-function nearTokenOnly(requirement, candidates) {
-  const nearest = candidates[0] ?? "";
-  return {
-    requirement,
-    reason: "near-token-only",
-    candidates,
-    suggestion: `No exact token for "${requirement.rawValue}" \u2014 nearest is ${nearest}; use it only with designer sign-off, otherwise add a token.`
-  };
-}
-function noTokenMatch(requirement) {
-  return {
-    requirement,
-    reason: "no-token-match",
-    candidates: [],
-    suggestion: `No token matches "${requirement.rawValue}" \u2014 add a token for it; never approximate with a raw value.`
-  };
-}
-function isResolved(outcome) {
-  return "resolution" in outcome;
-}
-function findGaps(input) {
-  const index = buildTokenIndex(input.tokens);
-  const resolved = [];
-  const gaps = [];
-  for (const requirement of input.requirements) {
-    const outcome = requirement.kind === "component" ? resolveComponent(requirement, input.registry) : requirement.valueKind === "color" ? resolveColor(requirement, index) : resolveDimension(requirement, index);
-    if (isResolved(outcome)) {
-      resolved.push(outcome);
-    } else {
-      gaps.push(outcome);
-    }
-  }
-  return { resolved, gaps };
-}
-
-// src/cli-commands/figma-auth-help.ts
-function missingFigmaTokenMessage(scopeNote) {
-  return [
-    "No Figma personal access token configured.",
-    "",
-    "Give the CLI a Dev/Full-seat PAT. The durable way (survives restarts) is a",
-    "gitignored .ds-bridge.env in your project \u2014 the CLI auto-loads it on every run:",
-    "",
-    "  echo 'FIGMA_TOKEN=figd_your_token_here' >> .ds-bridge.env",
-    "",
-    "Inside Claude Code, /ds-bridge:connect writes that file for you. Setting the",
-    "token only in the /plugin configure dialog is not enough \u2014 Claude Code drops a",
-    "plugin's sensitive value on restart (issue #62442).",
-    "",
-    ...scopeNote
-  ].join("\n");
-}
-
-// src/cli-commands/frame-impl.ts
-var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
-var TOP_GAPS_LIMIT = 5;
-var PARSERS3 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
-var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set(["node_modules", ".git", "dist", "build"]);
-function fail7(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function missingTokenMessage() {
-  return missingFigmaTokenMessage([
-    "The token needs the file_content:read scope, and must come from a Dev or",
-    "Full seat \u2014 a View seat is rate-limited and cannot be used here."
-  ]);
-}
-function unknownAliasMessage(outcome, productFileKeys) {
-  const aliases = Object.keys(productFileKeys);
-  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
-  if (outcome.suggestions.length > 0) {
-    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
-  }
-  lines.push(
-    "",
-    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
-    "Or pass --file-key <raw-figma-file-key> directly."
-  );
-  return lines.join("\n");
-}
-function missingRegistryMessage(registryPath) {
-  return [
-    `No component registry found at ${registryPath}.`,
-    "",
-    'Run "ds-bridge registry build" first \u2014 it maps the Figma library to your',
-    "code components, which frame-impl needs to resolve component requirements."
-  ].join("\n");
-}
-function clientErrorMessage(result) {
-  switch (result.kind) {
-    case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
-    case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
-    case "not-found":
-      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
-    case "rate-limited":
-      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
-    case "network-error":
-      return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-function readProjectConfigText2() {
-  const configPath = join13(cwd(), ".ds-bridge.json");
-  if (!existsSync10(configPath)) return void 0;
-  try {
-    return readFileSync12(configPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
-function loadRegistry3(registryPath) {
-  if (!existsSync10(registryPath)) {
-    return { kind: "error", message: missingRegistryMessage(registryPath) };
-  }
-  try {
-    const registry = JSON.parse(
-      readFileSync12(registryPath, "utf8")
-    );
-    return { kind: "ok", registry };
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not read the registry at ${registryPath}: ${detail}. Re-run "ds-bridge registry build".`
-    };
-  }
-}
-function isConventionalTokenFile2(name) {
-  if (!name.endsWith(".json")) return false;
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
-}
-function isTokenDir2(name) {
-  return name === "tokens" || name === "design-tokens";
-}
-function detectFileFormat2(absPath) {
-  let raw;
-  try {
-    raw = readFileSync12(absPath, "utf8");
-  } catch {
-    return void 0;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return void 0;
-  }
-  const format = detectFormat(parsed);
-  return format === "unknown" ? void 0 : format;
-}
-function depthOf2(path) {
-  return path.split(sep2).filter((s) => s.length > 0).length;
-}
-function collectTokenCandidates(dir, insideTokenDir, acc) {
-  let entries;
-  try {
-    entries = readdirSync2(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join13(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
-      collectTokenCandidates(
-        full,
-        insideTokenDir || isTokenDir2(entry.name),
-        acc
-      );
-      continue;
-    }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
-  }
-}
-function discoverFirstTokenSource(root) {
-  const candidates = [];
-  collectTokenCandidates(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
-    const depth = depthOf2(a) - depthOf2(b);
-    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-  });
-  return verified[0];
-}
-function loadTokens(targetDir) {
-  let tokenPath;
-  const configPath = join13(targetDir, ".ds-bridge.json");
-  if (existsSync10(configPath)) {
-    try {
-      const resolved = resolveConfig({
-        projectFileText: readFileSync12(configPath, "utf8")
-      });
-      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
-        const src = resolved.config.tokenSource;
-        tokenPath = isAbsolute2(src) ? src : resolve8(targetDir, src);
-      }
-    } catch {
-      tokenPath = void 0;
-    }
-  }
-  if (tokenPath === void 0) {
-    tokenPath = discoverFirstTokenSource(targetDir);
-  }
-  if (tokenPath === void 0 || !existsSync10(tokenPath)) {
-    return {
-      kind: "error",
-      message: `No design-token source found for "${targetDir}".
-Set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
-    };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync12(tokenPath, "utf8"));
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
-    };
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    return {
-      kind: "error",
-      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
-    };
-  }
-  const outcome = PARSERS3[format](parsed);
-  if (outcome.kind === "error") {
-    return {
-      kind: "error",
-      message: `Failed to parse token source "${tokenPath}" as ${format}.`
-    };
-  }
-  return { kind: "ok", tokens: outcome.map.tokens };
-}
-function collectNodes(root) {
-  const nodes = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    nodes.push(node);
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i -= 1) {
-        const child = children[i];
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-  return nodes;
-}
-function hasBoundFill(node) {
-  const fills = node.boundVariables?.fills;
-  return Array.isArray(fills) && fills.length > 0;
-}
-function firstSolidFillColor(node) {
-  if (!Array.isArray(node.fills)) return void 0;
-  for (const paint of node.fills) {
-    if (paint.type !== "SOLID" || paint.color === void 0) continue;
-    const { r: r2, g, b, a } = paint.color;
-    const to255 = (v) => Math.round(v * 255);
-    return a >= 1 ? `rgb(${to255(r2)}, ${to255(g)}, ${to255(b)})` : `rgba(${to255(r2)}, ${to255(g)}, ${to255(b)}, ${a})`;
-  }
-  return void 0;
-}
-function deriveRequirements(root) {
-  const requirements = [];
-  for (const node of collectNodes(root)) {
-    if (node.type === "INSTANCE") {
-      requirements.push({
-        kind: "component",
-        nodeId: node.id,
-        name: node.name
-      });
-      continue;
-    }
-    if (!hasBoundFill(node)) {
-      const rawValue = firstSolidFillColor(node);
-      if (rawValue !== void 0) {
-        requirements.push({
-          kind: "token",
-          property: "fill",
-          rawValue,
-          valueKind: "color"
-        });
-      }
-    }
-  }
-  return requirements;
-}
-function nodeFromFileNodes(nodes, nodeId) {
-  const direct = nodes[nodeId];
-  if (direct !== void 0) return direct.document;
-  const entries = Object.values(nodes).filter(
-    (v) => v !== void 0
-  );
-  return entries[0]?.document;
-}
-async function fetchRoot(client, fileKey, nodeId) {
-  if (nodeId !== void 0) {
-    const result2 = await client.getFileNodes(fileKey, [nodeId]);
-    if (result2.kind !== "ok") {
-      return { kind: "error", message: clientErrorMessage(result2) };
-    }
-    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
-    if (root === void 0) {
-      return {
-        kind: "error",
-        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
-      };
-    }
-    return { kind: "ok", root };
-  }
-  const result = await client.getFile(fileKey);
-  if (result.kind !== "ok") {
-    return { kind: "error", message: clientErrorMessage(result) };
-  }
-  return { kind: "ok", root: result.data.document };
-}
-function requirementLabel(requirement) {
-  return requirement.kind === "component" ? requirement.name : `${requirement.property}: ${requirement.rawValue}`;
-}
-function rollUp(report, frameName) {
-  const resolvedCount = report.resolved.length;
-  const gapCount = report.gaps.length;
-  const total = resolvedCount + gapCount;
-  const pct5 = total === 0 ? 0 : Math.round(100 * resolvedCount / total);
-  const byReason = {};
-  for (const gap of report.gaps) {
-    byReason[gap.reason] = (byReason[gap.reason] ?? 0) + 1;
-  }
-  const topGaps = report.gaps.slice(0, TOP_GAPS_LIMIT).map((gap) => ({
-    reason: gap.reason,
-    requirement: requirementLabel(gap.requirement)
+    rows.set(key, row2);
+  }
+  return [...rows.values()].sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0).map(({ passes, ...row2 }) => ({
+    ...row2,
+    passRate: Math.round(100 * passes / row2.runs)
   }));
-  return { frameName, resolvedCount, gapCount, pct: pct5, byReason, topGaps };
 }
-function renderTerm6(impl, color) {
-  const severity = impl.pct >= 80 ? "ok" : impl.pct >= 50 ? "warn" : "error";
-  const headline = severityColor(
-    severity,
-    `Frame "${impl.frameName}" is ${impl.pct}% implementable (${impl.resolvedCount} resolved / ${impl.resolvedCount + impl.gapCount} requirements).`,
-    { color }
-  );
-  const lines = [headline];
-  if (impl.gapCount === 0) {
-    lines.push("", "No gaps \u2014 every requirement resolves to the system.");
-    return lines.join("\n");
-  }
-  const rows = Object.entries(impl.byReason).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([reason, count]) => [reason, String(count)]);
-  lines.push(
-    "",
-    `${impl.gapCount} gap(s) by reason:`,
-    renderTable(["reason", "count"], rows, { color })
-  );
-  return lines.join("\n");
-}
-function appendFrameImplHistory(record) {
-  const stateDir = join13(cwd(), ".ds-bridge");
-  mkdirSync8(stateDir, { recursive: true });
-  appendFileSync6(
-    join13(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-async function runFrameImpl(url, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail7(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const parsed = parseFigmaUrl(url);
-  if (parsed.kind !== "ok") {
-    fail7(
-      `${parsed.message}
-Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
-    );
-    return;
-  }
-  const projectFileText = readProjectConfigText2();
-  const resolved = resolveConfig({
-    env: process.env,
-    ...projectFileText !== void 0 ? { projectFileText } : {}
-  });
-  if (resolved.kind !== "ok") {
-    fail7(resolved.message);
-    return;
-  }
-  for (const warning of resolved.warnings) {
-    process.stderr.write(`warning: ${warning}
-`);
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind === "missing") {
-    fail7(missingTokenMessage());
-    return;
-  }
-  const fileKeyOutcome = resolveFileKey({
-    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
-    productFileKeys: config.productFileKeys,
-    defaultKey: parsed.fileKey
-  });
-  if (fileKeyOutcome.kind === "unknown-alias") {
-    fail7(unknownAliasMessage(fileKeyOutcome, config.productFileKeys));
-    return;
-  }
-  if (fileKeyOutcome.kind === "missing") {
-    fail7("No Figma file key resolved from the URL or --file-key.");
-    return;
-  }
-  const fileKey = fileKeyOutcome.key;
-  const targetDir = cwd();
-  const registryPath = join13(targetDir, ".ds-bridge", "registry.json");
-  const registryOutcome = loadRegistry3(registryPath);
-  if (registryOutcome.kind === "error") {
-    fail7(registryOutcome.message);
-    return;
-  }
-  const tokensOutcome = loadTokens(targetDir);
-  if (tokensOutcome.kind === "error") {
-    fail7(tokensOutcome.message);
-    return;
-  }
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE2;
-  const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
-  const fetched = await fetchRoot(client, fileKey, parsed.nodeId);
-  if (fetched.kind !== "ok") {
-    fail7(fetched.message);
-    return;
-  }
-  const requirements = deriveRequirements(fetched.root);
-  const gapsReport = findGaps({
-    requirements,
-    registry: registryOutcome.registry,
-    tokens: tokensOutcome.tokens
-  });
-  const impl = rollUp(gapsReport, fetched.root.name);
-  if (options.history) {
-    appendFrameImplHistory({
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      kind: "frame-impl",
-      frameName: impl.frameName,
-      fileKey,
-      ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {},
-      resolvedCount: impl.resolvedCount,
-      gapCount: impl.gapCount,
-      pct: impl.pct,
-      byReason: impl.byReason,
-      topGaps: impl.topGaps
-    });
-  }
-  if (format === "json") {
-    process.stdout.write(
-      `${JSON.stringify(
-        {
-          frameName: impl.frameName,
-          fileKey,
-          ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {},
-          pct: impl.pct,
-          resolvedCount: impl.resolvedCount,
-          gapCount: impl.gapCount,
-          byReason: impl.byReason,
-          topGaps: impl.topGaps
-        },
-        null,
-        2
-      )}
-`
-    );
-  } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm6(impl, color)}
-`);
-  }
-  process.exitCode = 0;
-}
-function registerFrameImplCommand(program2) {
-  program2.command("frame-impl").description(
-    "Resolve a Figma frame against the system and report its implementability (% on-system)"
-  ).argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
-    "--file-key <keyOrAlias>",
-    "target a product file by raw key or product_file_keys alias (default: the URL's key)"
-  ).option("--format <format>", "output format: term | json", "term").option(
-    "--no-history",
-    "do not append a frame-impl record to .ds-bridge/history.jsonl in the current directory"
-  ).action((url, options) => {
-    void runFrameImpl(url, options);
-  });
-}
-
-// src/cli-commands/handoff.ts
-import { appendFileSync as appendFileSync7, mkdirSync as mkdirSync9 } from "fs";
-import { join as join14 } from "path";
-import { cwd as cwd2 } from "process";
-
-// src/engines/handoff/score.ts
-var WEIGHT_BINDING = 40;
-var WEIGHT_AUTO_LAYOUT = 25;
-var WEIGHT_COMPONENT = 20;
-var WEIGHT_NAMING = 15;
-var BINDING_DEDUCTION_LIMIT = 10;
-var DEFAULT_NAME = /^(Frame|Rectangle|Group|Ellipse|Vector|Text) \d+$/;
-var MULTI_WORD_PASCAL = /^[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+$/;
-var COMPONENT_NOUNS = /* @__PURE__ */ new Set([
-  "Button",
-  "Chip",
-  "Input",
-  "Checkbox",
-  "Radio",
-  "Select",
-  "Badge",
-  "Avatar",
-  "Tooltip",
-  "Modal",
-  "Dialog",
-  "Tab",
-  "Tabs",
-  "Tag",
-  "Switch",
-  "Toggle",
-  "Dropdown",
-  "Menu",
-  "Toast",
-  "Alert",
-  "Accordion",
-  "Breadcrumb",
-  "Pagination",
-  "Slider",
-  "Stepper",
-  "Spinner"
-]);
-var FIX_BINDING = "Bind fills/strokes to a variable";
-var FIX_AUTO_LAYOUT = "Add auto layout";
-var FIX_COMPONENT = "Reattach to the published component or rename";
-var FIX_NAMING = "Rename meaningfully";
-function isStyleable(node) {
-  const hasFills = Array.isArray(node.fills) && node.fills.length > 0;
-  const hasStrokes = Array.isArray(node.strokes) && node.strokes.length > 0;
-  return hasFills || hasStrokes;
-}
-function isPaintBound(node) {
-  const bound = node.boundVariables;
-  if (bound === void 0) return false;
-  const fills = bound.fills;
-  const strokes = bound.strokes;
-  const boundFills = Array.isArray(fills) && fills.length > 0;
-  const boundStrokes = Array.isArray(strokes) && strokes.length > 0;
-  return boundFills || boundStrokes;
-}
-function isFrame(node) {
-  return node.type === "FRAME";
-}
-function hasAutoLayout(node) {
-  return node.layoutMode !== void 0 && node.layoutMode !== "NONE";
-}
-function isComponentName(name) {
-  return name.includes("/") || MULTI_WORD_PASCAL.test(name) || COMPONENT_NOUNS.has(name);
-}
-function isDefaultName(name) {
-  return DEFAULT_NAME.test(name);
-}
-function collect3(root) {
-  const nodes = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    nodes.push(node);
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i -= 1) {
-        const child = children[i];
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-  return nodes;
-}
-function scoreReadiness(root) {
-  const nodes = collect3(root);
-  const totalNodes = nodes.length;
-  const styleable = nodes.filter(isStyleable);
-  const unbound = styleable.filter((n) => !isPaintBound(n));
-  const boundCoverage = styleable.length === 0 ? 1 : 1 - unbound.length / styleable.length;
-  const frames = nodes.filter(isFrame);
-  const framesWithoutAutoLayout = frames.filter((n) => !hasAutoLayout(n));
-  const autoLayoutCoverage = frames.length === 0 ? 1 : 1 - framesWithoutAutoLayout.length / frames.length;
-  const instanceCount = nodes.filter((n) => n.type === "INSTANCE").length;
-  const suspectNodes = nodes.filter(
-    (n) => n.type !== "INSTANCE" && isComponentName(n.name)
-  );
-  const detachedSuspects = suspectNodes.length;
-  const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
-  const componentRatio = 1 - detachedSuspects / componentDenominator;
-  const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
-  const badNames = badNameNodes.length;
-  const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
-  const deductions = [];
-  if (unbound.length > 0) {
-    const lost = WEIGHT_BINDING * (unbound.length / styleable.length);
-    const perNode = lost / unbound.length;
-    const listed = [...unbound].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(0, BINDING_DEDUCTION_LIMIT);
-    for (const node of listed) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "var-binding",
-        points: perNode,
-        fix: FIX_BINDING
-      });
-    }
-  }
-  if (framesWithoutAutoLayout.length > 0) {
-    const lost = WEIGHT_AUTO_LAYOUT * (framesWithoutAutoLayout.length / frames.length);
-    const perNode = lost / framesWithoutAutoLayout.length;
-    for (const node of framesWithoutAutoLayout) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "auto-layout",
-        points: perNode,
-        fix: FIX_AUTO_LAYOUT
-      });
-    }
-  }
-  if (detachedSuspects > 0) {
-    const lost = WEIGHT_COMPONENT * (1 - componentRatio);
-    const perNode = lost / detachedSuspects;
-    for (const node of suspectNodes) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "component",
-        points: perNode,
-        fix: FIX_COMPONENT
-      });
-    }
-  }
-  if (badNames > 0) {
-    const lost = WEIGHT_NAMING * (badNames / totalNodes);
-    const perNode = lost / badNames;
-    for (const node of badNameNodes) {
-      deductions.push({
-        nodeId: node.id,
-        nodeName: node.name,
-        rule: "naming",
-        points: perNode,
-        fix: FIX_NAMING
-      });
-    }
-  }
-  deductions.sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points;
-    return a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0;
-  });
-  const rawScore = WEIGHT_BINDING * boundCoverage + WEIGHT_AUTO_LAYOUT * autoLayoutCoverage + WEIGHT_COMPONENT * componentRatio + WEIGHT_NAMING * namingRatio;
-  const score = Math.min(100, Math.max(0, Math.round(rawScore)));
-  return {
-    score,
-    deductions,
-    stats: {
-      totalNodes,
-      boundCoverage,
-      autoLayoutCoverage,
-      instanceCount,
-      detachedSuspects,
-      badNames
-    }
-  };
-}
-
-// src/cli-commands/handoff.ts
-var DEDUCTION_LIMIT = 10;
-var DEFAULT_FIGMA_API_BASE3 = "https://api.figma.com";
-var RULE_LABEL = {
-  "var-binding": "Variable binding",
-  "auto-layout": "Auto layout",
-  component: "Component usage",
-  naming: "Naming"
-};
-var HISTORY_DEDUCTION_LIMIT = 3;
-function appendHandoffHistory(report, frameName) {
-  const stateDir = join14(cwd2(), ".ds-bridge");
-  const record = {
-    at: (/* @__PURE__ */ new Date()).toISOString(),
-    kind: "handoff",
-    score: report.score,
-    frameName,
-    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
-  };
-  mkdirSync9(stateDir, { recursive: true });
-  appendFileSync7(
-    join14(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-function fail8(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function missingTokenMessage2() {
-  return missingFigmaTokenMessage([
-    "Create the token at figma.com \u2192 Settings \u2192 Security \u2192 Personal access",
-    "tokens, with these scopes:",
-    "  file_content:read, library_content:read, file_versions:read,",
-    "  file_comments:read, file_comments:write",
-    "",
-    "Note: the PAT must come from a Dev or Full seat \u2014 a View seat is rate-",
-    "limited to roughly a handful of requests per month and cannot be used here."
-  ]);
-}
-function clientErrorMessage2(result) {
-  switch (result.kind) {
-    case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
-    case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read (and file_comments:write for --comment).`;
-    case "not-found":
-      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
-    case "rate-limited":
-      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
-    case "network-error":
-      return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-function formatPoints(points) {
-  return points.toFixed(1).replace(/\.0$/, "");
-}
-function ruleSeverity() {
-  return "error";
-}
-function renderTerm7(report, threshold, color) {
-  const passed = report.score >= threshold;
-  const scoreSeverity = passed ? "ok" : "error";
-  const verdict = passed ? "PASS" : "BELOW THRESHOLD";
-  const scoreLine = severityColor(
-    scoreSeverity,
-    `Readiness ${report.score}/100 (threshold ${threshold}) \u2014 ${verdict}`,
-    { color }
-  );
-  const { stats } = report;
-  const statsRows = [
-    ["nodes", String(stats.totalNodes)],
-    ["bound coverage", `${Math.round(stats.boundCoverage * 100)}%`],
-    ["auto-layout coverage", `${Math.round(stats.autoLayoutCoverage * 100)}%`],
-    ["instances", String(stats.instanceCount)],
-    ["detached suspects", String(stats.detachedSuspects)],
-    ["default names", String(stats.badNames)]
-  ];
-  const statsTable = renderTable(["stat", "value"], statsRows, { color });
-  const lines = [scoreLine, "", statsTable];
-  if (report.deductions.length > 0) {
-    const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
-    const rows = listed.map((d) => [
-      severityColor(ruleSeverity(), RULE_LABEL[d.rule] ?? d.rule, { color }),
-      `${d.nodeName} (${d.nodeId})`,
-      `-${formatPoints(d.points)}`,
-      d.fix
-    ]);
-    const table = renderTable(["rule", "node", "points", "fix"], rows, {
-      color
-    });
-    lines.push("", `${report.deductions.length} deduction(s):`, table);
-    if (report.deductions.length > DEDUCTION_LIMIT) {
-      lines.push(`\u2026 ${report.deductions.length - DEDUCTION_LIMIT} more`);
-    }
-  } else {
-    lines.push("", "No deductions \u2014 this frame is handoff-ready.");
-  }
-  return lines.join("\n");
-}
-function commentBody(report, threshold) {
-  const verdict = report.score >= threshold ? "passes" : "is below";
-  const header = `Handoff readiness: ${report.score}/100 \u2014 ${verdict} the ${threshold} threshold.`;
-  if (report.deductions.length === 0) {
-    return `${header}
-No deductions \u2014 this frame is handoff-ready.`;
-  }
-  const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
-  const lines = listed.map(
-    (d) => `\u2022 ${RULE_LABEL[d.rule] ?? d.rule} (-${formatPoints(d.points)}): ${d.nodeName} \u2014 ${d.fix}`
-  );
-  const more = report.deductions.length > DEDUCTION_LIMIT ? [`\u2026 and ${report.deductions.length - DEDUCTION_LIMIT} more`] : [];
-  return [header, "Top deductions:", ...lines, ...more].join("\n");
-}
-function resolveThreshold(flag, configDefault) {
-  if (flag === void 0) return { kind: "ok", value: configDefault };
-  const n = Number(flag);
-  if (!Number.isFinite(n) || n < 0 || n > 100) {
-    return {
-      kind: "error",
-      message: `--threshold must be a number between 0 and 100 (got ${JSON.stringify(flag)}).`
-    };
-  }
-  return { kind: "ok", value: n };
-}
-function nodeFromFileNodes2(nodes, nodeId) {
-  const direct = nodes[nodeId];
-  if (direct !== void 0) return direct.document;
-  const entries = Object.values(nodes).filter(
-    (v) => v !== void 0
-  );
-  return entries[0]?.document;
-}
-async function fetchRoot2(client, fileKey, nodeId) {
-  if (nodeId !== void 0) {
-    const result2 = await client.getFileNodes(fileKey, [nodeId]);
-    if (result2.kind !== "ok") {
-      return { kind: "error", message: clientErrorMessage2(result2) };
-    }
-    const root = nodeFromFileNodes2(result2.data.nodes, nodeId);
-    if (root === void 0) {
-      return {
-        kind: "error",
-        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
-      };
-    }
-    return { kind: "ok", root };
-  }
-  const result = await client.getFile(fileKey);
-  if (result.kind !== "ok") {
-    return { kind: "error", message: clientErrorMessage2(result) };
-  }
-  return { kind: "ok", root: result.data.document };
-}
-async function runHandoff(url, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail8(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const parsed = parseFigmaUrl(url);
-  if (parsed.kind !== "ok") {
-    fail8(
-      `${parsed.message}
-Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
-    );
-    return;
-  }
-  const resolved = resolveConfig({ env: process.env });
-  if (resolved.kind !== "ok") {
-    fail8(resolved.message);
-    return;
-  }
-  for (const warning of resolved.warnings) {
-    process.stderr.write(`warning: ${warning}
-`);
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind === "missing") {
-    fail8(missingTokenMessage2());
-    return;
-  }
-  const threshold = resolveThreshold(
-    options.threshold,
-    config.readinessThreshold
-  );
-  if (threshold.kind === "error") {
-    fail8(threshold.message);
-    return;
-  }
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE3;
-  const client = createFigmaClient({
-    token: config.figmaToken.value,
-    baseUrl
-  });
-  const fetched = await fetchRoot2(client, parsed.fileKey, parsed.nodeId);
-  if (fetched.kind !== "ok") {
-    fail8(fetched.message);
-    return;
-  }
-  const report = scoreReadiness(fetched.root);
-  if (options.history) {
-    appendHandoffHistory(report, fetched.root.name);
-  }
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}
-`);
-  } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm7(report, threshold.value, color)}
-`);
-  }
-  if (options.comment) {
-    if (!options.yes) {
-      process.stderr.write(
-        "refusing to comment without --yes (pass --comment --yes to write the summary to Figma)\n"
-      );
-    } else {
-      const clientMeta = parsed.nodeId !== void 0 ? { node_id: parsed.nodeId } : void 0;
-      const posted = await client.postComment(
-        parsed.fileKey,
-        commentBody(report, threshold.value),
-        clientMeta
-      );
-      if (posted.kind !== "ok") {
-        process.stderr.write(
-          `warning: could not post the Figma comment: ${clientErrorMessage2(posted)}
-`
-        );
-      } else {
-        process.stdout.write(`Posted Figma comment ${posted.data.id}.
-`);
-      }
-    }
-  }
-  process.exitCode = report.score >= threshold.value ? 0 : 1;
-}
-function registerHandoffCommand(program2) {
-  program2.command("handoff").description("Score a Figma frame's pre-handoff machine-readability").argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
-    "--threshold <n>",
-    "readiness gate (0-100); exit 1 below it (default from config, 80)"
-  ).option("--format <format>", "output format: term | json", "term").option(
-    "--comment",
-    "post the score + top deductions as ONE Figma comment (requires --yes)",
-    false
-  ).option(
-    "--yes",
-    "confirm writing the --comment to Figma without an interactive prompt",
-    false
-  ).option(
-    "--no-history",
-    "do not append a readiness record to .ds-bridge/history.jsonl in the current directory"
-  ).action((url, options) => {
-    void runHandoff(url, options);
-  });
-}
-
-// src/cli-commands/impact.ts
-import {
-  appendFileSync as appendFileSync8,
-  existsSync as existsSync11,
-  mkdirSync as mkdirSync10,
-  readFileSync as readFileSync13,
-  writeFileSync as writeFileSync6
-} from "fs";
-import { dirname as dirname5, join as join15 } from "path";
-import { cwd as cwd3, env as processEnv } from "process";
-import { fileURLToPath as fileURLToPath3 } from "url";
-
-// src/engines/impact/component-diff.ts
-var RENAME_THRESHOLD = 0.5;
-function tokenize3(name) {
-  const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
-  const tokens = [];
-  for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
-    const token = part.toLowerCase();
-    if (token.length > 0) tokens.push(token);
-  }
-  return tokens;
-}
-function nameSimilarity(a, b) {
-  const setA = new Set(tokenize3(a));
-  const setB = new Set(tokenize3(b));
-  if (setA.size === 0 || setB.size === 0) return 0;
-  let intersection = 0;
-  for (const token of setA) {
-    if (setB.has(token)) intersection += 1;
-  }
-  return 2 * intersection / (setA.size + setB.size);
-}
-function byNameAsc4(a, b) {
-  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
-}
-var IMPACT_RANK = {
-  breaking: 2,
-  additive: 1,
-  cosmetic: 0
-};
-function moreSevere(a, b) {
-  return IMPACT_RANK[a] >= IMPACT_RANK[b] ? a : b;
-}
-function diffVariants(before, after) {
-  const changes = [];
-  const axes = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
-  for (const axis of [...axes].sort()) {
-    const beforeValues = before[axis];
-    const afterValues = after[axis];
-    if (beforeValues === void 0 && afterValues !== void 0) {
-      changes.push({ axis, kind: "axis-added" });
-      continue;
-    }
-    if (beforeValues !== void 0 && afterValues === void 0) {
-      changes.push({ axis, kind: "axis-removed" });
-      continue;
-    }
-    if (beforeValues === void 0 || afterValues === void 0) continue;
-    const beforeSet = new Set(beforeValues);
-    const afterSet = new Set(afterValues);
-    const added = [];
-    const removed = [];
-    for (const value2 of afterSet) {
-      if (!beforeSet.has(value2)) added.push(value2);
-    }
-    for (const value2 of beforeSet) {
-      if (!afterSet.has(value2)) removed.push(value2);
-    }
-    for (const value2 of removed.sort()) {
-      changes.push({ axis, kind: "value-removed", value: value2 });
-    }
-    for (const value2 of added.sort()) {
-      changes.push({ axis, kind: "value-added", value: value2 });
-    }
-  }
-  return changes;
-}
-function variantChangeImpact(change) {
-  switch (change.kind) {
-    case "axis-removed":
-    case "value-removed":
-      return "breaking";
-    case "axis-added":
-    case "value-added":
-      return "additive";
-  }
-}
-function classifyChanged(before, after) {
-  const variantChanges = diffVariants(before.variantProps, after.variantProps);
-  const descriptionChanged = before.description !== after.description;
-  if (variantChanges.length === 0 && !descriptionChanged) return void 0;
-  let impact = "cosmetic";
-  for (const change of variantChanges) {
-    impact = moreSevere(impact, variantChangeImpact(change));
-  }
-  return {
-    name: after.name,
-    nodeId: after.nodeId,
-    descriptionChanged,
-    variantChanges,
-    impact
-  };
-}
-function matchRenames(removedCandidates, addedCandidates) {
-  const edges = [];
-  for (let b = 0; b < removedCandidates.length; b += 1) {
-    const beforeModel = removedCandidates[b];
-    if (beforeModel === void 0) continue;
-    for (let a = 0; a < addedCandidates.length; a += 1) {
-      const afterModel = addedCandidates[a];
-      if (afterModel === void 0) continue;
-      const score = nameSimilarity(beforeModel.name, afterModel.name);
-      if (score >= RENAME_THRESHOLD) {
-        edges.push({ beforeIndex: b, afterIndex: a, score });
-      }
-    }
-  }
-  edges.sort((x, y) => {
-    if (x.score !== y.score) return y.score - x.score;
-    const bx = removedCandidates[x.beforeIndex]?.name ?? "";
-    const by = removedCandidates[y.beforeIndex]?.name ?? "";
-    if (bx !== by) return bx < by ? -1 : 1;
-    const ax = addedCandidates[x.afterIndex]?.name ?? "";
-    const ay = addedCandidates[y.afterIndex]?.name ?? "";
-    return ax < ay ? -1 : ax > ay ? 1 : 0;
-  });
-  const usedBefore = /* @__PURE__ */ new Set();
-  const usedAfter = /* @__PURE__ */ new Set();
-  const matches = [];
-  for (const edge of edges) {
-    if (usedBefore.has(edge.beforeIndex) || usedAfter.has(edge.afterIndex)) {
-      continue;
-    }
-    usedBefore.add(edge.beforeIndex);
-    usedAfter.add(edge.afterIndex);
-    matches.push(edge);
-  }
-  return matches;
-}
-function diffComponents(before, after) {
-  const beforeById = /* @__PURE__ */ new Map();
-  for (const model of before) {
-    if (!beforeById.has(model.nodeId)) beforeById.set(model.nodeId, model);
-  }
-  const afterById = /* @__PURE__ */ new Map();
-  for (const model of after) {
-    if (!afterById.has(model.nodeId)) afterById.set(model.nodeId, model);
-  }
-  const renamed = [];
-  const changed = [];
-  for (const [nodeId, beforeModel] of beforeById) {
-    const afterModel = afterById.get(nodeId);
-    if (afterModel === void 0) continue;
-    if (beforeModel.name !== afterModel.name) {
-      renamed.push({
-        fromName: beforeModel.name,
-        toName: afterModel.name,
-        nodeId,
-        fromNodeId: nodeId,
-        impact: "breaking"
-      });
-      continue;
-    }
-    const change = classifyChanged(beforeModel, afterModel);
-    if (change !== void 0) changed.push(change);
-  }
-  const removedCandidates = [...beforeById.entries()].filter(([id]) => !afterById.has(id)).map(([, model]) => model);
-  const addedCandidates = [...afterById.entries()].filter(([id]) => !beforeById.has(id)).map(([, model]) => model);
-  const renameMatches = matchRenames(removedCandidates, addedCandidates);
-  const matchedBefore = /* @__PURE__ */ new Set();
-  const matchedAfter = /* @__PURE__ */ new Set();
-  for (const match of renameMatches) {
-    matchedBefore.add(match.beforeIndex);
-    matchedAfter.add(match.afterIndex);
-    const beforeModel = removedCandidates[match.beforeIndex];
-    const afterModel = addedCandidates[match.afterIndex];
-    if (beforeModel === void 0 || afterModel === void 0) continue;
-    renamed.push({
-      fromName: beforeModel.name,
-      toName: afterModel.name,
-      nodeId: afterModel.nodeId,
-      fromNodeId: beforeModel.nodeId,
-      impact: "breaking"
-    });
-  }
-  const removed = [];
-  for (let b = 0; b < removedCandidates.length; b += 1) {
-    if (matchedBefore.has(b)) continue;
-    const model = removedCandidates[b];
-    if (model === void 0) continue;
-    removed.push({
-      name: model.name,
-      nodeId: model.nodeId,
-      impact: "breaking"
-    });
-  }
-  const added = [];
-  for (let a = 0; a < addedCandidates.length; a += 1) {
-    if (matchedAfter.has(a)) continue;
-    const model = addedCandidates[a];
-    if (model === void 0) continue;
-    added.push({ name: model.name, nodeId: model.nodeId, impact: "additive" });
-  }
-  added.sort(byNameAsc4);
-  removed.sort(byNameAsc4);
-  renamed.sort(
-    (x, y) => x.toName < y.toName ? -1 : x.toName > y.toName ? 1 : 0
-  );
-  changed.sort(byNameAsc4);
-  return { added, removed, renamed, changed };
-}
-
-// src/engines/registry/scan-figma.ts
-function isString(value2) {
-  return typeof value2 === "string";
-}
-function asString(value2) {
-  return isString(value2) ? value2 : "";
-}
-function parseVariantName(name) {
-  const props = {};
-  if (!name.includes("=")) return props;
-  for (const pair of name.split(",")) {
-    const eq = pair.indexOf("=");
-    if (eq === -1) continue;
-    const key = pair.slice(0, eq).trim();
-    const value2 = pair.slice(eq + 1).trim();
-    if (key.length === 0) continue;
-    const existing = props[key];
-    if (existing === void 0) {
-      props[key] = [value2];
-    } else {
-      existing.push(value2);
-    }
-  }
-  return props;
-}
-function normalizeVariantProps(props) {
-  const out = {};
-  for (const key of Object.keys(props).sort()) {
-    const values = props[key] ?? [];
-    out[key] = [...new Set(values)].sort();
-  }
-  return out;
-}
-function mergeVariantProps(into, from) {
-  for (const key of Object.keys(from)) {
-    const incoming = from[key] ?? [];
-    const existing = into[key];
-    if (existing === void 0) {
-      into[key] = [...incoming];
-    } else {
-      existing.push(...incoming);
-    }
-  }
-}
-function compareIds(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function buildPublished(input) {
-  const components = input?.meta?.components;
-  const ids = /* @__PURE__ */ new Set();
-  if (!Array.isArray(components)) return { models: [], ids };
-  const sets = /* @__PURE__ */ new Map();
-  const standalone = [];
-  for (const component of components) {
-    const nodeId = asString(component.node_id);
-    if (nodeId.length === 0) continue;
-    ids.add(nodeId);
-    const rawName = asString(component.name);
-    const description = asString(component.description);
-    const variantProps = parseVariantName(rawName);
-    const isVariant = Object.keys(variantProps).length > 0;
-    const setName = isString(component.containing_frame?.name) ? component.containing_frame.name : void 0;
-    if (isVariant && setName !== void 0) {
-      const existing = sets.get(setName);
-      if (existing === void 0) {
-        sets.set(setName, {
-          name: setName,
-          nodeId,
-          description,
-          variantProps: { ...variantProps }
-        });
-      } else {
-        mergeVariantProps(existing.variantProps, variantProps);
-        if (compareIds(nodeId, existing.nodeId) < 0) existing.nodeId = nodeId;
-        if (existing.description.length === 0 && description.length > 0) {
-          existing.description = description;
-        }
-      }
-    } else {
-      standalone.push({ name: rawName, nodeId, description, variantProps });
-    }
-  }
-  const models = [];
-  for (const acc of [...sets.values(), ...standalone]) {
-    models.push({
-      name: acc.name,
-      nodeId: acc.nodeId,
-      description: acc.description,
-      variantProps: normalizeVariantProps(acc.variantProps),
-      source: "published"
-    });
-  }
-  return { models, ids };
-}
-function variantPropsFromChildren(children) {
-  const props = {};
-  if (!Array.isArray(children)) return props;
-  for (const child of children) {
-    if (child.type !== "COMPONENT") continue;
-    mergeVariantProps(props, parseVariantName(asString(child.name)));
-  }
-  return props;
-}
-function buildInline(document, publishedIds) {
-  if (document === void 0) return [];
-  const byId = /* @__PURE__ */ new Map();
-  const stack = [document];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    const type = node.type;
-    if (type === "COMPONENT_SET" || type === "COMPONENT") {
-      const nodeId = asString(node.id);
-      if (nodeId.length > 0 && !publishedIds.has(nodeId) && !byId.has(nodeId)) {
-        const variantProps = type === "COMPONENT_SET" ? variantPropsFromChildren(node.children) : {};
-        byId.set(nodeId, {
-          name: asString(node.name),
-          nodeId,
-          description: asString(node.description),
-          variantProps: normalizeVariantProps(variantProps),
-          source: "inline"
-        });
-      }
-      if (type === "COMPONENT_SET") continue;
-    }
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i -= 1) {
-        const child = children[i];
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-  return [...byId.values()];
-}
-function buildFigmaComponentModel(input) {
-  const { models: publishedModels, ids } = buildPublished(input.published);
-  const inlineModels = buildInline(input.fileDocument, ids);
-  const byId = /* @__PURE__ */ new Map();
-  for (const model of publishedModels) {
-    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
-  }
-  for (const model of inlineModels) {
-    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
-  }
-  return [...byId.values()].sort((a, b) => {
-    if (a.name !== b.name) return a.name < b.name ? -1 : 1;
-    return compareIds(a.nodeId, b.nodeId);
-  });
-}
-
-// src/cli-commands/impact.ts
-var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
-function fail9(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function missingTokenMessage3() {
-  return missingFigmaTokenMessage([
-    "The token needs the library_content:read and file_versions:read scopes, and",
-    "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
-    "be used here."
-  ]);
-}
-function missingFileKeyMessage() {
-  return [
-    "No Figma library file key configured.",
-    "",
-    "Pass --file-key <key>, set the figma_file_key plugin option, or export it:",
-    "",
-    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
-    "",
-    "The key is the segment after /file/ or /design/ in the library file URL."
-  ].join("\n");
-}
-function unknownAliasMessage2(outcome, productFileKeys) {
-  const aliases = Object.keys(productFileKeys);
-  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
-  if (outcome.suggestions.length > 0) {
-    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
-  }
-  lines.push(
-    "",
-    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
-    "Or pass --file-key <raw-figma-file-key> directly."
-  );
-  return lines.join("\n");
-}
-function clientErrorMessage3(result) {
-  switch (result.kind) {
-    case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
-    case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs library_content:read and file_versions:read.`;
-    case "not-found":
-      return "Figma could not find that file. Check the file key is correct and the token's account can access the library.";
-    case "rate-limited":
-      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
-    case "network-error":
-      return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-function readProjectConfigText3() {
-  const configPath = join15(cwd3(), ".ds-bridge.json");
-  if (!existsSync11(configPath)) return void 0;
-  try {
-    return readFileSync13(configPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
-function cursorPath() {
-  const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
-  if (dataDir !== void 0 && dataDir !== "") {
-    return join15(dataDir, "impact-cursor.json");
-  }
-  return join15(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
-}
-function readCursor(path) {
-  if (!existsSync11(path)) return void 0;
-  try {
-    const parsed = JSON.parse(readFileSync13(path, "utf8"));
-    if (!Array.isArray(parsed.snapshot)) return void 0;
-    return parsed;
-  } catch {
-    return void 0;
-  }
-}
-function writeCursor(path, cursor) {
-  try {
-    mkdirSync10(dirname5(path), { recursive: true });
-    writeFileSync6(path, `${JSON.stringify(cursor, null, 2)}
-`, "utf8");
-    return true;
-  } catch {
-    return false;
-  }
-}
-function loadRegistry4() {
-  const registryPath = join15(cwd3(), ".ds-bridge", "registry.json");
-  if (!existsSync11(registryPath)) return void 0;
-  try {
-    return JSON.parse(readFileSync13(registryPath, "utf8"));
-  } catch {
-    return void 0;
-  }
-}
-async function mapChangedUsage(registry, changedFigmaNames) {
-  const globals = globalThis;
-  if (typeof globals.__filename !== "string") {
-    const filename = fileURLToPath3(import.meta.url);
-    globals.__filename = filename;
-    globals.__dirname = dirname5(filename);
-  }
-  const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
-  return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
-}
-function changedNames(diff) {
-  const names = [];
-  for (const removed of diff.removed) names.push(removed.name);
-  for (const renamed of diff.renamed) names.push(renamed.fromName);
-  for (const changed of diff.changed) names.push(changed.name);
-  for (const added of diff.added) names.push(added.name);
-  return names;
-}
-function hasBreaking(diff) {
-  if (diff.removed.length > 0) return true;
-  if (diff.renamed.length > 0) return true;
-  return diff.changed.some((c2) => c2.impact === "breaking");
-}
-function countByImpact(diff) {
-  const counts = { breaking: 0, additive: 0, cosmetic: 0 };
-  const all = [
-    ...diff.added,
-    ...diff.removed,
-    ...diff.renamed,
-    ...diff.changed
-  ];
-  for (const entry of all) {
-    if (entry.impact === "breaking") counts.breaking += 1;
-    else if (entry.impact === "additive") counts.additive += 1;
-    else counts.cosmetic += 1;
-  }
-  return counts;
-}
-function buildMigrationSites(diff, usageByName, cap) {
-  const all = [];
-  for (const row of diffRows(diff)) {
-    const usage = usageByName.get(row.lookupName);
-    if (usage === void 0) continue;
-    for (const site of usage.usages) {
-      all.push({
-        file: site.file,
-        line: site.line,
-        subject: row.component,
-        from: row.fromName,
-        to: row.toName
-      });
-    }
-  }
-  const limit = Number.isFinite(cap) && cap > 0 ? cap : all.length;
-  const truncated = all.length > limit;
-  return { sites: truncated ? all.slice(0, limit) : all, truncated };
-}
-function appendImpactHistory(targetDir, diff, usageByName, cap) {
-  const stateDir = join15(targetDir, ".ds-bridge");
-  let touchedCallSites = 0;
-  for (const usage of usageByName.values()) {
-    touchedCallSites += usage.usages.length;
-  }
-  const { sites, truncated } = buildMigrationSites(diff, usageByName, cap);
-  const record = {
-    at: (/* @__PURE__ */ new Date()).toISOString(),
-    kind: "impact",
-    ...countByImpact(diff),
-    touchedCallSites,
-    ...sites.length > 0 ? { sites } : {},
-    ...truncated ? { sitesTruncated: true } : {}
-  };
-  mkdirSync10(stateDir, { recursive: true });
-  appendFileSync8(
-    join15(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-function renderChecklist(sites, truncated) {
-  if (sites.length === 0) {
-    return "Migration checklist: no mapped call sites (no registry, or no changed component is imported in resolved .tsx files).";
-  }
-  const header = `Migration checklist \u2014 ${sites.length} call site${sites.length === 1 ? "" : "s"}${truncated ? " (truncated to the cap)" : ""}:`;
-  const lines = sites.map((s) => {
-    const move = s.from !== "" && s.to !== "" ? `${s.from} \u2192 ${s.to}` : s.to === "" ? `${s.from} \u2192 (removed)` : `(new) \u2192 ${s.to}`;
-    return `  ${s.file}:${s.line} \xB7 ${s.subject} \xB7 ${move}`;
-  });
-  return [header, ...lines].join("\n");
-}
-function diffRows(diff) {
-  const rows = [];
-  for (const r2 of diff.removed) {
-    rows.push({
-      component: r2.name,
-      lookupName: r2.name,
-      category: "removed",
-      impact: r2.impact,
-      detail: "component removed from the library",
-      fromName: r2.name,
-      toName: ""
-    });
-  }
-  for (const r2 of diff.renamed) {
-    rows.push({
-      component: r2.toName,
-      lookupName: r2.fromName,
-      category: "renamed",
-      impact: r2.impact,
-      detail: `renamed from "${r2.fromName}"`,
-      fromName: r2.fromName,
-      toName: r2.toName
-    });
-  }
-  for (const c2 of diff.changed) {
-    const parts = [];
-    if (c2.descriptionChanged) parts.push("description changed");
-    for (const vc of c2.variantChanges) {
-      if (vc.kind === "axis-added") parts.push(`+axis ${vc.axis}`);
-      else if (vc.kind === "axis-removed") parts.push(`-axis ${vc.axis}`);
-      else if (vc.kind === "value-added") parts.push(`+${vc.axis}=${vc.value}`);
-      else parts.push(`-${vc.axis}=${vc.value}`);
-    }
-    rows.push({
-      component: c2.name,
-      lookupName: c2.name,
-      category: "changed",
-      impact: c2.impact,
-      detail: parts.join(", "),
-      fromName: c2.name,
-      toName: c2.name
-    });
-  }
-  for (const a of diff.added) {
-    rows.push({
-      component: a.name,
-      lookupName: a.name,
-      category: "added",
-      impact: a.impact,
-      detail: "new component",
-      fromName: "",
-      toName: a.name
-    });
-  }
-  const rank = {
-    breaking: 0,
-    additive: 1,
-    cosmetic: 2
-  };
-  rows.sort((x, y) => {
-    const byImpact = (rank[x.impact] ?? 9) - (rank[y.impact] ?? 9);
-    return byImpact !== 0 ? byImpact : x.component < y.component ? -1 : x.component > y.component ? 1 : 0;
-  });
-  return rows;
-}
-function renderTerm8(diff, usageByName, registryPresent, color) {
-  const rows = diffRows(diff);
-  if (rows.length === 0) {
-    return severityColor(
-      "ok",
-      "No component changes since the last snapshot.",
-      {
-        color
-      }
-    );
-  }
-  const breaking = hasBreaking(diff);
-  const header = severityColor(
-    breaking ? "error" : "ok",
-    breaking ? `${rows.length} change(s) \u2014 BREAKING changes found.` : `${rows.length} change(s) \u2014 no breaking changes.`,
-    { color }
-  );
-  const tableRows = rows.map((row) => {
-    const usage = usageByName.get(row.lookupName);
-    const sites = usage?.count ?? 0;
-    const touches = registryPresent ? sites > 0 ? `touches ${sites} call site${sites === 1 ? "" : "s"}` : "no call sites" : "\u2014";
-    const sev = row.impact === "breaking" ? "error" : row.impact === "additive" ? "warn" : "info";
-    return [
-      severityColor(sev, row.impact, { color }),
-      row.category,
-      row.component,
-      row.detail,
-      touches
-    ];
-  });
-  const table = renderTable(
-    ["impact", "category", "component", "detail", "code"],
-    tableRows,
-    { color }
-  );
-  const lines = [header, "", table];
-  if (!registryPresent) {
-    lines.push(
-      "",
-      'No .ds-bridge/registry.json found \u2014 run "ds-bridge registry build" to map changes to code call sites.'
-    );
-  }
-  return lines.join("\n");
-}
-async function runImpact(options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail9(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const projectFileText = readProjectConfigText3();
-  const resolved = resolveConfig({
-    env: process.env,
-    ...projectFileText !== void 0 ? { projectFileText } : {}
-  });
-  if (resolved.kind !== "ok") {
-    fail9(resolved.message);
-    return;
-  }
-  for (const warning of resolved.warnings) {
-    process.stderr.write(`warning: ${warning}
-`);
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind === "missing") {
-    fail9(missingTokenMessage3());
-    return;
-  }
-  const fileKeyOutcome = resolveFileKey({
-    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
-    productFileKeys: config.productFileKeys,
-    ...config.figmaFileKey !== void 0 ? { defaultKey: config.figmaFileKey } : {}
-  });
-  if (fileKeyOutcome.kind === "unknown-alias") {
-    fail9(unknownAliasMessage2(fileKeyOutcome, config.productFileKeys));
-    return;
-  }
-  if (fileKeyOutcome.kind === "missing") {
-    fail9(missingFileKeyMessage());
-    return;
-  }
-  const fileKey = fileKeyOutcome.key;
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
-  const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
-  const componentsResult = await client.getComponents(fileKey);
-  if (componentsResult.kind !== "ok") {
-    fail9(clientErrorMessage3(componentsResult));
-    return;
-  }
-  const versionsResult = await client.getVersions(fileKey);
-  if (versionsResult.kind !== "ok") {
-    fail9(clientErrorMessage3(versionsResult));
-    return;
-  }
-  const freshSnapshot = buildFigmaComponentModel({
-    published: componentsResult.data
-  });
-  const newestVersionId = versionsResult.data.versions[0]?.id ?? "";
-  const capturedAt = (/* @__PURE__ */ new Date()).toISOString();
-  const path = cursorPath();
-  const cursor = readCursor(path);
-  const haveBaseline = cursor !== void 0 && cursor.fileKey === fileKey;
-  const nextCursor = {
-    fileKey,
-    versionId: newestVersionId,
-    capturedAt,
-    snapshot: freshSnapshot
-  };
-  if (!haveBaseline) {
-    if (!writeCursor(path, nextCursor)) {
-      fail9(`Could not write the impact cursor to "${path}".`);
-      return;
-    }
-    const sinceNote = options.since !== void 0 ? ` (--since ${options.since} noted; v2 diffs against the cached snapshot)` : "";
-    if (format === "json") {
-      process.stdout.write(
-        `${JSON.stringify(
-          {
-            baseline: true,
-            breaking: false,
-            fileKey,
-            versionId: newestVersionId,
-            componentCount: freshSnapshot.length
-          },
-          null,
-          2
-        )}
-`
-      );
-    } else {
-      process.stdout.write(
-        `Captured a baseline snapshot of ${freshSnapshot.length} component(s)${sinceNote}.
-Run "ds-bridge impact" again after library changes to see the diff.
-`
-      );
-    }
-    process.exitCode = 0;
-    return;
-  }
-  const diff = diffComponents(cursor.snapshot, freshSnapshot);
-  const breaking = hasBreaking(diff);
-  const registry = loadRegistry4();
-  const usageByName = /* @__PURE__ */ new Map();
-  if (registry !== void 0) {
-    const usages = await mapChangedUsage(registry, changedNames(diff));
-    for (const usage of usages) usageByName.set(usage.figmaName, usage);
-  }
-  const { sites, truncated } = buildMigrationSites(
-    diff,
-    usageByName,
-    config.migrationSitesCap
-  );
-  if (format === "json") {
-    const usageList = [...usageByName.values()];
-    process.stdout.write(
-      `${JSON.stringify(
-        {
-          baseline: false,
-          breaking,
-          fileKey,
-          fromVersionId: cursor.versionId,
-          toVersionId: newestVersionId,
-          diff,
-          usage: usageList,
-          registryPresent: registry !== void 0,
-          sites,
-          sitesTruncated: truncated
-        },
-        null,
-        2
-      )}
-`
-    );
-  } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(
-      `${renderTerm8(diff, usageByName, registry !== void 0, color)}
-`
-    );
-  }
-  if (options.checklist && format === "term") {
-    process.stdout.write(`
-${renderChecklist(sites, truncated)}
-`);
-  }
-  appendImpactHistory(cwd3(), diff, usageByName, config.migrationSitesCap);
-  if (!writeCursor(path, nextCursor)) {
-    process.stderr.write(
-      `warning: could not update the impact cursor at "${path}".
-`
-    );
-  }
-  process.exitCode = breaking ? 1 : 0;
-}
-function registerImpactCommand(program2) {
-  program2.command("impact").description(
-    "Detect breaking Figma library changes since the last snapshot and map them to code"
-  ).option(
-    "--since <versionId>",
-    "note a baseline version id (v2 diffs against the cached snapshot)"
-  ).option(
-    "--file-key <keyOrAlias>",
-    "Figma file key OR a product_file_keys alias (overrides config)"
-  ).option("--format <format>", "output format: term | json", "term").option(
-    "--checklist",
-    "print the per-call-site migration checklist (file:line \xB7 old\u2192new) after the report (term only)",
-    false
-  ).option(
-    "--sites",
-    "alias of --checklist: print the per-call-site migration checklist (term only)",
-    false
-  ).action((options) => {
-    void runImpact({
-      ...options,
-      checklist: options.checklist || options.sites === true
-    });
-  });
-}
-
-// src/cli-commands/library-health.ts
-import {
-  appendFileSync as appendFileSync9,
-  existsSync as existsSync12,
-  mkdirSync as mkdirSync11,
-  readFileSync as readFileSync14,
-  writeFileSync as writeFileSync7
-} from "fs";
-import { join as join17 } from "path";
-import { cwd as cwd4, env as processEnv2 } from "process";
-
-// src/engines/figma/library-health.ts
-var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
-var CAP = 20;
-function componentNameOf(file, componentId) {
-  if (componentId === void 0) return void 0;
-  const components = file.components;
-  if (components === void 0) return void 0;
-  return components[componentId]?.name;
-}
-function walk(root, visit) {
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    visit(node);
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-}
-function compareStrings(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function assessLibraryHealth(file, opts) {
-  const deprecatedPattern = opts?.deprecatedPattern ?? DEFAULT_DEPRECATED_PATTERN;
-  const hasComponents = file.components !== void 0;
-  const componentNames = /* @__PURE__ */ new Set();
-  if (file.components !== void 0) {
-    for (const id of Object.keys(file.components)) {
-      const entry = file.components[id];
-      if (entry !== void 0) componentNames.add(entry.name);
-    }
-  }
-  const hotspots = [];
-  const deprecatedCounts = /* @__PURE__ */ new Map();
-  const detached = [];
-  walk(file.document, (node) => {
-    const isInstance = node.type === "INSTANCE";
-    if (isInstance) {
-      const overrides = node.overrides;
-      const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
-      if (overrideCount > 0) {
-        const componentName = componentNameOf(file, node.componentId);
-        hotspots.push({
-          nodeId: node.id,
-          name: node.name,
-          ...componentName !== void 0 ? { componentName } : {},
-          overrideCount
-        });
-      }
-      if (hasComponents) {
-        const componentName = componentNameOf(file, node.componentId);
-        if (componentName !== void 0 && deprecatedPattern.test(componentName)) {
-          deprecatedCounts.set(
-            componentName,
-            (deprecatedCounts.get(componentName) ?? 0) + 1
-          );
-        }
-      }
-    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && componentNames.has(node.name)) {
-      detached.push({ nodeId: node.id, name: node.name, heuristic: true });
-    }
-  });
-  let deprecatedUsageTotal = 0;
-  for (const count of deprecatedCounts.values()) deprecatedUsageTotal += count;
-  const totals = {
-    overrideHotspots: hotspots.length,
-    deprecatedUsage: deprecatedUsageTotal,
-    detachedCandidates: detached.length
-  };
-  hotspots.sort((a, b) => {
-    if (a.overrideCount !== b.overrideCount) {
-      return b.overrideCount - a.overrideCount;
-    }
-    return compareStrings(a.name, b.name);
-  });
-  const deprecatedUsage = [
-    ...deprecatedCounts.entries()
-  ].map(([componentName, count]) => ({ componentName, count })).sort((a, b) => compareStrings(a.componentName, b.componentName)).slice(0, CAP);
-  const detachedCandidates = [...detached].sort((a, b) => compareStrings(a.nodeId, b.nodeId)).slice(0, CAP);
-  return {
-    overrideHotspots: hotspots.slice(0, CAP),
-    deprecatedUsage,
-    detachedCandidates,
-    totals
-  };
-}
-
-// src/io/figma/cache.ts
-import { dirname as dirname6, join as join16 } from "path";
-function cachePath(args) {
-  const fileName = `library-${args.key}.json`;
-  const dataDir = args.env.CLAUDE_PLUGIN_DATA;
-  if (dataDir !== void 0 && dataDir !== "") {
-    return join16(dataDir, "figma", fileName);
-  }
-  return join16(args.cwd, ".ds-bridge", "cache", fileName);
-}
-function isEnvelope(value2) {
-  return typeof value2 === "object" && value2 !== null && typeof value2.stampedAtMs === "number";
-}
-function readCache(args) {
-  const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
-  if (!args.fs.exists(path)) return { kind: "miss" };
-  let envelope;
-  try {
-    const parsed = JSON.parse(args.fs.read(path));
-    if (!isEnvelope(parsed)) return { kind: "miss" };
-    envelope = parsed;
-  } catch {
-    return { kind: "miss" };
-  }
-  const ageMs = args.now - envelope.stampedAtMs;
-  if (ageMs > args.ttlMs) return { kind: "stale", ageMs };
-  return { kind: "hit", data: envelope.data, ageMs };
-}
-function writeCache(args) {
-  const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
-  const envelope = { stampedAtMs: args.now, data: args.data };
-  try {
-    args.fs.mkdir(dirname6(path));
-    args.fs.write(path, `${JSON.stringify(envelope, null, 2)}
-`);
-  } catch {
-  }
-}
-
-// src/cli-commands/library-health.ts
-var DEFAULT_FIGMA_API_BASE5 = "https://api.figma.com";
-var CACHE_TTL_MS = 60 * 60 * 1e3;
-function fail10(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function missingTokenMessage4() {
-  return missingFigmaTokenMessage([
-    "The token needs the file_content:read scope, and must come from a Dev or",
-    "Full seat \u2014 a View seat is rate-limited and cannot be used here."
-  ]);
-}
-function missingFileKeyMessage2() {
-  return [
-    "No Figma library file key configured.",
-    "",
-    "Pass --file-key <key>, set the figma_file_key plugin option, or export it:",
-    "",
-    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
-    "",
-    "The key is the segment after /file/ or /design/ in the library file URL."
-  ].join("\n");
-}
-function readProjectConfigText4() {
-  const configPath = join17(cwd4(), ".ds-bridge.json");
-  if (!existsSync12(configPath)) return void 0;
-  try {
-    return readFileSync14(configPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
-function unknownAliasMessage3(outcome, productFileKeys) {
-  const aliases = Object.keys(productFileKeys);
-  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
-  if (outcome.suggestions.length > 0) {
-    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
-  }
-  lines.push(
-    "",
-    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
-    "Or pass --file-key <raw-figma-file-key> directly."
-  );
-  return lines.join("\n");
-}
-function clientErrorMessage4(result) {
-  switch (result.kind) {
-    case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
-    case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
-    case "not-found":
-      return "Figma could not find that file. Check the file key is correct and the token's account can access the library.";
-    case "rate-limited":
-      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
-    case "network-error":
-      return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-var fsAdapter = {
-  exists: (path) => existsSync12(path),
-  read: (path) => readFileSync14(path, "utf8"),
-  mkdir: (path) => {
-    mkdirSync11(path, { recursive: true });
-  },
-  write: (path, content) => {
-    writeFileSync7(path, content, "utf8");
-  }
-};
-function appendLibraryHealthHistory(totals) {
-  const stateDir = join17(cwd4(), ".ds-bridge");
-  const record = {
-    at: (/* @__PURE__ */ new Date()).toISOString(),
-    kind: "library-health",
-    overrideHotspots: totals.overrideHotspots,
-    deprecatedUsage: totals.deprecatedUsage,
-    detachedCandidates: totals.detachedCandidates
-  };
-  mkdirSync11(stateDir, { recursive: true });
-  appendFileSync9(
-    join17(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-function renderTerm9(report, color) {
-  const { totals } = report;
-  const clean = totals.overrideHotspots === 0 && totals.deprecatedUsage === 0 && totals.detachedCandidates === 0;
-  const header = severityColor(
-    clean ? "ok" : "warn",
-    clean ? "Library health: no hygiene signals found." : "Library health \u2014 hygiene signals found (informational).",
-    { color }
-  );
-  const summary = renderTable(
-    ["signal", "count"],
-    [
-      ["override hotspots", String(totals.overrideHotspots)],
-      ["deprecated usage", String(totals.deprecatedUsage)],
-      ["detached candidates", String(totals.detachedCandidates)]
-    ],
-    { color }
-  );
-  const lines = [header, "", summary];
-  if (report.overrideHotspots.length > 0) {
-    lines.push("", "Top override hotspots:");
-    for (const h of report.overrideHotspots) {
-      const named2 = h.componentName !== void 0 ? ` (${h.componentName})` : "";
-      lines.push(`  ${h.name}${named2}: ${h.overrideCount} override(s)`);
-    }
-  }
-  lines.push(
-    "",
-    `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
-  );
-  return lines.join("\n");
-}
-async function runLibraryHealth(options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail10(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const projectFileText = readProjectConfigText4();
-  const resolved = resolveConfig({
-    env: process.env,
-    ...projectFileText !== void 0 ? { projectFileText } : {}
-  });
-  if (resolved.kind !== "ok") {
-    fail10(resolved.message);
-    return;
-  }
-  for (const warning of resolved.warnings) {
-    process.stderr.write(`warning: ${warning}
-`);
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind === "missing") {
-    fail10(missingTokenMessage4());
-    return;
-  }
-  const fileKeyOutcome = resolveFileKey({
-    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
-    productFileKeys: config.productFileKeys,
-    ...config.figmaFileKey !== void 0 ? { defaultKey: config.figmaFileKey } : {}
-  });
-  if (fileKeyOutcome.kind === "unknown-alias") {
-    fail10(unknownAliasMessage3(fileKeyOutcome, config.productFileKeys));
-    return;
-  }
-  if (fileKeyOutcome.kind === "missing") {
-    fail10(missingFileKeyMessage2());
-    return;
-  }
-  const fileKey = fileKeyOutcome.key;
-  const cacheEnv = processEnv2.CLAUDE_PLUGIN_DATA !== void 0 ? { CLAUDE_PLUGIN_DATA: processEnv2.CLAUDE_PLUGIN_DATA } : {};
-  const cacheArgs = {
-    key: fileKey,
-    env: cacheEnv,
-    cwd: cwd4()
-  };
-  let file;
-  if (!options.refresh) {
-    const cached = readCache({
-      ...cacheArgs,
-      fs: fsAdapter,
-      now: Date.now(),
-      ttlMs: CACHE_TTL_MS
-    });
-    if (cached.kind === "hit") {
-      file = cached.data;
-    }
-  }
-  if (file === void 0) {
-    const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE5;
-    const client = createFigmaClient({
-      token: config.figmaToken.value,
-      baseUrl
-    });
-    const result = await client.getFile(fileKey);
-    if (result.kind === "ok") {
-      file = result.data;
-      writeCache({
-        ...cacheArgs,
-        fs: fsAdapter,
-        now: Date.now(),
-        data: result.data
-      });
-    } else if (result.kind === "rate-limited") {
-      process.stderr.write(`warning: ${clientErrorMessage4(result)}
-`);
-      const fallback = existsSync12(cachePath(cacheArgs)) ? readCache({
-        ...cacheArgs,
-        fs: fsAdapter,
-        now: Date.now(),
-        // A huge TTL so any present envelope counts as a hit.
-        ttlMs: Number.MAX_SAFE_INTEGER
-      }) : { kind: "miss" };
-      if (fallback.kind === "hit") {
-        file = fallback.data;
-      } else {
-        process.exitCode = 2;
-        return;
-      }
-    } else {
-      fail10(clientErrorMessage4(result));
-      return;
-    }
-  }
-  const report = assessLibraryHealth(file);
-  appendLibraryHealthHistory(report.totals);
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}
-`);
-  } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm9(report, color)}
-`);
-  }
-  process.exitCode = 0;
-}
-function registerLibraryHealthCommand(program2) {
-  program2.command("library-health").description(
-    "Crawl a Figma file for design-system hygiene signals (override hotspots, deprecated usage, detached-instance candidates)"
-  ).option(
-    "--file-key <keyOrAlias>",
-    "Figma file key OR a product_file_keys alias (overrides config)"
-  ).option("--format <format>", "output format: term | json", "term").option("--refresh", "bypass the response cache and re-crawl", false).action((options) => {
-    void runLibraryHealth(options);
-  });
-}
-
-// src/cli-commands/lint.ts
-import { spawnSync as spawnSync2 } from "child_process";
-import {
-  appendFileSync as appendFileSync10,
-  existsSync as existsSync13,
-  mkdirSync as mkdirSync12,
-  readdirSync as readdirSync3,
-  readFileSync as readFileSync15,
-  statSync as statSync6,
-  writeFileSync as writeFileSync8
-} from "fs";
-import { isAbsolute as isAbsolute3, join as join18, relative, resolve as resolve9, sep as sep3 } from "path";
-
-// src/engines/lint/extract.ts
-var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
-var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
-var DIM_RE = /-?\d+(?:\.\d+)?(?:px)?/;
-var SPACING_PREFIXES = ["padding", "margin", "inset"];
-var SPACING_EXACT = /* @__PURE__ */ new Set([
-  "gap",
-  "row-gap",
-  "column-gap",
-  "rowGap",
-  "columnGap",
-  "top",
-  "right",
-  "bottom",
-  "left"
-]);
-function isSpacingProperty(property) {
-  const lower = property.toLowerCase();
-  if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
-  for (const prefix of SPACING_PREFIXES) {
-    if (lower === prefix || lower.startsWith(prefix)) return true;
-  }
-  return false;
-}
-function blankComments(text2) {
-  let out = "";
-  let i = 0;
-  while (i < text2.length) {
-    const ch = text2[i];
-    if (ch === "/" && text2[i + 1] === "*") {
-      const end = text2.indexOf("*/", i + 2);
-      const stop = end === -1 ? text2.length : end + 2;
-      for (let j = i; j < stop; j++) out += text2[j] === "\n" ? "\n" : " ";
-      i = stop;
-      continue;
-    }
-    if (ch === "/" && text2[i + 1] === "/" && text2[i - 1] !== ":") {
-      let j = i;
-      while (j < text2.length && text2[j] !== "\n") {
-        out += " ";
-        j += 1;
-      }
-      i = j;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      out += ch;
-      i += 1;
-      while (i < text2.length && text2[i] !== ch) {
-        out += text2[i] === "\n" ? "\n" : " ";
-        i += 1;
-      }
-      if (i < text2.length) {
-        out += text2[i];
-        i += 1;
-      }
-      continue;
-    }
-    out += ch;
-    i += 1;
-  }
-  return out;
-}
-function* scanValue(value2, property) {
-  const spacing = isSpacingProperty(property);
-  let i = 0;
-  while (i < value2.length) {
-    const rest = value2.slice(i);
-    if (/^var\s*\(/i.test(rest)) {
-      const close = value2.indexOf(")", i);
-      i = close === -1 ? value2.length : close + 1;
-      continue;
-    }
-    const fn5 = COLOR_FN_RE.exec(rest);
-    if (fn5 !== null && fn5.index === 0) {
-      yield { offset: i, raw: fn5[0], valueKind: "color" };
-      i += fn5[0].length;
-      continue;
-    }
-    if (value2[i] === "#") {
-      const hex2 = HEX_RE.exec(rest);
-      if (hex2 !== null && hex2.index === 0) {
-        yield { offset: i, raw: hex2[0], valueKind: "color" };
-        i += hex2[0].length;
-        continue;
-      }
-    }
-    if (spacing && (value2[i] === "-" || /\d/.test(value2[i] ?? ""))) {
-      const prev = value2[i - 1] ?? " ";
-      if (!/[a-zA-Z0-9.#-]/.test(prev)) {
-        const dim = DIM_RE.exec(rest);
-        if (dim !== null && dim.index === 0) {
-          const px = Number.parseFloat(dim[0]);
-          if (Number.isFinite(px) && px !== 0) {
-            yield { offset: i, raw: dim[0], valueKind: "dimension" };
-          }
-          i += dim[0].length;
-          continue;
-        }
-      }
-    }
-    i += 1;
-  }
-}
-function extractCss(text2, lineBase, colBase) {
-  const hits = [];
-  const cleaned = blankComments(text2);
-  const lines = cleaned.split("\n");
-  for (let li = 0; li < lines.length; li++) {
-    const line = lines[li] ?? "";
-    const colShift = li === 0 ? colBase : 0;
-    const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
-    let m = decl.exec(line);
-    while (m !== null) {
-      const property = m[1] ?? "";
-      const value2 = m[2] ?? "";
-      const valueStart = m.index + m[0].length - value2.length;
-      for (const hit of scanValue(value2, property)) {
-        hits.push({
-          line: lineBase + li,
-          col: colShift + valueStart + hit.offset + 1,
-          raw: hit.raw,
-          property,
-          valueKind: hit.valueKind
-        });
-      }
-      m = decl.exec(line);
-    }
-  }
-  return hits;
-}
-function indexToLineCol(source, index) {
-  let line = 1;
-  let lineStart = 0;
-  for (let i = 0; i < index; i++) {
-    if (source[i] === "\n") {
-      line += 1;
-      lineStart = i + 1;
-    }
-  }
-  return { line, col: index - lineStart + 1 };
-}
-var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
-function extractTsx(source, file) {
-  const out = [];
-  const styleOpen = /style\s*=\s*\{\{/g;
-  let so = styleOpen.exec(source);
-  while (so !== null) {
-    const bodyStart = so.index + so[0].length;
-    const close = source.indexOf("}}", bodyStart);
-    const body = source.slice(bodyStart, close === -1 ? source.length : close);
-    STYLE_OBJ_PROP_RE.lastIndex = 0;
-    let pm = STYLE_OBJ_PROP_RE.exec(body);
-    while (pm !== null) {
-      const property = pm[1] ?? "";
-      const valueCapture = pm[2] ?? "";
-      const rawValue = valueCapture.trim();
-      const leading = valueCapture.length - valueCapture.trimStart().length;
-      const valueIndexInBody = pm.index + pm[0].length - valueCapture.length + leading;
-      const absValueIndex = bodyStart + valueIndexInBody;
-      const quoted = /^(["'])(.*)\1$/.exec(rawValue);
-      if (quoted !== null) {
-        const inner = quoted[2] ?? "";
-        if (isColorLiteral(inner)) {
-          const pos = indexToLineCol(source, absValueIndex);
-          out.push({
-            file,
-            line: pos.line,
-            col: pos.col,
-            raw: rawValue,
-            property,
-            valueKind: "color",
-            context: "style-object"
-          });
-        }
-      } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
-        if (isSpacingProperty(property)) {
-          const num3 = Number.parseFloat(rawValue);
-          if (Number.isFinite(num3) && num3 !== 0) {
-            const pos = indexToLineCol(source, absValueIndex);
-            out.push({
-              file,
-              line: pos.line,
-              col: pos.col,
-              raw: rawValue,
-              property,
-              valueKind: "dimension",
-              context: "style-object"
-            });
-          }
-        }
-      }
-      pm = STYLE_OBJ_PROP_RE.exec(body);
-    }
-    so = styleOpen.exec(source);
-  }
-  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
-  let st = styledOpen.exec(source);
-  while (st !== null) {
-    const backtickIndex = st.index + st[0].length - 1;
-    const bodyStart = backtickIndex + 1;
-    const close = source.indexOf("`", bodyStart);
-    const body = source.slice(bodyStart, close === -1 ? source.length : close);
-    const pos = indexToLineCol(source, bodyStart);
-    const cssHits = extractCss(body, pos.line, pos.col - 1);
-    for (const hit of cssHits) {
-      out.push({
-        file,
-        line: hit.line,
-        col: hit.col,
-        raw: hit.raw,
-        property: hit.property,
-        valueKind: hit.valueKind,
-        context: "styled-template"
-      });
-    }
-    st = styledOpen.exec(source);
-  }
-  return out;
-}
-var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
-var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
-function isColorLiteral(value2) {
-  const v = value2.trim();
-  return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
-}
-function extensionOf(path) {
-  const dot = path.lastIndexOf(".");
-  return dot === -1 ? "" : path.slice(dot).toLowerCase();
-}
-function byLineThenCol(a, b) {
-  if (a.line !== b.line) return a.line - b.line;
-  return a.col - b.col;
-}
-function extractLiterals(file) {
-  const ext = extensionOf(file.path);
-  let result = [];
-  try {
-    if (ext === ".css" || ext === ".scss") {
-      result = extractCss(file.content, 1, 0).map((hit) => ({
-        file: file.path,
-        line: hit.line,
-        col: hit.col,
-        raw: hit.raw,
-        property: hit.property,
-        valueKind: hit.valueKind,
-        context: "css-declaration"
-      }));
-    } else if (ext === ".tsx" || ext === ".jsx") {
-      result = extractTsx(file.content, file.path);
-    }
-  } catch {
-    return [];
-  }
-  return result.sort(byLineThenCol);
-}
-
-// src/engines/lint/adoption.ts
-function countTokenRefs(css) {
-  const masked = blankComments(css);
-  const refRe = /\bvar\s*\(\s*--[\w-]+/gi;
-  let count = 0;
-  while (refRe.exec(masked) !== null) count += 1;
-  return count;
-}
-var BY_DIRECTORY_CAP = 20;
-function dirnameOf(path) {
-  const slash = path.lastIndexOf("/");
-  return slash === -1 ? "" : path.slice(0, slash);
-}
-function pct2(refs, literals) {
-  const denom = refs + literals;
-  return denom === 0 ? 0 : refs / denom;
-}
-function tallyAdoption(files) {
-  const totals = { refs: 0, literals: 0 };
-  const byDir = /* @__PURE__ */ new Map();
-  for (const file of files) {
-    totals.refs += file.refs;
-    totals.literals += file.literals;
-    const dir = dirnameOf(file.path);
-    const bucket = byDir.get(dir);
-    if (bucket === void 0) {
-      byDir.set(dir, { dir, refs: file.refs, literals: file.literals });
-    } else {
-      bucket.refs += file.refs;
-      bucket.literals += file.literals;
-    }
-  }
-  const byDirectory = [...byDir.values()].filter((d) => d.refs + d.literals > 0).sort((a, b) => {
-    const pa = pct2(a.refs, a.literals);
-    const pb = pct2(b.refs, b.literals);
-    if (pa !== pb) return pa - pb;
-    return a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0;
-  }).slice(0, BY_DIRECTORY_CAP);
-  return { totals, byDirectory };
-}
-
-// src/engines/lint/fix.ts
-function isCompositeToken(token) {
-  return typeof token.value === "object" && token.value !== null;
-}
-function toCssVar(token) {
-  return `var(--${token.name.replaceAll(".", "-")})`;
-}
-function quoteOf(raw) {
-  const first = raw[0];
-  const last = raw[raw.length - 1];
-  if (raw.length >= 2 && (first === '"' || first === "'") && first === last) {
-    return first;
-  }
-  return void 0;
-}
-function replacementFor(literal, token) {
-  const cssVar = toCssVar(token);
-  if (literal.context !== "style-object") return cssVar;
-  const quote = quoteOf(literal.raw);
-  if (quote !== void 0) return `${quote}${cssVar}${quote}`;
-  return `"${cssVar}"`;
-}
-function compareEdits(a, b) {
-  if (a.file !== b.file) return a.file < b.file ? -1 : 1;
-  if (a.line !== b.line) return b.line - a.line;
-  return b.col - a.col;
-}
-function planFixes(findings) {
-  const edits = [];
-  for (const { literal, match } of findings) {
-    if (match.kind !== "exact") continue;
-    if (isCompositeToken(match.token)) continue;
-    edits.push({
-      file: literal.file,
-      line: literal.line,
-      col: literal.col,
-      length: literal.raw.length,
-      replacement: replacementFor(literal, match.token)
-    });
-  }
-  return edits.sort(compareEdits);
-}
-function applyEdits(content, edits) {
-  if (edits.length === 0) return content;
-  const lines = content.split("\n");
-  const byLine = /* @__PURE__ */ new Map();
-  for (const edit of edits) {
-    const bucket = byLine.get(edit.line);
-    if (bucket === void 0) byLine.set(edit.line, [edit]);
-    else bucket.push(edit);
-  }
-  for (const [line, lineEdits] of byLine) {
-    const index = line - 1;
-    const text2 = lines[index];
-    if (text2 === void 0) continue;
-    let next = text2;
-    for (const edit of [...lineEdits].sort((a, b) => b.col - a.col)) {
-      const start = edit.col - 1;
-      if (start < 0 || start > next.length) continue;
-      next = next.slice(0, start) + edit.replacement + next.slice(start + edit.length);
-    }
-    lines[index] = next;
-  }
-  return lines.join("\n");
-}
-
-// src/engines/lint/match.ts
-var COLOR_NEAR_DELTA_E2 = 2.5;
-var DIMENSION_NEAR_PX2 = 1;
-var NEAR_LIMIT2 = 3;
-function pickPreferred2(tokens) {
-  if (tokens.length === 0) return void 0;
-  const names = new Set(tokens.map((t) => t.name));
-  const semantic = tokens.find(
-    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
-  );
-  return semantic ?? tokens[0];
-}
-function aliasRank(token) {
-  return token.aliasOf !== void 0 ? 0 : 1;
-}
-function stripQuotes(raw) {
-  const trimmed = raw.trim();
-  const quote = trimmed[0];
-  if (trimmed.length >= 2 && (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
-function matchColor(literal, index, options) {
-  const canonical2 = normalizeColor(stripQuotes(literal.raw));
-  if (canonical2 === void 0) return { kind: "off-system" };
-  const exact = index.byValue.get(canonical2);
-  if (exact !== void 0 && exact.length > 0) {
-    const token = pickPreferred2(exact);
-    if (token !== void 0) return { kind: "exact", token };
-  }
-  const composite = options?.compositeColors?.get(canonical2);
-  if (composite !== void 0 && composite.length > 0) {
-    const token = pickPreferred2(composite);
-    if (token !== void 0) return { kind: "exact", token };
-  }
-  const near = index.nearest(canonical2, {
-    maxDeltaE: COLOR_NEAR_DELTA_E2,
-    limit: NEAR_LIMIT2
-  });
-  if (near.length === 0) return { kind: "off-system" };
-  const candidates = near.map((m) => ({ token: m.token, distance: m.deltaE })).sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : aliasRank(a.token) - aliasRank(b.token)
-  ).slice(0, NEAR_LIMIT2);
-  return { kind: "near", candidates };
-}
-function matchDimension(literal, index) {
-  const dim = normalizeDimension(stripQuotes(literal.raw));
-  if (dim === void 0) return { kind: "off-system" };
-  const bucket = index.byValue.get(`${dim.px}px`);
-  if (bucket !== void 0) {
-    const exact = bucket.find((t) => t.type === "dimension");
-    if (exact !== void 0) return { kind: "exact", token: exact };
-  }
-  const candidates = [];
-  for (const token of index.byName.values()) {
-    if (token.type !== "dimension") continue;
-    const tokenDim = normalizeDimension(
-      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
-    );
-    if (tokenDim === void 0) continue;
-    const distance = Math.abs(dim.px - tokenDim.px);
-    if (distance === 0 || distance > DIMENSION_NEAR_PX2) continue;
-    candidates.push({ token, distance });
-  }
-  if (candidates.length === 0) return { kind: "off-system" };
-  candidates.sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
-  );
-  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT2) };
-}
-function matchLiteral(literal, index, options) {
-  return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
-}
-function buildCompositeColorLookup(tokens) {
-  const lookup = /* @__PURE__ */ new Map();
-  for (const token of tokens) {
-    const { value: value2 } = token;
-    if (typeof value2 !== "object" || value2 === null) continue;
-    const inner = value2.color;
-    if (typeof inner !== "string") continue;
-    const canonical2 = normalizeColor(inner);
-    if (canonical2 === void 0) continue;
-    const bucket = lookup.get(canonical2);
-    if (bucket === void 0) {
-      lookup.set(canonical2, [token]);
-    } else {
-      bucket.push(token);
-    }
-  }
-  return lookup;
-}
-
-// src/cli-commands/lint.ts
-var PARSERS4 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
-var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
-  "node_modules",
-  ".git",
-  "dist",
-  "out",
-  ".next",
-  "coverage"
-]);
-var LINTABLE_EXTENSIONS = [".css", ".scss", ".tsx", ".jsx"];
-var KIND_SEVERITY = {
-  exact: "error",
-  near: "warn",
-  "off-system": "info"
-};
-function countByKind(findings) {
-  const byKind = { exact: 0, near: 0, offSystem: 0 };
-  for (const finding of findings) {
-    if (finding.match.kind === "exact") byKind.exact += 1;
-    else if (finding.match.kind === "near") byKind.near += 1;
-    else byKind.offSystem += 1;
-  }
-  return byKind;
-}
-function computeAdoption(files, findings) {
-  const cssFiles = files.filter((f3) => isCssLike(f3.rel));
-  const literalsByFile = /* @__PURE__ */ new Map();
-  for (const finding of findings) {
-    const rel2 = finding.literal.file;
-    if (!isCssLike(rel2)) continue;
-    literalsByFile.set(rel2, (literalsByFile.get(rel2) ?? 0) + 1);
-  }
-  const perFile = cssFiles.map((file) => {
-    let refs = 0;
-    try {
-      refs = countTokenRefs(readFileSync15(file.abs, "utf8"));
-    } catch {
-      refs = 0;
-    }
-    return {
-      path: file.rel,
-      refs,
-      literals: literalsByFile.get(file.rel) ?? 0
-    };
-  });
-  const tally2 = tallyAdoption(perFile);
-  return {
-    refs: tally2.totals.refs,
-    literals: tally2.totals.literals,
-    byDirectory: tally2.byDirectory
-  };
-}
-function isCssLike(path) {
-  const lower = path.toLowerCase();
-  return lower.endsWith(".css") || lower.endsWith(".scss");
-}
-function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join18(targetDir, ".ds-bridge");
-  const record = {
-    at: (/* @__PURE__ */ new Date()).toISOString(),
-    kind: "lint",
-    byKind: countByKind(findings),
-    adoption: computeAdoption(files, findings)
-  };
-  mkdirSync12(stateDir, { recursive: true });
-  appendFileSync10(
-    join18(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
-}
-function hasExtension(name) {
-  const lower = name.toLowerCase();
-  return LINTABLE_EXTENSIONS.some((ext) => lower.endsWith(ext));
-}
-function walkLintableFiles(dir, acc) {
-  let entries;
-  try {
-    entries = readdirSync3(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join18(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS3.has(entry.name)) continue;
-      walkLintableFiles(full, acc);
-      continue;
-    }
-    if (entry.isFile() && hasExtension(entry.name)) acc.push(full);
-  }
-}
-function resolveTokenSource(targetDir, flagTokens) {
-  if (flagTokens !== void 0) {
-    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve9(process.cwd(), flagTokens);
-    if (!existsSync13(abs2)) {
-      return {
-        kind: "error",
-        message: `Token source "${abs2}" (from --tokens) does not exist.`
-      };
-    }
-    return { kind: "ok", path: abs2 };
-  }
-  const configPath = join18(targetDir, ".ds-bridge.json");
-  if (existsSync13(configPath)) {
-    let projectFileText;
-    try {
-      projectFileText = readFileSync15(configPath, "utf8");
-    } catch {
-      projectFileText = void 0;
-    }
-    if (projectFileText !== void 0) {
-      const resolved = resolveConfig({ projectFileText });
-      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
-        const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute3(src) ? src : resolve9(targetDir, src);
-        if (existsSync13(abs2)) return { kind: "ok", path: abs2 };
-        return {
-          kind: "error",
-          message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
-        };
-      }
-    }
-  }
-  const discovered = discoverFirstTokenSource2(targetDir);
-  if (discovered !== void 0) return { kind: "ok", path: discovered };
-  return {
-    kind: "error",
-    message: `No design-token source found for "${targetDir}".
-Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
-  };
-}
-function discoverFirstTokenSource2(root) {
-  const candidates = [];
-  collectTokenCandidates2(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat3(path) !== void 0).sort((a, b) => {
-    const depth = depthOf3(a) - depthOf3(b);
-    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-  });
-  return verified[0];
-}
-function depthOf3(path) {
-  return path.split(sep3).filter((s) => s.length > 0).length;
-}
-function isConventionalTokenFile3(name) {
-  if (!name.endsWith(".json")) return false;
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
-}
-function isTokenDir3(name) {
-  return name === "tokens" || name === "design-tokens";
-}
-function collectTokenCandidates2(dir, insideTokenDir, acc) {
-  let entries;
-  try {
-    entries = readdirSync3(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join18(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS3.has(entry.name)) continue;
-      collectTokenCandidates2(
-        full,
-        insideTokenDir || isTokenDir3(entry.name),
-        acc
-      );
-      continue;
-    }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile3(entry.name)) acc.push(full);
-  }
-}
-function detectFileFormat3(absPath) {
-  let raw;
-  try {
-    raw = readFileSync15(absPath, "utf8");
-  } catch {
-    return void 0;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return void 0;
-  }
-  const format = detectFormat(parsed);
-  return format === "unknown" ? void 0 : format;
-}
-function loadTokenMap(tokenPath) {
-  let raw;
-  try {
-    raw = readFileSync15(tokenPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not read token source "${tokenPath}": ${detail}`
-    };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
-    };
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    return {
-      kind: "error",
-      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
-    };
-  }
-  const outcome = PARSERS4[format](parsed);
-  if (outcome.kind === "error") {
-    const lines = outcome.errors.map((e4) => {
-      const where = e4.path !== void 0 ? ` (${e4.path})` : "";
-      return `  ${e4.code}${where}: ${e4.message}`;
-    });
-    return {
-      kind: "error",
-      message: `Failed to parse token source "${tokenPath}" as ${format}:
-${lines.join("\n")}`
-    };
-  }
-  return { kind: "ok", map: outcome.map };
-}
-function lintFile(absPath, relPath, tokens) {
-  let content;
-  try {
-    content = readFileSync15(absPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not read "${absPath}": ${detail}`
-    };
-  }
-  const literals = extractLiterals({ path: relPath, content });
-  const findings = [];
-  for (const literal of literals) {
-    const match = matchLiteral(literal, tokens.index, {
-      compositeColors: tokens.compositeColors
-    });
-    findings.push({ literal, match });
-  }
-  return { kind: "ok", findings };
-}
-function candidateNames(match) {
-  return match.kind === "near" ? match.candidates.map((candidate) => candidate.token.name) : [];
-}
-function toJsonFinding(finding) {
-  const base = {
-    file: finding.literal.file,
-    line: finding.literal.line,
-    col: finding.literal.col,
-    raw: finding.literal.raw,
-    property: finding.literal.property,
-    kind: finding.match.kind
-  };
-  if (finding.match.kind === "exact") {
-    base.expectedToken = finding.match.token.name;
-  } else if (finding.match.kind === "near") {
-    base.expectedCandidates = candidateNames(finding.match);
-  }
-  return base;
-}
-function suggestionFor(match) {
-  switch (match.kind) {
-    case "exact":
-      return `use token ${match.token.name}`;
-    case "near": {
-      const names = candidateNames(match).join(", ");
-      return `near token(s): ${names}`;
-    }
-    case "off-system":
-      return "no matching token (off-system)";
-  }
-}
-function renderTerm10(findings, color) {
-  const blocks = [];
-  const byFile = /* @__PURE__ */ new Map();
-  for (const finding of findings) {
-    const bucket = byFile.get(finding.literal.file);
-    if (bucket === void 0) byFile.set(finding.literal.file, [finding]);
-    else bucket.push(finding);
-  }
-  for (const [file, fileFindings] of byFile) {
-    const lines = [severityColor("ok", file, { color })];
-    for (const finding of fileFindings) {
-      const { literal, match } = finding;
-      const severity = KIND_SEVERITY[match.kind];
-      const position = `${literal.file}:${literal.line}:${literal.col}`;
-      const label = severityColor(severity, match.kind, { color });
-      lines.push(
-        `  ${position}  ${label}  ${literal.property}: ${literal.raw} \u2014 ${suggestionFor(match)}`
-      );
-    }
-    blocks.push(lines.join("\n"));
-  }
-  const counts = {
-    exact: 0,
-    near: 0,
-    "off-system": 0
-  };
-  for (const finding of findings) counts[finding.match.kind] += 1;
-  const rows = Object.keys(counts).map((kind) => [
-    severityColor(KIND_SEVERITY[kind], kind, { color }),
-    String(counts[kind])
-  ]);
-  const table = renderTable(["kind", "count"], rows, { color });
-  const total = findings.length;
-  const heading = `${total} finding${total === 1 ? "" : "s"}`;
-  return [heading, "", ...blocks, "", table].join("\n");
-}
-function changedFiles(targetDir) {
-  const result = spawnSync2("git", ["diff", "--name-only", "HEAD"], {
-    cwd: targetDir,
-    encoding: "utf8"
-  });
-  if (result.error !== void 0 || result.status !== 0) {
-    return {
-      kind: "error",
-      message: `Could not list changed files in "${targetDir}" \u2014 not a git repository (or git is unavailable). Run without --changed, or lint inside a repo.`
-    };
-  }
-  const files = new Set(
-    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve9(targetDir, rel2))
-  );
-  return { kind: "ok", files };
-}
-function applyFixes(editsByFile) {
-  let changed = 0;
-  for (const [absPath, edits] of editsByFile) {
-    let content;
-    try {
-      content = readFileSync15(absPath, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      return {
-        kind: "error",
-        message: `Could not read "${absPath}": ${detail}`
-      };
-    }
-    const next = applyEdits(content, edits);
-    if (next === content) continue;
-    try {
-      writeFileSync8(absPath, next, "utf8");
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      return {
-        kind: "error",
-        message: `Could not write "${absPath}": ${detail}`
-      };
-    }
-    changed += 1;
-  }
-  return { kind: "ok", changed };
-}
-function lintAll(files, tokens) {
-  const all = [];
-  for (const file of files) {
-    const result = lintFile(file.abs, file.rel, tokens);
-    if (result.kind === "error") return result;
-    all.push(...result.findings);
-  }
-  return { kind: "ok", findings: all };
-}
-function fail11(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function registerLintCommand(program2) {
-  program2.command("lint").description("Find raw values that should be design tokens").argument("[path]", "file or directory to lint", ".").option("--fix", "rewrite fixable exact matches to var() in place", false).option("--format <format>", "output format: term | json", "term").option("--tokens <file>", "explicit token source file").option("--changed", "limit to files changed vs git HEAD", false).action((path, options) => {
-    const format = options.format;
-    if (format !== "json" && format !== "term") {
-      fail11(
-        `Unknown --format "${options.format}". Expected "json" or "term".`
-      );
-      return;
-    }
-    const targetPath = resolve9(path);
-    if (!existsSync13(targetPath)) {
-      fail11(`Path "${targetPath}" does not exist.`);
-      return;
-    }
-    const stat2 = statSync6(targetPath);
-    const isFile = stat2.isFile();
-    if (isFile && !hasExtension(targetPath)) {
-      fail11(
-        `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
-      );
-      return;
-    }
-    const targetDir = isFile ? process.cwd() : targetPath;
-    const tokenSource = resolveTokenSource(targetDir, options.tokens);
-    if (tokenSource.kind === "error") {
-      fail11(tokenSource.message);
-      return;
-    }
-    const loaded = loadTokenMap(tokenSource.path);
-    if (loaded.kind === "error") {
-      fail11(loaded.message);
-      return;
-    }
-    const tokens = {
-      map: loaded.map,
-      index: buildTokenIndex(loaded.map.tokens),
-      compositeColors: buildCompositeColorLookup(loaded.map.tokens)
-    };
-    const walked = [];
-    if (isFile) walked.push(targetPath);
-    else walkLintableFiles(targetDir, walked);
-    let inScope = walked;
-    if (options.changed) {
-      const changed = changedFiles(targetDir);
-      if (changed.kind === "error") {
-        fail11(changed.message);
-        return;
-      }
-      inScope = walked.filter((abs2) => changed.files.has(abs2));
-    }
-    const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
-    const linted = lintAll(files, tokens);
-    if (linted.kind === "error") {
-      fail11(linted.message);
-      return;
-    }
-    if (options.fix) {
-      runFix(files, tokens, linted.findings, isFile ? void 0 : targetDir);
-      return;
-    }
-    emitReport(linted.findings, format);
-    if (!isFile) {
-      const adoption = computeAdoption(files, linted.findings);
-      appendLintHistory(targetDir, linted.findings, files);
-      if (format === "term") emitAdoptionSummary(adoption);
-    }
-    process.exitCode = linted.findings.length > 0 ? 1 : 0;
-  });
-}
-function toRelative(targetDir, abs2) {
-  const rel2 = relative(targetDir, abs2);
-  return rel2.split(sep3).join("/");
-}
-function emitAdoptionSummary(adoption) {
-  const total = adoption.refs + adoption.literals;
-  const pct5 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
-  process.stdout.write(
-    `on-system: ${pct5}% (${adoption.refs} token refs / ${total} css/scss values)
-`
-  );
-}
-function emitReport(findings, format) {
-  if (format === "json") {
-    const json = findings.map(toJsonFinding);
-    process.stdout.write(`${JSON.stringify(json, null, 2)}
-`);
-    return;
-  }
-  const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-  process.stdout.write(`${renderTerm10(findings, color)}
-`);
-}
-function runFix(files, tokens, findings, historyDir) {
-  const relToAbs = new Map(files.map((f3) => [f3.rel, f3.abs]));
-  const engineFindings = findings.map((f3) => ({
-    literal: f3.literal,
-    match: f3.match
-  }));
-  const edits = planFixes(engineFindings);
-  const editsByFile = /* @__PURE__ */ new Map();
-  for (const edit of edits) {
-    const abs2 = relToAbs.get(edit.file);
-    if (abs2 === void 0) continue;
-    const bucket = editsByFile.get(abs2);
-    if (bucket === void 0) editsByFile.set(abs2, [edit]);
-    else bucket.push(edit);
-  }
-  const applied = applyFixes(editsByFile);
-  if (applied.kind === "error") {
-    fail11(applied.message);
-    return;
-  }
-  process.stdout.write(
-    `Changed ${applied.changed} file${applied.changed === 1 ? "" : "s"}.
-`
-  );
-  const relinted = lintAll(files, tokens);
-  if (relinted.kind === "error") {
-    fail11(relinted.message);
-    return;
-  }
-  const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
-  const stillExact = relinted.findings.filter((f3) => f3.match.kind === "exact");
-  const hasRemaining = remaining.length > 0 || stillExact.length > 0;
-  if (historyDir !== void 0) {
-    const adoption = computeAdoption(files, relinted.findings);
-    appendLintHistory(historyDir, relinted.findings, files);
-    emitAdoptionSummary(adoption);
-  }
-  process.exitCode = hasRemaining ? 1 : 0;
-}
-
-// src/cli-commands/parity.ts
-import { existsSync as existsSync14, readFileSync as readFileSync16, statSync as statSync7 } from "fs";
-import { join as join19, resolve as resolvePath4 } from "path";
 
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
-var SEVERITY_ORDER2 = {
+var SEVERITY_ORDER = {
   "missing-in-code": 0,
   "missing-in-figma": 1,
   "prop-mismatch": 2,
   ok: 3
 };
-function byNameAsc5(a, b) {
+function byNameAsc2(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 function show(score) {
@@ -16368,8 +10451,8 @@ function buildParity(registry) {
     }
   }
   for (const entry of unmatchedFigma) {
-    const top = entry.candidates?.[0];
-    const detail = top !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top.codeName} @ ${show(top.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
+    const top2 = entry.candidates?.[0];
+    const detail = top2 !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top2.codeName} @ ${show(top2.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
     rows.push({
       component: entry.name,
       status: "missing-in-code",
@@ -16377,8 +10460,8 @@ function buildParity(registry) {
     });
   }
   for (const entry of unmatchedCode) {
-    const top = entry.candidates?.[0];
-    const detail = top !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top.figmaName} (${top.nodeId}) @ ${show(top.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
+    const top2 = entry.candidates?.[0];
+    const detail = top2 !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top2.figmaName} (${top2.nodeId}) @ ${show(top2.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
     rows.push({
       component: entry.name,
       status: "missing-in-figma",
@@ -16386,8 +10469,8 @@ function buildParity(registry) {
     });
   }
   rows.sort((a, b) => {
-    const bySeverity = SEVERITY_ORDER2[a.status] - SEVERITY_ORDER2[b.status];
-    return bySeverity !== 0 ? bySeverity : byNameAsc5(a.component, b.component);
+    const bySeverity = SEVERITY_ORDER[a.status] - SEVERITY_ORDER[b.status];
+    return bySeverity !== 0 ? bySeverity : byNameAsc2(a.component, b.component);
   });
   const summary = {
     ok: 0,
@@ -16395,8 +10478,8 @@ function buildParity(registry) {
     missingInFigma: 0,
     propMismatch: 0
   };
-  for (const row of rows) {
-    switch (row.status) {
+  for (const row2 of rows) {
+    switch (row2.status) {
       case "ok":
         summary.ok += 1;
         break;
@@ -16416,831 +10499,16 @@ function buildParity(registry) {
 function toParitySection(report) {
   return {
     columns: ["Status"],
-    rows: report.rows.map((row) => ({
-      component: row.component,
-      cells: [{ status: row.status }]
+    rows: report.rows.map((row2) => ({
+      component: row2.component,
+      cells: [{ status: row2.status }]
     }))
   };
 }
 
-// src/cli-commands/parity.ts
-function fail12(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function normalizeName3(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-function statusSeverity2(status) {
-  switch (status) {
-    case "ok":
-      return "ok";
-    case "prop-mismatch":
-      return "warn";
-    case "missing-in-code":
-    case "missing-in-figma":
-      return "error";
-  }
-}
-function loadRegistry5(targetDir) {
-  const registryPath = join19(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync14(registryPath)) {
-    fail12(
-      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
-    );
-    return void 0;
-  }
-  let raw;
-  try {
-    raw = readFileSync16(registryPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail12(`Could not read registry "${registryPath}": ${detail}`);
-    return void 0;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail12(`Registry "${registryPath}" is not valid JSON: ${detail}`);
-    return void 0;
-  }
-}
-function filterRows(rows, component) {
-  if (component === void 0 || component === "") return rows;
-  const needle = normalizeName3(component);
-  if (needle === "") return rows;
-  return rows.filter((row) => normalizeName3(row.component).includes(needle));
-}
-function summarize(rows) {
-  const summary = {
-    ok: 0,
-    missingInCode: 0,
-    missingInFigma: 0,
-    propMismatch: 0
-  };
-  for (const row of rows) {
-    switch (row.status) {
-      case "ok":
-        summary.ok += 1;
-        break;
-      case "missing-in-code":
-        summary.missingInCode += 1;
-        break;
-      case "missing-in-figma":
-        summary.missingInFigma += 1;
-        break;
-      case "prop-mismatch":
-        summary.propMismatch += 1;
-        break;
-    }
-  }
-  return summary;
-}
-function renderTerm11(report, color) {
-  if (report.rows.length === 0) {
-    return "No components in the registry \u2014 nothing to compare.";
-  }
-  const statusWidth = Math.max(
-    ...report.rows.map((row) => row.status.length),
-    "status".length
-  );
-  const componentWidth = Math.max(
-    ...report.rows.map((row) => row.component.length),
-    "component".length
-  );
-  const lines = [];
-  for (const row of report.rows) {
-    const status = row.status.padEnd(statusWidth);
-    const component = row.component.padEnd(componentWidth);
-    const coloredStatus = severityColor(statusSeverity2(row.status), status, {
-      color
-    });
-    lines.push(`${coloredStatus}  ${component}  ${row.detail}`);
-  }
-  const { summary } = report;
-  const bars = renderBarChart(
-    [
-      { label: "ok", value: summary.ok },
-      { label: "prop-mismatch", value: summary.propMismatch },
-      { label: "missing-in-code", value: summary.missingInCode },
-      { label: "missing-in-figma", value: summary.missingInFigma }
-    ],
-    { width: 24, color }
-  );
-  const total = report.rows.length;
-  const allOk = total > 0 && summary.ok === total;
-  const verdict = allOk ? severityColor("ok", "All components in parity.", { color }) : severityColor(
-    "error",
-    `${total - summary.ok} of ${total} component(s) out of parity.`,
-    { color }
-  );
-  return [...lines, "", "Summary:", bars, "", verdict].join("\n");
-}
-function mdCell(value2) {
-  return value2.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
-}
-function renderMarkdown(report) {
-  const header = "| Component | Status | Detail |";
-  const separator = "| --- | --- | --- |";
-  const rows = report.rows.map(
-    (row) => `| ${mdCell(row.component)} | ${mdCell(row.status)} | ${mdCell(row.detail)} |`
-  );
-  const { summary } = report;
-  const summaryLine2 = `_ok: ${summary.ok} \xB7 prop-mismatch: ${summary.propMismatch} \xB7 missing-in-code: ${summary.missingInCode} \xB7 missing-in-figma: ${summary.missingInFigma}_`;
-  return [header, separator, ...rows, "", summaryLine2].join("\n");
-}
-function hasRegistry2(candidate) {
-  return existsSync14(
-    join19(resolvePath4(candidate), ".ds-bridge", "registry.json")
-  );
-}
-function disambiguate2(component, path) {
-  if (component !== void 0 && component !== "" && path === "." && !hasRegistry2(".") && hasRegistry2(component)) {
-    return { component: void 0, path: component };
-  }
-  return { component, path };
-}
-function runParity(rawComponent, rawPath, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail12(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const { component, path } = disambiguate2(rawComponent, rawPath);
-  const targetDir = resolvePath4(path);
-  if (!existsSync14(targetDir) || !statSync7(targetDir).isDirectory()) {
-    fail12(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const registry = loadRegistry5(targetDir);
-  if (registry === void 0) return;
-  const full = buildParity(registry);
-  const rows = filterRows(full.rows, component);
-  const report = { rows, summary: summarize(rows) };
-  if (options.markdown) {
-    process.stdout.write(`${renderMarkdown(report)}
-`);
-  } else if (format === "json") {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}
-`);
-  } else {
-    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm11(report, color)}
-`);
-  }
-  const allOk = report.rows.every((row) => row.status === "ok");
-  process.exitCode = allOk ? 0 : 1;
-}
-function registerParityCommand(program2) {
-  program2.command("parity").description(
-    "Compare code components against the Figma library via the saved registry"
-  ).argument("[component]", "filter rows by normalized name substring").argument(
-    "[path]",
-    "project directory holding .ds-bridge/registry.json",
-    "."
-  ).option("--format <format>", "output format: term | json", "term").option(
-    "--markdown",
-    "emit a GitHub-flavored markdown table to stdout",
-    false
-  ).action(
-    (component, path, options) => {
-      runParity(component, path, options);
-    }
-  );
-}
-
-// src/cli-commands/registry.ts
-import {
-  appendFileSync as appendFileSync11,
-  existsSync as existsSync15,
-  mkdirSync as mkdirSync13,
-  readFileSync as readFileSync17,
-  statSync as statSync8,
-  writeFileSync as writeFileSync9
-} from "fs";
-import { dirname as dirname7, join as join20, resolve as resolvePath5 } from "path";
-import { fileURLToPath as fileURLToPath4 } from "url";
-
-// src/engines/registry/match.ts
-var MATCH_THRESHOLD = 0.6;
-var AMBIGUITY_GAP = 0.1;
-var TOKEN_SCORE_FLOOR = 0.3;
-var NAME_WEIGHT = 0.7;
-var SHAPE_WEIGHT = 0.3;
-var MAX_CANDIDATES = 3;
-function normalizeName4(name) {
-  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-}
-function tokenize4(name) {
-  const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
-  const tokens = [];
-  for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
-    const token = part.toLowerCase();
-    if (token.length > 0) tokens.push(token);
-  }
-  return tokens;
-}
-function tokenSetScore(a, b) {
-  const setA = new Set(tokenize4(a));
-  const setB = new Set(tokenize4(b));
-  if (setA.size === 0 || setB.size === 0) return 0;
-  let intersection = 0;
-  for (const token of setA) {
-    if (setB.has(token)) intersection += 1;
-  }
-  return 2 * intersection / (setA.size + setB.size);
-}
-function nameScore(codeName, figmaName) {
-  if (normalizeName4(codeName) === normalizeName4(figmaName)) return 1;
-  const score = tokenSetScore(codeName, figmaName);
-  return score < TOKEN_SCORE_FLOOR ? 0 : score;
-}
-function valueJaccard(a, b) {
-  const setA = new Set(a);
-  const setB = new Set(b);
-  if (setA.size === 0 && setB.size === 0) return 0;
-  let intersection = 0;
-  for (const value2 of setA) {
-    if (setB.has(value2)) intersection += 1;
-  }
-  const union = setA.size + setB.size - intersection;
-  return union === 0 ? 0 : intersection / union;
-}
-function normalizedKeyIndex(variants) {
-  const index = /* @__PURE__ */ new Map();
-  for (const key of Object.keys(variants)) {
-    const values = variants[key] ?? [];
-    const norm = normalizeName4(key);
-    const existing = index.get(norm);
-    if (existing === void 0) {
-      index.set(norm, [...values]);
-    } else {
-      existing.push(...values);
-    }
-  }
-  return index;
-}
-function shapeScore(codeVariants, figmaVariants) {
-  const codeIndex = normalizedKeyIndex(codeVariants);
-  const figmaIndex = normalizedKeyIndex(figmaVariants);
-  const codeEmpty = codeIndex.size === 0;
-  const figmaEmpty = figmaIndex.size === 0;
-  if (codeEmpty && figmaEmpty) return 0.5;
-  if (codeEmpty || figmaEmpty) return 0.25;
-  const keys = /* @__PURE__ */ new Set([...codeIndex.keys(), ...figmaIndex.keys()]);
-  let total = 0;
-  for (const key of keys) {
-    total += valueJaccard(codeIndex.get(key) ?? [], figmaIndex.get(key) ?? []);
-  }
-  return total / keys.size;
-}
-function scorePair(codeComponent, figmaModel) {
-  const name = nameScore(codeComponent.name, figmaModel.name);
-  const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
-  return {
-    nameScore: name,
-    shapeScore: shape,
-    score: NAME_WEIGHT * name + SHAPE_WEIGHT * shape
-  };
-}
-function byNameAsc6(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function rankFigmaCandidates(codeComponent, figma) {
-  return figma.map((figmaModel) => ({
-    figma: figmaModel,
-    score: scorePair(codeComponent, figmaModel).score
-  })).sort(
-    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc6(a.figma.name, b.figma.name)
-  ).slice(0, MAX_CANDIDATES);
-}
-function rankCodeCandidates(figmaModel, code) {
-  return code.map((codeComponent) => ({
-    code: codeComponent,
-    score: scorePair(codeComponent, figmaModel).score
-  })).sort(
-    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc6(a.code.name, b.code.name)
-  ).slice(0, MAX_CANDIDATES);
-}
-function matchComponents(code, figma) {
-  const edges = [];
-  for (let c2 = 0; c2 < code.length; c2 += 1) {
-    const codeComponent = code[c2];
-    if (codeComponent === void 0) continue;
-    for (let f3 = 0; f3 < figma.length; f3 += 1) {
-      const figmaModel = figma[f3];
-      if (figmaModel === void 0) continue;
-      const parts = scorePair(codeComponent, figmaModel);
-      if (parts.score >= MATCH_THRESHOLD) {
-        edges.push({ codeIndex: c2, figmaIndex: f3, parts });
-      }
-    }
-  }
-  edges.sort((a, b) => {
-    if (a.parts.score !== b.parts.score) return b.parts.score - a.parts.score;
-    const codeA = code[a.codeIndex]?.name ?? "";
-    const codeB = code[b.codeIndex]?.name ?? "";
-    const byCode = byNameAsc6(codeA, codeB);
-    if (byCode !== 0) return byCode;
-    const figmaA = figma[a.figmaIndex]?.name ?? "";
-    const figmaB = figma[b.figmaIndex]?.name ?? "";
-    return byNameAsc6(figmaA, figmaB);
-  });
-  const matchedCode = /* @__PURE__ */ new Set();
-  const matchedFigma = /* @__PURE__ */ new Set();
-  const matches = [];
-  for (const edge of edges) {
-    if (matchedCode.has(edge.codeIndex)) continue;
-    if (matchedFigma.has(edge.figmaIndex)) continue;
-    const codeComponent = code[edge.codeIndex];
-    if (codeComponent === void 0) continue;
-    let best = -1;
-    let second = -1;
-    for (let f3 = 0; f3 < figma.length; f3 += 1) {
-      if (matchedFigma.has(f3)) continue;
-      const figmaModel2 = figma[f3];
-      if (figmaModel2 === void 0) continue;
-      const s = scorePair(codeComponent, figmaModel2).score;
-      if (s > best) {
-        second = best;
-        best = s;
-      } else if (s > second) {
-        second = s;
-      }
-    }
-    const ambiguous = second >= MATCH_THRESHOLD && best >= MATCH_THRESHOLD && best - second < AMBIGUITY_GAP;
-    if (ambiguous) {
-      continue;
-    }
-    matchedCode.add(edge.codeIndex);
-    matchedFigma.add(edge.figmaIndex);
-    const figmaModel = figma[edge.figmaIndex];
-    if (figmaModel === void 0) continue;
-    matches.push({
-      code: codeComponent,
-      figma: figmaModel,
-      score: edge.parts.score,
-      nameScore: edge.parts.nameScore,
-      shapeScore: edge.parts.shapeScore
-    });
-  }
-  matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
-  const unmatchedCode = [];
-  for (let c2 = 0; c2 < code.length; c2 += 1) {
-    if (matchedCode.has(c2)) continue;
-    const codeComponent = code[c2];
-    if (codeComponent === void 0) continue;
-    unmatchedCode.push({
-      code: codeComponent,
-      candidates: rankFigmaCandidates(codeComponent, figma)
-    });
-  }
-  unmatchedCode.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
-  const unmatchedFigma = [];
-  for (let f3 = 0; f3 < figma.length; f3 += 1) {
-    if (matchedFigma.has(f3)) continue;
-    const figmaModel = figma[f3];
-    if (figmaModel === void 0) continue;
-    unmatchedFigma.push({
-      figma: figmaModel,
-      candidates: rankCodeCandidates(figmaModel, code)
-    });
-  }
-  unmatchedFigma.sort((a, b) => byNameAsc6(a.figma.name, b.figma.name));
-  return { matches, unmatchedCode, unmatchedFigma };
-}
-
-// src/cli-commands/registry.ts
-async function scanCode2(targetDir) {
-  const globals = globalThis;
-  if (typeof globals.__filename !== "string") {
-    const filename = fileURLToPath4(import.meta.url);
-    globals.__filename = filename;
-    globals.__dirname = dirname7(filename);
-  }
-  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
-  return scanCodeComponents(targetDir);
-}
-var DEFAULT_FIGMA_API_BASE6 = "https://api.figma.com";
-function fail13(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function missingTokenMessage5() {
-  return missingFigmaTokenMessage([
-    "The token needs the file_content:read and library_content:read scopes, and",
-    "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
-    "be used here."
-  ]);
-}
-function missingFileKeyMessage3() {
-  return [
-    "No Figma library file key configured.",
-    "",
-    "Set the figma_file_key plugin option, or for standalone CLI use export it:",
-    "",
-    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
-    "",
-    "The key is the segment after /file/ or /design/ in the library file URL."
-  ].join("\n");
-}
-function clientErrorMessage5(result) {
-  switch (result.kind) {
-    case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
-    case "scope-error":
-      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read and library_content:read.`;
-    case "not-found":
-      return "Figma could not find that file. Check figma_file_key is correct and the token's account can access the library.";
-    case "rate-limited":
-      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
-    case "network-error":
-      return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-async function runBuild(path, options) {
-  const format = options.format;
-  if (format !== "json" && format !== "term") {
-    fail13(`Unknown --format "${options.format}". Expected "json" or "term".`);
-    return;
-  }
-  const targetDir = resolvePath5(path);
-  if (!existsSync15(targetDir) || !statSync8(targetDir).isDirectory()) {
-    fail13(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const resolved = resolveConfig({ env: process.env });
-  if (resolved.kind !== "ok") {
-    fail13(resolved.message);
-    return;
-  }
-  for (const warning of resolved.warnings) {
-    process.stderr.write(`warning: ${warning}
-`);
-  }
-  const { config } = resolved;
-  if (config.figmaToken.kind === "missing") {
-    fail13(missingTokenMessage5());
-    return;
-  }
-  if (config.figmaFileKey === void 0 || config.figmaFileKey === "") {
-    fail13(missingFileKeyMessage3());
-    return;
-  }
-  const code = await scanCode2(targetDir);
-  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE6;
-  const client = createFigmaClient({
-    token: config.figmaToken.value,
-    baseUrl
-  });
-  const componentsResult = await client.getComponents(config.figmaFileKey);
-  if (componentsResult.kind !== "ok") {
-    fail13(clientErrorMessage5(componentsResult));
-    return;
-  }
-  const fileResult = await client.getFile(config.figmaFileKey);
-  if (fileResult.kind !== "ok") {
-    fail13(clientErrorMessage5(fileResult));
-    return;
-  }
-  const figma = buildFigmaComponentModel({
-    published: componentsResult.data,
-    fileDocument: fileResult.data.document
-  });
-  const matchResult = matchComponents(code, figma);
-  const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join20(targetDir, ".ds-bridge");
-  const registryPath = join20(stateDir, "registry.json");
-  try {
-    mkdirSync13(stateDir, { recursive: true });
-    writeFileSync9(
-      registryPath,
-      `${JSON.stringify(registry, null, 2)}
-`,
-      "utf8"
-    );
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail13(`Could not write registry to "${registryPath}": ${detail}`);
-    return;
-  }
-  const parityRecord = parityRecordFrom(registry, generatedAt);
-  appendParityHistory(stateDir, parityRecord);
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(registry, null, 2)}
-`);
-  } else {
-    process.stdout.write(
-      `${renderBuildSummary(registry, registryPath, parityRecord)}
-`
-    );
-  }
-  process.exitCode = 0;
-}
-function parityRecordFrom(registry, generatedAt) {
-  const { ok, missingInCode, missingInFigma, propMismatch } = buildParity(registry).summary;
-  const total = ok + missingInCode + missingInFigma + propMismatch;
-  const score = total > 0 ? Math.round(100 * ok / total) : 0;
-  return {
-    at: generatedAt,
-    kind: "parity",
-    total,
-    ok,
-    missingInCode,
-    missingInFigma,
-    propMismatch,
-    score
-  };
-}
-function appendParityHistory(stateDir, record) {
-  try {
-    mkdirSync13(stateDir, { recursive: true });
-    appendFileSync11(
-      join20(stateDir, "history.jsonl"),
-      `${JSON.stringify(record)}
-`,
-      "utf8"
-    );
-  } catch {
-  }
-}
-function worstAmbiguities(registry) {
-  const lines = [];
-  const ranked = [...registry.unmatchedCode].map((u) => ({
-    name: u.name,
-    top: u.candidates[0]
-  })).filter((u) => u.top !== void 0).sort((a, b) => (b.top?.score ?? 0) - (a.top?.score ?? 0)).slice(0, 3);
-  for (const entry of ranked) {
-    const top = entry.top;
-    if (top === void 0) continue;
-    lines.push(
-      `  ${entry.name} \u2014 closest: ${top.figmaName} (${top.nodeId}) @ ${top.score}`
-    );
-  }
-  return lines;
-}
-function renderBuildSummary(registry, registryPath, parity) {
-  const lines = [
-    `Registry written to ${registryPath}`,
-    `  matched:        ${registry.matches.length}`,
-    `  unmatched code: ${registry.unmatchedCode.length}`,
-    `  unmatched figma:${registry.unmatchedFigma.length}`,
-    `  parity score: ${parity.score} (${parity.ok}/${parity.total})`
-  ];
-  const ambiguities = worstAmbiguities(registry);
-  if (ambiguities.length > 0) {
-    lines.push("", "Closest near-misses:", ...ambiguities);
-  }
-  return lines.join("\n");
-}
-function loadRegistry6(targetDir) {
-  const registryPath = join20(targetDir, ".ds-bridge", "registry.json");
-  if (!existsSync15(registryPath)) {
-    fail13(
-      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
-    );
-    return void 0;
-  }
-  let raw;
-  try {
-    raw = readFileSync17(registryPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail13(`Could not read registry "${registryPath}": ${detail}`);
-    return void 0;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail13(`Registry "${registryPath}" is not valid JSON: ${detail}`);
-    return void 0;
-  }
-}
-function runResolve(nodeNameOrId, path) {
-  const targetDir = resolvePath5(path);
-  if (!existsSync15(targetDir) || !statSync8(targetDir).isDirectory()) {
-    fail13(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const registry = loadRegistry6(targetDir);
-  if (registry === void 0) return;
-  const outcome = resolveEntry(registry, nodeNameOrId);
-  switch (outcome.kind) {
-    case "match":
-      process.stdout.write(`${JSON.stringify(outcome.entry, null, 2)}
-`);
-      process.exitCode = 0;
-      return;
-    case "candidates":
-      process.stdout.write(
-        `${JSON.stringify(
-          {
-            kind: "candidates",
-            node: nodeNameOrId,
-            candidates: outcome.entries
-          },
-          null,
-          2
-        )}
-`
-      );
-      process.exitCode = 1;
-      return;
-    case "not-found":
-      process.stderr.write(
-        `No registry entry found for "${nodeNameOrId}". It is neither a matched node nor an unmatched Figma component in the registry.
-`
-      );
-      process.exitCode = 1;
-      return;
-  }
-}
-function registerRegistryCommand(program2) {
-  const registry = program2.command("registry").description("Build and query the Figma\u2194code component registry");
-  registry.command("build").description(
-    "Scan code components, fetch the Figma library, and write .ds-bridge/registry.json"
-  ).argument("[path]", "project directory to scan", ".").option("--format <format>", "output format: term | json", "term").action((path, options) => {
-    void runBuild(path, options);
-  });
-  registry.command("resolve").description("Resolve a Figma node id or name against the saved registry").argument("<nodeNameOrId>", "Figma node id (e.g. 10:42) or component name").argument(
-    "[path]",
-    "project directory holding .ds-bridge/registry.json",
-    "."
-  ).action((nodeNameOrId, path) => {
-    runResolve(nodeNameOrId, path);
-  });
-}
-
-// src/cli-commands/release-check.ts
-import { existsSync as existsSync16, readFileSync as readFileSync18, statSync as statSync9 } from "fs";
-import { join as join21, resolve as resolve10 } from "path";
-
-// src/engines/report/release-readiness.ts
-function asNumber3(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function extractReleaseSignals(records) {
-  const signals = {};
-  for (const { kind, record } of records) {
-    switch (kind) {
-      case "impact":
-        signals.impact = { breaking: asNumber3(record.breaking) };
-        break;
-      case "tokens-check":
-        signals.drift = {
-          stale: asNumber3(record.stale),
-          missing: asNumber3(record.missing)
-        };
-        break;
-      case "parity":
-        signals.parity = {
-          missingInCode: asNumber3(record.missingInCode),
-          missingInFigma: asNumber3(record.missingInFigma),
-          total: asNumber3(record.total)
-        };
-        break;
-      default:
-        break;
-    }
-  }
-  return signals;
-}
-function impactCheck(signal) {
-  if (signal === void 0) {
-    return { name: "impact", pass: false, detail: "no impact data" };
-  }
-  const breaking = asNumber3(signal.breaking);
-  if (breaking === 0) {
-    return { name: "impact", pass: true, detail: "no breaking changes" };
-  }
-  return {
-    name: "impact",
-    pass: false,
-    detail: `${breaking} breaking change${breaking === 1 ? "" : "s"}`
-  };
-}
-function driftCheck(signal) {
-  if (signal === void 0) {
-    return { name: "drift", pass: false, detail: "no drift data" };
-  }
-  const stale = asNumber3(signal.stale);
-  const missing = asNumber3(signal.missing);
-  if (stale === 0 && missing === 0) {
-    return { name: "drift", pass: true, detail: "tokens in sync" };
-  }
-  return {
-    name: "drift",
-    pass: false,
-    detail: `${stale} stale, ${missing} missing`
-  };
-}
-function parityCheck(signal) {
-  if (signal === void 0 || asNumber3(signal.total) === 0) {
-    return { name: "parity", pass: false, detail: "no parity data" };
-  }
-  const missingInCode = asNumber3(signal.missingInCode);
-  const missingInFigma = asNumber3(signal.missingInFigma);
-  if (missingInCode === 0 && missingInFigma === 0) {
-    return { name: "parity", pass: true, detail: "full parity" };
-  }
-  return {
-    name: "parity",
-    pass: false,
-    detail: `${missingInCode} missing in code, ${missingInFigma} missing in figma`
-  };
-}
-function evaluateReleaseReadiness(signals) {
-  const checks = [
-    impactCheck(signals.impact),
-    driftCheck(signals.drift),
-    parityCheck(signals.parity)
-  ];
-  return { go: checks.every((c2) => c2.pass), checks };
-}
-
-// src/cli-commands/release-check.ts
-function fail14(message) {
-  process.stderr.write(`${message}
-`);
-  process.exitCode = 2;
-}
-function readHistoryText2(stateDir) {
-  try {
-    return readFileSync18(join21(stateDir, "history.jsonl"), "utf8");
-  } catch {
-    return "";
-  }
-}
-function renderTerm12(readiness) {
-  const headline = `RELEASE: ${readiness.go ? "GO" : "NO-GO"}`;
-  const rows = readiness.checks.map((check) => [
-    check.name,
-    check.pass ? "pass" : "fail",
-    check.detail ?? ""
-  ]);
-  const table = renderTable(["gate", "status", "detail"], rows, {
-    color: false
-  });
-  return `${headline}
-${table}`;
-}
-function runReleaseCheck(path, options) {
-  const format = options.format;
-  if (format !== "term" && format !== "json") {
-    fail14(`Unknown --format "${options.format}". Expected "term" or "json".`);
-    return;
-  }
-  const targetDir = resolve10(path);
-  if (!existsSync16(targetDir) || !statSync9(targetDir).isDirectory()) {
-    fail14(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const stateDir = join21(targetDir, ".ds-bridge");
-  const signals = extractReleaseSignals(
-    replayHistory(readHistoryText2(stateDir))
-  );
-  const readiness = evaluateReleaseReadiness(signals);
-  if (format === "json") {
-    process.stdout.write(`${JSON.stringify(readiness, null, 2)}
-`);
-  } else {
-    process.stdout.write(`${renderTerm12(readiness)}
-`);
-  }
-  process.exitCode = readiness.go ? 0 : 1;
-}
-function registerReleaseCheckCommand(program2) {
-  program2.command("release-check").description(
-    "Pre-publish go/no-go gate over the project history (exit 0 go / 1 no-go / 2 error)"
-  ).argument(
-    "[path]",
-    "project directory holding .ds-bridge/history.jsonl",
-    "."
-  ).option("--format <format>", "output format: term | json", "term").action((path, options) => {
-    runReleaseCheck(path, options);
-  });
-}
-
-// src/cli-commands/report.ts
-import { spawn } from "child_process";
-import {
-  existsSync as existsSync17,
-  mkdirSync as mkdirSync14,
-  readFileSync as readFileSync19,
-  statSync as statSync10,
-  writeFileSync as writeFileSync10
-} from "fs";
-import { basename, dirname as dirname8, join as join22, resolve as resolve11 } from "path";
-import { platform } from "process";
-
 // src/engines/report/audience-changelog.ts
 var RECENT_CAP = 12;
-function breakingRank2(severity) {
+function breakingRank(severity) {
   return severity === "breaking" ? 0 : 1;
 }
 var SEVERITY_FIELD = {
@@ -17266,18 +10534,18 @@ function toEntry(raw, order) {
   const title = typeof obj.title === "string" ? obj.title : "";
   return { audience, severity, title, order };
 }
-function inAudience2(entry, audience) {
+function inAudience(entry, audience) {
   return entry.audience === audience || entry.audience === "both";
 }
 function buildSlice(label, audience, entries) {
-  const scoped = entries.filter((e4) => inAudience2(e4, audience));
+  const scoped = entries.filter((e4) => inAudience(e4, audience));
   if (scoped.length === 0) return void 0;
   const counts = { breaking: 0, additive: 0, cosmetic: 0 };
   for (const entry of scoped) {
     counts[SEVERITY_FIELD[entry.severity]] += 1;
   }
   const recent = scoped.slice().sort(
-    (a, b) => breakingRank2(a.severity) - breakingRank2(b.severity) || a.order - b.order
+    (a, b) => breakingRank(a.severity) - breakingRank(b.severity) || a.order - b.order
   ).slice(0, RECENT_CAP).map((e4) => e4.title);
   return { audience: label, ...counts, recent };
 }
@@ -17311,7 +10579,7 @@ var DETACHED_DEDUCTION = 10;
 var READINESS_WEIGHT = 0.3;
 var CONTRAST_PER_FAIL = 5;
 var CONTRAST_CAP = 20;
-function normalizeName5(name) {
+function normalizeName(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 function isFiniteNumber(value2) {
@@ -17425,12 +10693,78 @@ function matchByKeyOrName(components, aliases, key, signalValue) {
       if (aliases[component]?.[key] === signalValue) return component;
     }
   }
-  const needle = normalizeName5(signalValue);
+  const needle = normalizeName(signalValue);
   if (needle === "") return void 0;
   for (const component of components) {
-    if (normalizeName5(component) === needle) return component;
+    if (normalizeName(component) === needle) return component;
   }
   return void 0;
+}
+
+// src/engines/report/consistency.ts
+var DEFAULT_CONSISTENCY_WEIGHTS = {
+  tokens: 40,
+  components: 40,
+  overrides: 20
+};
+var OVERRIDE_PENALTY_PER_HOTSPOT = 8;
+var SUB_ORDER = [
+  "tokens",
+  "components",
+  "overrides"
+];
+function asNumber3(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp012(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function roundHalfUp2(value2) {
+  return Math.round(value2);
+}
+function ratioScore(numerator, denominator) {
+  if (denominator <= 0) return void 0;
+  return clamp012(100 * numerator / denominator);
+}
+function subScore2(kind, input) {
+  switch (kind) {
+    case "tokens": {
+      if (input.tokens === void 0) return void 0;
+      const refs = asNumber3(input.tokens.refs);
+      const literals = asNumber3(input.tokens.literals);
+      return ratioScore(refs, refs + literals);
+    }
+    case "components": {
+      if (input.components === void 0) return void 0;
+      const matched = asNumber3(input.components.matched);
+      const custom = asNumber3(input.components.custom);
+      return ratioScore(matched, matched + custom);
+    }
+    case "overrides": {
+      if (input.overrides === void 0) return void 0;
+      const hotspots = asNumber3(input.overrides.hotspots);
+      return clamp012(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots);
+    }
+  }
+}
+function buildConsistency(input) {
+  const weights = input.weights ?? DEFAULT_CONSISTENCY_WEIGHTS;
+  const present = [];
+  for (const kind of SUB_ORDER) {
+    const score2 = subScore2(kind, input);
+    if (score2 === void 0) continue;
+    present.push({ kind, score: score2, weight: weights[kind] });
+  }
+  if (present.length === 0) return { kind: "no-data" };
+  const totalWeight = present.reduce((sum, c2) => sum + c2.weight, 0);
+  const weightedSum = present.reduce((sum, c2) => sum + c2.score * c2.weight, 0);
+  const score = roundHalfUp2(weightedSum / totalWeight);
+  const components = present.map((c2) => ({
+    kind: c2.kind,
+    score: roundHalfUp2(c2.score),
+    weight: c2.weight
+  }));
+  return { kind: "ok", score, components };
 }
 
 // src/engines/report/consumer.ts
@@ -17516,28 +10850,132 @@ function buildChangeFrequency(records) {
   return result;
 }
 
+// src/engines/report/executive.ts
+function asNumber4(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function clamp013(value2) {
+  return Math.min(100, Math.max(0, value2));
+}
+function roundHalfUp3(value2) {
+  return Math.round(value2);
+}
+function adoptionPct(coverage) {
+  if (coverage === void 0) return void 0;
+  const total = asNumber4(coverage.total);
+  if (total <= 0) return void 0;
+  const imported = asNumber4(coverage.imported);
+  return roundHalfUp3(clamp013(100 * imported / total));
+}
+function buildExecutive(input) {
+  const rollup = {};
+  if (input.systemScore !== void 0) {
+    rollup.health = asNumber4(input.systemScore.current);
+    rollup.trend = Array.isArray(input.systemScore.trend) ? input.systemScore.trend : [];
+  }
+  const adoption = adoptionPct(input.coverage);
+  if (adoption !== void 0) {
+    rollup.adoption = adoption;
+  }
+  if (input.consistency !== void 0 && input.consistency.kind === "ok") {
+    rollup.consistency = asNumber4(input.consistency.score);
+  }
+  if (input.debt !== void 0) {
+    rollup.debt = asNumber4(input.debt.pct);
+  }
+  return rollup;
+}
+
+// src/engines/report/executive-inputs.ts
+function isFiniteNumber2(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2);
+}
+function asObject3(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2) ? value2 : void 0;
+}
+function num4(value2) {
+  return isFiniteNumber2(value2) ? value2 : 0;
+}
+function executiveInputs(records, registry) {
+  let lint;
+  let adoption;
+  let health;
+  for (const { kind, record } of records) {
+    if (kind === "lint") {
+      lint = record;
+      const block = asObject3(record.adoption);
+      if (block !== void 0) adoption = block;
+    } else if (kind === "library-health") {
+      health = record;
+    }
+  }
+  const consistency = {};
+  if (adoption !== void 0) {
+    consistency.tokens = {
+      refs: num4(adoption.refs),
+      literals: num4(adoption.literals)
+    };
+  }
+  if (registry !== void 0 && Array.isArray(registry.matches) && Array.isArray(registry.unmatchedCode)) {
+    consistency.components = {
+      matched: registry.matches.length,
+      custom: registry.unmatchedCode.length
+    };
+  }
+  if (health !== void 0) {
+    const hotspots = health.overrideHotspots;
+    if (Array.isArray(hotspots)) {
+      consistency.overrides = { hotspots: hotspots.length };
+    } else if (isFiniteNumber2(hotspots)) {
+      consistency.overrides = { hotspots };
+    }
+  }
+  if (lint === void 0 && health === void 0) {
+    return { consistency, debt: void 0 };
+  }
+  const debt = {};
+  if (lint !== void 0) {
+    debt.offSystem = num4(asObject3(lint.byKind)?.offSystem);
+  }
+  if (health !== void 0) {
+    const deprecated = health.deprecatedUsage;
+    if (Array.isArray(deprecated)) {
+      debt.deprecatedUsage = deprecated;
+    } else if (isFiniteNumber2(deprecated)) {
+      debt.deprecatedCount = deprecated;
+    }
+    const detached = health.detachedCandidates;
+    if (Array.isArray(detached)) {
+      debt.detachedCandidates = detached;
+    } else if (isFiniteNumber2(detached)) {
+      debt.detachedCount = detached;
+    }
+  }
+  return { consistency, debt };
+}
+
 // src/engines/report/frame-implementability.ts
 var TOP_GAPS_CAP = 5;
-var EMPTY2 = {
+var EMPTY = {
   pct: 0,
   resolved: 0,
   total: 0,
   gaps: []
 };
-function asObject3(value2) {
+function asObject4(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
-function asNumber4(value2) {
+function asNumber5(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function clamp012(value2) {
+function clamp014(value2) {
   return Math.min(100, Math.max(0, value2));
 }
 function bucketsFromByReason(byReason) {
   if (byReason === void 0) return [];
   const buckets = [];
   for (const [reason, raw] of Object.entries(byReason)) {
-    const count = asNumber4(raw);
+    const count = asNumber5(raw);
     if (count > 0) buckets.push({ reason, count });
   }
   return buckets.sort(
@@ -17545,21 +10983,79 @@ function bucketsFromByReason(byReason) {
   );
 }
 function buildFrameImplementability(latest) {
-  if (latest === void 0) return EMPTY2;
-  const byReason = asObject3(latest.byReason);
+  if (latest === void 0) return EMPTY;
+  const byReason = asObject4(latest.byReason);
   const buckets = bucketsFromByReason(byReason);
   const gaps = buckets.slice(0, TOP_GAPS_CAP);
-  const resolved = asNumber4(latest.resolvedCount);
+  const resolved = asNumber5(latest.resolvedCount);
   const byReasonSum = buckets.reduce((sum, g) => sum + g.count, 0);
-  const gapCount = byReasonSum > 0 ? byReasonSum : asNumber4(latest.gapCount);
+  const gapCount = byReasonSum > 0 ? byReasonSum : asNumber5(latest.gapCount);
   const total = resolved + gapCount;
-  const recordedPct = typeof latest.pct === "number" && Number.isFinite(latest.pct) ? clamp012(latest.pct) : void 0;
-  const pct5 = recordedPct ?? (total <= 0 ? 0 : clamp012(Math.round(100 * resolved / total)));
+  const recordedPct = typeof latest.pct === "number" && Number.isFinite(latest.pct) ? clamp014(latest.pct) : void 0;
+  const pct5 = recordedPct ?? (total <= 0 ? 0 : clamp014(Math.round(100 * resolved / total)));
   return { pct: pct5, resolved, total, gaps };
 }
 
+// src/engines/report/frame-readiness-trend.ts
+function str2(value2) {
+  return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
+}
+function buildFrameReadinessTrend(records, threshold, opts = {}) {
+  const limit = opts.limit ?? 12;
+  const frames = /* @__PURE__ */ new Map();
+  const keyOf = frameKeyResolver(records);
+  for (const { kind, at, record } of records) {
+    if (kind !== "handoff") continue;
+    const score = record.score;
+    if (typeof score !== "number" || !Number.isFinite(score)) continue;
+    const key = keyOf(record);
+    const fileKey = str2(record.fileKey);
+    const nodeId = str2(record.nodeId);
+    const prev = frames.get(key);
+    const row2 = prev ?? {
+      key,
+      frameName: "",
+      latest: score,
+      first: score,
+      runs: 0,
+      byDate: /* @__PURE__ */ new Map()
+    };
+    row2.frameName = str2(record.frameName) ?? row2.frameName;
+    if (fileKey !== void 0) row2.fileKey = fileKey;
+    if (nodeId !== void 0) row2.nodeId = nodeId;
+    row2.latest = score;
+    row2.runs += 1;
+    if (at !== void 0) row2.byDate.set(at.slice(0, 10), score);
+    frames.set(key, row2);
+  }
+  if (frames.size === 0) return void 0;
+  const rows = [...frames.values()].map(
+    ({ byDate, ...row2 }) => ({
+      key: row2.key,
+      frameName: row2.frameName,
+      ...row2.fileKey !== void 0 ? { fileKey: row2.fileKey } : {},
+      ...row2.nodeId !== void 0 ? { nodeId: row2.nodeId } : {},
+      points: [...byDate.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([date, score]) => ({ date, score })),
+      latest: row2.latest,
+      first: row2.first,
+      delta: row2.latest - row2.first,
+      runs: row2.runs,
+      passing: row2.latest >= threshold
+    })
+  );
+  rows.sort(
+    (a, b) => Number(a.passing) - Number(b.passing) || a.latest - b.latest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  );
+  return {
+    threshold,
+    total: rows.length,
+    failing: rows.filter((r2) => !r2.passing).length,
+    frames: rows.slice(0, Math.max(0, limit))
+  };
+}
+
 // src/engines/report/freshness.ts
-var MS_PER_DAY2 = 24 * 60 * 60 * 1e3;
+var MS_PER_DAY = 24 * 60 * 60 * 1e3;
 var FRESHNESS_TRACKED_KINDS = [
   "drift",
   "lint",
@@ -17603,7 +11099,7 @@ function ageInDays(lastRunDay, nowIso) {
   const last = Date.parse(`${lastRunDay}T00:00:00.000Z`);
   const now = Date.parse(nowIso);
   if (Number.isNaN(last) || Number.isNaN(now)) return void 0;
-  return Math.max(0, Math.floor((now - last) / MS_PER_DAY2));
+  return Math.max(0, Math.floor((now - last) / MS_PER_DAY));
 }
 function buildFreshness(records, nowIso, thresholds) {
   const latestDay = /* @__PURE__ */ new Map();
@@ -17635,8 +11131,43 @@ function buildFreshness(records, nowIso, thresholds) {
   });
 }
 
+// src/engines/report/handoff-pass-rate.ts
+function tally(latest, threshold) {
+  let passing = 0;
+  for (const score of latest.values()) if (score >= threshold) passing += 1;
+  const frames = latest.size;
+  return {
+    frames,
+    passing,
+    pct: frames === 0 ? 0 : Math.round(100 * passing / frames)
+  };
+}
+function buildHandoffPassRate(records, threshold) {
+  const latest = /* @__PURE__ */ new Map();
+  const dated = [];
+  const keyOf = frameKeyResolver(records);
+  for (const { kind, at, record } of records) {
+    if (kind !== "handoff") continue;
+    const score = record.score;
+    if (typeof score !== "number" || !Number.isFinite(score)) continue;
+    const key = keyOf(record);
+    latest.set(key, score);
+    if (at !== void 0) dated.push({ date: at.slice(0, 10), key, score });
+  }
+  if (latest.size === 0) return void 0;
+  const days3 = [...new Set(dated.map((d) => d.date))].sort();
+  const trend = days3.map((date) => {
+    const upTo = /* @__PURE__ */ new Map();
+    for (const entry of dated) {
+      if (entry.date <= date) upTo.set(entry.key, entry.score);
+    }
+    return { date, ...tally(upTo, threshold) };
+  });
+  return { threshold, ...tally(latest, threshold), trend };
+}
+
 // src/engines/report/library-health-trend.ts
-function asNumber5(value2) {
+function asNumber6(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
 function buildLibraryHealthTrend(records) {
@@ -17647,9 +11178,9 @@ function buildLibraryHealthTrend(records) {
     const date = entry.at.slice(0, 10);
     byDate.set(date, {
       date,
-      overrides: asNumber5(entry.record.overrideHotspots),
-      deprecated: asNumber5(entry.record.deprecatedUsage),
-      detached: asNumber5(entry.record.detachedCandidates)
+      overrides: asNumber6(entry.record.overrideHotspots),
+      deprecated: asNumber6(entry.record.deprecatedUsage),
+      detached: asNumber6(entry.record.detachedCandidates)
     });
   }
   return [...byDate.values()].sort(
@@ -17657,23 +11188,502 @@ function buildLibraryHealthTrend(records) {
   );
 }
 
+// src/engines/report/library-hotspots-trend.ts
+var SIGNALS = [
+  { signal: "overrides", key: "topOverrides" },
+  { signal: "deprecated", key: "topDeprecated" },
+  { signal: "detached", key: "topDetached" }
+];
+function parseList(value2) {
+  if (!Array.isArray(value2)) return void 0;
+  const counts = /* @__PURE__ */ new Map();
+  for (const entry of value2) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { name, count } = entry;
+    if (typeof name !== "string" || name === "") continue;
+    if (typeof count !== "number" || !Number.isFinite(count)) continue;
+    counts.set(name, count);
+  }
+  return counts;
+}
+function compareNames(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function buildLibraryHotspotsTrend(records, opts = {}) {
+  const limit = opts.limit ?? 10;
+  const lines = [];
+  for (const { kind, at, record } of records) {
+    if (kind !== "library-health" || at === void 0) continue;
+    const topN = typeof record.topN === "number" && Number.isFinite(record.topN) ? record.topN : void 0;
+    const day = /* @__PURE__ */ new Map();
+    for (const { signal, key } of SIGNALS) {
+      const counts = parseList(record[key]);
+      if (counts === void 0) continue;
+      const stored = Array.isArray(record[key]) ? record[key].length : 0;
+      day.set(signal, {
+        counts,
+        full: topN === void 0 || stored >= topN
+      });
+    }
+    if (day.size === 0) continue;
+    const fileKey = typeof record.fileKey === "string" && record.fileKey !== "" ? record.fileKey : void 0;
+    lines.push({
+      date: at.slice(0, 10),
+      ...fileKey !== void 0 ? { fileKey } : {},
+      day
+    });
+  }
+  if (lines.length === 0) return void 0;
+  const target = lines[lines.length - 1]?.fileKey;
+  const byDate = /* @__PURE__ */ new Map();
+  for (const { date, fileKey, day } of lines) {
+    if (fileKey === target) byDate.set(date, day);
+  }
+  const dates = [...byDate.keys()].sort(compareNames);
+  const rows = [];
+  for (const { signal } of SIGNALS) {
+    const names = /* @__PURE__ */ new Set();
+    for (const day of byDate.values()) {
+      for (const name of day.get(signal)?.counts.keys() ?? []) names.add(name);
+    }
+    const signalRows = [];
+    for (const name of names) {
+      const points = dates.map((date) => {
+        const list = byDate.get(date)?.get(signal);
+        const stored = list?.counts.get(name);
+        const count = stored !== void 0 ? stored : list !== void 0 && !list.full ? 0 : null;
+        return { date, count };
+      });
+      signalRows.push(rowFor(signal, name, points));
+    }
+    signalRows.sort(
+      (a, b) => (b.latest ?? -1) - (a.latest ?? -1) || compareNames(a.name, b.name)
+    );
+    rows.push(...signalRows.slice(0, Math.max(0, limit)));
+  }
+  return { dates, rows };
+}
+function rowFor(signal, name, points) {
+  const known = points.filter(
+    (p4) => p4.count !== null
+  );
+  const first = known[0]?.count;
+  const latest = points[points.length - 1]?.count ?? null;
+  let previous;
+  for (let i = points.length - 2; i >= 0; i--) {
+    const count = points[i]?.count;
+    if (count !== null && count !== void 0) {
+      previous = count;
+      break;
+    }
+  }
+  let status;
+  if (latest === null) status = "below-top";
+  else if (latest === 0) status = "resolved";
+  else if (previous === void 0 || previous === 0)
+    status = points.length === 1 ? "flat" : "new";
+  else
+    status = latest > previous ? "rising" : latest < previous ? "falling" : "flat";
+  return {
+    signal,
+    name,
+    points,
+    ...first !== void 0 ? { first } : {},
+    latest,
+    ...first !== void 0 && latest !== null ? { delta: latest - first } : {},
+    status
+  };
+}
+
+// src/engines/report/manager-report.ts
+var TOP_N = 3;
+var LOW_CONSISTENCY = 50;
+var LOW_SCORE = 50;
+function top(candidates) {
+  return [...candidates].sort((a, b) => b.rank - a.rank).slice(0, TOP_N).map((c2) => c2.text);
+}
+function plural(n, one, many) {
+  return n === 1 ? one : many;
+}
+function finite(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2);
+}
+function frameLabel(f3) {
+  return f3.frameName !== "" ? f3.frameName : f3.key;
+}
+var KIND_LABEL = {
+  drift: "token drift",
+  readiness: "handoff readiness",
+  "frame-impl": "frame implementability",
+  "library-health": "library health"
+};
+function kindLabel(kind) {
+  return KIND_LABEL[kind] ?? kind;
+}
+var TARGET_LABEL = {
+  "system-score": "System score",
+  "on-system": "On-system usage",
+  drift: "Token drift",
+  parity: "Figma\u2194code parity",
+  contrast: "Contrast (WCAG)",
+  readiness: "Handoff readiness (latest run)"
+};
+function targetLabel(metric) {
+  return TARGET_LABEL[metric] ?? metric;
+}
+var TARGET_OP = {
+  ">=": "\u2265",
+  "<=": "\u2264",
+  "==": "="
+};
+function targetOp(op) {
+  return TARGET_OP[op] ?? op;
+}
+var PERCENT_METRICS = /* @__PURE__ */ new Set(["on-system", "parity"]);
+function targetValue(metric, value2) {
+  if (value2 === void 0) return "\u2014";
+  return PERCENT_METRICS.has(metric) ? `${value2}%` : String(value2);
+}
+var DEBT_INDEX_NOTE = "Design debt is a weighted index (deprecated \xD78, detached \xD75, off-system \xD72 per item), capped at 100.";
+var SCORE_KINDS = /* @__PURE__ */ new Set([
+  "drift",
+  "lint",
+  "readiness",
+  "a11y",
+  "adoption"
+]);
+var RECORD_KINDS = /* @__PURE__ */ new Set(["lint", "drift", "a11y"]);
+var START_COMMAND = {
+  readiness: "ds-bridge handoff <frame-url>",
+  parity: "ds-bridge record --figma",
+  "library-health": "ds-bridge record --figma",
+  impact: "ds-bridge impact",
+  changelog: "ds-bridge changelog",
+  "frame-impl": "ds-bridge frame-impl <frame-url>",
+  adoption: "ds-bridge registry build"
+};
+function joinAnd(items) {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+function buildHeadline(input) {
+  const headline2 = {};
+  const score = input.systemScore;
+  if (score !== void 0) {
+    const velocity = input.scoreVelocity;
+    const points = (input.scorePoints ?? []).filter((p4) => finite(p4.score));
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    headline2.score = {
+      current: score.current,
+      ...velocity !== void 0 ? { delta: velocity.delta, direction: velocity.direction } : points.length >= 2 && firstPoint !== void 0 && lastPoint !== void 0 ? {
+        delta: lastPoint.score - firstPoint.score,
+        since: firstPoint.date
+      } : {},
+      trend: (Array.isArray(score.trend) ? score.trend : []).map(
+        (p4) => p4.score
+      )
+    };
+  }
+  const adoption = input.adoptionTrend ?? [];
+  const last = adoption[adoption.length - 1];
+  const first = adoption[0];
+  if (last !== void 0) {
+    headline2.onSystem = adoption.length >= 2 && first !== void 0 ? { pct: last.pct, delta: last.pct - first.pct, since: first.date } : { pct: last.pct };
+  }
+  const coverage = input.importCoverage;
+  if (coverage !== void 0 && finite(coverage.total) && coverage.total > 0) {
+    headline2.importCoverage = {
+      imported: coverage.imported,
+      total: coverage.total,
+      pct: Math.round(100 * coverage.imported / coverage.total)
+    };
+  }
+  if (input.consistency !== void 0) {
+    headline2.consistency = input.consistency.score;
+  }
+  if (input.debt !== void 0) {
+    headline2.debt = {
+      pct: input.debt.pct,
+      level: input.debt.level,
+      items: input.debt.items.length
+    };
+  }
+  const frames = input.frames ?? [];
+  if (frames.length > 0) {
+    headline2.handoff = {
+      ready: frames.filter((f3) => f3.latest >= input.readinessThreshold).length,
+      frames: frames.length
+    };
+  }
+  return headline2;
+}
+function worstFirst(frames) {
+  return [...frames].sort(
+    (a, b) => a.latest - b.latest || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+  );
+}
+function buildRisks(input, frames, stale, never) {
+  const out = [];
+  const targets = input.targets ?? [];
+  for (const t of targets) {
+    if (t.band !== "red") continue;
+    out.push({
+      rank: 3,
+      text: `${targetLabel(t.metric)} is off target: ${targetValue(t.metric, t.measured)} vs goal ${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
+    });
+  }
+  const velocity = input.scoreVelocity;
+  if (velocity !== void 0 && velocity.direction === "down") {
+    const fell = Math.abs(velocity.delta);
+    const streak = velocity.regressionStreak;
+    out.push({
+      rank: streak >= 2 ? 3 : 2,
+      text: `System score fell ${fell} ${plural(fell, "pt", "pts")} in ${velocity.windowDays} ${plural(velocity.windowDays, "day", "days")}${streak >= 2 ? ` (${streak} drops in a row)` : ""}`
+    });
+  }
+  const drift = input.breakingDrift;
+  if (finite(drift) && drift > 0) {
+    out.push({
+      rank: 3,
+      text: `${drift} breaking token ${plural(drift, "change", "changes")} in the latest drift check`
+    });
+  }
+  const debt = input.debt;
+  if (debt !== void 0 && debt.level !== "low") {
+    const largest = debt.items[0]?.subject;
+    out.push({
+      rank: debt.level === "high" ? 3 : 2,
+      text: `Design debt is ${debt.level} at ${debt.pct}/100${largest !== void 0 ? ` (largest: ${largest})` : ""}`
+    });
+  }
+  const below = frames.filter((f3) => f3.latest < input.readinessThreshold);
+  const lowest = below[0];
+  if (lowest !== void 0) {
+    out.push({
+      rank: 2,
+      text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`
+    });
+  }
+  const consistency = input.consistency;
+  if (consistency !== void 0 && consistency.score < LOW_CONSISTENCY) {
+    out.push({
+      rank: 2,
+      text: `Consistency is low at ${consistency.score}/100`
+    });
+  }
+  if (stale.length > 0) {
+    out.push({
+      rank: 2,
+      text: `Stale data: ${stale.map(kindLabel).join(", ")} not measured recently`
+    });
+  }
+  for (const t of targets) {
+    if (t.band !== "amber") continue;
+    out.push({
+      rank: 1,
+      text: `${targetLabel(t.metric)} is close to its goal: ${targetValue(t.metric, t.measured)} vs ${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
+    });
+  }
+  const neverScored = never.filter((k4) => SCORE_KINDS.has(k4));
+  if (neverScored.length > 0) {
+    out.push({
+      rank: 1,
+      text: `Never measured: ${neverScored.map(kindLabel).join(", ")}`
+    });
+  }
+  const contrast = input.contrast;
+  if (contrast !== void 0 && finite(contrast.failed) && contrast.failed > 0) {
+    const n = contrast.failed;
+    const modes2 = contrast.modes.length > 0 ? ` (${contrast.modes.join(", ")})` : "";
+    out.push({
+      rank: 3,
+      text: `${n} contrast ${plural(n, "pair fails", "pairs fail")} WCAG ${contrast.level}${modes2}`
+    });
+  }
+  const gaps = input.tokenGaps;
+  const missing = finite(gaps?.missing) ? gaps?.missing ?? 0 : 0;
+  const orphan = finite(gaps?.orphan) ? gaps?.orphan ?? 0 : 0;
+  if (missing > 0) {
+    out.push({
+      rank: 2,
+      text: `${missing} design ${plural(missing, "token is", "tokens are")} missing from the code output${orphan > 0 ? `, ${orphan} orphan ${plural(orphan, "output", "outputs")} without a source token` : ""}`
+    });
+  } else if (orphan > 0) {
+    out.push({
+      rank: 2,
+      text: `${orphan} orphan token ${plural(orphan, "output", "outputs")} without a source token`
+    });
+  }
+  const score = input.systemScore;
+  const redScoreTarget = targets.some(
+    (t) => t.metric === "system-score" && t.band === "red"
+  );
+  if (score !== void 0 && finite(score.current) && score.current < LOW_SCORE && !redScoreTarget) {
+    out.push({ rank: 2, text: `System score is ${score.current}/100` });
+  }
+  return top(out);
+}
+function buildActions(input, frames, stale, never) {
+  const out = [];
+  for (const t of input.targets ?? []) {
+    if (t.band !== "red") continue;
+    out.push({
+      rank: 3,
+      text: `Bring ${targetLabel(t.metric)} to ${targetOp(t.op)} ${targetValue(t.metric, t.target)} (now ${targetValue(t.metric, t.measured)})`
+    });
+  }
+  const debt = input.debt;
+  if (debt !== void 0) {
+    for (const item of debt.items.slice(0, 2)) {
+      out.push({
+        rank: debt.level === "high" ? 3 : 2,
+        text: item.recommendation
+      });
+    }
+  }
+  const drift = input.breakingDrift;
+  if (finite(drift) && drift > 0) {
+    out.push({
+      rank: 3,
+      text: `Resolve the ${drift} breaking token ${plural(drift, "change", "changes")} (run ds-bridge tokens check)`
+    });
+  }
+  const lowest = frames.find((f3) => f3.latest < input.readinessThreshold);
+  if (lowest !== void 0) {
+    out.push({
+      rank: 2,
+      text: `Raise handoff readiness of "${frameLabel(lowest)}" from ${lowest.latest} to ${input.readinessThreshold}+ (run ds-bridge handoff)`
+    });
+  }
+  if (stale.length > 0 || never.some((k4) => RECORD_KINDS.has(k4))) {
+    out.push({ rank: 1, text: "Refresh the data: run ds-bridge record" });
+  }
+  const byCommand = /* @__PURE__ */ new Map();
+  for (const kind of never) {
+    const command = START_COMMAND[kind];
+    if (command === void 0) continue;
+    const kinds = byCommand.get(command) ?? [];
+    kinds.push(kindLabel(kind));
+    byCommand.set(command, kinds);
+  }
+  for (const [command, kinds] of byCommand) {
+    out.push({
+      rank: 1,
+      text: `Start measuring ${joinAnd(kinds)}: run ${command}`
+    });
+  }
+  const contrast = input.contrast;
+  if (contrast !== void 0 && finite(contrast.failed) && contrast.failed > 0) {
+    const n = contrast.failed;
+    out.push({
+      rank: 3,
+      text: `Fix the ${n} failing contrast ${plural(n, "pair", "pairs")} (run ds-bridge a11y)`
+    });
+  }
+  const gaps = input.tokenGaps;
+  const missing = finite(gaps?.missing) ? gaps?.missing ?? 0 : 0;
+  const orphan = finite(gaps?.orphan) ? gaps?.orphan ?? 0 : 0;
+  if (missing > 0) {
+    out.push({
+      rank: 2,
+      text: `Add the ${missing} missing ${plural(missing, "token", "tokens")} to the code output (run ds-bridge tokens check)`
+    });
+  } else if (orphan > 0) {
+    out.push({
+      rank: 1,
+      text: `Remove or re-source the ${orphan} orphan token ${plural(orphan, "output", "outputs")} (run ds-bridge tokens check)`
+    });
+  }
+  return top(out);
+}
+function signedNumber(n) {
+  if (n > 0) return `+${n}`;
+  if (n < 0) return `\u2212${Math.abs(n)}`;
+  return "\xB10";
+}
+function dayCount(n) {
+  return `${n} ${plural(n, "day", "days")}`;
+}
+function scoreChangeText(headline2, windowDays) {
+  const score = headline2.score;
+  if (score?.delta !== void 0 && score.direction === void 0 && score.since !== void 0) {
+    return `${signedNumber(score.delta)} pts since ${score.since}`;
+  }
+  if (score?.delta === void 0 || score.direction === void 0) {
+    return void 0;
+  }
+  if (score.direction === "flat" || score.delta === 0) {
+    return `no change in ${dayCount(windowDays)}`;
+  }
+  const arrow3 = score.direction === "up" ? "\u25B2" : "\u25BC";
+  return `${arrow3} ${signedNumber(score.delta)} in ${dayCount(windowDays)}`;
+}
+function onSystemChangeText(headline2) {
+  const onSystem = headline2.onSystem;
+  if (onSystem?.delta === void 0 || onSystem.since === void 0) {
+    return void 0;
+  }
+  return `${signedNumber(onSystem.delta)} pts since ${onSystem.since}`;
+}
+function buildManagerReport(input) {
+  const frames = worstFirst(input.frames ?? []);
+  const measured = [];
+  const stale = [];
+  const never = [];
+  for (const row2 of input.dataFreshness ?? []) {
+    if (row2.band === "unknown") {
+      never.push(row2.kind);
+    } else if (row2.band === "red") {
+      stale.push({
+        kind: row2.kind,
+        ...row2.ageDays !== void 0 ? { ageDays: row2.ageDays } : {}
+      });
+    } else {
+      measured.push({ kind: row2.kind, ageDays: row2.ageDays ?? 0 });
+    }
+  }
+  return {
+    project: input.project,
+    generatedAt: input.generatedAt,
+    windowDays: input.windowDays,
+    readinessThreshold: input.readinessThreshold,
+    headline: buildHeadline(input),
+    targets: [...input.targets ?? []],
+    risks: buildRisks(
+      input,
+      frames,
+      stale.map((s) => s.kind),
+      never
+    ),
+    actions: buildActions(
+      input,
+      frames,
+      stale.map((s) => s.kind),
+      never
+    ),
+    frames,
+    coverage: { measured, stale, never }
+  };
+}
+
 // src/engines/report/migration-checklist.ts
-function asObject4(value2) {
+function asObject5(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
-function asNumber6(value2) {
+function asNumber7(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function asString2(value2) {
+function asString(value2) {
   return typeof value2 === "string" ? value2 : "";
 }
 function toSite(raw) {
   return {
-    file: asString2(raw.file),
-    line: asNumber6(raw.line),
-    subject: asString2(raw.subject),
-    from: asString2(raw.from),
-    to: asString2(raw.to)
+    file: asString(raw.file),
+    line: asNumber7(raw.line),
+    subject: asString(raw.subject),
+    from: asString(raw.from),
+    to: asString(raw.to)
   };
 }
 function buildMigrationChecklist(latestImpact, cap) {
@@ -17684,7 +11694,7 @@ function buildMigrationChecklist(latestImpact, cap) {
   const recordedTruncated = latestImpact.sitesTruncated === true;
   const sites = [];
   for (const entry of rawSites) {
-    const obj = asObject4(entry);
+    const obj = asObject5(entry);
     if (obj === void 0) continue;
     sites.push(toSite(obj));
   }
@@ -17699,7 +11709,7 @@ function buildMigrationChecklist(latestImpact, cap) {
 
 // src/engines/report/ownership.ts
 var UNOWNED = "unowned";
-function asNumber7(value2) {
+function asNumber8(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
 function segments(path) {
@@ -17758,7 +11768,7 @@ function matchOwner(dir, ownership) {
   }
   return owner;
 }
-function pct3(refs, literals) {
+function pct(refs, literals) {
   const total = refs + literals;
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
@@ -17768,15 +11778,15 @@ function rollupByOwner(byDirectory, ownership) {
   for (const bucket of byDirectory) {
     const owner = matchOwner(bucket.dir, ownership) ?? UNOWNED;
     const acc = byOwner.get(owner) ?? { refs: 0, literals: 0 };
-    acc.refs += asNumber7(bucket.refs);
-    acc.literals += asNumber7(bucket.literals);
+    acc.refs += asNumber8(bucket.refs);
+    acc.literals += asNumber8(bucket.literals);
     byOwner.set(owner, acc);
   }
   return [...byOwner.entries()].map(([owner, { refs, literals }]) => ({
     owner,
     refs,
     literals,
-    pct: pct3(refs, literals)
+    pct: pct(refs, literals)
   })).sort(
     (a, b) => a.pct - b.pct || (a.owner < b.owner ? -1 : a.owner > b.owner ? 1 : 0)
   );
@@ -17798,19 +11808,19 @@ function parseCodeowners(text2) {
 }
 
 // src/engines/report/parity-trend.ts
-function asNumber8(value2) {
+function asNumber9(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function clamp013(value2) {
+function clamp015(value2) {
   return Math.min(100, Math.max(0, value2));
 }
 function recordPct(record) {
   if (typeof record.score === "number" && Number.isFinite(record.score)) {
-    return clamp013(record.score);
+    return clamp015(record.score);
   }
-  const total = asNumber8(record.total);
+  const total = asNumber9(record.total);
   if (total <= 0) return 0;
-  return clamp013(100 * asNumber8(record.ok) / total);
+  return clamp015(100 * asNumber9(record.ok) / total);
 }
 function buildParityTrend(records) {
   const byDate = /* @__PURE__ */ new Map();
@@ -17823,6 +11833,255 @@ function buildParityTrend(records) {
   return [...byDate.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([date, pct5]) => ({ date, pct: pct5 }));
 }
 
+// src/engines/report/presets.ts
+function presetFor(persona) {
+  return CATALOG.filter(
+    (meta) => meta.personas.includes(persona)
+  ).map((meta) => meta.id);
+}
+var PRESETS = {
+  "ds-designer": presetFor("ds-designer"),
+  "ds-manager": presetFor("ds-manager"),
+  "ds-engineer": presetFor("ds-engineer"),
+  "product-designer": presetFor("product-designer"),
+  "product-manager": presetFor("product-manager"),
+  "product-engineer": presetFor("product-engineer"),
+  everything: [...ALL_ARTIFACT_IDS],
+  // The curated leadership view — an explicit list (NOT tag-derived), per
+  // SPEC-analytics §4: the score, the executive rollup, adoption, targets and
+  // what is breaking.
+  exec: [
+    "system-score",
+    "executive",
+    "adoption-trend",
+    "targets",
+    "breaking-calendar"
+  ],
+  // The per-repo drill-down a manager opens from `ds-bridge rollup` (SPEC-rollup
+  // §4): an explicit list, comparable across repos — score, its velocity, the
+  // executive rollup, adoption, targets and whether the data is fresh.
+  org: [
+    "system-score",
+    "score-velocity",
+    "executive",
+    "adoption-trend",
+    "targets",
+    "data-freshness"
+  ]
+};
+var PRESET_NAMES = Object.keys(PRESETS);
+var PRESET_DESCRIPTIONS = {
+  "ds-designer": "Authors the Figma library; needs it clean, handoff-ready, accessible, and in parity with code.",
+  "ds-manager": "DesignOps governance: health, adoption, targets, ownership, and release comms across teams.",
+  "ds-engineer": "Owns tokens\u2194code and Figma\u2194code parity; source of breaking changes; pre-publish gatekeeper.",
+  "product-designer": "Designs product screens by consuming the library; tracks what is safe to build on and when it breaks.",
+  "product-manager": "Delivery/risk owner; tracks adoption and upstream breakage against targets.",
+  "product-engineer": "Builds product UI from the DS-code package; works a migration queue of breaking changes.",
+  everything: "The full 30-artifact catalog \u2014 the no-setup escape for an unconfigured repo.",
+  exec: "Leadership one-glance: score, executive rollup (health \xB7 adoption \xB7 consistency \xB7 debt), adoption trend, targets, breaking changes.",
+  org: "Org rollup drill-down: one repo's score, velocity, executive rollup, adoption, targets and data freshness \u2014 open it from ds-bridge rollup."
+};
+function editDistance4(a, b) {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const dist = Array.from({ length: rows * cols }, () => 0);
+  for (let i = 0; i < rows; i++) {
+    dist[i * cols] = i;
+  }
+  for (let j = 0; j < cols; j++) {
+    dist[j] = j;
+  }
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const substitution = a[i - 1] === b[j - 1] ? 0 : 1;
+      dist[i * cols + j] = Math.min(
+        (dist[(i - 1) * cols + j] ?? 0) + 1,
+        (dist[i * cols + j - 1] ?? 0) + 1,
+        (dist[(i - 1) * cols + j - 1] ?? 0) + substitution
+      );
+    }
+  }
+  return dist[rows * cols - 1] ?? 0;
+}
+function suggestViewNames(input, limit = 3) {
+  const needle = input.toLowerCase();
+  const MAX_DISTANCE = 4;
+  return PRESET_NAMES.map((name, index) => ({
+    name,
+    index,
+    prefix: name.startsWith(needle),
+    distance: editDistance4(needle, name)
+  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+    (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
+  ).slice(0, limit).map((c2) => c2.name);
+}
+function isPresetName(value2) {
+  return Object.hasOwn(PRESETS, value2);
+}
+function resolveSource2(selection, source) {
+  const view = selection.view;
+  const requested = selection.artifacts !== void 0 && selection.artifacts.length > 0 ? selection.artifacts : void 0;
+  if (view !== void 0 && requested !== void 0) {
+    return { kind: "conflicting-selection", source };
+  }
+  if (view !== void 0) {
+    if (!isPresetName(view)) {
+      return {
+        kind: "unknown-view",
+        view,
+        suggestions: suggestViewNames(view)
+      };
+    }
+    return {
+      kind: "ok",
+      artifacts: [...PRESETS[view]],
+      source,
+      viewName: view,
+      notices: []
+    };
+  }
+  if (requested !== void 0) {
+    const seen = /* @__PURE__ */ new Set();
+    const ordered = [];
+    let duplicates = 0;
+    for (const id of requested) {
+      const outcome = lookupArtifact(id);
+      if (outcome.kind === "unknown") {
+        return {
+          kind: "unknown-artifact",
+          id: outcome.id,
+          suggestions: outcome.suggestions
+        };
+      }
+      const resolved = outcome.artifact.id;
+      if (seen.has(resolved)) {
+        duplicates += 1;
+        continue;
+      }
+      seen.add(resolved);
+      ordered.push(resolved);
+    }
+    const notices = duplicates > 0 ? [
+      `Removed ${duplicates} duplicate artifact id${duplicates === 1 ? "" : "s"} from the selection.`
+    ] : [];
+    return { kind: "ok", artifacts: ordered, source, notices };
+  }
+  return void 0;
+}
+function resolveView(flags, projectConfig) {
+  const fromFlags = resolveSource2(flags, "flags");
+  if (fromFlags !== void 0) {
+    return fromFlags;
+  }
+  const fromProject = resolveSource2(projectConfig, "project");
+  if (fromProject !== void 0) {
+    return fromProject;
+  }
+  return {
+    kind: "ok",
+    artifacts: [...PRESETS.everything],
+    source: "default",
+    viewName: "everything",
+    notices: []
+  };
+}
+
+// src/engines/report/release-readiness.ts
+function asNumber10(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function extractReleaseSignals(records) {
+  const signals = {};
+  for (const { kind, record } of records) {
+    switch (kind) {
+      case "impact":
+        signals.impact = { breaking: asNumber10(record.breaking) };
+        break;
+      case "tokens-check":
+        signals.drift = {
+          stale: asNumber10(record.stale),
+          missing: asNumber10(record.missing)
+        };
+        break;
+      case "parity":
+        signals.parity = {
+          missingInCode: asNumber10(record.missingInCode),
+          missingInFigma: asNumber10(record.missingInFigma),
+          total: asNumber10(record.total)
+        };
+        break;
+      default:
+        break;
+    }
+  }
+  return signals;
+}
+function impactCheck(signal) {
+  if (signal === void 0) {
+    return { name: "impact", pass: false, detail: "no impact data" };
+  }
+  const breaking = asNumber10(signal.breaking);
+  if (breaking === 0) {
+    return { name: "impact", pass: true, detail: "no breaking changes" };
+  }
+  return {
+    name: "impact",
+    pass: false,
+    detail: `${breaking} breaking change${breaking === 1 ? "" : "s"}`
+  };
+}
+function driftCheck(signal) {
+  if (signal === void 0) {
+    return { name: "drift", pass: false, detail: "no drift data" };
+  }
+  const stale = asNumber10(signal.stale);
+  const missing = asNumber10(signal.missing);
+  if (stale === 0 && missing === 0) {
+    return { name: "drift", pass: true, detail: "tokens in sync" };
+  }
+  return {
+    name: "drift",
+    pass: false,
+    detail: `${stale} stale, ${missing} missing`
+  };
+}
+function parityCheck(signal) {
+  if (signal === void 0 || asNumber10(signal.total) === 0) {
+    return { name: "parity", pass: false, detail: "no parity data" };
+  }
+  const missingInCode = asNumber10(signal.missingInCode);
+  const missingInFigma = asNumber10(signal.missingInFigma);
+  if (missingInCode === 0 && missingInFigma === 0) {
+    return { name: "parity", pass: true, detail: "full parity" };
+  }
+  return {
+    name: "parity",
+    pass: false,
+    detail: `${missingInCode} missing in code, ${missingInFigma} missing in figma`
+  };
+}
+function evaluateReleaseReadiness(signals) {
+  const checks = [
+    impactCheck(signals.impact),
+    driftCheck(signals.drift),
+    parityCheck(signals.parity)
+  ];
+  return { go: checks.every((c2) => c2.pass), checks };
+}
+
+// src/engines/report/report-json.ts
+var REPORT_JSON_SCHEMA = "ds-bridge/report";
+var REPORT_JSON_SCHEMA_VERSION = 1;
+function reportJsonDocument(data, artifacts, viewLabel) {
+  return {
+    schema: REPORT_JSON_SCHEMA,
+    schemaVersion: REPORT_JSON_SCHEMA_VERSION,
+    view: viewLabel ?? null,
+    artifacts: [...artifacts],
+    data
+  };
+}
+
 // src/engines/report/scorecard.ts
 var ROW_ORDER = [
   "score",
@@ -17833,14 +12092,14 @@ var ROW_ORDER = [
   "contrast",
   "readiness"
 ];
-function asNumber9(value2) {
+function asNumber11(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
-function pct4(part, whole) {
+function pct2(part, whole) {
   if (whole <= 0) return void 0;
   return Math.round(100 * part / whole);
 }
-function asRecord2(value2) {
+function asRecord(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
 function extractLatest(text2) {
@@ -17852,7 +12111,7 @@ function extractLatest(text2) {
         break;
       case "lint": {
         latest.lint = record;
-        if (asRecord2(record.adoption) !== void 0) {
+        if (asRecord(record.adoption) !== void 0) {
           latest.adoption = record;
         }
         break;
@@ -17885,28 +12144,28 @@ function scoreFor(text2, weights) {
   };
 }
 function onSystemPct(record) {
-  const adoption = record === void 0 ? void 0 : asRecord2(record.adoption);
+  const adoption = record === void 0 ? void 0 : asRecord(record.adoption);
   if (adoption === void 0) return void 0;
-  const refs = asNumber9(adoption.refs);
-  const literals = asNumber9(adoption.literals);
-  return pct4(refs, refs + literals);
+  const refs = asNumber11(adoption.refs);
+  const literals = asNumber11(adoption.literals);
+  return pct2(refs, refs + literals);
 }
 function violations(record) {
   if (record === void 0) return void 0;
-  const byKind = asRecord2(record.byKind) ?? {};
-  return asNumber9(byKind.exact) + asNumber9(byKind.near) + asNumber9(byKind.offSystem);
+  const byKind = asRecord(record.byKind) ?? {};
+  return asNumber11(byKind.exact) + asNumber11(byKind.near) + asNumber11(byKind.offSystem);
 }
 function driftCounts(record) {
   if (record === void 0) return void 0;
   return {
-    stale: asNumber9(record.stale),
-    missing: asNumber9(record.missing),
-    orphan: asNumber9(record.orphan)
+    stale: asNumber11(record.stale),
+    missing: asNumber11(record.missing),
+    orphan: asNumber11(record.orphan)
   };
 }
 function coverageCounts(record) {
   if (record === void 0) return void 0;
-  return { imported: asNumber9(record.imported), total: asNumber9(record.total) };
+  return { imported: asNumber11(record.imported), total: asNumber11(record.total) };
 }
 function contrastPct(record) {
   if (record === void 0) return void 0;
@@ -17914,27 +12173,27 @@ function contrastPct(record) {
   let passed = 0;
   let failed = 0;
   for (const m of modes2) {
-    const mm = asRecord2(m);
+    const mm = asRecord(m);
     if (mm === void 0) continue;
-    passed += asNumber9(mm.passed);
-    failed += asNumber9(mm.failed);
+    passed += asNumber11(mm.passed);
+    failed += asNumber11(mm.failed);
   }
-  return pct4(passed, passed + failed);
+  return pct2(passed, passed + failed);
 }
 function readinessValue(record) {
   if (record === void 0) return void 0;
   return {
-    score: asNumber9(record.score),
+    score: asNumber11(record.score),
     frame: typeof record.frameName === "string" ? record.frameName : ""
   };
 }
 function scalarRow(id, now, base) {
   if (now === void 0 && base === void 0) return void 0;
-  const row = { id };
-  if (now !== void 0) row.now = now;
-  if (base !== void 0) row.base = base;
-  if (now !== void 0 && base !== void 0) row.delta = now - base;
-  return row;
+  const row2 = { id };
+  if (now !== void 0) row2.now = now;
+  if (base !== void 0) row2.base = base;
+  if (now !== void 0 && base !== void 0) row2.delta = now - base;
+  return row2;
 }
 function buildScorecard(currentText, baseText, weights) {
   const currentOnly = baseText === void 0;
@@ -17944,16 +12203,16 @@ function buildScorecard(currentText, baseText, weights) {
   const nowScore = scoreFor(currentText, weights);
   const baseScore = baseText === void 0 ? void 0 : scoreFor(baseText, weights);
   if (nowScore !== void 0 || baseScore !== void 0) {
-    const row = {
+    const row2 = {
       id: "score",
       components: nowScore?.components ?? []
     };
-    if (nowScore !== void 0) row.now = nowScore.current;
-    if (baseScore !== void 0) row.base = baseScore.current;
+    if (nowScore !== void 0) row2.now = nowScore.current;
+    if (baseScore !== void 0) row2.base = baseScore.current;
     if (nowScore !== void 0 && baseScore !== void 0) {
-      row.delta = nowScore.current - baseScore.current;
+      row2.delta = nowScore.current - baseScore.current;
     }
-    rows.push(row);
+    rows.push(row2);
   }
   const onSystem = scalarRow(
     "on-system",
@@ -17970,18 +12229,18 @@ function buildScorecard(currentText, baseText, weights) {
   const nowDrift = driftCounts(cur.tokensCheck);
   const baseDrift = bas === void 0 ? void 0 : driftCounts(bas.tokensCheck);
   if (nowDrift !== void 0 || baseDrift !== void 0) {
-    const row = { id: "drift" };
-    if (nowDrift !== void 0) row.now = nowDrift;
-    if (baseDrift !== void 0) row.base = baseDrift;
-    rows.push(row);
+    const row2 = { id: "drift" };
+    if (nowDrift !== void 0) row2.now = nowDrift;
+    if (baseDrift !== void 0) row2.base = baseDrift;
+    rows.push(row2);
   }
   const nowCov = coverageCounts(cur.adoptionLine);
   const baseCov = bas === void 0 ? void 0 : coverageCounts(bas.adoptionLine);
   if (nowCov !== void 0 || baseCov !== void 0) {
-    const row = { id: "import-coverage" };
-    if (nowCov !== void 0) row.now = nowCov;
-    if (baseCov !== void 0) row.base = baseCov;
-    rows.push(row);
+    const row2 = { id: "import-coverage" };
+    if (nowCov !== void 0) row2.now = nowCov;
+    if (baseCov !== void 0) row2.base = baseCov;
+    rows.push(row2);
   }
   const contrast = scalarRow(
     "contrast",
@@ -17992,13 +12251,13 @@ function buildScorecard(currentText, baseText, weights) {
   const nowReady = readinessValue(cur.handoff);
   const baseReady = bas === void 0 ? void 0 : readinessValue(bas.handoff);
   if (nowReady !== void 0 || baseReady !== void 0) {
-    const row = { id: "readiness" };
-    if (nowReady !== void 0) row.now = nowReady;
-    if (baseReady !== void 0) row.base = baseReady;
+    const row2 = { id: "readiness" };
+    if (nowReady !== void 0) row2.now = nowReady;
+    if (baseReady !== void 0) row2.base = baseReady;
     if (nowReady !== void 0 && baseReady !== void 0) {
-      row.delta = nowReady.score - baseReady.score;
+      row2.delta = nowReady.score - baseReady.score;
     }
-    rows.push(row);
+    rows.push(row2);
   }
   if (rows.length === 0) return { kind: "no-data" };
   rows.sort((a, b) => ROW_ORDER.indexOf(a.id) - ROW_ORDER.indexOf(b.id));
@@ -18013,7 +12272,7 @@ var BAND_GLYPH = {
   unknown: "\u26AA"
 };
 var TARGET_PERCENT = /* @__PURE__ */ new Set(["on-system", "contrast"]);
-var TITLE2 = "### Design-system scorecard";
+var TITLE = "### Design-system scorecard";
 var ROW_LABEL = {
   score: "System score",
   "on-system": "On-system",
@@ -18037,10 +12296,10 @@ var COMPONENT_LABEL = {
   lint: "Lint",
   readiness: "Readiness",
   a11y: "A11y",
-  adoption: "Adoption",
+  adoption: "On-system",
   parity: "Parity"
 };
-function arrow2(delta) {
+function arrow(delta) {
   if (delta > 0) return "\u25B2";
   if (delta < 0) return "\u25BC";
   return "=";
@@ -18058,47 +12317,47 @@ function isPercent(id) {
 function scalar(id, value2) {
   return isPercent(id) ? `${value2}%` : `${value2}`;
 }
-function metricLabel(row) {
-  if (row.id === "readiness") {
-    const frame = row.now?.frame ?? row.base?.frame ?? "";
+function metricLabel(row2) {
+  if (row2.id === "readiness") {
+    const frame = row2.now?.frame ?? row2.base?.frame ?? "";
     return frame === "" ? "Readiness" : `Readiness (${frame})`;
   }
-  return ROW_LABEL[row.id];
+  return ROW_LABEL[row2.id];
 }
-function hasScalarDelta(row) {
-  return (row.id === "score" || row.id === "on-system" || row.id === "lint-violations" || row.id === "contrast" || row.id === "readiness") && row.delta !== void 0;
+function hasScalarDelta(row2) {
+  return (row2.id === "score" || row2.id === "on-system" || row2.id === "lint-violations" || row2.id === "contrast" || row2.id === "readiness") && row2.delta !== void 0;
 }
-function nowScalar(row) {
-  switch (row.id) {
+function nowScalar(row2) {
+  switch (row2.id) {
     case "score":
     case "on-system":
     case "lint-violations":
     case "contrast":
-      return row.now;
+      return row2.now;
     case "readiness":
-      return row.now?.score;
+      return row2.now?.score;
     default:
       return void 0;
   }
 }
-function baseScalar(row) {
-  switch (row.id) {
+function baseScalar(row2) {
+  switch (row2.id) {
     case "score":
     case "on-system":
     case "lint-violations":
     case "contrast":
-      return row.base;
+      return row2.base;
     case "readiness":
-      return row.base?.score;
+      return row2.base?.score;
     default:
       return void 0;
   }
 }
-function moverFragment(label, id, row) {
-  const now = nowScalar(row);
-  const base = baseScalar(row);
-  const delta = hasScalarDelta(row) ? row.delta : 0;
-  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow2(delta)}`;
+function moverFragment(label, id, row2) {
+  const now = nowScalar(row2);
+  const base = baseScalar(row2);
+  const delta = hasScalarDelta(row2) ? row2.delta : 0;
+  return `${label} ${scalar(id, base ?? 0)} \u2192 ${scalar(id, now ?? 0)} ${arrow(delta)}`;
 }
 function breakingTokenIncrease(rows) {
   const drift = rows.find((r2) => r2.id === "drift");
@@ -18141,57 +12400,57 @@ function summaryLine(rows) {
   }
   return fragments.join(" \xB7 ");
 }
-function primaryNow(row) {
-  if (row.id === "drift") return row.now?.stale;
-  if (row.id === "import-coverage") return row.now?.imported;
-  return nowScalar(row);
+function primaryNow(row2) {
+  if (row2.id === "drift") return row2.now?.stale;
+  if (row2.id === "import-coverage") return row2.now?.imported;
+  return nowScalar(row2);
 }
 function currentOnlySummary(rows) {
   const scoreRow = rows.find((r2) => r2.id === "score");
   if (scoreRow !== void 0 && scoreRow.id === "score" && scoreRow.now !== void 0) {
     return `Score ${scoreRow.now}`;
   }
-  for (const row of rows) {
-    const now = primaryNow(row);
+  for (const row2 of rows) {
+    const now = primaryNow(row2);
     if (now === void 0) continue;
-    const value2 = row.id === "drift" || row.id === "import-coverage" ? `${now}` : scalar(row.id, now);
-    return `${ROW_LABEL[row.id]} ${value2}`;
+    const value2 = row2.id === "drift" || row2.id === "import-coverage" ? `${now}` : scalar(row2.id, now);
+    return `${ROW_LABEL[row2.id]} ${value2}`;
   }
   return "No movement";
 }
-function renderCompareRow(row, breaking) {
-  const label = metricLabel(row);
-  if (row.id === "drift") {
-    const base2 = row.base !== void 0 ? driftCell(row.base, false) : "\u2014";
-    const now2 = row.now !== void 0 ? driftCell(row.now, breaking) : "\u2014";
-    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.stale - row.base.stale)} ${arrow2(row.now.stale - row.base.stale)}` : "\u2014";
+function renderCompareRow(row2, breaking) {
+  const label = metricLabel(row2);
+  if (row2.id === "drift") {
+    const base2 = row2.base !== void 0 ? driftCell(row2.base, false) : "\u2014";
+    const now2 = row2.now !== void 0 ? driftCell(row2.now, breaking) : "\u2014";
+    const delta = row2.now !== void 0 && row2.base !== void 0 ? `${signed(row2.now.stale - row2.base.stale)} ${arrow(row2.now.stale - row2.base.stale)}` : "\u2014";
     return `| ${label} | ${base2} | ${now2} | ${delta} |`;
   }
-  if (row.id === "import-coverage") {
-    const base2 = row.base !== void 0 ? `${row.base.imported}/${row.base.total}` : "\u2014";
-    const now2 = row.now !== void 0 ? `${row.now.imported}/${row.now.total}` : "\u2014";
-    const delta = row.now !== void 0 && row.base !== void 0 ? `${signed(row.now.imported - row.base.imported)} ${arrow2(row.now.imported - row.base.imported)}` : "\u2014";
+  if (row2.id === "import-coverage") {
+    const base2 = row2.base !== void 0 ? `${row2.base.imported}/${row2.base.total}` : "\u2014";
+    const now2 = row2.now !== void 0 ? `${row2.now.imported}/${row2.now.total}` : "\u2014";
+    const delta = row2.now !== void 0 && row2.base !== void 0 ? `${signed(row2.now.imported - row2.base.imported)} ${arrow(row2.now.imported - row2.base.imported)}` : "\u2014";
     return `| ${label} | ${base2} | ${now2} | ${delta} |`;
   }
-  const now = nowScalar(row);
-  const base = baseScalar(row);
-  const nowCell = now !== void 0 ? scalar(row.id, now) : "\u2014";
-  const baseCell = base !== void 0 ? scalar(row.id, base) : "\u2014";
-  const deltaCell = hasScalarDelta(row) ? `${signed(row.delta)} ${arrow2(row.delta)}` : "\u2014";
+  const now = nowScalar(row2);
+  const base = baseScalar(row2);
+  const nowCell = now !== void 0 ? scalar(row2.id, now) : "\u2014";
+  const baseCell = base !== void 0 ? scalar(row2.id, base) : "\u2014";
+  const deltaCell = hasScalarDelta(row2) ? `${signed(row2.delta)} ${arrow(row2.delta)}` : "\u2014";
   return `| ${label} | ${baseCell} | ${nowCell} | ${deltaCell} |`;
 }
-function renderCurrentRow(row) {
-  const label = metricLabel(row);
-  if (row.id === "drift") {
-    const now2 = row.now !== void 0 ? driftCell(row.now, false) : "\u2014";
+function renderCurrentRow(row2) {
+  const label = metricLabel(row2);
+  if (row2.id === "drift") {
+    const now2 = row2.now !== void 0 ? driftCell(row2.now, false) : "\u2014";
     return `| ${label} | ${now2} |`;
   }
-  if (row.id === "import-coverage") {
-    const now2 = row.now !== void 0 ? `${row.now.imported}/${row.now.total}` : "\u2014";
+  if (row2.id === "import-coverage") {
+    const now2 = row2.now !== void 0 ? `${row2.now.imported}/${row2.now.total}` : "\u2014";
     return `| ${label} | ${now2} |`;
   }
-  const now = nowScalar(row);
-  const nowCell = now !== void 0 ? scalar(row.id, now) : "\u2014";
+  const now = nowScalar(row2);
+  const nowCell = now !== void 0 ? scalar(row2.id, now) : "\u2014";
   return `| ${label} | ${nowCell} |`;
 }
 function componentBlock(rows) {
@@ -18212,12 +12471,12 @@ function componentBlock(rows) {
   return lines;
 }
 function scoreNow(model) {
-  const row = model.rows.find((r2) => r2.id === "score");
-  return row !== void 0 && row.id === "score" ? row.now : void 0;
+  const row2 = model.rows.find((r2) => r2.id === "score");
+  return row2 !== void 0 && row2.id === "score" ? row2.now : void 0;
 }
 function scoreDelta(model) {
-  const row = model.rows.find((r2) => r2.id === "score");
-  return row !== void 0 && row.id === "score" ? row.delta : void 0;
+  const row2 = model.rows.find((r2) => r2.id === "score");
+  return row2 !== void 0 && row2.id === "score" ? row2.delta : void 0;
 }
 function targetMeasured(metric, measured) {
   if (measured === void 0) return "\u2014";
@@ -18238,8 +12497,8 @@ function targetsBlock(targets) {
   }
   return lines;
 }
-function ageCell(row) {
-  return row.ageDays !== void 0 ? `${row.ageDays}d` : "\u2014";
+function ageCell(row2) {
+  return row2.ageDays !== void 0 ? `${row2.ageDays}d` : "\u2014";
 }
 function freshnessBlock(rows, base) {
   if (rows.length === 0) return [];
@@ -18247,17 +12506,17 @@ function freshnessBlock(rows, base) {
   const header = delta ? "| Kind | Last run | Age | \u0394 age | Band |" : "| Kind | Last run | Age | Band |";
   const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
   const lines = ["### Freshness", "", header, rule];
-  for (const row of rows) {
-    const last = row.lastRun ?? "never";
-    const age = ageCell(row);
-    const band = BAND_GLYPH[row.band];
+  for (const row2 of rows) {
+    const last = row2.lastRun ?? "never";
+    const age3 = ageCell(row2);
+    const band = BAND_GLYPH[row2.band];
     if (!delta) {
-      lines.push(`| ${row.kind} | ${last} | ${age} | ${band} |`);
+      lines.push(`| ${row2.kind} | ${last} | ${age3} | ${band} |`);
       continue;
     }
-    const baseRow = base?.find((b) => b.kind === row.kind);
-    const d = row.ageDays !== void 0 && baseRow?.ageDays !== void 0 ? `${signed(row.ageDays - baseRow.ageDays)} ${arrow2(row.ageDays - baseRow.ageDays)}` : "\u2014";
-    lines.push(`| ${row.kind} | ${last} | ${age} | ${d} | ${band} |`);
+    const baseRow = base?.find((b) => b.kind === row2.kind);
+    const d = row2.ageDays !== void 0 && baseRow?.ageDays !== void 0 ? `${signed(row2.ageDays - baseRow.ageDays)} ${arrow(row2.ageDays - baseRow.ageDays)}` : "\u2014";
+    lines.push(`| ${row2.kind} | ${last} | ${age3} | ${d} | ${band} |`);
   }
   return lines;
 }
@@ -18298,14 +12557,14 @@ function ownershipBlock(rows, base) {
   const header = delta ? "| Owner | On-system | Refs | Literals | \u0394 pct |" : "| Owner | On-system | Refs | Literals |";
   const rule = delta ? "| --- | --- | --- | --- | --- |" : "| --- | --- | --- | --- |";
   const lines = ["### Ownership", "", header, rule];
-  for (const row of rows) {
-    const cells = `${row.owner} | ${row.pct}% | ${row.refs} | ${row.literals}`;
+  for (const row2 of rows) {
+    const cells = `${row2.owner} | ${row2.pct}% | ${row2.refs} | ${row2.literals}`;
     if (!delta) {
       lines.push(`| ${cells} |`);
       continue;
     }
-    const baseRow = base?.find((b) => b.owner === row.owner);
-    const d = baseRow !== void 0 ? `${signed(row.pct - baseRow.pct)} ${arrow2(row.pct - baseRow.pct)}` : "\u2014";
+    const baseRow = base?.find((b) => b.owner === row2.owner);
+    const d = baseRow !== void 0 ? `${signed(row2.pct - baseRow.pct)} ${arrow(row2.pct - baseRow.pct)}` : "\u2014";
     lines.push(`| ${cells} | ${d} |`);
   }
   return lines;
@@ -18314,15 +12573,15 @@ function libraryHealthBlock(rows, base, baseLabel, currentLabel) {
   const now = rows[rows.length - 1];
   const was = base?.[base.length - 1];
   if (now === void 0 || was === void 0) return [];
-  const row = (label, b, n) => `| ${label} | ${b} | ${n} | ${signed(n - b)} ${arrow2(n - b)} |`;
+  const row2 = (label, b, n) => `| ${label} | ${b} | ${n} | ${signed(n - b)} ${arrow(n - b)} |`;
   return [
     "### Library health",
     "",
     `| Signal | ${baseLabel} | ${currentLabel} | \u0394 |`,
     "| --- | --- | --- | --- |",
-    row("Override hotspots", was.overrides, now.overrides),
-    row("Deprecated usage", was.deprecated, now.deprecated),
-    row("Detached candidates", was.detached, now.detached)
+    row2("Override hotspots", was.overrides, now.overrides),
+    row2("Deprecated usage", was.deprecated, now.deprecated),
+    row2("Detached candidates", was.detached, now.detached)
   ];
 }
 function changelogBlock(changelog) {
@@ -18382,7 +12641,7 @@ function appendixBlocks(model, options) {
   return out;
 }
 function renderScorecardMarkdown(model, options) {
-  const lines = [TITLE2, ""];
+  const lines = [TITLE, ""];
   if (model.kind === "no-data") {
     lines.push(
       "_No design-system history yet \u2014 run a check to populate the scorecard._",
@@ -18403,10 +12662,10 @@ function renderScorecardMarkdown(model, options) {
       `| Metric | ${baseLabel} | ${currentLabel} | \u0394 |`,
       "| --- | --- | --- | --- |"
     );
-    for (const row of model.rows) lines.push(renderCompareRow(row, breaking));
+    for (const row2 of model.rows) lines.push(renderCompareRow(row2, breaking));
   } else {
     lines.push(`| Metric | ${currentLabel} |`, "| --- | --- |");
-    for (const row of model.rows) lines.push(renderCurrentRow(row));
+    for (const row2 of model.rows) lines.push(renderCurrentRow(row2));
   }
   lines.push("");
   const components = componentBlock(model.rows);
@@ -18465,7 +12724,7 @@ function evaluateTargets(latest, targets) {
 }
 
 // src/engines/report/velocity.ts
-var MS_PER_DAY3 = 24 * 60 * 60 * 1e3;
+var MS_PER_DAY2 = 24 * 60 * 60 * 1e3;
 function computeVelocity(trend, nowIso, windowDays) {
   if (trend.length < 2) return void 0;
   const latest = trend[trend.length - 1];
@@ -18473,7 +12732,7 @@ function computeVelocity(trend, nowIso, windowDays) {
   const nowMs = Date.parse(nowIso);
   let windowStartDate;
   if (!Number.isNaN(nowMs)) {
-    windowStartDate = new Date(nowMs - windowDays * MS_PER_DAY3).toISOString().slice(0, 10);
+    windowStartDate = new Date(nowMs - windowDays * MS_PER_DAY2).toISOString().slice(0, 10);
   }
   let baseline;
   if (windowStartDate !== void 0) {
@@ -18494,6 +12753,171 @@ function computeVelocity(trend, nowIso, windowDays) {
     else break;
   }
   return { delta, windowDays, direction, regressionStreak };
+}
+
+// src/io/dashboards.ts
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, readdirSync, readFileSync as readFileSync5 } from "fs";
+import { join as join6 } from "path";
+var DASHBOARDS_DIR = "dashboards";
+var REPORT_TYPES = ["html", "md", "terminal", "site"];
+function dashboardPath(dir, name, local) {
+  const suffix = local ? ".local.json" : ".json";
+  return join6(dir, DASHBOARDS_DIR, `${name}${suffix}`);
+}
+function writeDashboardFile(dir, name, selection, opts = {}) {
+  mkdirSync2(join6(dir, DASHBOARDS_DIR), { recursive: true });
+  const obj = { name };
+  if (selection.view !== void 0) obj.view = selection.view;
+  if (selection.artifacts !== void 0)
+    obj.artifacts = [...selection.artifacts];
+  const meta = opts.meta;
+  if (meta?.persona !== void 0) obj.persona = meta.persona;
+  if (meta?.report_type !== void 0) obj.report_type = meta.report_type;
+  if (meta?.audience !== void 0) obj.audience = meta.audience;
+  if (meta?.score_weights !== void 0) obj.score_weights = meta.score_weights;
+  atomicWriteJson(dashboardPath(dir, name, opts.local ?? false), obj);
+}
+function parseDashboard(text2, fallbackName) {
+  const selectionOutcome = parseSelectionFile(text2);
+  if (selectionOutcome.kind === "invalid") {
+    return { kind: "invalid", message: selectionOutcome.message };
+  }
+  const obj = JSON.parse(text2);
+  const selection = selectionOutcome.kind === "view" ? { kind: "view", view: selectionOutcome.view } : { kind: "artifacts", artifacts: selectionOutcome.artifacts };
+  const dashboard = {
+    name: typeof obj.name === "string" && obj.name !== "" ? obj.name : fallbackName,
+    selection
+  };
+  if (obj.report_type !== void 0) {
+    if (!REPORT_TYPES.includes(obj.report_type)) {
+      return {
+        kind: "invalid",
+        message: `report_type must be one of ${REPORT_TYPES.join(", ")}`
+      };
+    }
+    dashboard.reportType = obj.report_type;
+  }
+  if (obj.audience !== void 0) {
+    if (typeof obj.audience !== "string") {
+      return { kind: "invalid", message: "audience must be a string" };
+    }
+    dashboard.audience = obj.audience;
+  }
+  if (obj.persona !== void 0) {
+    if (typeof obj.persona !== "string") {
+      return { kind: "invalid", message: "persona must be a string" };
+    }
+    dashboard.persona = obj.persona;
+  }
+  if (obj.score_weights !== void 0) {
+    const weights = validateWeights(obj.score_weights);
+    if (weights.kind !== "ok") {
+      return {
+        kind: "invalid",
+        message: `score_weights is invalid (${weights.kind}${"key" in weights ? `: ${weights.key}` : ""})`
+      };
+    }
+    dashboard.scoreWeights = obj.score_weights;
+  }
+  return { kind: "ok", dashboard };
+}
+function readDashboardFile(dir, name) {
+  const localPath = dashboardPath(dir, name, true);
+  const sharedPath = dashboardPath(dir, name, false);
+  const path = existsSync5(localPath) ? localPath : existsSync5(sharedPath) ? sharedPath : void 0;
+  if (path === void 0) return { kind: "not-found" };
+  let text2;
+  try {
+    text2 = readFileSync5(path, "utf8");
+  } catch {
+    return { kind: "not-found" };
+  }
+  return parseDashboard(text2, name);
+}
+function listDashboards(dir) {
+  let files;
+  try {
+    files = readdirSync(join6(dir, DASHBOARDS_DIR));
+  } catch {
+    return [];
+  }
+  const byName2 = /* @__PURE__ */ new Map();
+  const entryFor = (name) => {
+    const existing = byName2.get(name);
+    if (existing !== void 0) return existing;
+    const created = { name, hasShared: false, hasLocal: false };
+    byName2.set(name, created);
+    return created;
+  };
+  for (const file of files) {
+    if (file.endsWith(".local.json")) {
+      entryFor(file.slice(0, -".local.json".length)).hasLocal = true;
+    } else if (file.endsWith(".json")) {
+      entryFor(file.slice(0, -".json".length)).hasShared = true;
+    }
+  }
+  return [...byName2.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// src/render/figma-trend-format.ts
+var SIGNAL_LABEL = {
+  overrides: "Overrides",
+  deprecated: "Deprecated",
+  detached: "Detached \u2014 heuristic, REST cannot truly detect detachment"
+};
+var SIGNAL_ORDER = [
+  "overrides",
+  "deprecated",
+  "detached"
+];
+var STATUS_LABEL = {
+  new: "new",
+  rising: "\u25B2 rising",
+  falling: "\u25BC falling",
+  flat: "= flat",
+  resolved: "\u2713 resolved",
+  "below-top": "below top N (not stored)"
+};
+function signedDelta(delta) {
+  if (delta > 0) return `+${delta}`;
+  if (delta < 0) return `\u2212${Math.abs(delta)}`;
+  return "\xB10";
+}
+function valueWithDelta(latest, delta) {
+  if (latest === null) return "\u2014";
+  return delta === void 0 ? String(latest) : `${latest} (${signedDelta(delta)})`;
+}
+function sparkPrefix(values) {
+  return values.length >= 2 ? `${sparkline(values)} ` : "";
+}
+function hotspotDetail(row2) {
+  const known = row2.points.map((p4) => p4.count).filter((c2) => c2 !== null);
+  const delta = known.length > 1 ? row2.delta : void 0;
+  return `${sparkPrefix(known)}${valueWithDelta(row2.latest, delta)} \xB7 ${STATUS_LABEL[row2.status]}`;
+}
+function dateSpan(dates) {
+  return `${dates[0] ?? ""} \u2192 ${dates[dates.length - 1] ?? ""}`;
+}
+function belowGateMeta(trend) {
+  return `${trend.failing} of ${trend.total} frame${trend.total === 1 ? "" : "s"} below the ${trend.threshold} gate`;
+}
+function frameDetail(frame) {
+  const delta = frame.runs > 1 ? frame.delta : void 0;
+  const gate = frame.passing ? "\u2713 ready" : "\u2717 below gate";
+  return `${sparkPrefix(frame.points.map((p4) => p4.score))}${valueWithDelta(frame.latest, delta)} \xB7 ${gate} \xB7 ${frame.runs} run${frame.runs === 1 ? "" : "s"}`;
+}
+function frameOverflow(trend) {
+  const hidden = trend.total - trend.frames.length;
+  return hidden > 0 ? `+${hidden} more` : void 0;
+}
+function passRateSub(rate) {
+  return `${rate.passing} of ${rate.frames} frame${rate.frames === 1 ? "" : "s"} \u2265 ${rate.threshold}`;
+}
+function passRateTrendLine(rate) {
+  if (rate.trend.length < 2) return void 0;
+  const first = rate.trend[0];
+  const last = rate.trend[rate.trend.length - 1];
+  return `${sparkline(rate.trend.map((p4) => p4.pct))} ${first?.pct ?? 0}% \u2192 ${last?.pct ?? 0}% (${dateSpan(rate.trend.map((p4) => p4.date))})`;
 }
 
 // src/render/html/charts.ts
@@ -18520,17 +12944,17 @@ function bandColor(pct5) {
   return TONE[toneFor(pct5)];
 }
 var TRACK_COLOR = "#eceae4";
-var TEXT_COLOR2 = "#2a2a27";
+var TEXT_COLOR = "#2a2a27";
 var MUTED_COLOR = "#7a7a72";
 var GRID_COLOR = "#e6e4dd";
 var FONT = "-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif";
-function escapeXml2(value2) {
+function escapeXml(value2) {
   return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 function round2(n) {
   return Number(n.toFixed(3));
 }
-function clamp3(value2, min, max) {
+function clamp2(value2, min, max) {
   if (value2 < min) return min;
   if (value2 > max) return max;
   return value2;
@@ -18576,10 +13000,10 @@ function svgOpen(width, height) {
 }
 function text(x, y, body, attrs = {}) {
   const weight = attrs.weight === void 0 ? "" : ` font-weight="${attrs.weight}"`;
-  return `<text x="${round2(x)}" y="${round2(y)}" text-anchor="${attrs.anchor ?? "start"}" fill="${attrs.fill ?? TEXT_COLOR2}" font-family="${FONT}" font-size="${attrs.size ?? 12}"${weight}>${body}</text>`;
+  return `<text x="${round2(x)}" y="${round2(y)}" text-anchor="${attrs.anchor ?? "start"}" fill="${attrs.fill ?? TEXT_COLOR}" font-family="${FONT}" font-size="${attrs.size ?? 12}"${weight}>${body}</text>`;
 }
 function emptyState(width, height, title) {
-  const safe = escapeXml2(title);
+  const safe = escapeXml(title);
   return [
     svgOpen(width, height),
     `<title>${safe}</title>`,
@@ -18629,7 +13053,7 @@ function lineChart(series, opts = {}) {
   const parts = [];
   parts.push(svgOpen(width, height));
   parts.push(
-    `<title>Line chart: ${escapeXml2(series.map((s) => s.label).join(", "))}</title>`
+    `<title>Line chart: ${escapeXml(series.map((s) => s.label).join(", "))}</title>`
   );
   if (legend) {
     let lx = pad2.left;
@@ -18639,7 +13063,7 @@ function lineChart(series, opts = {}) {
         `<rect x="${round2(lx)}" y="8" width="10" height="10" rx="5" fill="${color}" />`
       );
       parts.push(
-        text(lx + 15, 17, escapeXml2(s.label), { size: 12, fill: MUTED_COLOR })
+        text(lx + 15, 17, escapeXml(s.label), { size: 12, fill: MUTED_COLOR })
       );
       lx += 15 + s.label.length * CHAR_W + 18;
     });
@@ -18660,13 +13084,13 @@ function lineChart(series, opts = {}) {
   if (opts.xLabels) {
     const base = round2(height - 8);
     parts.push(
-      text(pad2.left, base, escapeXml2(opts.xLabels[0]), {
+      text(pad2.left, base, escapeXml(opts.xLabels[0]), {
         size: 11,
         fill: MUTED_COLOR
       })
     );
     parts.push(
-      text(width - pad2.right, base, escapeXml2(opts.xLabels[1]), {
+      text(width - pad2.right, base, escapeXml(opts.xLabels[1]), {
         anchor: "end",
         size: 11,
         fill: MUTED_COLOR
@@ -18723,7 +13147,7 @@ function barChart(items, opts = {}) {
   const parts = [];
   parts.push(svgOpen(width, height));
   parts.push(
-    `<title>Bar chart: ${escapeXml2(items.map((i) => i.label).join(", "))}</title>`
+    `<title>Bar chart: ${escapeXml(items.map((i) => i.label).join(", "))}</title>`
   );
   items.forEach((item, index) => {
     const clamped = Math.max(0, item.value);
@@ -18733,9 +13157,9 @@ function barChart(items, opts = {}) {
     const barH = rowH - 12;
     const midY = round2(y + rowH / 2 + 4);
     const label = clip(item.label, labelChars);
-    const tip = label === item.label ? "" : `<title>${escapeXml2(item.label)}</title>`;
+    const tip = label === item.label ? "" : `<title>${escapeXml(item.label)}</title>`;
     parts.push(
-      `<g>${tip}${text(pad2.left - 8, midY, escapeXml2(label), { anchor: "end", size: 12, fill: TEXT_COLOR2 })}</g>`
+      `<g>${tip}${text(pad2.left - 8, midY, escapeXml(label), { anchor: "end", size: 12, fill: TEXT_COLOR })}</g>`
     );
     parts.push(
       `<rect x="${pad2.left}" y="${barY}" width="${round2(trackW)}" height="${barH}" fill="${TRACK_COLOR}" rx="${barH / 2}" />`
@@ -18744,9 +13168,9 @@ function barChart(items, opts = {}) {
       `<rect class="bar" x="${pad2.left}" y="${barY}" width="${barW}" height="${barH}" fill="${item.color ?? fill}" rx="${barH / 2}" />`
     );
     parts.push(
-      text(pad2.left + trackW + 8, midY, escapeXml2(values[index] ?? ""), {
+      text(pad2.left + trackW + 8, midY, escapeXml(values[index] ?? ""), {
         size: 12,
-        fill: TEXT_COLOR2,
+        fill: TEXT_COLOR,
         weight: 600
       })
     );
@@ -18756,7 +13180,7 @@ function barChart(items, opts = {}) {
 }
 function donutGauge(value2, opts = {}) {
   const size = 132;
-  const clamped = clamp3(value2, 0, 100);
+  const clamped = clamp2(value2, 0, 100);
   const display = Math.round(clamped);
   const cx = size / 2;
   const cy = size / 2;
@@ -18770,10 +13194,10 @@ function donutGauge(value2, opts = {}) {
   const title = `${labelText}${display}%`;
   return [
     svgOpen(size, size),
-    `<title>${escapeXml2(title)}</title>`,
+    `<title>${escapeXml(title)}</title>`,
     `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${TRACK_COLOR}" stroke-width="${strokeWidth}" />`,
     `<circle cx="${cx}" cy="${cy}" r="${round2(radius)}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-dasharray="${drawn} ${gap}" transform="rotate(-90 ${cx} ${cy})" />`,
-    `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${TEXT_COLOR2}" font-family="${FONT}" font-size="30" font-weight="700">${display}</text>`,
+    `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" fill="${TEXT_COLOR}" font-family="${FONT}" font-size="30" font-weight="700">${display}</text>`,
     "</svg>"
   ].join("");
 }
@@ -18798,26 +13222,26 @@ function statusGrid(rows, opts = {}) {
   const parts = [];
   parts.push(svgOpen(width, height));
   parts.push(
-    `<title>Status grid: ${escapeXml2(rows.map((r2) => r2.label).join(", "))}</title>`
+    `<title>Status grid: ${escapeXml(rows.map((r2) => r2.label).join(", "))}</title>`
   );
-  rows.forEach((row, index) => {
+  rows.forEach((row2, index) => {
     const y = pad2.top + index * rowH;
     const midY = round2(y + rowH / 2 + 4);
-    const fill = STATUS_BAND_FILL[row.band];
-    const pillTextColor = row.band === "unknown" ? TEXT_COLOR2 : "#ffffff";
+    const fill = STATUS_BAND_FILL[row2.band];
+    const pillTextColor = row2.band === "unknown" ? TEXT_COLOR : "#ffffff";
     if (index > 0) {
       parts.push(
         `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${GRID_COLOR}" stroke-width="1" />`
       );
     }
     parts.push(
-      text(pad2.left, midY, escapeXml2(row.label), { size: 12, weight: 600 })
+      text(pad2.left, midY, escapeXml(row2.label), { size: 12, weight: 600 })
     );
     parts.push(
-      text(measuredX, midY, escapeXml2(row.measured), { size: 12, weight: 600 })
+      text(measuredX, midY, escapeXml(row2.measured), { size: 12, weight: 600 })
     );
     parts.push(
-      text(targetX, midY, escapeXml2(row.target), {
+      text(targetX, midY, escapeXml(row2.target), {
         size: 12,
         fill: MUTED_COLOR
       })
@@ -18826,7 +13250,7 @@ function statusGrid(rows, opts = {}) {
       `<rect class="pill" x="${pillX}" y="${round2(y + 7)}" width="${pillW}" height="${rowH - 14}" fill="${fill}" rx="${(rowH - 14) / 2}" />`
     );
     parts.push(
-      text(pillX + pillW / 2, midY - 0.5, escapeXml2(row.band), {
+      text(pillX + pillW / 2, midY - 0.5, escapeXml(row2.band), {
         anchor: "middle",
         size: 11,
         fill: pillTextColor,
@@ -18852,19 +13276,19 @@ function heatGrid(rows, opts = {}) {
   const parts = [];
   parts.push(svgOpen(width, height));
   parts.push(
-    `<title>Heat grid: ${escapeXml2(rows.map((r2) => r2.label).join(", "))}</title>`
+    `<title>Heat grid: ${escapeXml(rows.map((r2) => r2.label).join(", "))}</title>`
   );
-  rows.forEach((row, rowIndex) => {
+  rows.forEach((row2, rowIndex) => {
     const y = pad2.top + rowIndex * cellSize;
     parts.push(
-      text(labelW - 8, y + cellSize / 2 + 3, escapeXml2(clip(row.label, 18)), {
+      text(labelW - 8, y + cellSize / 2 + 3, escapeXml(clip(row2.label, 18)), {
         anchor: "end",
         size: 12
       })
     );
-    row.cells.forEach((cell, cellIndex) => {
+    row2.cells.forEach((cell3, cellIndex) => {
       const x = pad2.left + cellIndex * cellSize;
-      const opacity = round2(clamp3(cell.intensity, 0, 1));
+      const opacity = round2(clamp2(cell3.intensity, 0, 1));
       parts.push(
         `<rect x="${x}" y="${y}" width="${cellSize - 3}" height="${cellSize - 3}" fill="${TRACK_COLOR}" rx="4" />`
       );
@@ -19094,7 +13518,7 @@ var COMPONENT_LABEL2 = {
   lint: "lint",
   readiness: "readiness",
   a11y: "a11y",
-  adoption: "adoption",
+  adoption: "on-system",
   parity: "parity"
 };
 function systemScoreSection(data, weightProfile) {
@@ -19102,7 +13526,7 @@ function systemScoreSection(data, weightProfile) {
   if (score === void 0) {
     return panel("System score", emptyState2("report"));
   }
-  const trendSeries = [
+  const trendSeries2 = [
     {
       label: "score",
       points: score.trend.map((point, index) => ({
@@ -19126,7 +13550,7 @@ function systemScoreSection(data, weightProfile) {
     [
       '<div class="split">',
       `<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
-      `<div class="chart">${lineChart(trendSeries, { width: WIDE_W - 170, height: 180, colors: [PALETTE2[0]] })}</div>`,
+      `<div class="chart">${lineChart(trendSeries2, { width: WIDE_W - 170, height: 180, colors: [PALETTE2[0]] })}</div>`,
       "</div>",
       legend,
       caption
@@ -19212,11 +13636,11 @@ function paritySection(data) {
   if (parity === void 0 || parity.rows.length === 0) {
     return panel("Parity matrix", emptyState2("parity"));
   }
-  const rows = parity.rows.map((row) => ({
-    label: row.component,
-    cells: row.cells.map((cell) => ({
-      label: cell.status,
-      intensity: PARITY_INTENSITY[cell.status]
+  const rows = parity.rows.map((row2) => ({
+    label: row2.component,
+    cells: row2.cells.map((cell3) => ({
+      label: cell3.status,
+      intensity: PARITY_INTENSITY[cell3.status]
     }))
   }));
   const columns = parity.columns.length > 0 ? `<div class="cols">Columns: ${parity.columns.map((c2) => `<b>${escapeHtml(c2)}</b>`).join(" \xB7 ")}</div>` : "";
@@ -19327,15 +13751,15 @@ function leaderboardSection(data) {
   if (rows === void 0 || rows.length === 0) {
     return panel("Adoption leaderboard", emptyState2("lint <dir>"));
   }
-  const bars = rows.map((row) => {
-    const pct5 = onSystemPct2(row.refs, row.literals);
-    return { label: row.dir, value: pct5, color: bandColor(pct5) };
+  const bars = rows.map((row2) => {
+    const pct5 = onSystemPct2(row2.refs, row2.literals);
+    return { label: row2.dir, value: pct5, color: bandColor(pct5) };
   });
   const labels = [
     '<ul class="offenders">',
     ...rows.map(
-      (row) => `<li><code>${escapeHtml(row.dir)}</code><span class="count">${escapeHtml(
-        String(onSystemPct2(row.refs, row.literals))
+      (row2) => `<li><code>${escapeHtml(row2.dir)}</code><span class="count">${escapeHtml(
+        String(onSystemPct2(row2.refs, row2.literals))
       )}%</span></li>`
     ),
     "</ul>"
@@ -19493,17 +13917,17 @@ function componentHealthSection(data) {
   if (rows === void 0 || rows.length === 0) {
     return panel("Component health", emptyState2("registry build"));
   }
-  const bars = rows.map((row) => ({
-    label: row.component,
-    value: row.healthScore,
-    color: bandColor(row.healthScore)
+  const bars = rows.map((row2) => ({
+    label: row2.component,
+    value: row2.healthScore,
+    color: bandColor(row2.healthScore)
   }));
   const offenders = rows.slice(0, 5);
   const list = [
     '<ul class="offenders">',
-    ...offenders.map((row) => {
-      const issues = row.issues.length > 0 ? row.issues.join(", ") : "no issues";
-      return `<li><code>${escapeHtml(row.component)}</code><span class="count">${escapeHtml(String(row.healthScore))} \xB7 ${escapeHtml(issues)}</span></li>`;
+    ...offenders.map((row2) => {
+      const issues = row2.issues.length > 0 ? row2.issues.join(", ") : "no issues";
+      return `<li><code>${escapeHtml(row2.component)}</code><span class="count">${escapeHtml(String(row2.healthScore))} \xB7 ${escapeHtml(issues)}</span></li>`;
     }),
     "</ul>"
   ].join("");
@@ -19575,12 +13999,12 @@ function scoreVelocitySection(data) {
     flat: "\u25AC"
   };
   const arrow3 = ARROW[direction];
-  const signedDelta = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
+  const signedDelta2 = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
   const streakBadge = regressionStreak > 0 ? `<span class="badge">${escapeHtml(String(regressionStreak))} regression${regressionStreak === 1 ? "" : "s"}</span>` : "";
   return panel(
     "Score velocity",
     [
-      `<div class="stat"><span class="stat-value ${direction === "up" ? "ok" : direction === "down" ? "error" : ""}">${escapeHtml(arrow3)} ${escapeHtml(signedDelta)}</span><span class="stat-sub">over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</span></div>`,
+      `<div class="stat"><span class="stat-value ${direction === "up" ? "ok" : direction === "down" ? "error" : ""}">${escapeHtml(arrow3)} ${escapeHtml(signedDelta2)}</span><span class="stat-sub">over ${escapeHtml(String(windowDays))} day${windowDays === 1 ? "" : "s"}</span></div>`,
       `<div class="meta">${escapeHtml(direction)} \xB7 regression streak ${streakBadge}${regressionStreak === 0 ? escapeHtml("0") : ""}</div>`
     ].join("")
   );
@@ -19590,18 +14014,18 @@ function ownershipLeaderboardSection(data) {
   if (rows === void 0 || rows.length === 0) {
     return panel("Ownership leaderboard", emptyState2("lint"));
   }
-  const bars = rows.map((row) => ({
-    label: row.owner,
-    value: row.pct,
-    color: bandColor(row.pct)
+  const bars = rows.map((row2) => ({
+    label: row2.owner,
+    value: row2.pct,
+    color: bandColor(row2.pct)
   }));
   const labels = [
     '<ul class="offenders">',
     ...rows.map(
-      (row) => `<li><code>${escapeHtml(row.owner)}</code><span class="count">${escapeHtml(
-        String(row.pct)
-      )}% \xB7 ${escapeHtml(String(row.refs))} refs / ${escapeHtml(
-        String(row.literals)
+      (row2) => `<li><code>${escapeHtml(row2.owner)}</code><span class="count">${escapeHtml(
+        String(row2.pct)
+      )}% \xB7 ${escapeHtml(String(row2.refs))} refs / ${escapeHtml(
+        String(row2.literals)
       )} literals</span></li>`
     ),
     "</ul>"
@@ -19701,22 +14125,187 @@ function dataFreshnessSection(data) {
     red: TONE.error,
     unknown: TONE.neutral
   };
-  const ageLabel = (row) => {
-    if (row.ageDays === void 0) return "never";
-    if (row.ageDays === 0) return "today";
-    return `${row.ageDays}d ago`;
+  const ageLabel = (row2) => {
+    if (row2.ageDays === void 0) return "never";
+    if (row2.ageDays === 0) return "today";
+    return `${row2.ageDays}d ago`;
   };
-  const items = rows.map((row) => {
-    const fill = BAND_FILL[row.band];
-    const pill = `<span class="badge" style="background:${fill};color:#ffffff">${escapeHtml(row.band)}</span>`;
-    const age = escapeHtml(ageLabel(row));
-    return `<li><span class="date">${escapeHtml(row.kind)}</span><span class="detail">${pill} ${age}</span></li>`;
+  const items = rows.map((row2) => {
+    const fill = BAND_FILL[row2.band];
+    const pill = `<span class="badge" style="background:${fill};color:#ffffff">${escapeHtml(row2.band)}</span>`;
+    const age3 = escapeHtml(ageLabel(row2));
+    return `<li><span class="date">${escapeHtml(row2.kind)}</span><span class="detail">${pill} ${age3}</span></li>`;
   }).join("");
   return panel(
     "Data freshness",
     [
       '<div class="meta">Measurement age per check-kind \xB7 band signals trust</div>',
       `<ul class="calendar">${items}</ul>`
+    ].join("")
+  );
+}
+function debtTone(pct5) {
+  if (pct5 < 25) return "ok";
+  if (pct5 < 60) return "warn";
+  return "error";
+}
+function headlineTile(label, value2, tone, sub) {
+  return [
+    `<div class="kpi${value2 !== void 0 && tone !== void 0 ? ` ${tone}` : ""}">`,
+    `<span class="kpi-label">${escapeHtml(label)}</span>`,
+    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
+    `<span class="kpi-sub">${escapeHtml(value2 === void 0 ? "not measured" : sub ?? "")}</span>`,
+    "</div>"
+  ].join("");
+}
+function executiveSection(data) {
+  const exec = data.executive;
+  if (exec === void 0) {
+    return panel("Executive summary", emptyState2("record"));
+  }
+  const tiles = [
+    headlineTile(
+      "System score",
+      exec.health === void 0 ? void 0 : String(exec.health),
+      exec.health === void 0 ? void 0 : toneFor(exec.health),
+      "out of 100"
+    ),
+    headlineTile(
+      "Import coverage",
+      exec.adoption === void 0 ? void 0 : `${exec.adoption}%`,
+      exec.adoption === void 0 ? void 0 : toneFor(exec.adoption),
+      "components imported"
+    ),
+    headlineTile(
+      "Consistency",
+      exec.consistency === void 0 ? void 0 : String(exec.consistency),
+      exec.consistency === void 0 ? void 0 : toneFor(exec.consistency),
+      "on-system blend"
+    ),
+    headlineTile(
+      "Design debt",
+      exec.debt === void 0 ? void 0 : `${exec.debt}%`,
+      exec.debt === void 0 ? void 0 : debtTone(exec.debt),
+      "lower is better"
+    )
+  ].join("");
+  const trend = exec.trend ?? [];
+  const chart = trend.length >= 2 ? `<div class="chart">${lineChart(
+    [
+      {
+        label: "score",
+        points: trend.map((p4, i) => ({ x: i, y: p4.score }))
+      }
+    ],
+    {
+      width: CARD_W,
+      height: 140,
+      colors: [PALETTE2[0]],
+      xLabels: dateEnds(trend)
+    }
+  )}</div>` : "";
+  return panel(
+    "Executive summary",
+    [`<div class="kpis">${tiles}</div>`, chart].join("")
+  );
+}
+function consistencySection(data) {
+  const consistency = data.consistency;
+  if (consistency === void 0) {
+    return panel("Consistency", emptyState2("lint <dir>"));
+  }
+  const rows = consistency.components.map(
+    (c2) => `<tr><td>${escapeHtml(c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
+  ).join("");
+  return panel(
+    "Consistency",
+    [
+      `<div class="chart center">${donutGauge(consistency.score, { label: "Consistency" })}</div>`,
+      '<table class="weights">',
+      "<thead><tr><th>Signal</th><th>Score</th><th>Weight</th></tr></thead>",
+      `<tbody>${rows}</tbody>`,
+      "</table>",
+      '<div class="meta">tokens and components are true ratios \xB7 overrides is a documented-opinion penalty (8 per hotspot)</div>'
+    ].join("")
+  );
+}
+var DEBT_ITEMS_SHOWN = 8;
+function designDebtSection(data) {
+  const debt = data.debt;
+  if (debt === void 0) {
+    return panel("Design debt", emptyState2("lint <dir>"));
+  }
+  const tone = debtTone(debt.pct);
+  const shown = debt.items.slice(0, DEBT_ITEMS_SHOWN);
+  const items = shown.map(
+    (item) => `<li><span class="date">${escapeHtml(item.subject)} <span class="badge">${escapeHtml(item.kind)} \xB7 ${escapeHtml(String(item.count))}</span></span><span class="detail">${escapeHtml(item.recommendation)}</span></li>`
+  ).join("");
+  const more = debt.items.length > shown.length ? `<div class="meta">\u2026 and ${escapeHtml(String(debt.items.length - shown.length))} more</div>` : "";
+  return panel(
+    "Design debt",
+    [
+      `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(debt.pct))}%</span><span class="stat-sub">${escapeHtml(debt.level)} \xB7 ${escapeHtml(String(debt.items.length))} item${debt.items.length === 1 ? "" : "s"}</span></div>`,
+      items === "" ? "" : `<ul class="calendar stack">${items}</ul>`,
+      more
+    ].join("")
+  );
+}
+function libraryHotspotsTrendSection(data) {
+  const trend = data.libraryHotspotsTrend;
+  if (trend === void 0 || trend.rows.length === 0) {
+    return panel("Library hotspots trend", emptyState2("library-health"));
+  }
+  const blocks = SIGNAL_ORDER.flatMap((signal) => {
+    const rows = trend.rows.filter((r2) => r2.signal === signal);
+    if (rows.length === 0) return [];
+    const items = rows.map(
+      (row2) => `<li><code>${escapeHtml(row2.name)}</code><span class="detail">${escapeHtml(hotspotDetail(row2))}</span></li>`
+    ).join("");
+    return [
+      `<div class="cols"><b>${escapeHtml(SIGNAL_LABEL[signal])}</b></div>`,
+      `<ul class="calendar stack">${items}</ul>`
+    ];
+  });
+  return panel(
+    "Library hotspots trend",
+    [
+      `<div class="meta">Top components per signal \xB7 ${escapeHtml(dateSpan(trend.dates))}</div>`,
+      ...blocks
+    ].join(""),
+    "wide"
+  );
+}
+function frameReadinessTrendSection(data) {
+  const trend = data.frameReadinessTrend;
+  if (trend === void 0 || trend.frames.length === 0) {
+    return panel("Frame readiness trend", emptyState2("handoff <frame-url>"));
+  }
+  const items = trend.frames.map(
+    (frame) => `<li><code>${escapeHtml(frame.frameName === "" ? frame.key : frame.frameName)}</code><span class="detail">${escapeHtml(frameDetail(frame))}</span></li>`
+  ).join("");
+  const more = frameOverflow(trend);
+  return panel(
+    "Frame readiness trend",
+    [
+      `<div class="meta">${escapeHtml(belowGateMeta(trend))}</div>`,
+      `<ul class="calendar stack">${items}</ul>`,
+      more === void 0 ? "" : `<div class="meta">${escapeHtml(more)}</div>`
+    ].join(""),
+    "wide"
+  );
+}
+function handoffPassRateSection(data) {
+  const rate = data.handoffPassRate;
+  if (rate === void 0 || rate.frames === 0) {
+    return panel("Handoff pass rate", emptyState2("handoff <frame-url>"));
+  }
+  const tone = toneFor(rate.pct);
+  const line = passRateTrendLine(rate);
+  return panel(
+    "Handoff pass rate",
+    [
+      `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(rate.pct))}%</span><span class="stat-sub">${escapeHtml(passRateSub(rate))}</span></div>`,
+      line === void 0 ? "" : `<div class="meta">${escapeHtml(line)}</div>`
     ].join("")
   );
 }
@@ -19746,7 +14335,15 @@ var SECTION_RENDERERS = {
   "audience-changelog": audienceChangelogSection,
   "frame-implementability": frameImplementabilitySection,
   "release-readiness": releaseReadinessSection,
-  "data-freshness": dataFreshnessSection
+  "data-freshness": dataFreshnessSection,
+  // Executive layer (AN7) — the completeness gate is now 27 via the Record type.
+  consistency: consistencySection,
+  "design-debt": designDebtSection,
+  executive: executiveSection,
+  // Figma + per-frame trends (F6) — the completeness gate is now 30.
+  "library-hotspots-trend": libraryHotspotsTrendSection,
+  "frame-readiness-trend": frameReadinessTrendSection,
+  "handoff-pass-rate": handoffPassRateSection
 };
 function signed2(delta) {
   if (delta > 0) return `+${delta}`;
@@ -19827,6 +14424,22 @@ function kpis(data, selection) {
       value: release.go ? "Go" : "No-go",
       tone: release.go ? "ok" : "error",
       sub: `${passed}/${release.checks.length} checks pass`
+    });
+  }
+  if (on.has("consistency") && data.consistency !== void 0) {
+    out.push({
+      label: "Consistency",
+      value: String(data.consistency.score),
+      tone: toneFor(data.consistency.score),
+      sub: `${data.consistency.components.length} signal${data.consistency.components.length === 1 ? "" : "s"}`
+    });
+  }
+  if (on.has("design-debt") && data.debt !== void 0) {
+    out.push({
+      label: "Design debt",
+      value: `${data.debt.pct}%`,
+      tone: debtTone(data.debt.pct),
+      sub: `${data.debt.level} \xB7 ${data.debt.items.length} item${data.debt.items.length === 1 ? "" : "s"}`
     });
   }
   return out;
@@ -19945,6 +14558,191 @@ function renderIndex(entries) {
   ].join("\n");
 }
 
+// src/render/html/manager.ts
+var PAGE_STYLE = `
+.page { max-width: 960px; }
+.page .grid { grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
+ol.ranked { margin: 0; padding-left: 20px; font-size: 14px; }
+ol.ranked li { padding: 4px 0; }
+.empty-line { color: var(--text-subtle); font-size: 13px; margin: 0; }
+@media print {
+	body { background: #ffffff; }
+	header.dash { background: #ffffff; color: var(--text); border-bottom: 1px solid var(--border); }
+	header.dash .generated { color: var(--text-subtle); }
+	section.panel, .kpi { break-inside: avoid; }
+}
+`.trim();
+var NOT_MEASURED = "not measured";
+function tile(label, value2, tone, sub) {
+  const measured = value2 !== void 0;
+  return [
+    `<div class="kpi${measured && tone !== void 0 ? ` ${tone}` : ""}">`,
+    `<span class="kpi-label">${escapeHtml(label)}</span>`,
+    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
+    `<span class="kpi-sub">${escapeHtml(measured ? sub ?? "" : NOT_MEASURED)}</span>`,
+    "</div>"
+  ].join("");
+}
+function debtTone2(pct5) {
+  if (pct5 < 25) return "ok";
+  if (pct5 < 60) return "warn";
+  return "error";
+}
+function panel2(title, body) {
+  return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
+}
+function emptyLine(text2) {
+  return `<p class="empty-line">${escapeHtml(text2)}</p>`;
+}
+function ranked(items, empty) {
+  if (items.length === 0) return emptyLine(empty);
+  return `<ol class="ranked">${items.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`;
+}
+var STATUS = {
+  green: { text: "On track", fill: TONE.ok },
+  amber: { text: "At risk", fill: TONE.warn },
+  red: { text: "Off track", fill: TONE.error },
+  unknown: { text: "Not measured", fill: TONE.neutral }
+};
+function tableHtml(header, rows) {
+  const head = header.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+  const body = rows.map((r2) => `<tr>${r2.map((c2) => `<td>${c2}</td>`).join("")}</tr>`).join("");
+  return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function days(n) {
+  return `${n} ${n === 1 ? "day" : "days"}`;
+}
+function age(n) {
+  if (n === void 0) return "age unknown";
+  return n === 0 ? "today" : `${n}d ago`;
+}
+var FRAMES_SHOWN = 10;
+function renderManagerHtml(report) {
+  const h = report.headline;
+  const project = escapeHtml(report.project);
+  const tiles = [
+    tile(
+      "System score",
+      h.score === void 0 ? void 0 : String(h.score.current),
+      h.score === void 0 ? void 0 : toneFor(h.score.current),
+      scoreChangeText(h, report.windowDays) ?? "out of 100"
+    ),
+    tile(
+      "On-system usage",
+      h.onSystem === void 0 ? void 0 : `${h.onSystem.pct}%`,
+      h.onSystem === void 0 ? void 0 : toneFor(h.onSystem.pct),
+      onSystemChangeText(h) ?? "tokens vs literals"
+    ),
+    tile(
+      "Component import coverage",
+      h.importCoverage === void 0 ? void 0 : `${h.importCoverage.pct}%`,
+      h.importCoverage === void 0 ? void 0 : toneFor(h.importCoverage.pct),
+      h.importCoverage === void 0 ? void 0 : `${h.importCoverage.imported} of ${h.importCoverage.total} components`
+    ),
+    tile(
+      "Consistency",
+      h.consistency === void 0 ? void 0 : String(h.consistency),
+      h.consistency === void 0 ? void 0 : toneFor(h.consistency),
+      "out of 100"
+    ),
+    tile(
+      "Design debt",
+      h.debt === void 0 ? void 0 : `${h.debt.pct}/100`,
+      h.debt === void 0 ? void 0 : debtTone2(h.debt.pct),
+      h.debt === void 0 ? void 0 : `${h.debt.level} \xB7 lower is better`
+    ),
+    tile(
+      "Handoff readiness",
+      h.handoff === void 0 ? void 0 : `${h.handoff.ready}/${h.handoff.frames}`,
+      h.handoff === void 0 ? void 0 : toneFor(100 * h.handoff.ready / h.handoff.frames),
+      "frames at the readiness bar"
+    )
+  ].join("");
+  const targets = report.targets.length === 0 ? emptyLine(
+    "No targets set. Add metric_targets to .ds-bridge.json to track goals."
+  ) : tableHtml(
+    ["Target", "Now", "Goal", "Status"],
+    report.targets.map((t) => {
+      const status = STATUS[t.band];
+      return [
+        escapeHtml(targetLabel(t.metric)),
+        escapeHtml(targetValue(t.metric, t.measured)),
+        escapeHtml(
+          `${targetOp(t.op)} ${targetValue(t.metric, t.target)}`
+        ),
+        `<span class="badge" style="background:${status.fill};color:#ffffff">${escapeHtml(status.text)}</span>`
+      ];
+    })
+  );
+  const shownFrames = report.frames.slice(0, FRAMES_SHOWN);
+  const frames = report.frames.length === 0 ? emptyLine(
+    "No handoff checks yet. Run ds-bridge handoff <frame-url> to track frame readiness."
+  ) : [
+    tableHtml(
+      ["Frame", "Readiness", "Pass rate", "Runs"],
+      shownFrames.map((f3) => [
+        escapeHtml(frameLabel(f3)),
+        escapeHtml(String(f3.latest)),
+        escapeHtml(`${f3.passRate}%`),
+        escapeHtml(String(f3.runs))
+      ])
+    ),
+    report.frames.length > shownFrames.length ? `<div class="meta">\u2026 and ${escapeHtml(String(report.frames.length - shownFrames.length))} more frames</div>` : ""
+  ].join("");
+  const { measured, stale, never } = report.coverage;
+  const coverageItems = [];
+  if (measured.length > 0) {
+    coverageItems.push(
+      `<li><span class="date">Measured</span><span class="detail">${escapeHtml(measured.map((m) => `${kindLabel(m.kind)} (${age(m.ageDays)})`).join(", "))}</span></li>`
+    );
+  }
+  if (stale.length > 0) {
+    coverageItems.push(
+      `<li><span class="date">Stale</span><span class="detail">${escapeHtml(stale.map((m) => `${kindLabel(m.kind)} (${age(m.ageDays)})`).join(", "))}</span></li>`
+    );
+  }
+  if (never.length > 0) {
+    coverageItems.push(
+      `<li><span class="date">Never measured</span><span class="detail">${escapeHtml(never.map(kindLabel).join(", "))}</span></li>`
+    );
+  }
+  const coverage = coverageItems.length === 0 ? emptyLine("No checks recorded yet. Run ds-bridge record.") : `<ul class="calendar stack">${coverageItems.join("")}</ul>`;
+  const body = [
+    '<header class="dash"><div class="bar">',
+    `<h1>Design system report \xB7 <span class="project">${project}</span></h1>`,
+    `<span class="generated">${escapeHtml(readableInstant(report.generatedAt))} \xB7 last ${escapeHtml(days(report.windowDays))}</span>`,
+    "</div></header>",
+    '<div class="wrap page">',
+    `<div class="kpis">${tiles}</div>`,
+    '<div class="grid">',
+    panel2("Top risks", ranked(report.risks, "No risks flagged.")),
+    panel2("Next actions", ranked(report.actions, "Nothing urgent.")),
+    panel2("Targets", targets),
+    panel2("Handoff readiness by frame", frames),
+    panel2("Data coverage", coverage),
+    "</div>",
+    h.debt !== void 0 ? `<div class="meta">${escapeHtml(DEBT_INDEX_NOTE)}</div>` : "",
+    '<div class="meta">Generated by ds-bridge (report --format exec-html) from .ds-bridge/history.jsonl. Numbers marked \u201Cnot measured\u201D were never recorded; they are not zero.</div>',
+    "</div>"
+  ].join("");
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    `<title>Design system report \xB7 ${project}</title>`,
+    `<style>${STYLE}
+${PAGE_STYLE}</style>`,
+    "</head>",
+    "<body>",
+    body,
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
 // src/render/html/snapshot.ts
 var SNAPSHOT_SENTINEL = "__GENERATED_AT__";
 function normalizeSnapshot(html) {
@@ -19954,11 +14752,176 @@ function normalizeSnapshot(html) {
   );
 }
 
+// src/render/markdown/manager.ts
+var NOT_MEASURED2 = "not measured";
+var NO_CHANGE = "\u2014";
+function cell(text2) {
+  return text2.replace(/\r?\n/g, " ").replace(/\|/g, "\\|");
+}
+function row(cells) {
+  return `| ${cells.map(cell).join(" | ")} |`;
+}
+function table(header, rows) {
+  return [row(header), row(header.map(() => "---")), ...rows.map(row)];
+}
+function days2(n) {
+  return `${n} ${n === 1 ? "day" : "days"}`;
+}
+function headlineRows(report) {
+  const h = report.headline;
+  const onSystem = h.onSystem;
+  const coverage = h.importCoverage;
+  const handoff = h.handoff;
+  return [
+    [
+      "System score",
+      h.score === void 0 ? NOT_MEASURED2 : `${h.score.current}/100`,
+      scoreChangeText(h, report.windowDays) ?? NO_CHANGE
+    ],
+    [
+      "On-system usage",
+      onSystem === void 0 ? NOT_MEASURED2 : `${onSystem.pct}%`,
+      onSystemChangeText(h) ?? NO_CHANGE
+    ],
+    [
+      "Component import coverage",
+      coverage === void 0 ? NOT_MEASURED2 : `${coverage.pct}% (${coverage.imported} of ${coverage.total})`,
+      NO_CHANGE
+    ],
+    [
+      "Consistency",
+      h.consistency === void 0 ? NOT_MEASURED2 : `${h.consistency}/100`,
+      NO_CHANGE
+    ],
+    [
+      "Design debt",
+      h.debt === void 0 ? NOT_MEASURED2 : `${h.debt.pct}/100 (${h.debt.level})`,
+      NO_CHANGE
+    ],
+    [
+      "Handoff readiness",
+      handoff === void 0 ? NOT_MEASURED2 : `${handoff.ready} of ${handoff.frames} ${handoff.frames === 1 ? "frame" : "frames"} ready`,
+      NO_CHANGE
+    ]
+  ];
+}
+var STATUS2 = {
+  green: "On track",
+  amber: "At risk",
+  red: "Off track",
+  unknown: "Not measured"
+};
+function numbered(items, empty) {
+  if (items.length === 0) return [empty];
+  return items.map((text2, i) => `${i + 1}. ${text2.replace(/\r?\n/g, " ")}`);
+}
+function age2(n) {
+  if (n === void 0) return "age unknown";
+  return n === 0 ? "today" : `${n}d ago`;
+}
+var FRAMES_SHOWN2 = 10;
+function renderManagerMarkdown(report) {
+  const out = [
+    `# Design system report: ${report.project}`,
+    "",
+    `Report date ${report.generatedAt.slice(0, 10)} \xB7 changes over the last ${days2(report.windowDays)}`,
+    "",
+    ...table(["Metric", "Now", "Change"], headlineRows(report)),
+    ""
+  ];
+  const trend = report.headline.score?.trend ?? [];
+  if (trend.length >= 2) {
+    out.push(`Score trend: ${sparkline(trend)} (${trend.length} runs)`, "");
+  }
+  out.push("## Targets", "");
+  if (report.targets.length === 0) {
+    out.push(
+      "No targets set. Add `metric_targets` to `.ds-bridge.json` to track goals."
+    );
+  } else {
+    out.push(
+      ...table(
+        ["Target", "Now", "Goal", "Status"],
+        report.targets.map((t) => [
+          targetLabel(t.metric),
+          targetValue(t.metric, t.measured),
+          `${targetOp(t.op)} ${targetValue(t.metric, t.target)}`,
+          STATUS2[t.band]
+        ])
+      )
+    );
+  }
+  out.push("");
+  out.push(
+    "## Top risks",
+    "",
+    ...numbered(report.risks, "No risks flagged."),
+    ""
+  );
+  out.push(
+    "## Next actions",
+    "",
+    ...numbered(report.actions, "Nothing urgent."),
+    ""
+  );
+  out.push("## Handoff readiness by frame", "");
+  if (report.frames.length === 0) {
+    out.push(
+      "No handoff checks yet. Run `ds-bridge handoff <frame-url>` to track frame readiness."
+    );
+  } else {
+    const shown = report.frames.slice(0, FRAMES_SHOWN2);
+    out.push(
+      ...table(
+        ["Frame", "Readiness", "Pass rate", "Runs"],
+        shown.map((f3) => [
+          frameLabel(f3),
+          String(f3.latest),
+          `${f3.passRate}%`,
+          String(f3.runs)
+        ])
+      )
+    );
+    if (report.frames.length > shown.length) {
+      out.push("", `\u2026 and ${report.frames.length - shown.length} more frames`);
+    }
+  }
+  out.push("");
+  out.push("## Data coverage", "");
+  const { measured, stale, never } = report.coverage;
+  if (measured.length + stale.length + never.length === 0) {
+    out.push("- No checks recorded yet. Run `ds-bridge record`.");
+  } else {
+    if (measured.length > 0) {
+      out.push(
+        `- Measured: ${measured.map((m) => `${kindLabel(m.kind)} (${age2(m.ageDays)})`).join(", ")}`
+      );
+    }
+    if (stale.length > 0) {
+      out.push(
+        `- Stale: ${stale.map((m) => `${kindLabel(m.kind)} (${age2(m.ageDays)})`).join(", ")}`
+      );
+    }
+    if (never.length > 0) {
+      out.push(`- Never measured: ${never.map(kindLabel).join(", ")}`);
+    }
+  }
+  out.push("");
+  if (report.headline.debt !== void 0) {
+    out.push(`_${DEBT_INDEX_NOTE}_`, "");
+  }
+  out.push(
+    '_Generated by ds-bridge (`report --format exec`) from `.ds-bridge/history.jsonl`. Numbers marked "not measured" were never recorded; they are not zero._',
+    ""
+  );
+  return out.join("\n");
+}
+
 // src/render/terminal/dashboard.ts
 function emptyState3(command) {
   return `No data yet \u2014 run \`ds-bridge ${command}\` to populate this section.`;
 }
-function panel2(title, body) {
+function panel3(title, body) {
   return `${title}
 ${"\u2500".repeat([...title].length)}
 ${body}`;
@@ -19966,14 +14929,14 @@ ${body}`;
 function systemScoreTerminalSection(data, color) {
   const score = data.systemScore;
   if (score === void 0) {
-    return panel2("System score", emptyState3("report"));
+    return panel3("System score", emptyState3("report"));
   }
   const COMPONENT_LABEL3 = {
     drift: "drift",
     lint: "lint",
     readiness: "readiness",
     a11y: "a11y",
-    adoption: "adoption",
+    adoption: "on-system",
     parity: "parity"
   };
   const gauge = renderGauge(score.current, {
@@ -19991,18 +14954,18 @@ function systemScoreTerminalSection(data, color) {
     ]),
     { color }
   );
-  return panel2("System score", [gauge, trend, legend].join("\n"));
+  return panel3("System score", [gauge, trend, legend].join("\n"));
 }
 function driftTrendTerminalSection(data, _color) {
   const trend = data.driftTrend;
   if (trend === void 0 || trend.length === 0) {
-    return panel2("Drift trend", emptyState3("tokens check"));
+    return panel3("Drift trend", emptyState3("tokens check"));
   }
   const breaking = sparkline(trend.map((point) => point.breaking));
   const additive = sparkline(trend.map((point) => point.additive));
   const cosmetic = sparkline(trend.map((point) => point.cosmetic));
   const dateRange = trend.length > 0 ? `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}` : "";
-  return panel2(
+  return panel3(
     "Drift trend",
     [
       `Breaking ${breaking}`,
@@ -20015,7 +14978,7 @@ function driftTrendTerminalSection(data, _color) {
 function lintSummaryTerminalSection(data, color) {
   const lint = data.lintSummary;
   if (lint === void 0) {
-    return panel2("Lint violations", emptyState3("lint"));
+    return panel3("Lint violations", emptyState3("lint"));
   }
   const bars = renderBarChart(
     [
@@ -20028,12 +14991,12 @@ function lintSummaryTerminalSection(data, color) {
   const offenders = lint.topOffenders.length > 0 ? lint.topOffenders.map((o) => `${o.file}  ${o.count}`).join("\n") : "";
   const body = offenders === "" ? bars : `${bars}
 ${offenders}`;
-  return panel2("Lint violations", body);
+  return panel3("Lint violations", body);
 }
 function readinessTerminalSection(data, color) {
   const readiness = data.readiness;
   if (readiness === void 0) {
-    return panel2("Readiness", emptyState3("handoff <frame-url>"));
+    return panel3("Readiness", emptyState3("handoff <frame-url>"));
   }
   const gauge = renderGauge(readiness.score, {
     label: "Readiness",
@@ -20045,12 +15008,12 @@ function readinessTerminalSection(data, color) {
   if (deductions !== "") {
     lines.push(deductions);
   }
-  return panel2("Readiness", lines.join("\n"));
+  return panel3("Readiness", lines.join("\n"));
 }
 function parityTerminalSection(data, color) {
   const parity = data.parity;
   if (parity === void 0 || parity.rows.length === 0) {
-    return panel2("Parity matrix", emptyState3("parity"));
+    return panel3("Parity matrix", emptyState3("parity"));
   }
   const STATUS_CELL = {
     ok: "ok",
@@ -20058,20 +15021,20 @@ function parityTerminalSection(data, color) {
     "missing-in-code": "fail",
     "missing-in-figma": "fail"
   };
-  const rows = parity.rows.map((row) => ({
-    label: row.component,
-    cells: row.cells.map((cell) => STATUS_CELL[cell.status])
+  const rows = parity.rows.map((row2) => ({
+    label: row2.component,
+    cells: row2.cells.map((cell3) => STATUS_CELL[cell3.status])
   }));
   const body = [renderMatrix(rows, parity.columns, { color })];
   if (parity.columns.length > 0) {
     body.push(`Columns: ${parity.columns.join(" \xB7 ")}`);
   }
-  return panel2("Parity matrix", body.join("\n"));
+  return panel3("Parity matrix", body.join("\n"));
 }
 function a11yTerminalSection(data, color) {
   const a11y = data.a11y;
   if (a11y === void 0 || a11y.modes.length === 0) {
-    return panel2("Contrast (a11y)", emptyState3("a11y"));
+    return panel3("Contrast (a11y)", emptyState3("a11y"));
   }
   const bars = a11y.modes.map((m) => ({
     label: m.mode,
@@ -20085,12 +15048,12 @@ function a11yTerminalSection(data, color) {
     renderBarChart(bars, { width: 24, color }),
     ...tallies
   ].join("\n");
-  return panel2("Contrast (a11y)", body);
+  return panel3("Contrast (a11y)", body);
 }
 function impactTerminalSection(data, color) {
   const impact = data.impact;
   if (impact === void 0) {
-    return panel2("Change impact", emptyState3("impact"));
+    return panel3("Change impact", emptyState3("impact"));
   }
   const bars = [
     { label: "Breaking", value: impact.breaking },
@@ -20100,12 +15063,12 @@ function impactTerminalSection(data, color) {
   const sites = impact.touchedCallSites;
   const radius = `Touches ${sites} call site${sites === 1 ? "" : "s"}`;
   const body = [renderBarChart(bars, { width: 24, color }), radius].join("\n");
-  return panel2("Change impact", body);
+  return panel3("Change impact", body);
 }
 function adoptionTrendTerminalSection(data, _color) {
   const trend = data.adoptionTrend;
   if (trend === void 0 || trend.length === 0) {
-    return panel2("Adoption trend", emptyState3("lint <dir>"));
+    return panel3("Adoption trend", emptyState3("lint <dir>"));
   }
   const spark = sparkline(trend.map((point) => point.pct));
   const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
@@ -20113,12 +15076,12 @@ function adoptionTrendTerminalSection(data, _color) {
     `on-system %  ${spark}`,
     `On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)`
   ].join("\n");
-  return panel2("Adoption trend", body);
+  return panel3("Adoption trend", body);
 }
 function importCoverageTerminalSection(data, color) {
   const coverage = data.importCoverage;
   if (coverage === void 0) {
-    return panel2("Import coverage", emptyState3("adoption"));
+    return panel3("Import coverage", emptyState3("adoption"));
   }
   const { imported, total, uncovered, uncoveredTotal } = coverage;
   const pct5 = total === 0 ? 0 : Math.round(imported / total * 100);
@@ -20135,30 +15098,30 @@ function importCoverageTerminalSection(data, color) {
   if (uncoveredTotal > uncovered.length) {
     lines.push(`\u2026 and ${uncoveredTotal - uncovered.length} more`);
   }
-  return panel2("Import coverage", lines.join("\n"));
+  return panel3("Import coverage", lines.join("\n"));
 }
 function leaderboardTerminalSection(data, color) {
   const rows = data.leaderboard;
   if (rows === void 0 || rows.length === 0) {
-    return panel2("Adoption leaderboard", emptyState3("lint <dir>"));
+    return panel3("Adoption leaderboard", emptyState3("lint <dir>"));
   }
   const onSystemPct4 = (refs, literals) => {
     const total = refs + literals;
     return total === 0 ? 0 : Math.round(refs / total * 100);
   };
-  const bars = rows.map((row) => ({
-    label: row.dir,
-    value: onSystemPct4(row.refs, row.literals)
+  const bars = rows.map((row2) => ({
+    label: row2.dir,
+    value: onSystemPct4(row2.refs, row2.literals)
   }));
   const lines = [];
   lines.push("On-system % by directory, worst-first \xB7 css/scss values only");
   lines.push(renderBarChart(bars, { width: 24, color }));
-  return panel2("Adoption leaderboard", lines.join("\n"));
+  return panel3("Adoption leaderboard", lines.join("\n"));
 }
 function libraryHealthTerminalSection(data, color) {
   const health = data.libraryHealth;
   if (health === void 0) {
-    return panel2("Library health", emptyState3("library-health"));
+    return panel3("Library health", emptyState3("library-health"));
   }
   const { totals } = health;
   const bars = [
@@ -20176,12 +15139,12 @@ function libraryHealthTerminalSection(data, color) {
       lines.push(`\u2022 ${h.name} (${h.overrideCount})`);
     }
   }
-  return panel2("Library health", lines.join("\n"));
+  return panel3("Library health", lines.join("\n"));
 }
 function breakingCalendarTerminalSection(data, color) {
   const calendar = data.breakingCalendar;
   if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel2("Breaking calendar", emptyState3("tokens check"));
+    return panel3("Breaking calendar", emptyState3("tokens check"));
   }
   const BREAKING_SOURCE_LABEL2 = {
     tokens: "tokens",
@@ -20196,12 +15159,12 @@ function breakingCalendarTerminalSection(data, color) {
     `${calendar.total} breaking event${calendar.total === 1 ? "" : "s"}, most-recent first`
   );
   lines.push(renderTable(["Date", "Source", "Detail"], rows, { color }));
-  return panel2("Breaking calendar", lines.join("\n"));
+  return panel3("Breaking calendar", lines.join("\n"));
 }
 function changeFrequencyTerminalSection(data, color) {
   const frequency = data.changeFrequency;
   if (frequency === void 0 || frequency.byKind.length === 0) {
-    return panel2("Change frequency", emptyState3("tokens check"));
+    return panel3("Change frequency", emptyState3("tokens check"));
   }
   const items = frequency.byKind.map((bucket) => ({
     label: bucket.kind,
@@ -20209,29 +15172,29 @@ function changeFrequencyTerminalSection(data, color) {
   }));
   const window = frequency.windowFirst !== void 0 && frequency.windowLast !== void 0 ? `Records per kind \xB7 ${frequency.windowFirst} \u2192 ${frequency.windowLast}` : "Records per kind";
   const body = [window, renderBarChart(items, { width: 24, color })].join("\n");
-  return panel2("Change frequency", body);
+  return panel3("Change frequency", body);
 }
 function targetsTerminalSection(data, color) {
   const targets = data.targets;
   if (targets === void 0 || targets.length === 0) {
-    return panel2("Targets / SLAs", emptyState3("report"));
+    return panel3("Targets / SLAs", emptyState3("report"));
   }
   const COMPONENT_LABEL3 = {
     drift: "drift",
     lint: "lint",
     readiness: "readiness",
     a11y: "a11y",
-    adoption: "adoption",
+    adoption: "on-system",
     parity: "parity"
   };
-  const bandLevel = (band) => band === "green" ? "ok" : band === "amber" ? "warn" : band === "red" ? "error" : "info";
+  const bandLevel2 = (band) => band === "green" ? "ok" : band === "amber" ? "warn" : band === "red" ? "error" : "info";
   const rows = targets.map((verdict) => [
     COMPONENT_LABEL3[verdict.metric] ?? verdict.metric,
     verdict.measured === void 0 ? "\u2014" : String(verdict.measured),
     `${verdict.op} ${verdict.target}`,
-    severityColor(bandLevel(verdict.band), verdict.band, { color })
+    severityColor(bandLevel2(verdict.band), verdict.band, { color })
   ]);
-  const table = renderTable(["Metric", "Measured", "Target", "Status"], rows, {
+  const table3 = renderTable(["Metric", "Measured", "Target", "Status"], rows, {
     color
   });
   const legend = [
@@ -20240,12 +15203,12 @@ function targetsTerminalSection(data, color) {
     "red = misses target",
     "unknown = not measured"
   ].join("  \xB7  ");
-  return panel2("Targets / SLAs", [table, legend].join("\n"));
+  return panel3("Targets / SLAs", [table3, legend].join("\n"));
 }
 function parityTrendTerminalSection(data, _color) {
   const trend = data.parityTrend;
   if (trend === void 0 || trend.length === 0) {
-    return panel2("Parity trend", emptyState3("registry build"));
+    return panel3("Parity trend", emptyState3("registry build"));
   }
   const values = trend.map((point) => point.pct);
   const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
@@ -20253,30 +15216,30 @@ function parityTrendTerminalSection(data, _color) {
     `parity %  ${sparkline(values)}`,
     `Component parity pass-% over ${dateRange}`
   ].join("\n");
-  return panel2("Parity trend", body);
+  return panel3("Parity trend", body);
 }
 function componentHealthTerminalSection(data, color) {
   const rows = data.componentHealth;
   if (rows === void 0 || rows.length === 0) {
-    return panel2("Component health", emptyState3("registry build"));
+    return panel3("Component health", emptyState3("registry build"));
   }
-  const tableRows = rows.map((row) => [
-    row.component,
-    String(row.healthScore),
-    row.issues.length > 0 ? row.issues.join(", ") : "no issues"
+  const tableRows = rows.map((row2) => [
+    row2.component,
+    String(row2.healthScore),
+    row2.issues.length > 0 ? row2.issues.join(", ") : "no issues"
   ]);
-  const table = renderTable(["Component", "Health", "Issues"], tableRows, {
+  const table3 = renderTable(["Component", "Health", "Issues"], tableRows, {
     color
   });
-  const body = ["Composite health per component, worst-first", table].join(
+  const body = ["Composite health per component, worst-first", table3].join(
     "\n"
   );
-  return panel2("Component health", body);
+  return panel3("Component health", body);
 }
 function libraryHealthTrendTerminalSection(data, _color) {
   const trend = data.libraryHealthTrend;
   if (trend === void 0 || trend.length === 0) {
-    return panel2("Library health trend", emptyState3("library-health"));
+    return panel3("Library health trend", emptyState3("library-health"));
   }
   const overrides = sparkline(trend.map((p4) => p4.overrides));
   const deprecated = sparkline(trend.map((p4) => p4.deprecated));
@@ -20290,12 +15253,12 @@ function libraryHealthTrendTerminalSection(data, _color) {
     `over ${dateRange}`,
     detachedCaveat
   ].join("\n");
-  return panel2("Library health trend", body);
+  return panel3("Library health trend", body);
 }
 function migrationChecklistTerminalSection(data, color) {
   const checklist = data.migrationChecklist;
   if (checklist === void 0 || checklist.sites.length === 0) {
-    return panel2("Migration checklist", emptyState3("impact --checklist"));
+    return panel3("Migration checklist", emptyState3("impact --checklist"));
   }
   const headers = ["site", "subject", "from \u2192 to"];
   const rows = checklist.sites.map((site) => [
@@ -20313,12 +15276,12 @@ function migrationChecklistTerminalSection(data, color) {
     ...overflow !== "" ? [overflow] : [],
     mapUsageCaveat
   ].join("\n");
-  return panel2("Migration checklist", body);
+  return panel3("Migration checklist", body);
 }
 function scoreVelocityTerminalSection(data, color) {
   const velocity = data.scoreVelocity;
   if (velocity === void 0) {
-    return panel2("Score velocity", emptyState3("report"));
+    return panel3("Score velocity", emptyState3("report"));
   }
   const { delta, windowDays, direction, regressionStreak } = velocity;
   const ARROW = {
@@ -20327,32 +15290,32 @@ function scoreVelocityTerminalSection(data, color) {
     flat: "\u25AC"
   };
   const arrow3 = ARROW[direction];
-  const signedDelta = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
+  const signedDelta2 = delta > 0 ? `+${delta}` : delta < 0 ? `\u2212${Math.abs(delta)}` : "0";
   const streakText = regressionStreak > 0 ? severityColor("warn", `${regressionStreak}-decline streak`, { color }) : "0-decline streak";
-  const headline = `${arrow3} ${signedDelta} over ${windowDays} day${windowDays === 1 ? "" : "s"}`;
-  const body = [headline, `${direction} \xB7 ${streakText}`].join("\n");
-  return panel2("Score velocity", body);
+  const headline2 = `${arrow3} ${signedDelta2} over ${windowDays} day${windowDays === 1 ? "" : "s"}`;
+  const body = [headline2, `${direction} \xB7 ${streakText}`].join("\n");
+  return panel3("Score velocity", body);
 }
 function ownershipLeaderboardTerminalSection(data, color) {
   const rows = data.ownershipLeaderboard;
   if (rows === void 0 || rows.length === 0) {
-    return panel2("Ownership leaderboard", emptyState3("lint"));
+    return panel3("Ownership leaderboard", emptyState3("lint"));
   }
-  const bars = rows.map((row) => ({ label: row.owner, value: row.pct }));
+  const bars = rows.map((row2) => ({ label: row2.owner, value: row2.pct }));
   const labels = rows.map(
-    (row) => `${row.owner}: ${row.pct}% \xB7 ${row.refs} refs / ${row.literals} literals`
+    (row2) => `${row2.owner}: ${row2.pct}% \xB7 ${row2.refs} refs / ${row2.literals} literals`
   ).join("\n");
   const body = [
     "On-system % by owner, worst-first \xB7 css/scss values only",
     renderBarChart(bars, { width: 24, color }),
     labels
   ].join("\n");
-  return panel2("Ownership leaderboard", body);
+  return panel3("Ownership leaderboard", body);
 }
 function audienceChangelogTerminalSection(data, color) {
   const changelog = data.audienceChangelog;
   if (changelog === void 0 || changelog.slices.length === 0) {
-    return panel2("Changelog by audience", emptyState3("changelog"));
+    return panel3("Changelog by audience", emptyState3("changelog"));
   }
   const headers = ["audience", "breaking", "additive", "cosmetic", "recent"];
   const rows = changelog.slices.map((slice) => [
@@ -20362,12 +15325,12 @@ function audienceChangelogTerminalSection(data, color) {
     String(slice.cosmetic),
     slice.recent.length > 0 ? slice.recent.join(", ") : "No recent entries"
   ]);
-  return panel2("Changelog by audience", renderTable(headers, rows, { color }));
+  return panel3("Changelog by audience", renderTable(headers, rows, { color }));
 }
 function frameImplementabilityTerminalSection(data, color) {
   const frame = data.frameImplementability;
   if (frame === void 0) {
-    return panel2("Frame implementability", emptyState3("frame-impl"));
+    return panel3("Frame implementability", emptyState3("frame-impl"));
   }
   const { pct: pct5, resolved, total, gaps } = frame;
   const gauge = renderGauge(pct5, {
@@ -20385,12 +15348,12 @@ function frameImplementabilityTerminalSection(data, color) {
       )
     );
   }
-  return panel2("Frame implementability", body.join("\n"));
+  return panel3("Frame implementability", body.join("\n"));
 }
 function releaseReadinessTerminalSection(data, color) {
   const readiness = data.releaseReadiness;
   if (readiness === void 0 || readiness.checks.length === 0) {
-    return panel2("Release readiness", emptyState3("release-check"));
+    return panel3("Release readiness", emptyState3("release-check"));
   }
   const verdict = readiness.go ? severityColor("ok", "GO", { color }) : severityColor("error", "NO-GO", { color });
   const headers = ["check", "pass", "detail"];
@@ -20399,7 +15362,7 @@ function releaseReadinessTerminalSection(data, color) {
     check.pass ? severityColor("ok", "\u2713", { color }) : severityColor("error", "\u2717", { color }),
     check.detail !== void 0 && check.detail.length > 0 ? check.detail : ""
   ]);
-  return panel2(
+  return panel3(
     "Release readiness",
     [verdict, renderTable(headers, rows, { color })].join("\n")
   );
@@ -20407,7 +15370,7 @@ function releaseReadinessTerminalSection(data, color) {
 function dataFreshnessTerminalSection(data, color) {
   const rows = data.dataFreshness;
   if (rows === void 0 || rows.length === 0) {
-    return panel2("Data freshness", emptyState3("report"));
+    return panel3("Data freshness", emptyState3("report"));
   }
   const BAND_SEVERITY = {
     green: "ok",
@@ -20415,25 +15378,143 @@ function dataFreshnessTerminalSection(data, color) {
     red: "error",
     unknown: "info"
   };
-  const ageLabel = (row) => {
-    if (row.ageDays === void 0) return "never";
-    if (row.ageDays === 0) return "today";
-    return `${row.ageDays}d ago`;
+  const ageLabel = (row2) => {
+    if (row2.ageDays === void 0) return "never";
+    if (row2.ageDays === 0) return "today";
+    return `${row2.ageDays}d ago`;
   };
   const headers = ["kind", "lastRun", "age", "band"];
-  const tableRows = rows.map((row) => [
-    row.kind,
-    row.lastRun ?? "never",
-    ageLabel(row),
-    severityColor(BAND_SEVERITY[row.band], row.band, { color })
+  const tableRows = rows.map((row2) => [
+    row2.kind,
+    row2.lastRun ?? "never",
+    ageLabel(row2),
+    severityColor(BAND_SEVERITY[row2.band], row2.band, { color })
   ]);
-  return panel2(
+  return panel3(
     "Data freshness",
     [
       "Measurement age per check-kind \xB7 band signals trust",
       renderTable(headers, tableRows, { color })
     ].join("\n")
   );
+}
+function executiveTerminalSection(data, _color) {
+  const exec = data.executive;
+  if (exec === void 0) {
+    return panel3("Executive summary", emptyState3("record"));
+  }
+  const row2 = (label, value2) => `${label.padEnd(17)}${value2 ?? "\u2014"}`;
+  const lines = [
+    row2(
+      "System score",
+      exec.health === void 0 ? void 0 : String(exec.health)
+    ),
+    row2(
+      "Import coverage",
+      exec.adoption === void 0 ? void 0 : `${exec.adoption}%`
+    ),
+    row2(
+      "Consistency",
+      exec.consistency === void 0 ? void 0 : String(exec.consistency)
+    ),
+    row2("Design debt", exec.debt === void 0 ? void 0 : `${exec.debt}%`)
+  ];
+  const trend = exec.trend ?? [];
+  if (trend.length >= 2) {
+    lines.push(`${"Trend".padEnd(17)}${sparkline(trend.map((p4) => p4.score))}`);
+  }
+  return panel3("Executive summary", lines.join("\n"));
+}
+function consistencyTerminalSection(data, color) {
+  const consistency = data.consistency;
+  if (consistency === void 0) {
+    return panel3("Consistency", emptyState3("lint <dir>"));
+  }
+  const gauge = renderGauge(consistency.score, {
+    label: "Consistency",
+    width: 24,
+    color
+  });
+  const table3 = renderTable(
+    ["Signal", "Score", "Weight"],
+    consistency.components.map((c2) => [
+      c2.kind,
+      String(c2.score),
+      String(c2.weight)
+    ]),
+    { color }
+  );
+  return panel3(
+    "Consistency",
+    [
+      gauge,
+      table3,
+      "overrides is a documented-opinion penalty (8 per hotspot)"
+    ].join("\n")
+  );
+}
+function designDebtTerminalSection(data, color) {
+  const debt = data.debt;
+  if (debt === void 0) {
+    return panel3("Design debt", emptyState3("lint <dir>"));
+  }
+  const LEVEL_SEVERITY = { low: "ok", medium: "warn", high: "error" };
+  const headline2 = `${debt.pct}% \xB7 ${severityColor(LEVEL_SEVERITY[debt.level], debt.level, { color })}`;
+  if (debt.items.length === 0) return panel3("Design debt", headline2);
+  const shown = debt.items.slice(0, 8);
+  const table3 = renderTable(
+    ["Subject", "Kind", "Count", "Recommendation"],
+    shown.map((i) => [i.subject, i.kind, String(i.count), i.recommendation]),
+    { color }
+  );
+  const more = debt.items.length > shown.length ? [`\u2026 and ${debt.items.length - shown.length} more`] : [];
+  return panel3("Design debt", [headline2, table3, ...more].join("\n"));
+}
+function libraryHotspotsTrendTerminalSection(data, _color) {
+  const trend = data.libraryHotspotsTrend;
+  if (trend === void 0 || trend.rows.length === 0) {
+    return panel3("Library hotspots trend", emptyState3("library-health"));
+  }
+  const lines = [`Top components per signal \xB7 ${dateSpan(trend.dates)}`];
+  for (const signal of SIGNAL_ORDER) {
+    const rows = trend.rows.filter((r2) => r2.signal === signal);
+    if (rows.length === 0) continue;
+    const width = Math.max(...rows.map((r2) => [...r2.name].length));
+    lines.push("", SIGNAL_LABEL[signal]);
+    for (const row2 of rows) {
+      lines.push(`  ${row2.name.padEnd(width)}  ${hotspotDetail(row2)}`);
+    }
+  }
+  return panel3("Library hotspots trend", lines.join("\n"));
+}
+function frameReadinessTrendTerminalSection(data, _color) {
+  const trend = data.frameReadinessTrend;
+  if (trend === void 0 || trend.frames.length === 0) {
+    return panel3("Frame readiness trend", emptyState3("handoff <frame-url>"));
+  }
+  const names = trend.frames.map(
+    (f3) => f3.frameName === "" ? f3.key : f3.frameName
+  );
+  const width = Math.max(...names.map((n) => [...n].length));
+  const lines = [
+    belowGateMeta(trend),
+    ...trend.frames.map(
+      (frame, i) => `  ${(names[i] ?? "").padEnd(width)}  ${frameDetail(frame)}`
+    )
+  ];
+  const more = frameOverflow(trend);
+  if (more !== void 0) lines.push(more);
+  return panel3("Frame readiness trend", lines.join("\n"));
+}
+function handoffPassRateTerminalSection(data, _color) {
+  const rate = data.handoffPassRate;
+  if (rate === void 0 || rate.frames === 0) {
+    return panel3("Handoff pass rate", emptyState3("handoff <frame-url>"));
+  }
+  const lines = [`${rate.pct}% \xB7 ${passRateSub(rate)}`];
+  const line = passRateTrendLine(rate);
+  if (line !== void 0) lines.push(line);
+  return panel3("Handoff pass rate", lines.join("\n"));
 }
 var SECTION_RENDERERS_TERMINAL = {
   "system-score": systemScoreTerminalSection,
@@ -20459,7 +15540,13 @@ var SECTION_RENDERERS_TERMINAL = {
   "audience-changelog": audienceChangelogTerminalSection,
   "frame-implementability": frameImplementabilityTerminalSection,
   "release-readiness": releaseReadinessTerminalSection,
-  "data-freshness": dataFreshnessTerminalSection
+  "data-freshness": dataFreshnessTerminalSection,
+  consistency: consistencyTerminalSection,
+  "design-debt": designDebtTerminalSection,
+  executive: executiveTerminalSection,
+  "library-hotspots-trend": libraryHotspotsTrendTerminalSection,
+  "frame-readiness-trend": frameReadinessTrendTerminalSection,
+  "handoff-pass-rate": handoffPassRateTerminalSection
 };
 function renderTerminalDashboard(data, selection, opts) {
   const headerLines = [`ds-bridge report \xB7 ${data.project}`];
@@ -20486,7 +15573,7 @@ function renderInstant(env = process.env) {
   }
   return (/* @__PURE__ */ new Date()).toISOString();
 }
-function asNumber10(value2) {
+function asNumber12(value2) {
   return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
 }
 function onSystemPct3(refs, literals) {
@@ -20494,10 +15581,10 @@ function onSystemPct3(refs, literals) {
   return total === 0 ? 0 : Math.round(refs / total * 100);
 }
 function aggregateHistory(stateDir, onWarning) {
-  const historyPath = join22(stateDir, "history.jsonl");
+  const historyPath = join7(stateDir, "history.jsonl");
   let text2;
   try {
-    text2 = readFileSync19(historyPath, "utf8");
+    text2 = readFileSync6(historyPath, "utf8");
   } catch {
     return {
       driftTrend: [],
@@ -20538,9 +15625,9 @@ function aggregateHistory(stateDir, onWarning) {
       const date = typeof r2.at === "string" ? r2.at.slice(0, 10) : "";
       driftTrend.push({
         date,
-        breaking: asNumber10(r2.stale),
-        additive: asNumber10(r2.missing),
-        cosmetic: asNumber10(r2.orphan)
+        breaking: asNumber12(r2.stale),
+        additive: asNumber12(r2.missing),
+        cosmetic: asNumber12(r2.orphan)
       });
       continue;
     }
@@ -20549,16 +15636,16 @@ function aggregateHistory(stateDir, onWarning) {
       const byKind = r2.byKind ?? { exact: 0, near: 0, offSystem: 0 };
       lint = {
         byKind: {
-          exact: asNumber10(byKind.exact),
-          near: asNumber10(byKind.near),
-          offSystem: asNumber10(byKind.offSystem)
+          exact: asNumber12(byKind.exact),
+          near: asNumber12(byKind.near),
+          offSystem: asNumber12(byKind.offSystem)
         },
         topOffenders: []
       };
       const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
       if (adoption !== void 0) {
-        const refs = asNumber10(adoption.refs);
-        const literals = asNumber10(adoption.literals);
+        const refs = asNumber12(adoption.refs);
+        const literals = asNumber12(adoption.literals);
         if (typeof r2.at === "string") {
           adoptionTrend.push({
             date: r2.at.slice(0, 10),
@@ -20568,16 +15655,16 @@ function aggregateHistory(stateDir, onWarning) {
         const byDirectory = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
         leaderboard = byDirectory.map((d) => ({
           dir: typeof d.dir === "string" ? d.dir : "",
-          refs: asNumber10(d.refs),
-          literals: asNumber10(d.literals)
+          refs: asNumber12(d.refs),
+          literals: asNumber12(d.literals)
         }));
       }
       continue;
     }
     if (record.kind === "adoption") {
       const r2 = record;
-      const imported = asNumber10(r2.imported);
-      const total = asNumber10(r2.total);
+      const imported = asNumber12(r2.imported);
+      const total = asNumber12(r2.total);
       const uncovered = Array.isArray(r2.uncovered) ? r2.uncovered.filter((n) => typeof n === "string") : [];
       importCoverage = {
         imported,
@@ -20591,11 +15678,11 @@ function aggregateHistory(stateDir, onWarning) {
       const r2 = record;
       const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
       readiness = {
-        score: asNumber10(r2.score),
+        score: asNumber12(r2.score),
         frameName: typeof r2.frameName === "string" ? r2.frameName : "",
         deductions: deductions.map((d) => ({
           reason: RULE_REASON[d.rule] ?? d.rule,
-          points: asNumber10(d.points)
+          points: asNumber12(d.points)
         }))
       };
       continue;
@@ -20607,8 +15694,8 @@ function aggregateHistory(stateDir, onWarning) {
         level: r2.level === "AAA" ? "AAA" : "AA",
         modes: modes2.map((m) => ({
           mode: typeof m.mode === "string" ? m.mode : "",
-          passed: asNumber10(m.passed),
-          failed: asNumber10(m.failed)
+          passed: asNumber12(m.passed),
+          failed: asNumber12(m.failed)
         }))
       };
       continue;
@@ -20616,10 +15703,10 @@ function aggregateHistory(stateDir, onWarning) {
     if (record.kind === "impact") {
       const r2 = record;
       impact = {
-        breaking: asNumber10(r2.breaking),
-        additive: asNumber10(r2.additive),
-        cosmetic: asNumber10(r2.cosmetic),
-        touchedCallSites: asNumber10(r2.touchedCallSites)
+        breaking: asNumber12(r2.breaking),
+        additive: asNumber12(r2.additive),
+        cosmetic: asNumber12(r2.cosmetic),
+        touchedCallSites: asNumber12(r2.touchedCallSites)
       };
       continue;
     }
@@ -20630,9 +15717,9 @@ function aggregateHistory(stateDir, onWarning) {
         deprecatedUsage: [],
         detachedCandidates: [],
         totals: {
-          overrideHotspots: asNumber10(r2.overrideHotspots),
-          deprecatedUsage: asNumber10(r2.deprecatedUsage),
-          detachedCandidates: asNumber10(r2.detachedCandidates)
+          overrideHotspots: asNumber12(r2.overrideHotspots),
+          deprecatedUsage: asNumber12(r2.deprecatedUsage),
+          detachedCandidates: asNumber12(r2.detachedCandidates)
         }
       };
     }
@@ -20650,10 +15737,10 @@ function aggregateHistory(stateDir, onWarning) {
   };
 }
 function computeSystemScore(stateDir, weights) {
-  const historyPath = join22(stateDir, "history.jsonl");
+  const historyPath = join7(stateDir, "history.jsonl");
   let text2;
   try {
-    text2 = readFileSync19(historyPath, "utf8");
+    text2 = readFileSync6(historyPath, "utf8");
   } catch {
     return void 0;
   }
@@ -20666,17 +15753,31 @@ function computeSystemScore(stateDir, weights) {
   };
 }
 function computeConsumerArtifacts(stateDir) {
-  const records = replayHistory(readHistoryText3(stateDir));
+  const records = replayHistory(readHistoryText(stateDir));
   return {
     breakingCalendar: buildBreakingCalendar(records),
     changeFrequency: buildChangeFrequency(records)
   };
 }
 function computeParityTrend(stateDir) {
-  return buildParityTrend(replayHistory(readHistoryText3(stateDir)));
+  return buildParityTrend(replayHistory(readHistoryText(stateDir)));
+}
+function computeFigmaTrends(stateDir, readinessThreshold2) {
+  const records = replayHistory(readHistoryText(stateDir));
+  const libraryHotspotsTrend = buildLibraryHotspotsTrend(records);
+  const frameReadinessTrend = buildFrameReadinessTrend(
+    records,
+    readinessThreshold2
+  );
+  const handoffPassRate = buildHandoffPassRate(records, readinessThreshold2);
+  return {
+    ...libraryHotspotsTrend !== void 0 ? { libraryHotspotsTrend } : {},
+    ...frameReadinessTrend !== void 0 ? { frameReadinessTrend } : {},
+    ...handoffPassRate !== void 0 ? { handoffPassRate } : {}
+  };
 }
 function computeLibraryHealthTrend(stateDir) {
-  return buildLibraryHealthTrend(replayHistory(readHistoryText3(stateDir)));
+  return buildLibraryHealthTrend(replayHistory(readHistoryText(stateDir)));
 }
 var VELOCITY_WINDOW = /^(\d+)([dw])$/;
 function parseVelocityWindow(raw) {
@@ -20701,7 +15802,7 @@ function computeScoreVelocity(trend, nowIso, windowDays) {
   return computeVelocity(trend, nowIso, windowDays);
 }
 function computeMigrationChecklist(stateDir, cap) {
-  const records = replayHistory(readHistoryText3(stateDir));
+  const records = replayHistory(readHistoryText(stateDir));
   let latestImpact;
   for (const entry of records) {
     if (entry.kind === "impact") latestImpact = entry.record;
@@ -20709,7 +15810,7 @@ function computeMigrationChecklist(stateDir, cap) {
   return buildMigrationChecklist(latestImpact, cap);
 }
 function computeAudienceChangelog(stateDir) {
-  const records = replayHistory(readHistoryText3(stateDir));
+  const records = replayHistory(readHistoryText(stateDir));
   let latestChangelog;
   for (const entry of records) {
     if (entry.kind === "changelog") latestChangelog = entry.record;
@@ -20717,7 +15818,7 @@ function computeAudienceChangelog(stateDir) {
   return buildAudienceChangelog(latestChangelog);
 }
 function computeFrameImplementability(stateDir) {
-  const records = replayHistory(readHistoryText3(stateDir));
+  const records = replayHistory(readHistoryText(stateDir));
   let latestFrameImpl;
   for (const entry of records) {
     if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
@@ -20729,7 +15830,7 @@ function resolveOwnership(targetDir, ownership, ownershipFile) {
   if (ownershipFile === void 0) return void 0;
   let text2;
   try {
-    text2 = readFileSync19(resolve11(targetDir, ownershipFile), "utf8");
+    text2 = readFileSync6(resolve6(targetDir, ownershipFile), "utf8");
   } catch {
     return void 0;
   }
@@ -20739,15 +15840,15 @@ function byDirectoryFromRecords(records) {
   let byDirectory = [];
   for (const { kind, record } of records) {
     if (kind !== "lint") continue;
-    const adoption = asRecord3(record.adoption);
+    const adoption = asRecord2(record.adoption);
     if (adoption === void 0) continue;
     const raw = Array.isArray(adoption.byDirectory) ? adoption.byDirectory : [];
     byDirectory = raw.map((entry) => {
-      const dirRec = asRecord3(entry) ?? {};
+      const dirRec = asRecord2(entry) ?? {};
       return {
         dir: typeof dirRec.dir === "string" ? dirRec.dir : "",
-        refs: asNumber10(dirRec.refs),
-        literals: asNumber10(dirRec.literals)
+        refs: asNumber12(dirRec.refs),
+        literals: asNumber12(dirRec.literals)
       };
     });
   }
@@ -20755,12 +15856,12 @@ function byDirectoryFromRecords(records) {
 }
 function computeOwnershipLeaderboard(stateDir, ownership) {
   if (ownership === void 0) return [];
-  const records = replayHistory(readHistoryText3(stateDir));
+  const records = replayHistory(readHistoryText(stateDir));
   return rollupByOwner(byDirectoryFromRecords(records), ownership);
 }
 function computeReleaseReadiness(stateDir) {
   const signals = extractReleaseSignals(
-    replayHistory(readHistoryText3(stateDir))
+    replayHistory(readHistoryText(stateDir))
   );
   if (signals.impact === void 0 && signals.drift === void 0 && signals.parity === void 0) {
     return { go: false, checks: [] };
@@ -20769,16 +15870,16 @@ function computeReleaseReadiness(stateDir) {
 }
 function computeDataFreshness(stateDir, nowIso, thresholds) {
   return buildFreshness(
-    replayHistory(readHistoryText3(stateDir)),
+    replayHistory(readHistoryText(stateDir)),
     nowIso,
     thresholds
   );
 }
 function readParityRows(stateDir) {
-  const registryPath = join22(stateDir, "registry.json");
+  const registryPath = join7(stateDir, "registry.json");
   let text2;
   try {
-    text2 = readFileSync19(registryPath, "utf8");
+    text2 = readFileSync6(registryPath, "utf8");
   } catch {
     return [];
   }
@@ -20803,7 +15904,7 @@ function computeComponentHealth(stateDir, readiness, a11y, aliases) {
     ...aliases !== void 0 ? { aliases } : {}
   });
 }
-function asRecord3(value2) {
+function asRecord2(value2) {
   return typeof value2 === "object" && value2 !== null ? value2 : void 0;
 }
 function safePct(part, whole) {
@@ -20811,7 +15912,7 @@ function safePct(part, whole) {
   return Math.round(100 * part / whole);
 }
 function latestTargetScalars(stateDir, systemScore) {
-  const records = replayHistory(readHistoryText3(stateDir));
+  const records = replayHistory(readHistoryText(stateDir));
   let adoptionLint;
   let tokensCheck;
   let parity;
@@ -20820,7 +15921,7 @@ function latestTargetScalars(stateDir, systemScore) {
   for (const { kind, record } of records) {
     switch (kind) {
       case "lint":
-        if (asRecord3(record.adoption) !== void 0) adoptionLint = record;
+        if (asRecord2(record.adoption) !== void 0) adoptionLint = record;
         break;
       case "tokens-check":
         tokensCheck = record;
@@ -20839,22 +15940,22 @@ function latestTargetScalars(stateDir, systemScore) {
     }
   }
   const scalars = {};
-  const adoption = adoptionLint && asRecord3(adoptionLint.adoption);
+  const adoption = adoptionLint && asRecord2(adoptionLint.adoption);
   if (adoption !== void 0) {
-    const refs = asNumber10(adoption.refs);
-    const literals = asNumber10(adoption.literals);
+    const refs = asNumber12(adoption.refs);
+    const literals = asNumber12(adoption.literals);
     const pct5 = safePct(refs, refs + literals);
     if (pct5 !== void 0) scalars["on-system"] = pct5;
   }
   if (tokensCheck !== void 0) {
-    scalars.drift = asNumber10(tokensCheck.stale) + asNumber10(tokensCheck.missing) + asNumber10(tokensCheck.orphan);
+    scalars.drift = asNumber12(tokensCheck.stale) + asNumber12(tokensCheck.missing) + asNumber12(tokensCheck.orphan);
   }
   if (parity !== void 0) {
-    const total = asNumber10(parity.total);
+    const total = asNumber12(parity.total);
     if (typeof parity.score === "number" && Number.isFinite(parity.score)) {
       scalars.parity = parity.score;
     } else if (total > 0) {
-      scalars.parity = Math.round(100 * asNumber10(parity.ok) / total);
+      scalars.parity = Math.round(100 * asNumber12(parity.ok) / total);
     }
   }
   if (a11y !== void 0) {
@@ -20862,15 +15963,15 @@ function latestTargetScalars(stateDir, systemScore) {
     let passed = 0;
     let failed = 0;
     for (const m of modes2) {
-      const mm = asRecord3(m);
+      const mm = asRecord2(m);
       if (mm === void 0) continue;
-      passed += asNumber10(mm.passed);
-      failed += asNumber10(mm.failed);
+      passed += asNumber12(mm.passed);
+      failed += asNumber12(mm.failed);
     }
     const pct5 = safePct(passed, passed + failed);
     if (pct5 !== void 0) scalars.contrast = pct5;
   }
-  if (handoff !== void 0) scalars.readiness = asNumber10(handoff.score);
+  if (handoff !== void 0) scalars.readiness = asNumber12(handoff.score);
   if (systemScore !== void 0) scalars["system-score"] = systemScore;
   return scalars;
 }
@@ -20879,10 +15980,10 @@ function computeTargets(stateDir, targets, systemScore) {
   return evaluateTargets(latestTargetScalars(stateDir, systemScore), targets);
 }
 function readParity(stateDir, onWarning) {
-  const registryPath = join22(stateDir, "registry.json");
+  const registryPath = join7(stateDir, "registry.json");
   let text2;
   try {
-    text2 = readFileSync19(registryPath, "utf8");
+    text2 = readFileSync6(registryPath, "utf8");
   } catch {
     return void 0;
   }
@@ -20897,10 +15998,128 @@ function readParity(stateDir, onWarning) {
   if (section.rows.length === 0) return void 0;
   return section;
 }
+function readRegistryFile(stateDir) {
+  try {
+    return JSON.parse(
+      readFileSync6(join7(stateDir, "registry.json"), "utf8")
+    );
+  } catch {
+    return void 0;
+  }
+}
+function computeExecutiveLayer(stateDir, systemScore, importCoverage) {
+  const inputs = executiveInputs(
+    replayHistory(readHistoryText(stateDir)),
+    readRegistryFile(stateDir)
+  );
+  const outcome = buildConsistency(inputs.consistency);
+  const debt = inputs.debt !== void 0 ? buildDebt(inputs.debt) : void 0;
+  const executive = buildExecutive({
+    ...systemScore !== void 0 ? { systemScore } : {},
+    ...importCoverage !== void 0 ? { coverage: importCoverage } : {},
+    consistency: outcome,
+    ...debt !== void 0 ? { debt } : {}
+  });
+  return {
+    ...outcome.kind === "ok" ? {
+      consistency: {
+        score: outcome.score,
+        components: outcome.components
+      }
+    } : {},
+    ...debt !== void 0 ? { debt } : {},
+    ...Object.keys(executive).length > 0 ? { executive } : {}
+  };
+}
+function managerContrast(a11y) {
+  if (a11y === void 0) return void 0;
+  let failed = 0;
+  const modes2 = [];
+  for (const m of a11y.modes) {
+    if (typeof m.failed === "number" && m.failed > 0) {
+      failed += m.failed;
+      modes2.push(m.mode);
+    }
+  }
+  return { failed, level: a11y.level, modes: modes2 };
+}
+function storedScorePoints(replayed, nowIso, windowDays) {
+  const nowMs = Date.parse(nowIso);
+  const startMs = Number.isNaN(nowMs) ? Number.NEGATIVE_INFINITY : nowMs - windowDays * 24 * 60 * 60 * 1e3;
+  const out = [];
+  for (const entry of replayed) {
+    if (entry.kind !== "score") continue;
+    const r2 = entry.record;
+    if (typeof r2.at !== "string") continue;
+    if (typeof r2.score !== "number" || !Number.isFinite(r2.score)) continue;
+    const atMs = Date.parse(r2.at);
+    if (Number.isNaN(atMs) || atMs < startMs) continue;
+    out.push({ date: r2.at.slice(0, 10), score: r2.score });
+  }
+  return out;
+}
+function runManagerReport(format, stateDir, options, selection, data, windowDays) {
+  const replayed = replayHistory(readHistoryText(stateDir));
+  const frames = readinessByFrame(replayed, selection.readinessThreshold);
+  const lastDrift = data.driftTrend?.[data.driftTrend.length - 1];
+  const contrast = managerContrast(data.a11y);
+  const scorePoints = storedScorePoints(replayed, data.generatedAt, windowDays);
+  const report = buildManagerReport({
+    project: data.project,
+    generatedAt: data.generatedAt,
+    windowDays,
+    readinessThreshold: selection.readinessThreshold,
+    ...data.systemScore !== void 0 ? { systemScore: data.systemScore } : {},
+    ...data.scoreVelocity !== void 0 ? { scoreVelocity: data.scoreVelocity } : {},
+    ...data.adoptionTrend !== void 0 ? { adoptionTrend: data.adoptionTrend } : {},
+    ...data.importCoverage !== void 0 ? { importCoverage: data.importCoverage } : {},
+    ...data.targets !== void 0 ? { targets: data.targets } : {},
+    ...data.consistency !== void 0 ? { consistency: data.consistency } : {},
+    ...data.debt !== void 0 ? { debt: data.debt } : {},
+    ...data.dataFreshness !== void 0 ? { dataFreshness: data.dataFreshness } : {},
+    frames,
+    ...lastDrift !== void 0 ? {
+      breakingDrift: lastDrift.breaking,
+      tokenGaps: {
+        missing: lastDrift.additive,
+        orphan: lastDrift.cosmetic
+      }
+    } : {},
+    ...contrast !== void 0 ? { contrast } : {},
+    ...scorePoints.length > 0 ? { scorePoints } : {}
+  });
+  if (format === "exec") {
+    const markdown = renderManagerMarkdown(report);
+    if (options.out !== void 0) {
+      const outPath2 = resolve6(options.out);
+      const written2 = writeDashboard(outPath2, markdown);
+      if (written2.kind === "error") {
+        failReport(written2.message);
+        return;
+      }
+      process.stdout.write(`${outPath2}
+`);
+    } else {
+      process.stdout.write(markdown);
+    }
+    process.exitCode = 0;
+    return;
+  }
+  const outPath = options.out !== void 0 ? resolve6(options.out) : join7(stateDir, "reports", "exec.html");
+  const written = writeDashboard(outPath, renderManagerHtml(report));
+  if (written.kind === "error") {
+    failReport(written.message);
+    return;
+  }
+  process.stdout.write(`${outPath}
+`);
+  if (options.open) openReport(outPath, process.env);
+  process.exitCode = 0;
+}
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync14(dirname8(outPath), { recursive: true });
-    writeFileSync10(outPath, html, "utf8");
+    mkdirSync3(dirname3(outPath), { recursive: true });
+    writeFileSync3(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -20997,6 +16216,7 @@ function resolveDashboardSelection(targetDir, name, ctx) {
     artifacts: outcome.artifacts,
     migrationSitesCap: ctx.migrationSitesCap,
     scoreVelocityWindow: ctx.scoreVelocityWindow,
+    readinessThreshold: ctx.readinessThreshold,
     viewLabel: read.dashboard.name,
     ...read.dashboard.reportType !== void 0 ? { reportType: read.dashboard.reportType } : {},
     ...viewName !== void 0 ? { viewName } : {},
@@ -21023,11 +16243,12 @@ function resolveSelection(targetDir, options) {
   const defaults = resolveConfig({});
   let migrationSitesCap = defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
   let scoreVelocityWindow = defaults.kind === "ok" ? defaults.config.scoreVelocityWindow : 30;
-  const configPath = join22(targetDir, ".ds-bridge.json");
-  if (existsSync17(configPath)) {
+  let readinessThreshold2 = defaults.kind === "ok" ? defaults.config.readinessThreshold : 80;
+  const configPath = join7(targetDir, ".ds-bridge.json");
+  if (existsSync6(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync19(configPath, "utf8");
+      projectFileText = readFileSync6(configPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -21047,6 +16268,7 @@ function resolveSelection(targetDir, options) {
     migrationSitesCap = resolved.config.migrationSitesCap;
     metricTargets = resolved.config.metricTargets;
     scoreVelocityWindow = resolved.config.scoreVelocityWindow;
+    readinessThreshold2 = resolved.config.readinessThreshold;
     freshnessThresholds = resolved.config.freshnessThresholds;
     componentAliases = resolved.config.componentAliases;
     ownership = resolved.config.ownership;
@@ -21064,6 +16286,7 @@ function resolveSelection(targetDir, options) {
     return resolveDashboardSelection(targetDir, activeDashboard, {
       migrationSitesCap,
       scoreVelocityWindow,
+      readinessThreshold: readinessThreshold2,
       scoreWeights,
       scoreWeightsByView,
       metricTargets,
@@ -21114,6 +16337,7 @@ function resolveSelection(targetDir, options) {
         artifacts: outcome.artifacts,
         migrationSitesCap,
         scoreVelocityWindow,
+        readinessThreshold: readinessThreshold2,
         ...viewLabel !== void 0 ? { viewLabel } : {},
         ...viewName !== void 0 ? { viewName } : {},
         ...scoreWeights !== void 0 ? { scoreWeights } : {},
@@ -21127,9 +16351,9 @@ function resolveSelection(targetDir, options) {
     }
   }
 }
-function readHistoryText3(stateDir) {
+function readHistoryText(stateDir) {
   try {
-    return readFileSync19(join22(stateDir, "history.jsonl"), "utf8");
+    return readFileSync6(join7(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
@@ -21140,15 +16364,15 @@ function runMarkdownReport(targetDir, options, selection) {
     selection.scoreWeights,
     selection.scoreWeightsByView
   );
-  const stateDir = join22(targetDir, ".ds-bridge");
-  const currentText = readHistoryText3(stateDir);
+  const stateDir = join7(targetDir, ".ds-bridge");
+  const currentText = readHistoryText(stateDir);
   let baseText;
   let noBaseline = false;
   const baseLabel = options.delta;
   if (options.delta !== void 0) {
     const outcome = readFileAtRef({
       ref: options.delta,
-      path: join22(".ds-bridge", "history.jsonl"),
+      path: join7(".ds-bridge", "history.jsonl"),
       cwd: targetDir,
       exec: spawnGitExec
     });
@@ -21241,7 +16465,7 @@ function runMarkdownReport(targetDir, options, selection) {
     ...baseBlocks !== void 0 ? { baseBlocks } : {}
   });
   if (options.out !== void 0) {
-    const outPath = resolve11(options.out);
+    const outPath = resolve6(options.out);
     const written = writeDashboard(outPath, markdown);
     if (written.kind === "error") {
       failReport(written.message);
@@ -21267,10 +16491,10 @@ function runMarkdownReport(targetDir, options, selection) {
   process.exitCode = 0;
 }
 function readPublishConfig(targetDir) {
-  const configPath = join22(targetDir, ".ds-bridge.json");
-  if (!existsSync17(configPath)) return void 0;
+  const configPath = join7(targetDir, ".ds-bridge.json");
+  if (!existsSync6(configPath)) return void 0;
   try {
-    const projectFileText = readFileSync19(configPath, "utf8");
+    const projectFileText = readFileSync6(configPath, "utf8");
     const resolved = resolveConfig({ projectFileText });
     return resolved.kind === "ok" ? resolved.config.publish : void 0;
   } catch {
@@ -21287,16 +16511,16 @@ function resolvePublishNames(targetDir, options) {
   return readPublishConfig(targetDir) ?? [];
 }
 function runSiteReport(targetDir, options, selection, data, weightProfile, mode) {
-  const stateDir = join22(targetDir, ".ds-bridge");
+  const stateDir = join7(targetDir, ".ds-bridge");
   const snapshot = mode === "snapshot";
   const suffix = snapshot ? ".snapshot.html" : ".html";
   const transform = snapshot ? normalizeSnapshot : (html) => html;
-  const outDir = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, snapshot ? "snapshots" : "reports");
+  const outDir = options.out !== void 0 ? resolve6(options.out) : join7(stateDir, snapshot ? "snapshots" : "reports");
   const names = resolvePublishNames(targetDir, options);
   const entries = [];
   const writePage = (name, html) => {
     const written = writeDashboard(
-      join22(outDir, `${name}${suffix}`),
+      join7(outDir, `${name}${suffix}`),
       transform(html)
     );
     if (written.kind === "error") {
@@ -21344,7 +16568,7 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode)
   }
   const indexName = snapshot ? "index.snapshot.html" : "index.html";
   const indexWritten = writeDashboard(
-    join22(outDir, indexName),
+    join7(outDir, indexName),
     transform(renderIndex(entries))
   );
   if (indexWritten.kind === "error") {
@@ -21355,62 +16579,8 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode)
 `);
   process.exitCode = 0;
 }
-function runReport(path, options) {
-  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal" && options.format !== "site") {
-    failReport(
-      `Unknown --format "${options.format}". Expected "html", "md", "terminal", or "site".`
-    );
-    return;
-  }
-  const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
-  if (velocityWindowFlag.kind === "error") {
-    failReport(velocityWindowFlag.message);
-    return;
-  }
-  const targetDir = resolve11(path);
-  if (!existsSync17(targetDir) || !statSync10(targetDir).isDirectory()) {
-    failReport(`Path "${targetDir}" is not a directory.`);
-    return;
-  }
-  const selection = resolveSelection(targetDir, options);
-  if ("kind" in selection) {
-    failReport(selection.message);
-    return;
-  }
-  const format = options.format ?? selection.reportType ?? "html";
-  if (format !== "html" && format !== "md" && format !== "terminal" && format !== "site") {
-    failReport(
-      `report_type "${format}" is not a supported render target \u2014 pass --format html|md|terminal|site.`
-    );
-    return;
-  }
-  if (options.delta !== void 0 && format !== "md") {
-    failReport("--delta requires --format md.");
-    return;
-  }
-  if (options.open && format !== "html") {
-    failReport(
-      `--open is not valid with --format ${format} (there is no file to open).`
-    );
-    return;
-  }
-  if (options.gate && format !== "md") {
-    failReport(
-      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
-    );
-    return;
-  }
-  if (options.snapshot && format !== "html" && format !== "site") {
-    failReport(
-      `--snapshot renders HTML snapshots \u2014 not valid with --format ${format}.`
-    );
-    return;
-  }
-  if (format === "md") {
-    runMarkdownReport(targetDir, options, selection);
-    return;
-  }
-  const stateDir = join22(targetDir, ".ds-bridge");
+function assembleReportData(targetDir, selection, velocityWindowFlagDays) {
+  const stateDir = join7(targetDir, ".ds-bridge");
   const warn = (message) => {
     process.stderr.write(`${message}
 `);
@@ -21437,8 +16607,12 @@ function runReport(path, options) {
     systemScore?.current
   );
   const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+  const figmaTrends = computeFigmaTrends(
+    stateDir,
+    selection.readinessThreshold
+  );
   const generatedAt = renderInstant();
-  const velocityWindowDays = velocityWindowFlag.days ?? selection.scoreVelocityWindow;
+  const velocityWindowDays = velocityWindowFlagDays ?? selection.scoreVelocityWindow;
   const scoreVelocity = systemScore !== void 0 ? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays) : void 0;
   const dataFreshness = computeDataFreshness(
     stateDir,
@@ -21456,6 +16630,11 @@ function runReport(path, options) {
     resolveOwnership(targetDir, selection.ownership, selection.ownershipFile)
   );
   const releaseReadiness = computeReleaseReadiness(stateDir);
+  const executiveLayer = computeExecutiveLayer(
+    stateDir,
+    systemScore,
+    aggregation.importCoverage
+  );
   const data = {
     generatedAt,
     project: basename(targetDir),
@@ -21482,8 +16661,124 @@ function runReport(path, options) {
     ...dataFreshness.length > 0 ? { dataFreshness } : {},
     ...componentHealth.length > 0 ? { componentHealth } : {},
     ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
-    ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}
+    ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {},
+    ...executiveLayer,
+    ...figmaTrends
   };
+  return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
+}
+function loadReportData(targetDir) {
+  const selection = resolveSelection(targetDir, {
+    open: false,
+    out: void 0,
+    view: void 0,
+    artifacts: void 0,
+    format: void 0,
+    delta: void 0,
+    gate: false,
+    velocityWindow: void 0,
+    dashboard: void 0,
+    dashboards: void 0,
+    allDashboards: void 0,
+    snapshot: void 0
+  });
+  if ("kind" in selection) {
+    return { kind: "error", message: selection.message };
+  }
+  return {
+    kind: "ok",
+    data: assembleReportData(targetDir, selection, void 0).data
+  };
+}
+function runReport(path, options) {
+  if (options.format !== void 0 && options.format !== "html" && options.format !== "md" && options.format !== "terminal" && options.format !== "site" && options.format !== "exec" && options.format !== "exec-html" && options.format !== "json") {
+    failReport(
+      `Unknown --format "${options.format}". Expected "html", "md", "terminal", "site", "exec", "exec-html", or "json".`
+    );
+    return;
+  }
+  const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
+  if (velocityWindowFlag.kind === "error") {
+    failReport(velocityWindowFlag.message);
+    return;
+  }
+  const targetDir = resolve6(path);
+  if (!existsSync6(targetDir) || !statSync4(targetDir).isDirectory()) {
+    failReport(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const selection = resolveSelection(targetDir, options);
+  if ("kind" in selection) {
+    failReport(selection.message);
+    return;
+  }
+  const format = options.format ?? selection.reportType ?? "html";
+  if (format !== "html" && format !== "md" && format !== "terminal" && format !== "site" && format !== "exec" && format !== "exec-html" && format !== "json") {
+    failReport(
+      `report_type "${format}" is not a supported render target \u2014 pass --format html|md|terminal|site|exec|exec-html|json.`
+    );
+    return;
+  }
+  if (options.delta !== void 0 && format !== "md") {
+    failReport("--delta requires --format md.");
+    return;
+  }
+  if (options.open && format !== "html" && format !== "exec-html") {
+    failReport(
+      `--open is not valid with --format ${format} (there is no file to open).`
+    );
+    return;
+  }
+  if (options.gate && format !== "md") {
+    failReport(
+      "--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard)."
+    );
+    return;
+  }
+  if (options.snapshot && format !== "html" && format !== "site") {
+    failReport(
+      `--snapshot renders HTML snapshots \u2014 not valid with --format ${format}.`
+    );
+    return;
+  }
+  if (format === "md") {
+    runMarkdownReport(targetDir, options, selection);
+    return;
+  }
+  const { data, stateDir, generatedAt, velocityWindowDays, weightProfile } = assembleReportData(targetDir, selection, velocityWindowFlag.days);
+  if (format === "json") {
+    const text2 = `${JSON.stringify(
+      reportJsonDocument(data, selection.artifacts, selection.viewLabel),
+      null,
+      2
+    )}
+`;
+    if (options.out !== void 0) {
+      const outPath2 = resolve6(options.out);
+      const written2 = writeDashboard(outPath2, text2);
+      if (written2.kind === "error") {
+        failReport(written2.message);
+        return;
+      }
+      process.stdout.write(`${outPath2}
+`);
+    } else {
+      process.stdout.write(text2);
+    }
+    process.exitCode = 0;
+    return;
+  }
+  if (format === "exec" || format === "exec-html") {
+    runManagerReport(
+      format,
+      stateDir,
+      options,
+      selection,
+      data,
+      velocityWindowDays
+    );
+    return;
+  }
   if (options.snapshot === true) {
     runSiteReport(
       targetDir,
@@ -21507,7 +16802,7 @@ function runReport(path, options) {
       ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
     });
     if (options.out !== void 0) {
-      const outPath2 = resolve11(options.out);
+      const outPath2 = resolve6(options.out);
       const written2 = writeDashboard(outPath2, text2);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -21531,7 +16826,7 @@ function runReport(path, options) {
       ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
     }
   });
-  const outPath = options.out !== void 0 ? resolve11(options.out) : join22(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve6(options.out) : join7(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -21547,13 +16842,13 @@ function runReport(path, options) {
 function registerReportCommand(program2) {
   program2.command("report").description("Render an offline HTML dashboard from the project history").argument("[path]", "project directory to report on", ".").option(
     "--view <preset>",
-    "render a persona preset: owner | engineering | design | consumer | everything"
+    "render a preset: ds-designer | ds-manager | ds-engineer | product-designer | product-manager | product-engineer | everything | exec | org"
   ).option(
     "--artifacts <ids>",
     "render a custom comma-separated artifact list (mutually exclusive with --view)"
   ).option(
     "--format <format>",
-    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY). A saved --dashboard's report_type defaults it."
+    "output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY) | terminal | site | exec (the paste-ready markdown DS-manager one-pager) | exec-html (the same one-pager as offline HTML, default .ds-bridge/reports/exec.html) | json (the full ReportData, versioned \u2014 schemas/report.v1.schema.json). A saved --dashboard's report_type defaults it."
   ).option(
     "--delta <ref>",
     "compare against the base ref's committed history (requires --format md)"
@@ -21580,7 +16875,7 @@ function registerReportCommand(program2) {
     false
   ).option(
     "--out <file>",
-    "output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)"
+    "output file (default <path>/.ds-bridge/reports/dashboard.html; exec-html \u2192 .ds-bridge/reports/exec.html; with --format md|exec|json, writes to the file instead of stdout)"
   ).option(
     "--open",
     'open the report after writing (override the opener with the DS_BRIDGE_OPEN_CMD env var; defaults to "open" on macOS, "xdg-open" elsewhere)',
@@ -21590,23 +16885,9251 @@ function registerReportCommand(program2) {
   });
 }
 
+// src/cli-commands/analytics.ts
+function fail3(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function runAnalytics(path, options) {
+  const format = options.format;
+  if (format !== "term" && format !== "json") {
+    fail3(`Unknown --format "${format}". Expected "term" or "json".`);
+    return;
+  }
+  const emit = options.emit !== void 0 ? parseEmit(options.emit) : void 0;
+  if (emit?.kind === "error") {
+    fail3(emit.message);
+    return;
+  }
+  if (options.out !== void 0 && emit === void 0) {
+    fail3("--out requires --emit <domain> (nothing is written without --emit).");
+    return;
+  }
+  const targetDir = resolve7(path);
+  if (!existsSync7(targetDir) || !statSync5(targetDir).isDirectory()) {
+    fail3(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const loaded = loadReportData(targetDir);
+  if (loaded.kind === "error") {
+    fail3(loaded.message);
+    return;
+  }
+  const data = loaded.data;
+  if (emit === void 0) {
+    const doc = buildAnalytics(data);
+    process.stdout.write(
+      format === "json" ? stableStringify(doc) : renderAnalyticsTerm(doc)
+    );
+    process.exitCode = 0;
+    return;
+  }
+  const outDir = options.out !== void 0 ? resolve7(options.out) : join8(targetDir, ".ds-bridge", "analytics");
+  const files = emit.domains.map((domain) => [
+    ARTIFACT_FILE[domain],
+    buildDomainArtifact(domain, data)
+  ]);
+  if (emit.merged) files.push([MERGED_ARTIFACT_FILE, buildAnalytics(data)]);
+  const written = [];
+  try {
+    mkdirSync4(outDir, { recursive: true });
+    for (const [name, value2] of files) {
+      const file = join8(outDir, name);
+      writeFileSync4(file, stableStringify(value2), "utf8");
+      written.push(file);
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail3(`Could not write analytics artifacts to ${outDir}: ${detail}`);
+    return;
+  }
+  process.stdout.write(
+    format === "json" ? `${JSON.stringify({ written }, null, 2)}
+` : `${written.join("\n")}
+`
+  );
+  process.exitCode = 0;
+}
+function registerAnalyticsCommand(program2) {
+  program2.command("analytics").description(
+    "Design-system analytics from the recorded history: executive rollup (health \xB7 adoption \xB7 consistency \xB7 debt) and per-domain JSON artifacts"
+  ).argument("[path]", "project directory", ".").option(
+    "--emit <domain>",
+    "write a schema-versioned JSON artifact: figma | code | token | git | score | all (all also writes analytics.json)"
+  ).option(
+    "--out <dir>",
+    "artifact directory for --emit (default <path>/.ds-bridge/analytics/)"
+  ).option(
+    "--format <format>",
+    "output format: term | json (json without --emit prints analytics.json)",
+    "term"
+  ).action((path, options) => {
+    runAnalytics(path, options);
+  });
+}
+
+// src/cli-commands/badge.ts
+import {
+  existsSync as existsSync8,
+  mkdirSync as mkdirSync5,
+  readFileSync as readFileSync7,
+  statSync as statSync6,
+  writeFileSync as writeFileSync5
+} from "fs";
+import { dirname as dirname4, join as join9, resolve as resolve8 } from "path";
+
+// src/render/html/badge.ts
+var DEFAULT_LABEL = "ds-bridge";
+var LABEL_BG = "#404040";
+var TEXT_COLOR2 = "#ffffff";
+var BAND_GREEN = "#16a34a";
+var BAND_AMBER = "#d97706";
+var BAND_RED = "#dc2626";
+var CHAR_WIDTH = 7;
+var SEGMENT_PADDING = 10;
+var HEIGHT = 20;
+var FONT_SIZE = 11;
+function escapeXml2(value2) {
+  return value2.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function clamp3(value2, min, max) {
+  if (value2 < min) return min;
+  if (value2 > max) return max;
+  return value2;
+}
+function roundHalfUp4(value2) {
+  return Math.round(value2);
+}
+function bandFill(score) {
+  if (score >= 90) return BAND_GREEN;
+  if (score >= 70) return BAND_AMBER;
+  return BAND_RED;
+}
+function segmentWidth(text2) {
+  return text2.length * CHAR_WIDTH + SEGMENT_PADDING * 2;
+}
+function renderBadge(input) {
+  const label = input.label ?? DEFAULT_LABEL;
+  const display = roundHalfUp4(clamp3(input.score, 0, 100));
+  const valueText = `${display}/100`;
+  const fill = bandFill(display);
+  const labelW = segmentWidth(label);
+  const valueW = segmentWidth(valueText);
+  const totalW = labelW + valueW;
+  const safeLabel = escapeXml2(label);
+  const safeValue = escapeXml2(valueText);
+  const title = `${label} system score: ${valueText}`;
+  const labelMid = labelW / 2;
+  const valueMid = labelW + valueW / 2;
+  const textY = HEIGHT / 2 + FONT_SIZE / 2 - 2;
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${HEIGHT}" viewBox="0 0 ${totalW} ${HEIGHT}" role="img">`,
+    `<title>${escapeXml2(title)}</title>`,
+    `<rect x="0" y="0" width="${labelW}" height="${HEIGHT}" fill="${LABEL_BG}" />`,
+    `<rect x="${labelW}" y="0" width="${valueW}" height="${HEIGHT}" fill="${fill}" />`,
+    `<text x="${labelMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeLabel}</text>`,
+    `<text x="${valueMid}" y="${textY}" text-anchor="middle" fill="${TEXT_COLOR2}" font-family="sans-serif" font-size="${FONT_SIZE}">${safeValue}</text>`,
+    "</svg>"
+  ].join("");
+}
+
+// src/cli-commands/badge.ts
+function fail4(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function noDataMessage(historyPath) {
+  return [
+    `No system-score data in ${historyPath}.`,
+    "",
+    "The badge is computed by replaying the project history. Populate it first by",
+    "running a check that appends a history line, for example:",
+    "",
+    "  /ds-bridge:ds-lint        \u2014 DS-aware lint violations",
+    "  ds-bridge tokens check    \u2014 token drift (token-check)",
+    "",
+    "Then run `ds-bridge badge` again."
+  ].join("\n");
+}
+function readProjectConfigText(targetDir) {
+  const configPath = join9(targetDir, ".ds-bridge.json");
+  if (!existsSync8(configPath)) return void 0;
+  try {
+    return readFileSync7(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function weightProfileForConfig(cfg) {
+  const view = resolveView(
+    {},
+    {
+      ...cfg.dashboardView !== void 0 ? { view: cfg.dashboardView } : {},
+      ...cfg.dashboardArtifacts !== void 0 ? { artifacts: cfg.dashboardArtifacts } : {}
+    }
+  );
+  const viewName = view.kind === "ok" && view.source !== "default" ? view.viewName : void 0;
+  return resolveWeightProfile(
+    viewName,
+    cfg.scoreWeights,
+    cfg.scoreWeightsByView
+  );
+}
+function runBadge(path, options) {
+  const targetDir = resolve8(path);
+  if (!existsSync8(targetDir) || !statSync6(targetDir).isDirectory()) {
+    fail4(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const stateDir = join9(targetDir, ".ds-bridge");
+  const historyPath = join9(stateDir, "history.jsonl");
+  let historyText;
+  try {
+    historyText = readFileSync7(historyPath, "utf8");
+  } catch {
+    fail4(noDataMessage(historyPath));
+    return;
+  }
+  const projectFileText = readProjectConfigText(targetDir);
+  let weightProfile = resolveWeightProfile(void 0, void 0, void 0);
+  if (projectFileText !== void 0) {
+    const resolved = resolveConfig({ projectFileText });
+    if (resolved.kind !== "ok") {
+      fail4(resolved.message);
+      return;
+    }
+    weightProfile = weightProfileForConfig(resolved.config);
+  }
+  const outcome = scoreFromHistory(historyText, weightProfile.weights);
+  if (outcome.kind === "no-data") {
+    fail4(noDataMessage(historyPath));
+    return;
+  }
+  const svg = renderBadge({ score: outcome.current });
+  const outPath = options.out !== void 0 ? resolve8(options.out) : join9(stateDir, "badge.svg");
+  try {
+    mkdirSync5(dirname4(outPath), { recursive: true });
+    writeFileSync5(outPath, svg, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail4(`Could not write badge to "${outPath}": ${detail}`);
+    return;
+  }
+  process.stdout.write(`${outPath}
+`);
+  process.exitCode = 0;
+}
+function registerBadgeCommand(program2) {
+  program2.command("badge").description(
+    "Render a self-contained system-score SVG badge from the project history"
+  ).argument("[path]", "project directory to badge", ".").option("--out <file>", "output file (default <path>/.ds-bridge/badge.svg)").action((path, options) => {
+    runBadge(path, options);
+  });
+}
+
+// src/cli-commands/changelog.ts
+import { join as join10 } from "path";
+import { cwd as processCwd } from "process";
+
+// src/engines/changelog/aggregate.ts
+var SOURCE_ORDER = {
+  figma: 0,
+  code: 1,
+  tokens: 2
+};
+var SEVERITY_ORDER2 = {
+  breaking: 0,
+  notable: 1,
+  minor: 2
+};
+var CONVENTIONAL_HEADER = /^(\w+)(?:\(([^)]*)\))?(!)?:\s*(.+)$/;
+function toIso(value2) {
+  const ms = Date.parse(value2);
+  if (Number.isNaN(ms)) return value2;
+  return new Date(ms).toISOString();
+}
+function withinSince(dateIso, since) {
+  const at = Date.parse(dateIso);
+  const from = Date.parse(since);
+  if (Number.isNaN(at) || Number.isNaN(from)) return true;
+  return at >= from;
+}
+function valuePreview(token) {
+  const { value: value2 } = token;
+  if (typeof value2 === "string" || typeof value2 === "number")
+    return String(value2);
+  return JSON.stringify(value2);
+}
+function fromDiffEntry(entry, dateIso) {
+  const severity = entry.impact === "breaking" ? "breaking" : "notable";
+  switch (entry.kind) {
+    case "added":
+      return {
+        id: `tokens:added:${entry.token.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token added: ${entry.token.name}`,
+        detail: `${entry.token.type} = ${valuePreview(entry.token)}`
+      };
+    case "removed":
+      return {
+        id: `tokens:removed:${entry.token.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token removed: ${entry.token.name}`,
+        detail: `was ${entry.token.type} = ${valuePreview(entry.token)}`
+      };
+    case "renamed":
+      return {
+        id: `tokens:renamed:${entry.from.name}->${entry.to.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token renamed: ${entry.from.name} \u2192 ${entry.to.name}`,
+        detail: `${entry.to.type} = ${valuePreview(entry.to)}`
+      };
+    case "value-changed":
+      return {
+        id: `tokens:value-changed:${entry.after.name}`,
+        dateIso,
+        source: "tokens",
+        audience: "both",
+        severity,
+        title: `Token changed: ${entry.after.name}`,
+        detail: `${valuePreview(entry.before)} \u2192 ${valuePreview(entry.after)}`
+      };
+    case "meta-changed": {
+      const meta = entry.after.description ?? entry.after.group;
+      return withDetail(
+        {
+          id: `tokens:meta-changed:${entry.after.name}`,
+          dateIso,
+          source: "tokens",
+          audience: "both",
+          severity,
+          title: `Token metadata changed: ${entry.after.name}`
+        },
+        meta
+      );
+    }
+  }
+}
+function withDetail(base, detail) {
+  return detail === void 0 ? base : { ...base, detail };
+}
+function fromCommit(commit) {
+  const lines = commit.subject.split("\n");
+  const header = (lines[0] ?? "").trim();
+  const hasBreakingFooter = /(^|\n)BREAKING CHANGE:/.test(commit.subject);
+  const match = CONVENTIONAL_HEADER.exec(header);
+  let severity = "minor";
+  let title = header;
+  if (match) {
+    const type = match[1];
+    const bang = match[3];
+    const subject = match[4] ?? header;
+    title = subject;
+    if (bang !== void 0 || hasBreakingFooter) {
+      severity = "breaking";
+    } else if (type === "feat") {
+      severity = "notable";
+    } else if (type === "fix") {
+      severity = "minor";
+    } else {
+      severity = "minor";
+    }
+  } else if (hasBreakingFooter) {
+    severity = "breaking";
+  }
+  return {
+    id: `code:${commit.hash}`,
+    dateIso: toIso(commit.dateIso),
+    source: "code",
+    audience: "developer",
+    severity,
+    title,
+    detail: commit.author
+  };
+}
+function fromVersion(version) {
+  const description = (version.description ?? "").trim();
+  return withDetail(
+    {
+      id: `figma:${version.id}`,
+      dateIso: toIso(version.created_at),
+      source: "figma",
+      audience: "designer",
+      severity: "notable",
+      title: (version.label ?? "").trim()
+    },
+    description === "" ? void 0 : description
+  );
+}
+function compareEntries(a, b) {
+  const dateDelta = Date.parse(b.dateIso) - Date.parse(a.dateIso);
+  if (dateDelta !== 0) return dateDelta;
+  const sourceDelta = SOURCE_ORDER[a.source] - SOURCE_ORDER[b.source];
+  if (sourceDelta !== 0) return sourceDelta;
+  const sevDelta = SEVERITY_ORDER2[a.severity] - SEVERITY_ORDER2[b.severity];
+  if (sevDelta !== 0) return sevDelta;
+  if (a.title < b.title) return -1;
+  if (a.title > b.title) return 1;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+function aggregateChangelog(input) {
+  const entries = [];
+  for (const version of input.versions) {
+    if ((version.label ?? "").trim() === "") continue;
+    entries.push(fromVersion(version));
+  }
+  for (const commit of input.commits) {
+    entries.push(fromCommit(commit));
+  }
+  const tokenDate = toIso(input.since);
+  for (const entry of input.tokenDiff.entries) {
+    entries.push(fromDiffEntry(entry, tokenDate));
+  }
+  return entries.filter((entry) => withinSince(entry.dateIso, input.since)).sort(compareEntries);
+}
+
+// src/engines/changelog/render-md.ts
+var EMPTY2 = "# Changelog\n\n_No changes in the selected window._\n";
+var SECTIONS = [
+  { heading: "## For designers", audience: "designer" },
+  { heading: "## For developers", audience: "developer" }
+];
+function badge(severity) {
+  return `**[${severity}]**`;
+}
+function dateKey(entry) {
+  return entry.dateIso.slice(0, 10);
+}
+function escapeInline(text2) {
+  return text2.replace(/([\\*_`])/g, "\\$1");
+}
+function inSection(entry, sectionAudience) {
+  return entry.audience === sectionAudience || entry.audience === "both";
+}
+function renderItem(entry) {
+  const head = `- ${badge(entry.severity)} ${escapeInline(entry.title)}`;
+  if (entry.detail === void 0 || entry.detail.trim() === "") return head;
+  return `${head} \u2014 ${escapeInline(entry.detail)}`;
+}
+function renderSection(heading, entries) {
+  if (entries.length === 0) return void 0;
+  const lines = [heading, ""];
+  let currentDate;
+  for (const entry of entries) {
+    const date = dateKey(entry);
+    if (date !== currentDate) {
+      if (currentDate !== void 0) lines.push("");
+      lines.push(`### ${date}`, "");
+      currentDate = date;
+    }
+    lines.push(renderItem(entry));
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+function renderChangelogMarkdown(entries, options) {
+  const wanted = options.audience;
+  const sectionBlocks = [];
+  for (const section of SECTIONS) {
+    if (wanted !== void 0 && wanted !== "both" && wanted !== section.audience) {
+      continue;
+    }
+    const sectionEntries = entries.filter(
+      (entry) => inSection(entry, section.audience)
+    );
+    const block = renderSection(section.heading, sectionEntries);
+    if (block !== void 0) sectionBlocks.push(block);
+  }
+  if (sectionBlocks.length === 0) return EMPTY2;
+  return `# Changelog
+
+${sectionBlocks.join("\n")}`;
+}
+
+// src/io/figma/client.ts
+var DEFAULT_BASE_URL = "https://api.figma.com";
+var MAX_RETRIES = 3;
+var DEFAULT_RETRY_AFTER_SECONDS = 1;
+function defaultSleep(ms) {
+  return new Promise((resolve17) => setTimeout(resolve17, ms));
+}
+function joinIds(ids) {
+  return encodeURIComponent(ids.join(","));
+}
+function parseRetryAfter(headers) {
+  const raw = headers.get("Retry-After");
+  if (raw === null) return DEFAULT_RETRY_AFTER_SECONDS;
+  const seconds = Number.parseInt(raw, 10);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS;
+}
+function mentionsScope(body) {
+  const text2 = typeof body === "string" ? body : JSON.stringify(body ?? "");
+  return /scope/i.test(text2);
+}
+function createFigmaClient(options) {
+  const fetchImpl = options.fetch ?? fetch;
+  const sleep = options.sleep ?? defaultSleep;
+  const jitter = options.jitter ?? Math.random;
+  const { token } = options;
+  const origin = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const BASE_URL = `${origin}/v1`;
+  const baseHeaders = { "X-Figma-Token": token };
+  async function request(url, init) {
+    let lastRetryAfter = DEFAULT_RETRY_AFTER_SECONDS;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+      let response;
+      try {
+        response = await fetchImpl(url, init);
+      } catch (error) {
+        return {
+          kind: "network-error",
+          message: error instanceof Error ? error.message : String(error)
+        };
+      }
+      const { status } = response;
+      if (status === 429) {
+        lastRetryAfter = parseRetryAfter(response.headers);
+        if (attempt < MAX_RETRIES) {
+          await sleep(lastRetryAfter * 1e3 * (1 + jitter()));
+          continue;
+        }
+        return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
+      }
+      if (status === 401) return { kind: "auth-error" };
+      if (status === 403) {
+        let body;
+        try {
+          body = await response.json();
+        } catch {
+          body = await response.text().catch(() => "");
+        }
+        if (mentionsScope(body)) {
+          const message = typeof body === "object" && body !== null && "err" in body && typeof body.err === "string" ? body.err : "Token is missing a required scope.";
+          return { kind: "scope-error", message };
+        }
+        return { kind: "auth-error" };
+      }
+      if (status === 404) return { kind: "not-found" };
+      if (!response.ok) {
+        return {
+          kind: "network-error",
+          message: `Figma API responded with status ${status}.`
+        };
+      }
+      try {
+        const data = await response.json();
+        return { kind: "ok", data };
+      } catch (error) {
+        return {
+          kind: "network-error",
+          message: error instanceof Error ? error.message : String(error)
+        };
+      }
+    }
+    return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
+  }
+  function get(url) {
+    return request(url, { method: "GET", headers: { ...baseHeaders } });
+  }
+  return {
+    getMe() {
+      return get(`${BASE_URL}/me`);
+    },
+    getFile(key) {
+      return get(`${BASE_URL}/files/${key}`);
+    },
+    getFileNodes(key, ids) {
+      const url = `${BASE_URL}/files/${key}/nodes?ids=${joinIds(ids)}`;
+      return get(url);
+    },
+    getComponents(key) {
+      return get(
+        `${BASE_URL}/files/${key}/components`
+      );
+    },
+    getVersions(key) {
+      return get(`${BASE_URL}/files/${key}/versions`);
+    },
+    getComments(key) {
+      return get(`${BASE_URL}/files/${key}/comments`);
+    },
+    postComment(key, message, clientMeta) {
+      const body = clientMeta === void 0 ? { message } : { message, client_meta: clientMeta };
+      return request(`${BASE_URL}/files/${key}/comments`, {
+        method: "POST",
+        headers: {
+          ...baseHeaders,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    },
+    getImages(key, ids, opts) {
+      const parts = [`ids=${joinIds(ids)}`];
+      if (opts?.format !== void 0) parts.push(`format=${opts.format}`);
+      if (opts?.scale !== void 0) parts.push(`scale=${opts.scale}`);
+      if (opts?.svg_include_id !== void 0) {
+        parts.push(`svg_include_id=${opts.svg_include_id}`);
+      }
+      return get(
+        `${BASE_URL}/images/${key}?${parts.join("&")}`
+      );
+    }
+  };
+}
+
+// src/cli-commands/changelog.ts
+var DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
+function defaultSince(now) {
+  const ms = now.getTime() - 90 * 24 * 60 * 60 * 1e3;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+var EMPTY_TOKEN_DIFF = { entries: [], unchanged: 0 };
+var HISTORY_RECENT_LIMIT = 12;
+function defaultDeps() {
+  return {
+    exec: spawnGitExec,
+    makeClient: (token) => createFigmaClient({
+      token,
+      baseUrl: process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE
+    }),
+    env: process.env,
+    cwd: processCwd(),
+    now: () => /* @__PURE__ */ new Date(),
+    stdout: (text2) => process.stdout.write(text2),
+    stderr: (text2) => process.stderr.write(text2)
+  };
+}
+function severityFor(severity) {
+  switch (severity) {
+    case "breaking":
+      return "error";
+    case "notable":
+      return "warn";
+    case "minor":
+      return "info";
+  }
+}
+function parseAudience(flag) {
+  switch (flag) {
+    case "designers":
+    case "designer":
+      return { kind: "ok", value: "designer" };
+    case "developers":
+    case "developer":
+      return { kind: "ok", value: "developer" };
+    case "both":
+      return { kind: "ok", value: "both" };
+    default:
+      return { kind: "error" };
+  }
+}
+function audienceMatches(entry, audience) {
+  if (audience === "both") return true;
+  return entry.audience === audience || entry.audience === "both";
+}
+function renderTerm3(entries, audience, color) {
+  if (entries.length === 0) {
+    return "No changes in the selected window.";
+  }
+  const lines = [`${entries.length} change(s):`, ""];
+  for (const entry of entries) {
+    const date = entry.dateIso.slice(0, 10);
+    const badge2 = severityColor(severityFor(entry.severity), entry.severity, {
+      color
+    });
+    const tag = `[${entry.source}/${entry.audience}]`;
+    const detail = entry.detail !== void 0 ? ` \u2014 ${entry.detail}` : "";
+    lines.push(`${date}  ${badge2}  ${tag} ${entry.title}${detail}`);
+  }
+  if (audience !== "both") {
+    lines.unshift(`(audience: ${audience})`, "");
+  }
+  return lines.join("\n");
+}
+async function fetchVersions(deps) {
+  const resolved = resolveConfig({ env: deps.env });
+  if (resolved.kind !== "ok") {
+    return { versions: [], note: `Figma side skipped: ${resolved.message}` };
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind !== "present" || config.figmaFileKey === void 0) {
+    return {
+      versions: [],
+      note: "Figma side skipped (no token / file key configured) \u2014 code + token changes only."
+    };
+  }
+  const client = deps.makeClient(config.figmaToken.value);
+  const result = await client.getVersions(config.figmaFileKey);
+  if (result.kind !== "ok") {
+    return {
+      versions: [],
+      note: `Figma side skipped (API ${result.kind}) \u2014 code + token changes only.`
+    };
+  }
+  return { versions: result.data.versions };
+}
+function breakingRank2(severity) {
+  return severity === "breaking" ? 0 : 1;
+}
+function tally2(counts, severity) {
+  counts[severity] += 1;
+}
+function buildChangelogHistoryRecord(entries, since, at) {
+  const designer = {
+    breaking: 0,
+    notable: 0,
+    minor: 0
+  };
+  const developer = {
+    breaking: 0,
+    notable: 0,
+    minor: 0
+  };
+  const both = { breaking: 0, notable: 0, minor: 0 };
+  for (const entry of entries) {
+    if (entry.audience === "designer") tally2(designer, entry.severity);
+    else if (entry.audience === "developer") tally2(developer, entry.severity);
+    else tally2(both, entry.severity);
+  }
+  const recent = entries.map((entry, order) => ({ entry, order })).sort(
+    (a, b) => breakingRank2(a.entry.severity) - breakingRank2(b.entry.severity) || a.order - b.order
+  ).slice(0, HISTORY_RECENT_LIMIT).map(({ entry }) => ({
+    audience: entry.audience,
+    severity: entry.severity,
+    source: entry.source,
+    title: entry.title
+  }));
+  return {
+    at,
+    kind: "changelog",
+    since,
+    designer,
+    developer,
+    both,
+    recent
+  };
+}
+function appendChangelogHistory(deps, record) {
+  const stateDir = join10(deps.cwd, ".ds-bridge");
+  appendHistoryRecord(stateDir, record);
+}
+async function runChangelog(options, deps) {
+  const format = options.format;
+  if (format !== "term" && format !== "json" && format !== "md") {
+    deps.stderr(
+      `Unknown --format "${options.format}". Expected "term", "json", or "md".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const audience = parseAudience(options.audience);
+  if (audience.kind !== "ok") {
+    deps.stderr(
+      `Unknown --audience "${options.audience}". Expected "designers", "developers", or "both".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const since = options.since ?? defaultSince(deps.now());
+  const log = readGitLog({ exec: deps.exec, cwd: deps.cwd, since });
+  if (log.kind === "git-unavailable") {
+    deps.stderr(`Could not run git: ${log.message}
+`);
+    process.exitCode = 2;
+    return;
+  }
+  if (log.kind === "not-a-repo") {
+    deps.stderr(
+      `"${deps.cwd}" is not a git repository (or git failed). Run inside a repo.
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const { versions, note } = await fetchVersions(deps);
+  if (note !== void 0 && format === "term") {
+    deps.stderr(`${note}
+`);
+  }
+  const all = aggregateChangelog({
+    versions,
+    commits: log.commits,
+    tokenDiff: EMPTY_TOKEN_DIFF,
+    since
+  });
+  const entries = all.filter((entry) => audienceMatches(entry, audience.value));
+  if (options.history) {
+    appendChangelogHistory(
+      deps,
+      buildChangelogHistoryRecord(all, since, deps.now().toISOString())
+    );
+  }
+  if (format === "json") {
+    deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}
+`);
+  } else if (format === "md") {
+    deps.stdout(renderChangelogMarkdown(entries, { audience: audience.value }));
+  } else {
+    const color = shouldColor(deps.env, Boolean(process.stdout.isTTY));
+    deps.stdout(`${renderTerm3(entries, audience.value, color)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerChangelogCommand(program2) {
+  program2.command("changelog").description(
+    "Audience-segmented changelog from git log, Figma versions, and token changes"
+  ).option(
+    "--since <date>",
+    "include changes since this date (default: 90 days ago)"
+  ).option("--audience <who>", "designers | developers | both", "both").option("--format <format>", "output format: term | json | md", "term").option(
+    "--no-history",
+    "do not append a changelog record to .ds-bridge/history.jsonl in the current directory"
+  ).action((options) => {
+    void runChangelog(options, defaultDeps());
+  });
+}
+
+// src/cli-commands/config.ts
+import {
+  appendFileSync as appendFileSync2,
+  chmodSync,
+  existsSync as existsSync9,
+  readFileSync as readFileSync9,
+  renameSync as renameSync3,
+  unlinkSync as unlinkSync2,
+  writeFileSync as writeFileSync6
+} from "fs";
+import { join as join11, resolve as resolvePath } from "path";
+import * as readline from "readline";
+
+// src/io/dotenv.ts
+import { readFileSync as readFileSync8 } from "fs";
+function parseDotenv(text2) {
+  const out = {};
+  for (const rawLine of text2.split("\n")) {
+    const line = rawLine.trim();
+    if (line === "" || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    if (key === "") continue;
+    out[key] = stripOneQuoteLayer(line.slice(eq + 1).trim());
+  }
+  return out;
+}
+function stripOneQuoteLayer(value2) {
+  if (value2.length < 2) return value2;
+  const first = value2[0];
+  const last = value2[value2.length - 1];
+  if ((first === '"' || first === "'") && first === last) {
+    return value2.slice(1, -1);
+  }
+  return value2;
+}
+function loadDotenvInto(filePath, env) {
+  let text2;
+  try {
+    text2 = readFileSync8(filePath, "utf8");
+  } catch {
+    return;
+  }
+  for (const [key, value2] of Object.entries(parseDotenv(text2))) {
+    const current = env[key];
+    if (current === void 0 || current === "") {
+      env[key] = value2;
+    }
+  }
+}
+
+// src/io/figma/verify.ts
+async function verifyConnection(opts) {
+  const client = createFigmaClient({
+    token: opts.token,
+    ...opts.baseUrl !== void 0 ? { baseUrl: opts.baseUrl } : {},
+    ...opts.fetchImpl !== void 0 ? { fetch: opts.fetchImpl } : {},
+    ...opts.sleep !== void 0 ? { sleep: opts.sleep } : {},
+    ...opts.jitter !== void 0 ? { jitter: opts.jitter } : {}
+  });
+  const lines = [];
+  const me = await client.getMe();
+  switch (me.kind) {
+    case "ok": {
+      const who = me.data.email ? `${me.data.handle} <${me.data.email}>` : me.data.handle;
+      lines.push(`\u2713 Token valid \u2014 authenticated as ${who}.`);
+      break;
+    }
+    case "auth-error":
+      lines.push(
+        "\u2717 Token rejected (401) \u2014 it is invalid, revoked, or mistyped."
+      );
+      return { ok: false, lines };
+    case "scope-error":
+      lines.push(`\u2717 Token is missing a required scope: ${me.message}`);
+      return { ok: false, lines };
+    case "rate-limited":
+      lines.push(
+        `\u2717 Rate-limited (429) on /v1/me \u2014 retry after ${me.retryAfterSeconds}s. A View-seat PAT is throttled this hard; create the token from a Dev or Full seat.`
+      );
+      return { ok: false, lines };
+    case "not-found":
+      lines.push(
+        "\u2717 Unexpected 404 from /v1/me \u2014 is FIGMA_API_BASE pointed somewhere odd?"
+      );
+      return { ok: false, lines };
+    case "network-error":
+      lines.push(`\u2717 Could not reach Figma: ${me.message}`);
+      return { ok: false, lines };
+  }
+  if (opts.fileKey === void 0 || opts.fileKey === "") {
+    lines.push(
+      "\u2139 No library file key set, so library read access wasn't checked. Set one with `config set-library <url|key>`."
+    );
+    return { ok: true, lines };
+  }
+  const file = await client.getFile(opts.fileKey);
+  switch (file.kind) {
+    case "ok":
+      lines.push(
+        `\u2713 Library readable \u2014 "${file.data.name}" (${opts.fileKey}). Your seat can read library content.`
+      );
+      return { ok: true, lines };
+    case "auth-error":
+      lines.push(
+        `\u26A0 Authenticated, but cannot read file ${opts.fileKey} (403) \u2014 the token lacks file_content:read or your seat can't access this file.`
+      );
+      return { ok: false, lines };
+    case "scope-error":
+      lines.push(
+        `\u26A0 Authenticated, but the token is missing a scope for file reads: ${file.message}`
+      );
+      return { ok: false, lines };
+    case "rate-limited":
+      lines.push(
+        `\u26A0 Authenticated, but reading the library was rate-limited (429, retry ${file.retryAfterSeconds}s) \u2014 the classic View-seat throttle. Use a Dev/Full-seat PAT.`
+      );
+      return { ok: false, lines };
+    case "not-found":
+      lines.push(
+        `\u26A0 Authenticated, but file ${opts.fileKey} was not found (404). Double-check the library file key.`
+      );
+      return { ok: false, lines };
+    case "network-error":
+      lines.push(
+        `\u26A0 Authenticated, but the library read failed: ${file.message}`
+      );
+      return { ok: false, lines };
+  }
+}
+
+// src/cli-commands/config.ts
+var ENV_FILE_NAME = ".ds-bridge.env";
+var PROJECT_FILE_NAME2 = ".ds-bridge.json";
+function fail5(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function maskToken(token) {
+  if (token.length <= 8) return "*".repeat(token.length);
+  const head = token.slice(0, 5);
+  const tail = token.slice(-4);
+  return `${head}\u2026${tail}`;
+}
+function serializeDotenv(map) {
+  return `${Object.entries(map).map(([key, value2]) => `${key}=${value2}`).join("\n")}
+`;
+}
+function writeEnvFileMerged(dir, updates) {
+  const filePath = join11(dir, ENV_FILE_NAME);
+  const existing = existsSync9(filePath) ? parseDotenv(readFileSync9(filePath, "utf8")) : {};
+  const merged = { ...existing, ...updates };
+  const text2 = serializeDotenv(merged);
+  const tempPath = join11(dir, `${ENV_FILE_NAME}.${process.pid}.tmp`);
+  try {
+    writeFileSync6(tempPath, text2, { encoding: "utf8", mode: 384 });
+    renameSync3(tempPath, filePath);
+  } catch (error) {
+    try {
+      if (existsSync9(tempPath)) unlinkSync2(tempPath);
+    } catch {
+    }
+    throw error;
+  }
+  chmodSync(filePath, 384);
+}
+function runPersistToken(path) {
+  const env = process.env;
+  const token = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN ?? void 0;
+  if (token === void 0 || token === "") {
+    fail5(
+      "No Figma token in this session's environment, so nothing was written. Either add it directly to .ds-bridge.env (FIGMA_TOKEN=figd_\u2026, gitignored) \u2014 the durable path the CLI auto-loads on every run \u2014 or set it in the plugin dialog (`/plugin configure`) and run this in the SAME session (before a restart: Claude Code drops the sensitive value on restart, #62442)."
+    );
+    return;
+  }
+  const rawFileKey = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? void 0;
+  const fileKey = rawFileKey !== void 0 ? extractFigmaFileKey(rawFileKey) : void 0;
+  const targetDir = resolvePath(path);
+  const updates = { FIGMA_TOKEN: token };
+  if (fileKey !== void 0 && fileKey !== "") {
+    updates.FIGMA_DESIGN_SYSTEM_FILE = fileKey;
+  }
+  try {
+    writeEnvFileMerged(targetDir, updates);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail5(`Could not write ${join11(targetDir, ENV_FILE_NAME)}: ${detail}`);
+    return;
+  }
+  const savedKey = updates.FIGMA_DESIGN_SYSTEM_FILE !== void 0 ? " and the design-system file key" : "";
+  process.stdout.write(
+    `Saved Figma token (${maskToken(token)})${savedKey} to ${join11(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
+`
+  );
+  process.exitCode = 0;
+}
+function ensureGitignored(dir) {
+  const gitignorePath = join11(dir, ".gitignore");
+  let existing = "";
+  if (existsSync9(gitignorePath)) {
+    existing = readFileSync9(gitignorePath, "utf8");
+    if (existing.split(/\r?\n/).some((line) => line.trim() === ENV_FILE_NAME)) {
+      return false;
+    }
+  }
+  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  appendFileSync2(
+    gitignorePath,
+    `${prefix}# ds-bridge Figma token \u2014 never commit
+${ENV_FILE_NAME}
+`,
+    "utf8"
+  );
+  return true;
+}
+function detectFileKeyDefault(dir) {
+  const filePath = join11(dir, ENV_FILE_NAME);
+  if (existsSync9(filePath)) {
+    try {
+      const existing = parseDotenv(readFileSync9(filePath, "utf8"));
+      const fromFile = existing.FIGMA_DESIGN_SYSTEM_FILE;
+      if (fromFile !== void 0 && fromFile !== "") {
+        return extractFigmaFileKey(fromFile);
+      }
+    } catch {
+    }
+  }
+  const env = process.env;
+  const fromEnv = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE;
+  return fromEnv !== void 0 && fromEnv !== "" ? extractFigmaFileKey(fromEnv) : void 0;
+}
+function applyConnect(dir, token, fileKey) {
+  const updates = { FIGMA_TOKEN: token };
+  const trimmedKey = extractFigmaFileKey(fileKey);
+  if (trimmedKey !== "") updates.FIGMA_DESIGN_SYSTEM_FILE = trimmedKey;
+  writeEnvFileMerged(dir, updates);
+  const gitignoreUpdated = ensureGitignored(dir);
+  return {
+    envPath: join11(dir, ENV_FILE_NAME),
+    masked: maskToken(token),
+    fileKey: trimmedKey === "" ? void 0 : trimmedKey,
+    gitignoreUpdated
+  };
+}
+function promptHidden(question) {
+  return new Promise((resolve17) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+      terminal: true
+    });
+    let promptShown = false;
+    rl._writeToOutput = () => {
+      if (!promptShown) {
+        process.stdout.write(question);
+        promptShown = true;
+      }
+    };
+    rl.question(question, (answer) => {
+      rl.close();
+      process.stdout.write("\n");
+      resolve17(answer.trim());
+    });
+  });
+}
+function promptLine(question) {
+  return new Promise((resolve17) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve17(answer.trim());
+    });
+  });
+}
+async function runConnect(path, verify) {
+  const targetDir = resolvePath(path);
+  if (!process.stdin.isTTY) {
+    const cliPath = process.argv[1] ?? "<path-to>/dist/cli.mjs";
+    fail5(
+      `\`config connect\` is interactive and needs a real terminal so it can prompt for your token without echoing it. Run it directly in your shell (not through Claude Code's tool runner):
+
+  node ${cliPath} config connect
+
+Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` instead, which is non-interactive.`
+    );
+    return;
+  }
+  process.stdout.write(
+    "Connect ds-bridge to Figma. The token is written to .ds-bridge.env (gitignored, mode 0600) and is never echoed or printed in full.\n\n"
+  );
+  const token = await promptHidden("Figma personal access token (hidden): ");
+  if (token === "") {
+    fail5("No token entered \u2014 nothing was written.");
+    return;
+  }
+  if (!token.startsWith("figd_") && !token.startsWith("figd-")) {
+    process.stdout.write(
+      "warning: that does not look like a Figma PAT (expected a figd_\u2026 value) \u2014 saving it anyway.\n"
+    );
+  }
+  const defaultKey = detectFileKeyDefault(targetDir);
+  const keyPrompt = defaultKey !== void 0 ? `Figma library file key [${defaultKey}]: ` : "Figma library file key (optional \u2014 Enter to skip): ";
+  const keyInput = await promptLine(keyPrompt);
+  const fileKey = keyInput !== "" ? keyInput : defaultKey ?? "";
+  let summary;
+  try {
+    summary = applyConnect(targetDir, token, fileKey);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail5(`Could not write ${join11(targetDir, ENV_FILE_NAME)}: ${detail}`);
+    return;
+  }
+  const ignoreNote = summary.gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.
+` : "";
+  const keyNote = summary.fileKey !== void 0 ? ` and library file key (${summary.fileKey})` : "";
+  process.stdout.write(
+    `
+${ignoreNote}Saved Figma token (${summary.masked})${keyNote} to ${summary.envPath} (mode 0600).
+
+Connected. Back in Claude Code, run /ds-bridge:ds-docs (or /ds-bridge:connect) \u2014 the CLI auto-loads .ds-bridge.env on every run.
+`
+  );
+  if (verify) {
+    await runVerify(token, summary.fileKey);
+    return;
+  }
+  process.exitCode = 0;
+}
+async function runVerify(token, fileKey) {
+  process.stdout.write("\nVerifying with Figma\u2026\n");
+  let result;
+  try {
+    const apiBase = process.env.FIGMA_API_BASE;
+    result = await verifyConnection({
+      token,
+      ...fileKey !== void 0 ? { fileKey } : {},
+      ...apiBase !== void 0 ? { baseUrl: apiBase } : {}
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail5(`Verification could not run: ${detail}`);
+    return;
+  }
+  for (const line of result.lines) {
+    process.stdout.write(`  ${line}
+`);
+  }
+  process.exitCode = result.ok ? 0 : 2;
+}
+function readProjectObject(dir) {
+  const filePath = join11(dir, PROJECT_FILE_NAME2);
+  if (!existsSync9(filePath)) return {};
+  try {
+    const raw = JSON.parse(readFileSync9(filePath, "utf8"));
+    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+      return raw;
+    }
+  } catch {
+  }
+  return {};
+}
+function readEnvFile(dir) {
+  const filePath = join11(dir, ENV_FILE_NAME);
+  if (!existsSync9(filePath)) return {};
+  try {
+    return parseDotenv(readFileSync9(filePath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+function readProductFileKeys(dir) {
+  const raw = readProjectObject(dir).product_file_keys;
+  const out = {};
+  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+    for (const [k4, v] of Object.entries(raw)) {
+      if (typeof v === "string") out[k4] = v;
+    }
+  }
+  return out;
+}
+function envBacking(envFile, env, key) {
+  const value2 = env[key];
+  if (value2 === void 0 || value2 === "") return void 0;
+  return envFile[key] === value2 ? "file" : "env";
+}
+function productSourceLabel(env, alias) {
+  const envKey = `FIGMA_PRODUCT_FILE_${alias.toUpperCase()}`;
+  const fromEnv = env[envKey];
+  return fromEnv !== void 0 && fromEnv !== "" ? `environment (${envKey})` : `${PROJECT_FILE_NAME2} (product_file_keys.${alias})`;
+}
+function renderRows(rows) {
+  const labelW = Math.max(...rows.map((r2) => r2.label.length));
+  const valueW = Math.max(...rows.map((r2) => r2.value.length));
+  return rows.map(
+    (r2) => `  ${r2.label.padEnd(labelW)}  ${r2.value.padEnd(valueW)}  \u2190 ${r2.source}`
+  );
+}
+function buildShowReport(dir) {
+  const env = process.env;
+  const projObj = readProjectObject(dir);
+  const envFile = readEnvFile(dir);
+  const projectFilePath = join11(dir, PROJECT_FILE_NAME2);
+  const projectFileText = existsSync9(projectFilePath) ? readFileSync9(projectFilePath, "utf8") : void 0;
+  const resolved = resolveConfig({
+    env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind === "invalid-project-file") {
+    return { kind: "invalid", message: resolved.message };
+  }
+  const cfg = resolved.config;
+  const tokenSource = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ? "plugin dialog (CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN, session-only)" : envBacking(envFile, env, "FIGMA_TOKEN") === "file" ? ENV_FILE_NAME : envBacking(envFile, env, "FIGMA_TOKEN") === "env" ? "environment (FIGMA_TOKEN)" : "\u2014";
+  const keyBacking = envBacking(envFile, env, "FIGMA_DESIGN_SYSTEM_FILE");
+  const librarySource = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ? "plugin dialog (CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY, session-only)" : keyBacking === "file" ? `${ENV_FILE_NAME} (FIGMA_DESIGN_SYSTEM_FILE)` : keyBacking === "env" ? "environment (FIGMA_DESIGN_SYSTEM_FILE)" : typeof projObj.figma_file_key === "string" ? `${PROJECT_FILE_NAME2} (figma_file_key)` : "\u2014";
+  const tokenSrcSource = env.CLAUDE_PLUGIN_OPTION_TOKEN_SOURCE ? "plugin dialog (session-only)" : typeof projObj.token_source === "string" ? PROJECT_FILE_NAME2 : "auto-detected at run time";
+  const reportSource = env.CLAUDE_PLUGIN_OPTION_REPORT_STYLE === cfg.reportStyle ? "plugin dialog (session-only)" : typeof projObj.report_style === "string" ? PROJECT_FILE_NAME2 : "default";
+  const readinessSource = env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD !== void 0 && Number(env.CLAUDE_PLUGIN_OPTION_READINESS_THRESHOLD) === cfg.readinessThreshold ? "plugin dialog (session-only)" : typeof projObj.readiness_threshold === "number" ? PROJECT_FILE_NAME2 : "default";
+  const core = renderRows([
+    {
+      label: "Figma token",
+      value: cfg.figmaToken.kind === "present" ? maskToken(cfg.figmaToken.value) : "\u2014 (not set)",
+      source: tokenSource
+    },
+    {
+      label: "Library file key",
+      value: cfg.figmaFileKey ?? "\u2014 (not set)",
+      source: librarySource
+    },
+    {
+      label: "Token source",
+      value: cfg.tokenSource ?? "\u2014 (auto-detect)",
+      source: tokenSrcSource
+    },
+    { label: "Report style", value: cfg.reportStyle, source: reportSource },
+    {
+      label: "Readiness gate",
+      value: String(cfg.readinessThreshold),
+      source: readinessSource
+    }
+  ]);
+  const lines = [
+    `ds-bridge configuration  (${dir})`,
+    "",
+    ...core,
+    ""
+  ];
+  const aliases = Object.keys(cfg.productFileKeys);
+  if (aliases.length === 0) {
+    lines.push(
+      "  Product files: none \u2014 add one with `config add-product <alias> <url>`."
+    );
+  } else {
+    lines.push(`  Product files (${aliases.length}):`);
+    lines.push(
+      ...renderRows(
+        aliases.map((alias) => ({
+          label: `  ${alias}`,
+          value: cfg.productFileKeys[alias] ?? "",
+          source: productSourceLabel(env, alias)
+        }))
+      )
+    );
+  }
+  for (const warning of resolved.warnings) {
+    lines.push("", `  \u26A0 ${warning}`);
+  }
+  return { kind: "ok", lines };
+}
+function runShow(path) {
+  const dir = resolvePath(path);
+  const report = buildShowReport(dir);
+  if (report.kind === "invalid") {
+    fail5(report.message);
+    return;
+  }
+  process.stdout.write(`${report.lines.join("\n")}
+`);
+  process.exitCode = 0;
+}
+function runSetLibrary(value2, path) {
+  const key = extractFigmaFileKey(value2);
+  if (key === "") {
+    fail5(
+      "Provide a Figma library URL or file key, e.g. `config set-library https://www.figma.com/design/<KEY>/...`"
+    );
+    return;
+  }
+  if (!/^[A-Za-z0-9]+$/.test(key)) {
+    process.stdout.write(
+      `warning: "${key}" doesn't look like a bare Figma file key (letters/digits only) \u2014 saving it anyway.
+`
+    );
+  }
+  const dir = resolvePath(path);
+  try {
+    writeProjectConfig(dir, { figma_file_key: key });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail5(`Could not write ${join11(dir, PROJECT_FILE_NAME2)}: ${detail}`);
+    return;
+  }
+  process.stdout.write(
+    `Set figma_file_key to ${key} in ${join11(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
+`
+  );
+  process.exitCode = 0;
+}
+function runAddProduct(alias, value2, path) {
+  const cleanAlias = alias.trim();
+  if (cleanAlias === "") {
+    fail5("Provide an alias, e.g. `config add-product web <url>`.");
+    return;
+  }
+  const key = extractFigmaFileKey(value2);
+  if (key === "") {
+    fail5(
+      `Provide a Figma URL or file key for "${cleanAlias}", e.g. \`config add-product web https://www.figma.com/design/<KEY>/...\``
+    );
+    return;
+  }
+  const dir = resolvePath(path);
+  const existing = readProductFileKeys(dir);
+  const merged = { ...existing, [cleanAlias]: key };
+  try {
+    writeProjectConfig(dir, { product_file_keys: merged });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail5(`Could not write ${join11(dir, PROJECT_FILE_NAME2)}: ${detail}`);
+    return;
+  }
+  const verb = Object.hasOwn(existing, cleanAlias) ? "Updated" : "Registered";
+  process.stdout.write(
+    `${verb} product file "${cleanAlias}" \u2192 ${key} in ${join11(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
+`
+  );
+  process.exitCode = 0;
+}
+function runList(path) {
+  const dir = resolvePath(path);
+  const env = process.env;
+  const projectFilePath = join11(dir, PROJECT_FILE_NAME2);
+  const projectFileText = existsSync9(projectFilePath) ? readFileSync9(projectFilePath, "utf8") : void 0;
+  const resolved = resolveConfig({
+    env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind === "invalid-project-file") {
+    fail5(resolved.message);
+    return;
+  }
+  const cfg = resolved.config;
+  const lines = [
+    `Library (default):  ${cfg.figmaFileKey ?? "\u2014 (not set \u2014 `config set-library <url|key>`)"}`,
+    ""
+  ];
+  const aliases = Object.keys(cfg.productFileKeys);
+  if (aliases.length === 0) {
+    lines.push(
+      "Product files: none \u2014 add one with `config add-product <alias> <url>`."
+    );
+  } else {
+    lines.push(`Product files (${aliases.length}):`);
+    lines.push(
+      ...renderRows(
+        aliases.map((alias) => ({
+          label: alias,
+          value: cfg.productFileKeys[alias] ?? "",
+          source: productSourceLabel(env, alias)
+        }))
+      )
+    );
+  }
+  process.stdout.write(`${lines.join("\n")}
+`);
+  process.exitCode = 0;
+}
+function registerConfigCommand(program2) {
+  const config = program2.command("config").description("Manage ds-bridge project configuration");
+  config.command("persist-token").description(
+    "Save this session's Figma token to .ds-bridge.env (gitignored, 0600) so it survives a restart (opt-in fix for Claude Code #62442)"
+  ).argument("[path]", "project directory to write .ds-bridge.env into", ".").action((path) => {
+    runPersistToken(path);
+  });
+  config.command("connect").description(
+    "Interactively connect Figma: prompt for the token (hidden input) and write .ds-bridge.env (gitignored, 0600). Run it in your own terminal."
+  ).argument("[path]", "project directory to write .ds-bridge.env into", ".").option(
+    "--verify",
+    "after writing, ping Figma (/v1/me + a library read) to confirm the token works"
+  ).action((path, options) => {
+    void runConnect(path, options.verify === true);
+  });
+  config.command("show").description(
+    "Print the effective ds-bridge config (token masked) and which source won each value"
+  ).argument("[path]", "project directory to read config from", ".").action((path) => {
+    runShow(path);
+  });
+  config.command("set-library").description(
+    "Write the design-system library file key (a URL or bare key) to the committed .ds-bridge.json (figma_file_key) \u2014 shared by the whole team"
+  ).argument("<url-or-key>", "Figma library file URL or bare file key").argument("[path]", "project directory whose .ds-bridge.json to write", ".").action((urlOrKey, path) => {
+    runSetLibrary(urlOrKey, path);
+  });
+  config.command("add-product").description(
+    "Register a product/consumer Figma file under an alias in .ds-bridge.json (product_file_keys); target it later with --file-key <alias>"
+  ).argument("<alias>", "short alias, e.g. web | mobile | admin").argument("<url-or-key>", "the product Figma file URL or bare file key").argument("[path]", "project directory whose .ds-bridge.json to write", ".").action((alias, urlOrKey, path) => {
+    runAddProduct(alias, urlOrKey, path);
+  });
+  config.command("list").description(
+    "List the targetable file keys: the library default and every product alias"
+  ).argument("[path]", "project directory to read config from", ".").action((path) => {
+    runList(path);
+  });
+}
+
+// src/cli-commands/dashboard.ts
+import { appendFileSync as appendFileSync3, existsSync as existsSync10, readFileSync as readFileSync11, unlinkSync as unlinkSync3 } from "fs";
+import { join as join13, resolve as resolvePath2 } from "path";
+
+// src/engines/report/nl-match.ts
+function tokenize2(phrase) {
+  return (phrase.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+    (t) => t.length >= 3
+  );
+}
+function matchPhrase(phrase) {
+  const tokens = tokenize2(phrase);
+  if (tokens.length === 0) return [];
+  const matches = [];
+  for (const meta of CATALOG) {
+    const haystack = `${meta.id} ${meta.title}`.toLowerCase();
+    let score = 0;
+    for (const token of tokens) {
+      if (haystack.includes(token)) {
+        score += 2;
+      } else if (suggestArtifactIds(token, 3).includes(meta.id)) {
+        score += 1;
+      }
+    }
+    if (score > 0) matches.push({ id: meta.id, title: meta.title, score });
+  }
+  return matches.sort((a, b) => b.score - a.score);
+}
+
+// src/cli-commands/dashboard-wizard.ts
+import { readFileSync as readFileSync10 } from "fs";
+import { join as join12 } from "path";
+import { createInterface as createInterface2 } from "readline/promises";
+var WIZARD_VIEWS = PRESET_NAMES.filter(
+  (name) => name !== "exec" && name !== "org"
+);
+var PRODUCER_PERSONAS = /* @__PURE__ */ new Set([
+  "ds-designer",
+  "ds-manager",
+  "ds-engineer"
+]);
+var PERSONA_AUDIENCE = {
+  "ds-designer": "designers",
+  "ds-manager": "both",
+  "ds-engineer": "developers",
+  "product-designer": "designers",
+  "product-manager": "both",
+  "product-engineer": "developers"
+};
+var PROJECT_FILE_NAME3 = ".ds-bridge.json";
+function readExistingProductFileKeys(dir) {
+  try {
+    const raw = JSON.parse(
+      readFileSync10(join12(dir, PROJECT_FILE_NAME3), "utf8")
+    );
+    if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
+      const pfk = raw.product_file_keys;
+      if (typeof pfk === "object" && pfk !== null && !Array.isArray(pfk)) {
+        const out = {};
+        for (const [alias, key] of Object.entries(pfk)) {
+          if (typeof key === "string") out[alias] = key;
+        }
+        return out;
+      }
+    }
+  } catch {
+  }
+  return {};
+}
+var LineReader = class {
+  queue = [];
+  waiting;
+  closed = false;
+  constructor(rl) {
+    rl.on("line", (line) => {
+      if (this.waiting !== void 0) {
+        const { resolve: resolve17 } = this.waiting;
+        this.waiting = void 0;
+        resolve17(line);
+      } else {
+        this.queue.push(line);
+      }
+    });
+    rl.on("close", () => {
+      this.closed = true;
+      if (this.waiting !== void 0) {
+        const { reject } = this.waiting;
+        this.waiting = void 0;
+        reject(new EofError());
+      }
+    });
+  }
+  /** Resolve with the next line, or reject with {@link EofError} at end of input. */
+  next() {
+    const buffered = this.queue.shift();
+    if (buffered !== void 0) return Promise.resolve(buffered);
+    if (this.closed) return Promise.reject(new EofError());
+    return new Promise((resolve17, reject) => {
+      this.waiting = { resolve: resolve17, reject };
+    });
+  }
+};
+var EofError = class extends Error {
+};
+async function ask(reader, output, prompt) {
+  output.write(prompt);
+  return reader.next();
+}
+async function pickPreset(reader, output) {
+  output.write("Pick a dashboard view:\n");
+  WIZARD_VIEWS.forEach((name, index) => {
+    output.write(`  ${index + 1}) ${name}
+`);
+  });
+  for (; ; ) {
+    const answer = (await ask(reader, output, "View number: ")).trim();
+    const n = Number(answer);
+    if (Number.isInteger(n) && n >= 1 && n <= WIZARD_VIEWS.length) {
+      const picked = WIZARD_VIEWS[n - 1];
+      if (picked !== void 0) return picked;
+    }
+    output.write(
+      `Please enter a number between 1 and ${WIZARD_VIEWS.length}.
+`
+    );
+  }
+}
+function isYes(answer) {
+  const a = answer.trim().toLowerCase();
+  return a === "y" || a === "yes";
+}
+async function captureFileKeys(reader, output, cwd5, persona) {
+  if (PRODUCER_PERSONAS.has(persona)) {
+    const hasKey = isYes(
+      await ask(
+        reader,
+        output,
+        "Is your DS library file key configured (FIGMA_DESIGN_SYSTEM_FILE / figma_file_key)? (y/N) "
+      )
+    );
+    if (!hasKey) {
+      output.write(
+        "Heads up: library-health, parity, a11y, impact, and docs stay empty until figma_file_key is set.\n"
+      );
+    }
+    return void 0;
+  }
+  const alias = (await ask(
+    reader,
+    output,
+    "Name an alias for your product Figma file (e.g. web), or leave blank to skip: "
+  )).trim();
+  if (alias === "") return void 0;
+  const key = (await ask(reader, output, `Figma file key for "${alias}": `)).trim();
+  if (key === "") {
+    output.write("No file key entered \u2014 skipping the product file pin.\n");
+    return void 0;
+  }
+  return { ...readExistingProductFileKeys(cwd5), [alias]: key };
+}
+async function runSetupWizard(deps) {
+  const { input, output, cwd: cwd5, isTTY } = deps;
+  if (!isTTY) {
+    output.write(
+      "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` instead.\n"
+    );
+    return { exitCode: 2 };
+  }
+  const rl = createInterface2({ input, output });
+  const reader = new LineReader(rl);
+  try {
+    const preset = await pickPreset(reader, output);
+    if (preset === "everything") {
+      output.write(
+        "`everything` needs no setup \u2014 an unconfigured repo already renders the full catalog.\n"
+      );
+      return { exitCode: 0 };
+    }
+    const productFileKeys = await captureFileKeys(reader, output, cwd5, preset);
+    const confirmed = isYes(
+      await ask(reader, output, `Save the "${preset}" view? (y/N) `)
+    );
+    if (!confirmed) {
+      output.write("No changes made.\n");
+      return { exitCode: 0 };
+    }
+    writeProjectConfig(cwd5, {
+      dashboard_view: preset,
+      dashboard_artifacts: void 0,
+      dashboard_default: void 0,
+      ...productFileKeys !== void 0 ? { product_file_keys: productFileKeys } : {}
+    });
+    output.write(`Saved. Your dashboard view is now "${preset}".
+`);
+    output.write(
+      `Default --audience for ${preset}: ${PERSONA_AUDIENCE[preset]} (changelog/digest).
+`
+    );
+    output.write("Render it now? ds-bridge report --open\n");
+    return { exitCode: 0 };
+  } catch (error) {
+    if (error instanceof EofError) {
+      output.write("\nAborted \u2014 no changes made.\n");
+      return { exitCode: 2 };
+    }
+    throw error;
+  } finally {
+    rl.close();
+  }
+}
+
+// src/cli-commands/dashboard.ts
+function fail6(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+var PROJECT_FILE_NAME4 = ".ds-bridge.json";
+function readSelection(targetDir) {
+  const configPath = join13(targetDir, PROJECT_FILE_NAME4);
+  let projectFileText;
+  if (existsSync10(configPath)) {
+    try {
+      projectFileText = readFileSync11(configPath, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not read ${PROJECT_FILE_NAME4} at "${configPath}": ${detail}`
+      };
+    }
+  }
+  const resolved = resolveConfig(
+    projectFileText !== void 0 ? { projectFileText } : {}
+  );
+  if (resolved.kind === "invalid-project-file") {
+    return { kind: "error", message: resolved.message };
+  }
+  const { dashboardView, dashboardArtifacts } = resolved.config;
+  const projectSelection = {};
+  if (dashboardView !== void 0) projectSelection.view = dashboardView;
+  if (dashboardArtifacts !== void 0)
+    projectSelection.artifacts = dashboardArtifacts;
+  const view = resolveView({}, projectSelection);
+  if (view.kind === "conflicting-selection") {
+    return {
+      kind: "error",
+      message: "dashboard_view and dashboard_artifacts are mutually exclusive \u2014 set one, not both"
+    };
+  }
+  if (view.kind === "unknown-view") {
+    const hint = view.suggestions.length > 0 ? ` \u2014 did you mean ${view.suggestions.join(", ")}?` : "";
+    return {
+      kind: "error",
+      message: `Unknown dashboard_view "${view.view}"${hint}`
+    };
+  }
+  if (view.kind === "unknown-artifact") {
+    const hint = view.suggestions.length > 0 ? ` \u2014 did you mean ${view.suggestions.join(", ")}?` : "";
+    return {
+      kind: "error",
+      message: `Unknown artifact id "${view.id}"${hint}`
+    };
+  }
+  return {
+    kind: "ok",
+    selection: {
+      artifacts: view.artifacts,
+      enabled: new Set(view.artifacts),
+      source: view.source,
+      viewName: view.viewName
+    }
+  };
+}
+var NON_PERSONA_VIEWS = /* @__PURE__ */ new Set([
+  "everything",
+  "exec",
+  "org"
+]);
+function listPresets() {
+  return PRESET_NAMES.map((name) => ({
+    name,
+    description: PRESET_DESCRIPTIONS[name],
+    artifacts: [...PRESETS[name]],
+    persona: !NON_PERSONA_VIEWS.has(name)
+  }));
+}
+function toListJson(selection) {
+  const artifacts = CATALOG.map((meta) => ({
+    id: meta.id,
+    title: meta.title,
+    personas: [...meta.personas],
+    enabled: selection.enabled.has(meta.id)
+  }));
+  const view = { source: selection.source };
+  if (selection.viewName !== void 0) view.viewName = selection.viewName;
+  return { artifacts, presets: listPresets(), view };
+}
+function renderTerm4(data) {
+  const rows = data.artifacts.map((a) => [
+    a.enabled ? "\u2713" : " ",
+    a.id,
+    a.title,
+    a.personas.join(", ")
+  ]);
+  const table3 = renderTable(["on", "id", "title", "personas"], rows, {
+    color: false
+  });
+  const viewLabel = data.view.viewName !== void 0 ? `${data.view.viewName} (${data.view.source})` : data.view.source;
+  return [`View: ${viewLabel}`, table3].join("\n");
+}
+function runList2(path, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail6(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    return;
+  }
+  const targetDir = resolvePath2(path);
+  const selection = readSelection(targetDir);
+  if (selection.kind === "error") {
+    fail6(selection.message);
+    return;
+  }
+  const data = toListJson(selection.selection);
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(data, null, 2)}
+`);
+  } else {
+    process.stdout.write(`${renderTerm4(data)}
+`);
+  }
+  process.exitCode = 0;
+}
+function parseArtifacts(raw) {
+  const requested = raw.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+  if (requested.length === 0) {
+    return {
+      kind: "error",
+      message: "--artifacts needs at least one artifact id (comma-separated)."
+    };
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const ids = [];
+  for (const entry of requested) {
+    const outcome = lookupArtifact(entry);
+    if (outcome.kind === "unknown") {
+      const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
+      return {
+        kind: "error",
+        message: `Unknown artifact id "${entry}"${hint}`
+      };
+    }
+    if (!seen.has(outcome.artifact.id)) {
+      seen.add(outcome.artifact.id);
+      ids.push(outcome.artifact.id);
+    }
+  }
+  return { kind: "ok", ids };
+}
+function runSet(path, options) {
+  const hasView = options.view !== void 0;
+  const hasArtifacts = options.artifacts !== void 0;
+  if (hasView && hasArtifacts) {
+    fail6("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
+    return;
+  }
+  if (!hasView && !hasArtifacts) {
+    fail6(
+      "Specify a view or an artifact list: --view <preset> | --artifacts <a,b,\u2026>."
+    );
+    return;
+  }
+  const targetDir = resolvePath2(path);
+  if (hasView) {
+    const view = options.view;
+    const resolved = resolveView({ view }, {});
+    if (resolved.kind === "unknown-view") {
+      const hint = resolved.suggestions.length > 0 ? ` \u2014 did you mean ${resolved.suggestions.join(", ")}?` : "";
+      fail6(`Unknown view "${view}"${hint}`);
+      return;
+    }
+    writeProjectConfig(targetDir, {
+      dashboard_view: view,
+      dashboard_artifacts: void 0
+    });
+    process.stdout.write(`View set to "${view}".
+`);
+    process.exitCode = 0;
+    return;
+  }
+  const parsed = parseArtifacts(options.artifacts);
+  if (parsed.kind === "error") {
+    fail6(parsed.message);
+    return;
+  }
+  writeProjectConfig(targetDir, {
+    dashboard_artifacts: parsed.ids,
+    dashboard_view: void 0
+  });
+  process.stdout.write(`Artifacts set to ${parsed.ids.join(", ")}.
+`);
+  process.exitCode = 0;
+}
+var MATERIALIZE_NOTICE = "Your view is now an explicit list and will not auto-gain future preset artifacts.";
+function runEditDashboard(targetDir, name, id, mode) {
+  const read = readDashboardFile(targetDir, name);
+  if (read.kind === "not-found") {
+    failUnknownDashboard(targetDir, name);
+    return;
+  }
+  if (read.kind === "invalid") {
+    fail6(`Dashboard "${name}" is invalid: ${read.message}`);
+    return;
+  }
+  const sel = read.dashboard.selection;
+  const resolved = resolveView(
+    sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
+    {}
+  );
+  if (resolved.kind !== "ok") {
+    fail6(`Dashboard "${name}" has an unresolvable selection.`);
+    return;
+  }
+  const before = resolved.artifacts;
+  const present = before.includes(id);
+  if (mode === "add" && present) {
+    process.stdout.write(`"${id}" is already in "${name}" \u2014 no change.
+`);
+    process.exitCode = 0;
+    return;
+  }
+  if (mode === "remove" && !present) {
+    process.stdout.write(`"${id}" is not in "${name}" \u2014 no change.
+`);
+    process.exitCode = 0;
+    return;
+  }
+  const next = mode === "add" ? [...before, id] : before.filter((existing) => existing !== id);
+  const entry = listDashboards(targetDir).find((e4) => e4.name === name);
+  const local = entry !== void 0 && !entry.hasShared && entry.hasLocal;
+  writeDashboardFile(
+    targetDir,
+    name,
+    { artifacts: next },
+    { local, meta: metaFrom(read.dashboard) }
+  );
+  const verb = mode === "add" ? "Added" : "Removed";
+  process.stdout.write(
+    `${verb} "${id}" in "${name}". View: ${next.join(", ")}.
+`
+  );
+  process.exitCode = 0;
+}
+function runEdit(path, rawId, mode, dashboardName) {
+  const outcome = lookupArtifact(rawId);
+  if (outcome.kind === "unknown") {
+    const hint = outcome.suggestions.length > 0 ? ` \u2014 did you mean ${outcome.suggestions.join(", ")}?` : "";
+    fail6(`Unknown artifact id "${rawId}"${hint}`);
+    return;
+  }
+  const id = outcome.artifact.id;
+  const targetDir = resolvePath2(path);
+  if (dashboardName !== void 0) {
+    runEditDashboard(targetDir, dashboardName, id, mode);
+    return;
+  }
+  const current = readSelection(targetDir);
+  if (current.kind === "error") {
+    fail6(current.message);
+    return;
+  }
+  const wasExplicitList = current.selection.source === "project" && current.selection.viewName === void 0;
+  const before = current.selection.artifacts;
+  const present = current.selection.enabled.has(id);
+  if (mode === "add" && present) {
+    process.stdout.write(`"${id}" is already in your view \u2014 no change.
+`);
+    process.exitCode = 0;
+    return;
+  }
+  if (mode === "remove" && !present) {
+    process.stdout.write(`"${id}" is not in your view \u2014 no change.
+`);
+    process.exitCode = 0;
+    return;
+  }
+  const next = mode === "add" ? [...before, id] : before.filter((existing) => existing !== id);
+  writeProjectConfig(targetDir, {
+    dashboard_artifacts: next,
+    dashboard_view: void 0
+  });
+  if (!wasExplicitList) {
+    process.stdout.write(`${MATERIALIZE_NOTICE}
+`);
+  }
+  const verb = mode === "add" ? "Added" : "Removed";
+  process.stdout.write(`${verb} "${id}". View: ${next.join(", ")}.
+`);
+  process.exitCode = 0;
+}
+function failUnknownDashboard(targetDir, name) {
+  const names = listDashboards(targetDir).map((e4) => e4.name);
+  const available = names.length > 0 ? ` Available: ${names.join(", ")}.` : " No saved dashboards in dashboards/.";
+  fail6(`Unknown dashboard "${name}".${available}`);
+}
+function metaFrom(dashboard) {
+  const meta = {};
+  if (dashboard.persona !== void 0) meta.persona = dashboard.persona;
+  if (dashboard.reportType !== void 0)
+    meta.report_type = dashboard.reportType;
+  if (dashboard.audience !== void 0) meta.audience = dashboard.audience;
+  if (dashboard.scoreWeights !== void 0) {
+    meta.score_weights = dashboard.scoreWeights;
+  }
+  return meta;
+}
+function ensureLocalGitignore(targetDir) {
+  const gitignorePath = join13(targetDir, ".gitignore");
+  const line = "dashboards/*.local.json";
+  let existing = "";
+  if (existsSync10(gitignorePath)) {
+    existing = readFileSync11(gitignorePath, "utf8");
+    if (existing.split(/\r?\n/).some((l) => l.trim() === line)) return;
+  }
+  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  appendFileSync3(gitignorePath, `${prefix}${line}
+`, "utf8");
+}
+function runSave(name, path, options) {
+  const targetDir = resolvePath2(path);
+  if (options.view !== void 0 && options.artifacts !== void 0) {
+    fail6("--view and --artifacts are mutually exclusive \u2014 set one, not both.");
+    return;
+  }
+  let selection;
+  if (options.view !== void 0) {
+    const resolved = resolveView({ view: options.view }, {});
+    if (resolved.kind !== "ok") {
+      const hint = resolved.kind === "unknown-view" && resolved.suggestions.length > 0 ? ` \u2014 did you mean ${resolved.suggestions.join(", ")}?` : "";
+      fail6(`Unknown view "${options.view}"${hint}`);
+      return;
+    }
+    selection = options.freeze ? { artifacts: resolved.artifacts } : { view: options.view };
+  } else if (options.artifacts !== void 0) {
+    const parsed = parseArtifacts(options.artifacts);
+    if (parsed.kind === "error") {
+      fail6(parsed.message);
+      return;
+    }
+    selection = { artifacts: parsed.ids };
+  } else {
+    const current = readSelection(targetDir);
+    if (current.kind === "error") {
+      fail6(current.message);
+      return;
+    }
+    selection = current.selection.viewName !== void 0 && !options.freeze ? { view: current.selection.viewName } : { artifacts: current.selection.artifacts };
+  }
+  const local = options.local ?? false;
+  writeDashboardFile(targetDir, name, selection, { local });
+  if (local) ensureLocalGitignore(targetDir);
+  const where = `dashboards/${name}${local ? ".local" : ""}.json`;
+  const kind = "view" in selection ? `live preset "${selection.view}"` : "frozen list";
+  process.stdout.write(`Saved dashboard "${name}" (${kind}) to ${where}.
+`);
+  process.exitCode = 0;
+}
+function runLoad(name, path) {
+  const targetDir = resolvePath2(path);
+  const read = readDashboardFile(targetDir, name);
+  if (read.kind === "not-found") {
+    failUnknownDashboard(targetDir, name);
+    return;
+  }
+  if (read.kind === "invalid") {
+    fail6(`Dashboard "${name}" is invalid: ${read.message}`);
+    return;
+  }
+  writeProjectConfig(targetDir, {
+    dashboard_default: name,
+    dashboard_view: void 0,
+    dashboard_artifacts: void 0
+  });
+  process.stdout.write(`Default dashboard set to "${name}".
+`);
+  process.exitCode = 0;
+}
+function runLs(path) {
+  const targetDir = resolvePath2(path);
+  const entries = listDashboards(targetDir);
+  if (entries.length === 0) {
+    process.stdout.write("No saved dashboards in dashboards/.\n");
+    process.exitCode = 0;
+    return;
+  }
+  for (const e4 of entries) {
+    const marker = e4.hasShared && e4.hasLocal ? "shared + personal" : e4.hasShared ? "shared (committed)" : "personal (local)";
+    process.stdout.write(`${e4.name}  (${marker})
+`);
+  }
+  process.exitCode = 0;
+}
+function runRm(name, path, options) {
+  const targetDir = resolvePath2(path);
+  const file = join13(
+    targetDir,
+    "dashboards",
+    `${name}${options.local ? ".local" : ""}.json`
+  );
+  if (!existsSync10(file)) {
+    failUnknownDashboard(targetDir, name);
+    return;
+  }
+  unlinkSync3(file);
+  process.stdout.write(`Removed dashboard "${name}".
+`);
+  process.exitCode = 0;
+}
+function runSuggest(phrase) {
+  const matches = matchPhrase(phrase);
+  if (matches.length === 0) {
+    process.stdout.write(`No artifacts matched "${phrase}".
+`);
+    process.exitCode = 0;
+    return;
+  }
+  for (const m of matches) {
+    process.stdout.write(`${m.id}	${m.title}
+`);
+  }
+  const ids = matches.map((m) => m.id).join(",");
+  process.stdout.write(
+    `
+Save with: dashboard save <name> --artifacts ${ids}
+`
+  );
+  process.exitCode = 0;
+}
+async function runSetup(path) {
+  const isTTY = Boolean(process.stdin.isTTY) && Boolean(process.stdout.isTTY);
+  if (!isTTY) {
+    fail6(
+      "The setup wizard needs an interactive terminal. Use `ds-bridge dashboard set --view <preset>` (or --artifacts) instead."
+    );
+    return;
+  }
+  const targetDir = resolvePath2(path);
+  const outcome = await runSetupWizard({
+    input: process.stdin,
+    output: process.stdout,
+    cwd: targetDir,
+    isTTY
+  });
+  process.exitCode = outcome.exitCode;
+}
+function registerDashboardCommand(program2) {
+  const dashboard = program2.command("dashboard").description(
+    "Compose the report dashboard: list / set / add / remove artifacts"
+  );
+  dashboard.command("list").description(
+    "List the artifact catalog with an enabled marker for the resolved view"
+  ).argument("[path]", "project directory holding .ds-bridge.json", ".").option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runList2(path, options);
+  });
+  dashboard.command("set").description(
+    "Persist the dashboard view: --view <preset> XOR --artifacts <a,b,\u2026>"
+  ).argument("[path]", "project directory holding .ds-bridge.json", ".").option("--view <preset>", "persona preset name").option("--artifacts <ids>", "comma-separated explicit artifact ids").action((path, options) => {
+    runSet(path, options);
+  });
+  dashboard.command("add").description(
+    "Add an artifact to the view (materializes the current preset first)"
+  ).argument("<artifact>", "artifact id to add").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
+    "--dashboard <name>",
+    "edit a saved dashboard instead of the project view"
+  ).action(
+    (artifact, path, options) => {
+      runEdit(path, artifact, "add", options.dashboard);
+    }
+  );
+  dashboard.command("remove").description(
+    "Remove an artifact from the view (materializes the current preset first)"
+  ).argument("<artifact>", "artifact id to remove").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
+    "--dashboard <name>",
+    "edit a saved dashboard instead of the project view"
+  ).action(
+    (artifact, path, options) => {
+      runEdit(path, artifact, "remove", options.dashboard);
+    }
+  );
+  dashboard.command("save").description(
+    "Save a named dashboard (live preset by default; --freeze materializes)"
+  ).argument("<name>", "dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").option("--from-current", "save the project's current selection (default)").option("--view <preset>", "save a persona preset by name (kept live)").option(
+    "--artifacts <ids>",
+    "save an explicit comma-separated artifact list"
+  ).option(
+    "--freeze",
+    "materialize the resolved artifact list (not a live preset)"
+  ).option(
+    "--local",
+    "write a personal dashboards/<name>.local.json (gitignored)"
+  ).action((name, path, options) => {
+    runSave(name, path, options);
+  });
+  dashboard.command("load").description(
+    "Set a saved dashboard as the project default (dashboard_default)"
+  ).argument("<name>", "saved dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").action((name, path) => {
+    runLoad(name, path);
+  });
+  dashboard.command("ls").description("List saved dashboards with shared/personal markers").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
+    runLs(path);
+  });
+  dashboard.command("rm").description("Delete a saved dashboard").argument("<name>", "saved dashboard name").argument("[path]", "project directory holding .ds-bridge.json", ".").option(
+    "--local",
+    "delete the personal .local.json instead of the shared file"
+  ).action((name, path, options) => {
+    runRm(name, path, options);
+  });
+  dashboard.command("suggest").description(
+    "Suggest artifact ids for a free-text phrase (offline NL match, no LLM)"
+  ).argument("<phrase>", "free-text description of the dashboard you want").action((phrase) => {
+    runSuggest(phrase);
+  });
+  dashboard.command("setup").description("Interactive wizard to compose and persist a dashboard view").argument("[path]", "project directory holding .ds-bridge.json", ".").action((path) => {
+    void runSetup(path);
+  });
+}
+
+// src/cli-commands/digest.ts
+import {
+  existsSync as existsSync11,
+  mkdirSync as mkdirSync6,
+  readFileSync as readFileSync12,
+  statSync as statSync7,
+  writeFileSync as writeFileSync7
+} from "fs";
+import { dirname as dirname5, join as join14, resolve as resolve9 } from "path";
+import { cwd as processCwd2 } from "process";
+
+// src/engines/report/digest.ts
+var ACCEPTED_SINCE_FORMS = 'Expected an ISO date "YYYY-MM-DD" or a relative window "<N>d" / "<N>w".';
+var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+var RELATIVE = /^(\d+)([dw])$/;
+var MS_PER_DAY3 = 24 * 60 * 60 * 1e3;
+function parseSince(raw, nowIso) {
+  const value2 = raw ?? "7d";
+  const isoMatch = ISO_DATE.exec(value2);
+  if (isoMatch !== null) {
+    const ms = Date.parse(`${value2}T00:00:00.000Z`);
+    if (Number.isNaN(ms)) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    const roundTrip = new Date(ms).toISOString().slice(0, 10);
+    if (roundTrip !== value2) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    return { kind: "ok", sinceIso: `${value2}T00:00:00.000Z` };
+  }
+  const relMatch = RELATIVE.exec(value2);
+  if (relMatch !== null) {
+    const count = Number.parseInt(relMatch[1] ?? "", 10);
+    const unit = relMatch[2];
+    if (count <= 0) return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    const days3 = unit === "w" ? count * 7 : count;
+    const nowMs = Date.parse(nowIso);
+    if (Number.isNaN(nowMs)) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    return {
+      kind: "ok",
+      sinceIso: new Date(nowMs - days3 * MS_PER_DAY3).toISOString()
+    };
+  }
+  return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+}
+var KIND_AUDIENCE = {
+  drift: "both",
+  lint: "developer",
+  "on-system": "both",
+  coverage: "both",
+  readiness: "designer",
+  a11y: "designer"
+};
+var MOVEMENT_ORDER = [
+  "drift",
+  "lint",
+  "on-system",
+  "coverage",
+  "readiness",
+  "a11y"
+];
+function asNumber13(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function asRecord3(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function pct3(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function inAudience2(tag, wanted) {
+  if (wanted === "both") return true;
+  return tag === wanted || tag === "both";
+}
+function absorb(side, kind, record) {
+  switch (kind) {
+    case "tokens-check":
+      side.tokensCheck = record;
+      break;
+    case "lint":
+      side.lint = record;
+      if (asRecord3(record.adoption) !== void 0) side.adoption = record;
+      break;
+    case "adoption":
+      side.adoptionLine = record;
+      break;
+    case "handoff":
+      side.handoff = record;
+      break;
+    case "a11y":
+      side.a11y = record;
+      break;
+    default:
+      break;
+  }
+}
+function driftMetric(r2) {
+  return r2 === void 0 ? void 0 : asNumber13(r2.stale);
+}
+function lintMetric(r2) {
+  if (r2 === void 0) return void 0;
+  const byKind = asRecord3(r2.byKind) ?? {};
+  return asNumber13(byKind.exact) + asNumber13(byKind.near) + asNumber13(byKind.offSystem);
+}
+function onSystemMetric(r2) {
+  const adoption = r2 === void 0 ? void 0 : asRecord3(r2.adoption);
+  if (adoption === void 0) return void 0;
+  return pct3(
+    asNumber13(adoption.refs),
+    asNumber13(adoption.refs) + asNumber13(adoption.literals)
+  );
+}
+function coverageMetric(r2) {
+  if (r2 === void 0) return void 0;
+  return pct3(asNumber13(r2.imported), asNumber13(r2.total));
+}
+function readinessMetric(r2) {
+  return r2 === void 0 ? void 0 : asNumber13(r2.score);
+}
+function a11yMetric(r2) {
+  if (r2 === void 0) return void 0;
+  const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
+  let passed = 0;
+  let failed = 0;
+  for (const m of modes2) {
+    const mm = asRecord3(m);
+    if (mm === void 0) continue;
+    passed += asNumber13(mm.passed);
+    failed += asNumber13(mm.failed);
+  }
+  return pct3(passed, passed + failed);
+}
+var METRICS = {
+  drift: { slot: "tokensCheck", read: driftMetric },
+  lint: { slot: "lint", read: lintMetric },
+  "on-system": { slot: "adoption", read: onSystemMetric },
+  coverage: { slot: "adoptionLine", read: coverageMetric },
+  readiness: { slot: "handoff", read: readinessMetric },
+  a11y: { slot: "a11y", read: a11yMetric }
+};
+function directionOf(baseline, current) {
+  if (baseline === void 0) return "flat";
+  if (current > baseline) return "up";
+  if (current < baseline) return "down";
+  return "flat";
+}
+function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
+  const records = replayHistory(text2);
+  const before = {};
+  const inWindow = {};
+  let anyInWindow = false;
+  for (const { kind, at, record } of records) {
+    if (at === void 0) continue;
+    if (at >= sinceIso) {
+      absorb(inWindow, kind, record);
+      anyInWindow = true;
+    } else {
+      absorb(before, kind, record);
+    }
+  }
+  if (!anyInWindow) {
+    return { kind: "quiet", sinceIso, audience };
+  }
+  const movements = [];
+  for (const kind of MOVEMENT_ORDER) {
+    const tag = KIND_AUDIENCE[kind];
+    if (!inAudience2(tag, audience)) continue;
+    const { slot, read } = METRICS[kind];
+    const current = read(inWindow[slot]);
+    if (current === void 0) continue;
+    const baseline = read(before[slot]);
+    movements.push({
+      kind,
+      audience: tag,
+      ...baseline !== void 0 ? { baseline } : {},
+      current,
+      isNew: baseline === void 0,
+      direction: directionOf(baseline, current)
+    });
+  }
+  const candidates = [];
+  const driftStale = driftMetric(inWindow.tokensCheck);
+  if (driftStale !== void 0 && driftStale > 0) {
+    candidates.push({ command: "ds-bridge tokens check", audience: "both" });
+  }
+  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber13(asRecord3(inWindow.lint.byKind)?.offSystem);
+  if (offSystem !== void 0 && offSystem > 0) {
+    candidates.push({
+      command: "ds-bridge lint",
+      audience: "developer",
+      count: offSystem
+    });
+  }
+  const readiness = readinessMetric(inWindow.handoff);
+  if (readiness !== void 0 && readiness < readinessThreshold2) {
+    candidates.push({
+      command: "ds-bridge handoff <frame-url>",
+      audience: "designer"
+    });
+  }
+  const a11yFailing = (() => {
+    if (inWindow.a11y === void 0) return false;
+    const modes2 = Array.isArray(inWindow.a11y.modes) ? inWindow.a11y.modes : [];
+    return modes2.some((m) => asNumber13(asRecord3(m)?.failed) > 0);
+  })();
+  if (a11yFailing) {
+    candidates.push({ command: "ds-bridge a11y", audience: "designer" });
+  }
+  const coverage = coverageMetric(inWindow.adoptionLine);
+  if (coverage !== void 0 && coverage < 100) {
+    candidates.push({ command: "ds-bridge adoption", audience: "both" });
+  }
+  const actions = candidates.filter((a) => inAudience2(a.audience, audience)).slice(0, 3);
+  return { kind: "ok", sinceIso, audience, movements, actions };
+}
+
+// src/engines/report/digest-md.ts
+var SECTIONS2 = [
+  { heading: "For designers", audience: "designer" },
+  { heading: "For developers", audience: "developer" }
+];
+var MOVEMENT_LABEL = {
+  drift: "Drift",
+  lint: "Lint violations",
+  "on-system": "On-system",
+  coverage: "Import coverage",
+  readiness: "Readiness",
+  a11y: "Contrast"
+};
+var PERCENT_KINDS = /* @__PURE__ */ new Set([
+  "on-system",
+  "coverage",
+  "a11y"
+]);
+var ACTION_REASON = {
+  "ds-bridge tokens check": "review breaking token drift",
+  "ds-bridge handoff <frame-url>": "readiness is below the gate",
+  "ds-bridge a11y": "failing contrast pairs need a look",
+  "ds-bridge adoption": "import coverage is below 100%"
+};
+function arrow2(row2) {
+  if (row2.isNew) return "\u2014";
+  switch (row2.direction) {
+    case "up":
+      return "\u25B2";
+    case "down":
+      return "\u25BC";
+    case "flat":
+      return "=";
+  }
+}
+function value(kind, n) {
+  return PERCENT_KINDS.has(kind) ? `${n}%` : `${n}`;
+}
+function inSection2(rowAudience, sectionAudience) {
+  return rowAudience === sectionAudience || rowAudience === "both";
+}
+function movementText(row2) {
+  const label = MOVEMENT_LABEL[row2.kind];
+  const current = value(row2.kind, row2.current);
+  if (row2.isNew) {
+    return `${label} ${arrow2(row2)} new ${current}`;
+  }
+  const baseline = value(row2.kind, row2.baseline ?? 0);
+  return `${label} ${arrow2(row2)} ${baseline} \u2192 ${current}`;
+}
+function actionText(action) {
+  if (action.command === "ds-bridge lint") {
+    const n = action.count ?? 0;
+    const values = n === 1 ? "value" : "values";
+    const count = n > 0 ? `${n} ` : "";
+    return `Replace ${count}off-system ${values} with design tokens (run \`ds-bridge lint\` to list them)`;
+  }
+  const reason = ACTION_REASON[action.command] ?? "see the docs";
+  return `Run \`${action.command}\` \u2014 ${reason}`;
+}
+function sinceDate(sinceIso) {
+  return /^\d{4}-\d{2}-\d{2}/.test(sinceIso) ? sinceIso.slice(0, 10) : sinceIso;
+}
+function digestDocument(model, view) {
+  const title = "Design-system digest";
+  if (model.kind === "quiet") {
+    return {
+      title,
+      // The manager view backs a monthly (any-window) digest: window-neutral.
+      quiet: `${view === "manager" ? "Quiet period" : "Quiet week"} \u2014 no design-system movement since ${sinceDate(model.sinceIso)}.`,
+      sections: [],
+      actions: []
+    };
+  }
+  const sections = [];
+  if (view === "manager") {
+    if (model.movements.length > 0) {
+      sections.push({
+        heading: "For managers",
+        lines: model.movements.map(movementText)
+      });
+    }
+  } else {
+    for (const section of SECTIONS2) {
+      if (model.audience !== "both" && model.audience !== section.audience) {
+        continue;
+      }
+      const lines = model.movements.filter(
+        (m) => inSection2(m.audience, section.audience)
+      );
+      if (lines.length === 0) continue;
+      sections.push({
+        heading: section.heading,
+        lines: lines.map(movementText)
+      });
+    }
+  }
+  return {
+    title,
+    window: `Window: changes since ${sinceDate(model.sinceIso)}.`,
+    sections,
+    actions: model.actions.map(actionText)
+  };
+}
+function renderDigestMarkdown(model, view) {
+  const doc = digestDocument(model, view);
+  if (doc.quiet !== void 0) {
+    return `# ${doc.title}
+
+_${doc.quiet}_
+`;
+  }
+  const blocks = [`# ${doc.title}`, `_${doc.window ?? ""}_`];
+  for (const section of doc.sections) {
+    blocks.push(
+      [`## ${section.heading}`, "", ...section.lines.map((l) => `- ${l}`)].join(
+        "\n"
+      )
+    );
+  }
+  if (doc.actions.length > 0) {
+    blocks.push(
+      ["## Actions", "", ...doc.actions.map((a, i) => `${i + 1}. ${a}`)].join(
+        "\n"
+      )
+    );
+  }
+  return `${blocks.join("\n\n")}
+`;
+}
+
+// src/render/html/digest.ts
+var STYLE2 = `
+:root { --bg: #f6f5f1; --surface: #ffffff; --text: #1f1e1b; --text-subtle: #6b6a63; --border: #e6e3da; --accent: #a3384b; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 17px; margin: 28px 0 8px; }
+.window, .quiet { color: var(--text-subtle); margin: 0; font-style: italic; }
+ul, ol { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin: 0; padding: 12px 16px 12px 36px; }
+li { margin: 4px 0; font-variant-numeric: tabular-nums; }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f6e9ec; color: var(--accent); padding: 1px 5px; border-radius: 5px; }
+`.trim();
+function inline(text2) {
+  return text2.split("`").map(
+    (part, i) => i % 2 === 1 ? `<code>${escapeHtml(part)}</code>` : escapeHtml(part)
+  ).join("");
+}
+function renderDigestHtml(model, view) {
+  const doc = digestDocument(model, view);
+  const body = [`<h1>${escapeHtml(doc.title)}</h1>`];
+  if (doc.quiet !== void 0) {
+    body.push(`<p class="quiet">${escapeHtml(doc.quiet)}</p>`);
+  }
+  if (doc.window !== void 0) {
+    body.push(`<p class="window">${escapeHtml(doc.window)}</p>`);
+  }
+  for (const section of doc.sections) {
+    body.push(
+      `<h2>${escapeHtml(section.heading)}</h2>`,
+      `<ul>${section.lines.map((l) => `<li>${inline(l)}</li>`).join("")}</ul>`
+    );
+  }
+  if (doc.actions.length > 0) {
+    body.push(
+      "<h2>Actions</h2>",
+      `<ol>${doc.actions.map((a) => `<li>${inline(a)}</li>`).join("")}</ol>`
+    );
+  }
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>${escapeHtml(doc.title)}</title>`,
+    `<style>${STYLE2}</style>`,
+    "</head>",
+    "<body>",
+    `<main>${body.join("\n")}</main>`,
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
+// src/cli-commands/digest.ts
+function defaultDeps2() {
+  return {
+    cwd: processCwd2(),
+    now: () => /* @__PURE__ */ new Date(),
+    stdout: (text2) => process.stdout.write(text2),
+    stderr: (text2) => process.stderr.write(text2)
+  };
+}
+function parseAudience2(flag) {
+  switch (flag) {
+    case "managers":
+    case "manager":
+      return { kind: "ok", value: "both", view: "manager" };
+    case "designers":
+    case "designer":
+      return { kind: "ok", value: "designer" };
+    case "developers":
+    case "developer":
+      return { kind: "ok", value: "developer" };
+    case "both":
+      return { kind: "ok", value: "both" };
+    default:
+      return { kind: "error" };
+  }
+}
+function readHistoryText2(stateDir) {
+  try {
+    return readFileSync12(join14(stateDir, "history.jsonl"), "utf8");
+  } catch {
+    return "";
+  }
+}
+function resolveReadinessThreshold(targetDir) {
+  const configPath = join14(targetDir, ".ds-bridge.json");
+  let projectFileText;
+  if (existsSync11(configPath)) {
+    try {
+      projectFileText = readFileSync12(configPath, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not read ${configPath}: ${detail}`
+      };
+    }
+  }
+  const resolved = resolveConfig(
+    projectFileText !== void 0 ? { projectFileText } : {}
+  );
+  if (resolved.kind === "invalid-project-file") {
+    return { kind: "error", message: resolved.message };
+  }
+  return { kind: "ok", value: resolved.config.readinessThreshold };
+}
+function runDigest(path, options, deps) {
+  const audience = parseAudience2(options.audience);
+  if (audience.kind !== "ok") {
+    deps.stderr(
+      `Unknown --audience "${options.audience}". Expected "designers", "developers", "managers", or "both".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const format = options.format ?? "md";
+  if (format !== "md" && format !== "html") {
+    deps.stderr(
+      `Unknown --format "${options.format}". Expected "md" or "html".
+`
+    );
+    process.exitCode = 2;
+    return;
+  }
+  const nowIso = deps.now().toISOString();
+  const since = parseSince(options.since, nowIso);
+  if (since.kind !== "ok") {
+    deps.stderr(`Invalid --since "${options.since}". ${since.message}
+`);
+    process.exitCode = 2;
+    return;
+  }
+  const targetDir = resolve9(deps.cwd, path);
+  if (!existsSync11(targetDir) || !statSync7(targetDir).isDirectory()) {
+    deps.stderr(`Path "${targetDir}" is not a directory.
+`);
+    process.exitCode = 2;
+    return;
+  }
+  const threshold = resolveReadinessThreshold(targetDir);
+  if (threshold.kind === "error") {
+    deps.stderr(`${threshold.message}
+`);
+    process.exitCode = 2;
+    return;
+  }
+  const stateDir = join14(targetDir, ".ds-bridge");
+  const text2 = readHistoryText2(stateDir);
+  const model = buildDigest(
+    text2,
+    since.sinceIso,
+    audience.value,
+    threshold.value
+  );
+  const markdown = format === "html" ? renderDigestHtml(model, audience.view) : renderDigestMarkdown(model, audience.view);
+  if (options.out !== void 0) {
+    const outPath = resolve9(deps.cwd, options.out);
+    try {
+      mkdirSync6(dirname5(outPath), { recursive: true });
+      writeFileSync7(outPath, markdown, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      deps.stderr(`Could not write digest to "${outPath}": ${detail}
+`);
+      process.exitCode = 2;
+      return;
+    }
+    deps.stdout(`${outPath}
+`);
+  } else {
+    deps.stdout(markdown);
+  }
+  process.exitCode = 0;
+}
+function registerDigestCommand(program2) {
+  program2.command("digest").description(
+    "Paste-anywhere markdown of what moved in a window, segmented by audience, ending in up to three concrete actions"
+  ).argument("[path]", "project directory to digest", ".").option(
+    "--since <window>",
+    'window start: an ISO date "YYYY-MM-DD" or a relative "<N>d" / "<N>w" (default 7d)'
+  ).option(
+    "--audience <who>",
+    "designers | developers | managers (one section, every movement) | both",
+    "both"
+  ).option(
+    "--format <format>",
+    "md | html (a self-contained page, e.g. for a Pages site; default md)"
+  ).option(
+    "--out <file>",
+    "redirect the digest markdown to a file (and print the path) instead of stdout"
+  ).action((path, options) => {
+    runDigest(path, options, defaultDeps2());
+  });
+}
+
+// src/cli-commands/docs.ts
+import {
+  existsSync as existsSync12,
+  mkdirSync as mkdirSync7,
+  readFileSync as readFileSync13,
+  statSync as statSync8,
+  writeFileSync as writeFileSync8
+} from "fs";
+import { dirname as dirname6, join as join15, resolve as resolvePath3 } from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
+
+// src/engines/docs/merge.ts
+function byNameAsc3(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function indexCode(code) {
+  const byName2 = /* @__PURE__ */ new Map();
+  for (const component of code) {
+    if (!byName2.has(component.name)) byName2.set(component.name, component);
+  }
+  return byName2;
+}
+function indexFigma(figma) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const model of figma) {
+    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+  }
+  return byId;
+}
+function resolveCode(importPath, rich, figmaFallbackVariants) {
+  if (rich !== void 0) {
+    return {
+      importPath: rich.importPath,
+      props: rich.props,
+      variants: rich.variants
+    };
+  }
+  return {
+    importPath,
+    props: [],
+    variants: figmaFallbackVariants ?? {}
+  };
+}
+function mergeComponentDocs(input) {
+  const { registry } = input;
+  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
+  const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
+  const codeByName = indexCode(input.code);
+  const figmaById = indexFigma(input.figma);
+  const docs = [];
+  for (const match of matches) {
+    const richCode = codeByName.get(match.codeName);
+    const richFigma = figmaById.get(match.nodeId);
+    const description = richFigma?.description ?? "";
+    const gaps = [];
+    if (description.length === 0) gaps.push("missing-figma-description");
+    docs.push({
+      name: match.codeName,
+      code: resolveCode(match.importPath, richCode),
+      figma: { nodeId: match.nodeId, description },
+      gaps
+    });
+  }
+  for (const entry of unmatchedCode) {
+    const richCode = codeByName.get(entry.name);
+    docs.push({
+      name: entry.name,
+      code: resolveCode(entry.importPath, richCode),
+      gaps: ["unmatched-in-figma"]
+    });
+  }
+  for (const entry of unmatchedFigma) {
+    const richFigma = figmaById.get(entry.nodeId);
+    const description = richFigma?.description ?? "";
+    const gaps = ["unmatched-in-code"];
+    if (description.length === 0) gaps.push("missing-figma-description");
+    docs.push({
+      name: entry.name,
+      // No code side: surface the figma variant axes so the doc is not empty.
+      code: resolveCode("", void 0, richFigma?.variantProps),
+      figma: { nodeId: entry.nodeId, description },
+      gaps
+    });
+  }
+  docs.sort((a, b) => byNameAsc3(a.name, b.name));
+  return docs;
+}
+
+// src/engines/docs/render-llms.ts
+var TOKEN_TYPE_ORDER = [
+  "color",
+  "dimension",
+  "fontFamily",
+  "fontWeight",
+  "duration",
+  "number",
+  "shadow",
+  "typography",
+  "other"
+];
+function signature(doc) {
+  const parts = doc.code.props.map(
+    (prop) => `${prop.name}${prop.required ? "" : "?"}: ${prop.type}`
+  );
+  return `(${parts.join(", ")})`;
+}
+function locationOf(doc) {
+  if (doc.code.importPath.length > 0) return doc.code.importPath;
+  if (doc.figma !== void 0) return `figma:${doc.figma.nodeId}`;
+  return "(no source)";
+}
+function statusTag(doc) {
+  if (doc.gaps.length === 0) return "[documented]";
+  return `[gaps: ${doc.gaps.join(", ")}]`;
+}
+function renderTokens(tokens) {
+  const total = tokens.tokens.length;
+  const head = ["## Tokens", "", `Format: ${tokens.format}`, `Total: ${total}`];
+  if (total === 0) {
+    return [...head, "", "_No tokens._"].join("\n");
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const token of tokens.tokens) {
+    counts.set(token.type, (counts.get(token.type) ?? 0) + 1);
+  }
+  const lines = [];
+  for (const type of TOKEN_TYPE_ORDER) {
+    const count = counts.get(type);
+    if (count !== void 0 && count > 0) lines.push(`- ${type}: ${count}`);
+  }
+  return [...head, "", ...lines].join("\n");
+}
+function renderComponents(docs) {
+  const head = ["## Components"];
+  if (docs.length === 0) {
+    return [...head, "", "_No components._"].join("\n");
+  }
+  const lines = docs.map(
+    (doc) => `- ${doc.name}${signature(doc)} \u2014 ${locationOf(doc)} ${statusTag(doc)}`
+  );
+  return [...head, "", ...lines].join("\n");
+}
+function renderLlmsTxt(docs, tokens) {
+  const sections = [
+    "# Design System",
+    "> Machine-readable summary of the design system: tokens and components.",
+    renderTokens(tokens),
+    renderComponents(docs)
+  ];
+  return `${sections.join("\n\n")}
+`;
+}
+
+// src/engines/docs/render-mdx.ts
+function statusOf(doc) {
+  return doc.gaps.length > 0 ? "gaps" : "documented";
+}
+function escapeCell(text2) {
+  return text2.replace(/\|/g, "\\|");
+}
+function renderImport(doc) {
+  if (doc.code.importPath.length === 0) return void 0;
+  return [
+    "```tsx",
+    `import { ${doc.name} } from "${doc.code.importPath}";`,
+    "```"
+  ].join("\n");
+}
+function renderProps(doc) {
+  const { props } = doc.code;
+  if (props.length === 0) {
+    return ["## Props", "", "_No props documented._"].join("\n");
+  }
+  const rows = props.map(
+    (prop) => `| \`${escapeCell(prop.name)}\` | \`${escapeCell(prop.type)}\` | ${prop.required ? "yes" : "no"} |`
+  );
+  return [
+    "## Props",
+    "",
+    "| Prop | Type | Required |",
+    "| --- | --- | --- |",
+    ...rows
+  ].join("\n");
+}
+function renderVariants(doc) {
+  const axes = Object.keys(doc.code.variants).sort();
+  if (axes.length === 0) {
+    return ["## Variants", "", "_No variants._"].join("\n");
+  }
+  const lines = axes.map((axis) => {
+    const values = (doc.code.variants[axis] ?? []).map((value2) => `\`${value2}\``).join(", ");
+    return `- **${axis}**: ${values}`;
+  });
+  return ["## Variants", "", ...lines].join("\n");
+}
+function renderFigma(doc) {
+  const figma = doc.figma;
+  if (figma === void 0) return void 0;
+  const body = figma.description.length > 0 ? figma.description : "_No Figma description authored._";
+  return ["## Figma", "", body, "", `Node: \`${figma.nodeId}\``].join("\n");
+}
+function explainGap(gap) {
+  switch (gap) {
+    case "missing-figma-description":
+      return "The matched Figma component has no authored description.";
+    case "unmatched-in-figma":
+      return "The codebase has this component but the Figma library does not publish a match.";
+    case "unmatched-in-code":
+      return "Figma publishes this component but no code component matches it.";
+  }
+}
+function renderGaps(doc) {
+  if (doc.gaps.length === 0) return void 0;
+  const lines = doc.gaps.map((gap) => `> - ${explainGap(gap)}`);
+  return [
+    "> [!WARNING]",
+    "> This component has documentation gaps:",
+    ...lines
+  ].join("\n");
+}
+function renderComponentMdx(doc) {
+  const sections = [
+    ["---", `title: ${doc.name}`, `status: ${statusOf(doc)}`, "---"].join("\n"),
+    `# ${doc.name}`
+  ];
+  const importBlock = renderImport(doc);
+  if (importBlock !== void 0) sections.push(importBlock);
+  sections.push(renderProps(doc));
+  sections.push(renderVariants(doc));
+  const figmaBlock = renderFigma(doc);
+  if (figmaBlock !== void 0) sections.push(figmaBlock);
+  const gapsBlock = renderGaps(doc);
+  if (gapsBlock !== void 0) sections.push(gapsBlock);
+  return `${sections.join("\n\n")}
+`;
+}
+
+// src/cli-commands/docs.ts
+var EMPTY_TOKENS = { format: "w3c", tokens: [] };
+var PARSERS2 = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+function fail7(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function normalizeName2(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+async function scanCode(targetDir) {
+  const globals = globalThis;
+  if (typeof globals.__filename !== "string") {
+    const filename = fileURLToPath3(import.meta.url);
+    globals.__filename = filename;
+    globals.__dirname = dirname6(filename);
+  }
+  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
+  return scanCodeComponents(targetDir);
+}
+function loadRegistry2(targetDir) {
+  const registryPath = join15(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync12(registryPath)) {
+    fail7(
+      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
+    );
+    return void 0;
+  }
+  let raw;
+  try {
+    raw = readFileSync13(registryPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail7(`Could not read registry "${registryPath}": ${detail}`);
+    return void 0;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail7(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    return void 0;
+  }
+}
+async function discoverTokens(targetDir) {
+  const outcome = await discoverTokenSources(targetDir);
+  if (outcome.kind !== "ok" || outcome.sources.length === 0) {
+    return EMPTY_TOKENS;
+  }
+  const source = outcome.sources[0];
+  if (source === void 0) return EMPTY_TOKENS;
+  let raw;
+  try {
+    raw = readFileSync13(source.path, "utf8");
+  } catch {
+    return EMPTY_TOKENS;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return EMPTY_TOKENS;
+  }
+  const format = detectFormat(parsed);
+  if (format === "unknown") return EMPTY_TOKENS;
+  const result = PARSERS2[format](parsed);
+  return result.kind === "ok" ? result.map : EMPTY_TOKENS;
+}
+function mdxFileName(component) {
+  const safe = component.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `${safe.length > 0 ? safe : "component"}.mdx`;
+}
+function hasRegistry(candidate) {
+  return existsSync12(
+    join15(resolvePath3(candidate), ".ds-bridge", "registry.json")
+  );
+}
+function disambiguate(component, path) {
+  if (component !== void 0 && component !== "" && path === "." && !hasRegistry(".") && hasRegistry(component)) {
+    return { component: void 0, path: component };
+  }
+  return { component, path };
+}
+function renderTerm5(result) {
+  const rows = result.pages.map((page) => [
+    page.component,
+    page.gaps.length === 0 ? "\u2014" : page.gaps.join(", ")
+  ]);
+  const table3 = renderTable(["component", "gaps"], rows, { color: false });
+  const gapTotal = result.pages.reduce((sum, p4) => sum + p4.gaps.length, 0);
+  const heading = `${result.pages.length} pages written to ${result.outDir}`;
+  const footer = `llms.txt: ${result.llmsPath} \xB7 ${gapTotal} gaps total`;
+  return [heading, "", table3, "", footer].join("\n");
+}
+async function runDocs(rawComponent, rawPath, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail7(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const { component, path } = disambiguate(rawComponent, rawPath);
+  const targetDir = resolvePath3(path);
+  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
+    fail7(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const registry = loadRegistry2(targetDir);
+  if (registry === void 0) return;
+  const code = await scanCode(targetDir);
+  const tokens = await discoverTokens(targetDir);
+  const allDocs = mergeComponentDocs({ registry, code, figma: [], tokens });
+  let docs = allDocs;
+  if (component !== void 0 && component !== "") {
+    const needle = normalizeName2(component);
+    docs = allDocs.filter((doc) => normalizeName2(doc.name) === needle);
+    if (docs.length === 0) {
+      const candidates = allDocs.map((doc) => doc.name).join(", ");
+      fail7(
+        `No component named "${component}" in the registry. Candidates: ${candidates.length > 0 ? candidates : "(none)"}.`
+      );
+      return;
+    }
+  }
+  const outDir = options.out !== void 0 ? resolvePath3(options.out) : join15(targetDir, ".ds-bridge", "docs");
+  try {
+    mkdirSync7(outDir, { recursive: true });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail7(`Could not create output directory "${outDir}": ${detail}`);
+    return;
+  }
+  const pages = [];
+  for (const doc of docs) {
+    const fileName = mdxFileName(doc.name);
+    const pagePath = join15(outDir, fileName);
+    try {
+      writeFileSync8(pagePath, renderComponentMdx(doc), "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      fail7(`Could not write "${pagePath}": ${detail}`);
+      return;
+    }
+    pages.push({ component: doc.name, path: pagePath, gaps: doc.gaps });
+  }
+  const llmsPath = join15(outDir, "llms.txt");
+  try {
+    writeFileSync8(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail7(`Could not write "${llmsPath}": ${detail}`);
+    return;
+  }
+  const result = { outDir, llmsPath, pages };
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
+`);
+  } else {
+    process.stdout.write(`${renderTerm5(result)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerDocsCommand(program2) {
+  program2.command("docs").description(
+    "Generate component MDX docs + llms.txt from the saved registry and tokens"
+  ).argument("[component]", "filter to a single component by normalized name").argument(
+    "[path]",
+    "project directory holding .ds-bridge/registry.json",
+    "."
+  ).option("--out <dir>", "output directory (default .ds-bridge/docs)").option("--format <format>", "output format: term | json", "term").action(
+    (component, path, options) => {
+      void runDocs(component, path, options);
+    }
+  );
+}
+
+// src/cli-commands/frame-impl.ts
+import { existsSync as existsSync13, readdirSync as readdirSync2, readFileSync as readFileSync14 } from "fs";
+import { isAbsolute as isAbsolute2, join as join16, resolve as resolve10, sep as sep2 } from "path";
+import { cwd } from "process";
+
+// src/engines/tokens/normalize.ts
+function normalizeColor(raw) {
+  if (raw === "") return void 0;
+  const parsed = parse_default(raw);
+  if (parsed === void 0) return void 0;
+  const alpha = parsed.alpha ?? 1;
+  return alpha < 1 ? formatHex8(parsed) : formatHex(parsed);
+}
+var PX_RE = /^(-?\d+(?:\.\d+)?)px$/;
+var REM_RE = /^(-?\d+(?:\.\d+)?)rem$/;
+var UNITLESS_RE = /^(-?\d+(?:\.\d+)?)$/;
+function normalizeDimension(raw, options) {
+  const remBase = options?.remBase ?? 16;
+  if (typeof raw === "number") {
+    return Number.isFinite(raw) ? { px: raw } : void 0;
+  }
+  const trimmed = raw.trim();
+  const px = PX_RE.exec(trimmed);
+  if (px?.[1] !== void 0) return { px: Number(px[1]) };
+  const rem = REM_RE.exec(trimmed);
+  if (rem?.[1] !== void 0) return { px: Number(rem[1]) * remBase };
+  const unitless = UNITLESS_RE.exec(trimmed);
+  if (unitless?.[1] !== void 0) return { px: Number(unitless[1]) };
+  return void 0;
+}
+
+// src/engines/tokens/token-index.ts
+function canonicalValueKey(token) {
+  const { value: value2 } = token;
+  if (typeof value2 === "number") {
+    const dim2 = normalizeDimension(value2);
+    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
+  }
+  if (typeof value2 !== "string") return void 0;
+  const color = normalizeColor(value2);
+  if (color !== void 0) return color;
+  const dim = normalizeDimension(value2);
+  if (dim !== void 0) return `${dim.px}px`;
+  return value2;
+}
+var deltaE2000 = differenceCiede2000();
+function buildTokenIndex(tokens) {
+  const byName2 = /* @__PURE__ */ new Map();
+  const byValue = /* @__PURE__ */ new Map();
+  const colorTokens = [];
+  for (const token of tokens) {
+    byName2.set(token.name, token);
+    const key = canonicalValueKey(token);
+    if (key !== void 0) {
+      const bucket = byValue.get(key);
+      if (bucket === void 0) {
+        byValue.set(key, [token]);
+      } else {
+        bucket.push(token);
+      }
+    }
+    if (token.type === "color" && typeof token.value === "string") {
+      const parsed = parse_default(token.value);
+      if (parsed !== void 0) colorTokens.push({ token, parsed });
+    }
+  }
+  return {
+    byName: byName2,
+    byValue,
+    nearest(rawColor, options) {
+      const query = parse_default(rawColor);
+      if (query === void 0) return [];
+      return colorTokens.map(({ token, parsed }) => ({
+        token,
+        deltaE: deltaE2000(query, parsed)
+      })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
+    }
+  };
+}
+
+// src/engines/registry/persist.ts
+function round3(value2) {
+  if (!Number.isFinite(value2)) return 0;
+  return Math.round(value2 * 1e3) / 1e3;
+}
+function normalizeName3(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function byNameAsc4(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function toRegistryFile(result, generatedAt) {
+  const matches = result.matches.map((m) => ({
+    codeName: m.code.name,
+    importPath: m.code.importPath,
+    figmaName: m.figma.name,
+    nodeId: m.figma.nodeId,
+    score: round3(m.score)
+  })).sort((a, b) => byNameAsc4(a.codeName, b.codeName));
+  const unmatchedCode = result.unmatchedCode.map((u) => ({
+    name: u.code.name,
+    importPath: u.code.importPath,
+    candidates: u.candidates.map((c2) => ({
+      figmaName: c2.figma.name,
+      nodeId: c2.figma.nodeId,
+      score: round3(c2.score)
+    }))
+  })).sort((a, b) => byNameAsc4(a.name, b.name));
+  const unmatchedFigma = result.unmatchedFigma.map((u) => ({
+    name: u.figma.name,
+    nodeId: u.figma.nodeId,
+    candidates: u.candidates.map((c2) => ({
+      codeName: c2.code.name,
+      score: round3(c2.score)
+    }))
+  })).sort((a, b) => byNameAsc4(a.name, b.name));
+  return {
+    schemaVersion: 1,
+    generatedAt,
+    matches,
+    unmatchedCode,
+    unmatchedFigma
+  };
+}
+function resolveEntry(registry, nodeNameOrId) {
+  const query = nodeNameOrId;
+  const normalizedQuery = normalizeName3(query);
+  for (const entry of registry.matches) {
+    if (entry.nodeId === query) return { kind: "match", entry };
+  }
+  for (const entry of registry.matches) {
+    if (entry.figmaName === query) return { kind: "match", entry };
+  }
+  if (normalizedQuery.length > 0) {
+    for (const entry of registry.matches) {
+      if (normalizeName3(entry.figmaName) === normalizedQuery) {
+        return { kind: "match", entry };
+      }
+    }
+  }
+  for (const entry of registry.unmatchedFigma) {
+    if (entry.nodeId === query) {
+      return { kind: "candidates", entries: entry.candidates };
+    }
+  }
+  for (const entry of registry.unmatchedFigma) {
+    if (entry.name === query) {
+      return { kind: "candidates", entries: entry.candidates };
+    }
+  }
+  if (normalizedQuery.length > 0) {
+    for (const entry of registry.unmatchedFigma) {
+      if (normalizeName3(entry.name) === normalizedQuery) {
+        return { kind: "candidates", entries: entry.candidates };
+      }
+    }
+  }
+  return { kind: "not-found" };
+}
+
+// src/engines/registry/gaps.ts
+var COLOR_NEAR_DELTA_E = 2.5;
+var DIMENSION_NEAR_PX = 1;
+var NEAR_LIMIT = 3;
+function pickPreferred(tokens) {
+  if (tokens.length === 0) return void 0;
+  const names = new Set(tokens.map((t) => t.name));
+  const semantic = tokens.find(
+    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
+  );
+  return semantic ?? tokens[0];
+}
+function resolveComponent(requirement, registry) {
+  const byId = resolveEntry(registry, requirement.nodeId);
+  const outcome = byId.kind === "not-found" ? resolveEntry(registry, requirement.name) : byId;
+  if (outcome.kind === "match") {
+    return {
+      requirement,
+      resolution: {
+        kind: "registry-match",
+        codeName: outcome.entry.codeName,
+        importPath: outcome.entry.importPath
+      }
+    };
+  }
+  if (outcome.kind === "candidates") {
+    const candidates = outcome.entries.map((c2) => c2.codeName);
+    const list = candidates.length > 0 ? ` (${candidates.join(", ")})` : "";
+    return {
+      requirement,
+      reason: "ambiguous-registry-match",
+      candidates,
+      suggestion: `Multiple code components could match "${requirement.name}"${list} \u2014 pick one with a designer/engineer, don't guess.`
+    };
+  }
+  return {
+    requirement,
+    reason: "no-registry-match",
+    candidates: [],
+    suggestion: `No code component matches "${requirement.name}" \u2014 build it or publish the Figma component, then rebuild the registry. Do not invent UI.`
+  };
+}
+function resolveColor(requirement, index) {
+  const canonical3 = normalizeColor(requirement.rawValue);
+  if (canonical3 === void 0) return noTokenMatch(requirement);
+  const exact = index.byValue.get(canonical3);
+  const preferred = pickPreferred(exact ?? []);
+  if (preferred !== void 0) {
+    return tokenExact(requirement, preferred.name);
+  }
+  const near = index.nearest(canonical3, {
+    maxDeltaE: COLOR_NEAR_DELTA_E,
+    limit: NEAR_LIMIT
+  });
+  if (near.length > 0) {
+    return nearTokenOnly(
+      requirement,
+      near.map((m) => m.token.name)
+    );
+  }
+  return noTokenMatch(requirement);
+}
+function resolveDimension(requirement, index) {
+  const dim = normalizeDimension(requirement.rawValue);
+  if (dim === void 0) return noTokenMatch(requirement);
+  const bucket = index.byValue.get(`${dim.px}px`);
+  const exact = bucket?.find((t) => t.type === "dimension");
+  if (exact !== void 0) return tokenExact(requirement, exact.name);
+  const near = [];
+  for (const token of index.byName.values()) {
+    if (token.type !== "dimension") continue;
+    const tokenDim = normalizeDimension(
+      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
+    );
+    if (tokenDim === void 0) continue;
+    const distance = Math.abs(dim.px - tokenDim.px);
+    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
+    near.push({ name: token.name, distance });
+  }
+  if (near.length === 0) return noTokenMatch(requirement);
+  near.sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+  );
+  return nearTokenOnly(
+    requirement,
+    near.slice(0, NEAR_LIMIT).map((n) => n.name)
+  );
+}
+function tokenExact(requirement, tokenName) {
+  return { requirement, resolution: { kind: "token-exact", tokenName } };
+}
+function nearTokenOnly(requirement, candidates) {
+  const nearest = candidates[0] ?? "";
+  return {
+    requirement,
+    reason: "near-token-only",
+    candidates,
+    suggestion: `No exact token for "${requirement.rawValue}" \u2014 nearest is ${nearest}; use it only with designer sign-off, otherwise add a token.`
+  };
+}
+function noTokenMatch(requirement) {
+  return {
+    requirement,
+    reason: "no-token-match",
+    candidates: [],
+    suggestion: `No token matches "${requirement.rawValue}" \u2014 add a token for it; never approximate with a raw value.`
+  };
+}
+function isResolved(outcome) {
+  return "resolution" in outcome;
+}
+function findGaps(input) {
+  const index = buildTokenIndex(input.tokens);
+  const resolved = [];
+  const gaps = [];
+  for (const requirement of input.requirements) {
+    const outcome = requirement.kind === "component" ? resolveComponent(requirement, input.registry) : requirement.valueKind === "color" ? resolveColor(requirement, index) : resolveDimension(requirement, index);
+    if (isResolved(outcome)) {
+      resolved.push(outcome);
+    } else {
+      gaps.push(outcome);
+    }
+  }
+  return { resolved, gaps };
+}
+
+// src/cli-commands/figma-auth-help.ts
+function missingFigmaTokenMessage(scopeNote) {
+  return [
+    "No Figma personal access token configured.",
+    "",
+    "Give the CLI a Dev/Full-seat PAT. The durable way (survives restarts) is a",
+    "gitignored .ds-bridge.env in your project \u2014 the CLI auto-loads it on every run:",
+    "",
+    "  echo 'FIGMA_TOKEN=figd_your_token_here' >> .ds-bridge.env",
+    "",
+    "Inside Claude Code, /ds-bridge:connect writes that file for you. Setting the",
+    "token only in the /plugin configure dialog is not enough \u2014 Claude Code drops a",
+    "plugin's sensitive value on restart (issue #62442).",
+    "",
+    ...scopeNote
+  ].join("\n");
+}
+
+// src/cli-commands/frame-impl.ts
+var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
+var TOP_GAPS_LIMIT = 5;
+var PARSERS3 = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set(["node_modules", ".git", "dist", "build"]);
+function fail8(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage() {
+  return missingFigmaTokenMessage([
+    "The token needs the file_content:read scope, and must come from a Dev or",
+    "Full seat \u2014 a View seat is rate-limited and cannot be used here."
+  ]);
+}
+function unknownAliasMessage(outcome, productFileKeys) {
+  const aliases = Object.keys(productFileKeys);
+  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+  if (outcome.suggestions.length > 0) {
+    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+  }
+  lines.push(
+    "",
+    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
+    "Or pass --file-key <raw-figma-file-key> directly."
+  );
+  return lines.join("\n");
+}
+function missingRegistryMessage(registryPath) {
+  return [
+    `No component registry found at ${registryPath}.`,
+    "",
+    'Run "ds-bridge registry build" first \u2014 it maps the Figma library to your',
+    "code components, which frame-impl needs to resolve component requirements."
+  ].join("\n");
+}
+function clientErrorMessage(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
+    case "not-found":
+      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+function readProjectConfigText2() {
+  const configPath = join16(cwd(), ".ds-bridge.json");
+  if (!existsSync13(configPath)) return void 0;
+  try {
+    return readFileSync14(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function loadRegistry3(registryPath) {
+  if (!existsSync13(registryPath)) {
+    return { kind: "error", message: missingRegistryMessage(registryPath) };
+  }
+  try {
+    const registry = JSON.parse(
+      readFileSync14(registryPath, "utf8")
+    );
+    return { kind: "ok", registry };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read the registry at ${registryPath}: ${detail}. Re-run "ds-bridge registry build".`
+    };
+  }
+}
+function isConventionalTokenFile2(name) {
+  if (!name.endsWith(".json")) return false;
+  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
+}
+function isTokenDir2(name) {
+  return name === "tokens" || name === "design-tokens";
+}
+function detectFileFormat2(absPath) {
+  let raw;
+  try {
+    raw = readFileSync14(absPath, "utf8");
+  } catch {
+    return void 0;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return void 0;
+  }
+  const format = detectFormat(parsed);
+  return format === "unknown" ? void 0 : format;
+}
+function depthOf2(path) {
+  return path.split(sep2).filter((s) => s.length > 0).length;
+}
+function collectTokenCandidates(dir, insideTokenDir, acc) {
+  let entries;
+  try {
+    entries = readdirSync2(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join16(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      collectTokenCandidates(
+        full,
+        insideTokenDir || isTokenDir2(entry.name),
+        acc
+      );
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
+  }
+}
+function discoverFirstTokenSource(root) {
+  const candidates = [];
+  collectTokenCandidates(root, false, candidates);
+  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
+    const depth = depthOf2(a) - depthOf2(b);
+    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
+  });
+  return verified[0];
+}
+function loadTokens(targetDir) {
+  let tokenPath;
+  const configPath = join16(targetDir, ".ds-bridge.json");
+  if (existsSync13(configPath)) {
+    try {
+      const resolved = resolveConfig({
+        projectFileText: readFileSync14(configPath, "utf8")
+      });
+      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
+        const src = resolved.config.tokenSource;
+        tokenPath = isAbsolute2(src) ? src : resolve10(targetDir, src);
+      }
+    } catch {
+      tokenPath = void 0;
+    }
+  }
+  if (tokenPath === void 0) {
+    tokenPath = discoverFirstTokenSource(targetDir);
+  }
+  if (tokenPath === void 0 || !existsSync13(tokenPath)) {
+    return {
+      kind: "error",
+      message: `No design-token source found for "${targetDir}".
+Set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
+    };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync14(tokenPath, "utf8"));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
+    };
+  }
+  const format = detectFormat(parsed);
+  if (format === "unknown") {
+    return {
+      kind: "error",
+      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
+    };
+  }
+  const outcome = PARSERS3[format](parsed);
+  if (outcome.kind === "error") {
+    return {
+      kind: "error",
+      message: `Failed to parse token source "${tokenPath}" as ${format}.`
+    };
+  }
+  return { kind: "ok", tokens: outcome.map.tokens };
+}
+function collectNodes(root) {
+  const nodes = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    nodes.push(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+  return nodes;
+}
+function hasBoundFill(node) {
+  const fills = node.boundVariables?.fills;
+  return Array.isArray(fills) && fills.length > 0;
+}
+function firstSolidFillColor(node) {
+  if (!Array.isArray(node.fills)) return void 0;
+  for (const paint of node.fills) {
+    if (paint.type !== "SOLID" || paint.color === void 0) continue;
+    const { r: r2, g, b, a } = paint.color;
+    const to255 = (v) => Math.round(v * 255);
+    return a >= 1 ? `rgb(${to255(r2)}, ${to255(g)}, ${to255(b)})` : `rgba(${to255(r2)}, ${to255(g)}, ${to255(b)}, ${a})`;
+  }
+  return void 0;
+}
+function deriveRequirements(root) {
+  const requirements = [];
+  for (const node of collectNodes(root)) {
+    if (node.type === "INSTANCE") {
+      requirements.push({
+        kind: "component",
+        nodeId: node.id,
+        name: node.name
+      });
+      continue;
+    }
+    if (!hasBoundFill(node)) {
+      const rawValue = firstSolidFillColor(node);
+      if (rawValue !== void 0) {
+        requirements.push({
+          kind: "token",
+          property: "fill",
+          rawValue,
+          valueKind: "color"
+        });
+      }
+    }
+  }
+  return requirements;
+}
+function nodeFromFileNodes(nodes, nodeId) {
+  const direct = nodes[nodeId];
+  if (direct !== void 0) return direct.document;
+  const entries = Object.values(nodes).filter(
+    (v) => v !== void 0
+  );
+  return entries[0]?.document;
+}
+async function fetchRoot(client, fileKey, nodeId) {
+  if (nodeId !== void 0) {
+    const result2 = await client.getFileNodes(fileKey, [nodeId]);
+    if (result2.kind !== "ok") {
+      return { kind: "error", message: clientErrorMessage(result2) };
+    }
+    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
+    if (root === void 0) {
+      return {
+        kind: "error",
+        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
+      };
+    }
+    return { kind: "ok", root };
+  }
+  const result = await client.getFile(fileKey);
+  if (result.kind !== "ok") {
+    return { kind: "error", message: clientErrorMessage(result) };
+  }
+  return { kind: "ok", root: result.data.document };
+}
+function requirementLabel(requirement) {
+  return requirement.kind === "component" ? requirement.name : `${requirement.property}: ${requirement.rawValue}`;
+}
+function rollUp(report, frameName) {
+  const resolvedCount = report.resolved.length;
+  const gapCount = report.gaps.length;
+  const total = resolvedCount + gapCount;
+  const pct5 = total === 0 ? 0 : Math.round(100 * resolvedCount / total);
+  const byReason = {};
+  for (const gap of report.gaps) {
+    byReason[gap.reason] = (byReason[gap.reason] ?? 0) + 1;
+  }
+  const topGaps = report.gaps.slice(0, TOP_GAPS_LIMIT).map((gap) => ({
+    reason: gap.reason,
+    requirement: requirementLabel(gap.requirement)
+  }));
+  return { frameName, resolvedCount, gapCount, pct: pct5, byReason, topGaps };
+}
+function renderTerm6(impl, color) {
+  const severity = impl.pct >= 80 ? "ok" : impl.pct >= 50 ? "warn" : "error";
+  const headline2 = severityColor(
+    severity,
+    `Frame "${impl.frameName}" is ${impl.pct}% implementable (${impl.resolvedCount} resolved / ${impl.resolvedCount + impl.gapCount} requirements).`,
+    { color }
+  );
+  const lines = [headline2];
+  if (impl.gapCount === 0) {
+    lines.push("", "No gaps \u2014 every requirement resolves to the system.");
+    return lines.join("\n");
+  }
+  const rows = Object.entries(impl.byReason).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([reason, count]) => [reason, String(count)]);
+  lines.push(
+    "",
+    `${impl.gapCount} gap(s) by reason:`,
+    renderTable(["reason", "count"], rows, { color })
+  );
+  return lines.join("\n");
+}
+function appendFrameImplHistory(record) {
+  const stateDir = join16(cwd(), ".ds-bridge");
+  appendHistoryRecord(stateDir, record);
+}
+async function runFrameImpl(url, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail8(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const parsed = parseFigmaUrl(url);
+  if (parsed.kind !== "ok") {
+    fail8(
+      `${parsed.message}
+Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
+    );
+    return;
+  }
+  const projectFileText = readProjectConfigText2();
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind !== "ok") {
+    fail8(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail8(missingTokenMessage());
+    return;
+  }
+  const fileKeyOutcome = resolveFileKey({
+    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
+    productFileKeys: config.productFileKeys,
+    defaultKey: parsed.fileKey
+  });
+  if (fileKeyOutcome.kind === "unknown-alias") {
+    fail8(unknownAliasMessage(fileKeyOutcome, config.productFileKeys));
+    return;
+  }
+  if (fileKeyOutcome.kind === "missing") {
+    fail8("No Figma file key resolved from the URL or --file-key.");
+    return;
+  }
+  const fileKey = fileKeyOutcome.key;
+  const targetDir = cwd();
+  const registryPath = join16(targetDir, ".ds-bridge", "registry.json");
+  const registryOutcome = loadRegistry3(registryPath);
+  if (registryOutcome.kind === "error") {
+    fail8(registryOutcome.message);
+    return;
+  }
+  const tokensOutcome = loadTokens(targetDir);
+  if (tokensOutcome.kind === "error") {
+    fail8(tokensOutcome.message);
+    return;
+  }
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE2;
+  const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
+  const fetched = await fetchRoot(client, fileKey, parsed.nodeId);
+  if (fetched.kind !== "ok") {
+    fail8(fetched.message);
+    return;
+  }
+  const requirements = deriveRequirements(fetched.root);
+  const gapsReport = findGaps({
+    requirements,
+    registry: registryOutcome.registry,
+    tokens: tokensOutcome.tokens
+  });
+  const impl = rollUp(gapsReport, fetched.root.name);
+  if (options.history) {
+    appendFrameImplHistory({
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      kind: "frame-impl",
+      frameName: impl.frameName,
+      fileKey,
+      ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {},
+      resolvedCount: impl.resolvedCount,
+      gapCount: impl.gapCount,
+      pct: impl.pct,
+      byReason: impl.byReason,
+      topGaps: impl.topGaps
+    });
+  }
+  if (format === "json") {
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          frameName: impl.frameName,
+          fileKey,
+          ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {},
+          pct: impl.pct,
+          resolvedCount: impl.resolvedCount,
+          gapCount: impl.gapCount,
+          byReason: impl.byReason,
+          topGaps: impl.topGaps
+        },
+        null,
+        2
+      )}
+`
+    );
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm6(impl, color)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerFrameImplCommand(program2) {
+  program2.command("frame-impl").description(
+    "Resolve a Figma frame against the system and report its implementability (% on-system)"
+  ).argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
+    "--file-key <keyOrAlias>",
+    "target a product file by raw key or product_file_keys alias (default: the URL's key)"
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--no-history",
+    "do not append a frame-impl record to .ds-bridge/history.jsonl in the current directory"
+  ).action((url, options) => {
+    void runFrameImpl(url, options);
+  });
+}
+
+// src/cli-commands/handoff.ts
+import { join as join17 } from "path";
+import { cwd as cwd2 } from "process";
+
+// src/engines/handoff/score.ts
+var WEIGHT_BINDING = 40;
+var WEIGHT_AUTO_LAYOUT = 25;
+var WEIGHT_COMPONENT = 20;
+var WEIGHT_NAMING = 15;
+var BINDING_DEDUCTION_LIMIT = 10;
+var DEFAULT_NAME = /^(Frame|Rectangle|Group|Ellipse|Vector|Text) \d+$/;
+var MULTI_WORD_PASCAL = /^[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+$/;
+var COMPONENT_NOUNS = /* @__PURE__ */ new Set([
+  "Button",
+  "Chip",
+  "Input",
+  "Checkbox",
+  "Radio",
+  "Select",
+  "Badge",
+  "Avatar",
+  "Tooltip",
+  "Modal",
+  "Dialog",
+  "Tab",
+  "Tabs",
+  "Tag",
+  "Switch",
+  "Toggle",
+  "Dropdown",
+  "Menu",
+  "Toast",
+  "Alert",
+  "Accordion",
+  "Breadcrumb",
+  "Pagination",
+  "Slider",
+  "Stepper",
+  "Spinner"
+]);
+var FIX_BINDING = "Bind fills/strokes to a variable";
+var FIX_AUTO_LAYOUT = "Add auto layout";
+var FIX_COMPONENT = "Reattach to the published component or rename";
+var FIX_NAMING = "Rename meaningfully";
+function isStyleable(node) {
+  const hasFills = Array.isArray(node.fills) && node.fills.length > 0;
+  const hasStrokes = Array.isArray(node.strokes) && node.strokes.length > 0;
+  return hasFills || hasStrokes;
+}
+function isPaintBound(node) {
+  const bound = node.boundVariables;
+  if (bound === void 0) return false;
+  const fills = bound.fills;
+  const strokes = bound.strokes;
+  const boundFills = Array.isArray(fills) && fills.length > 0;
+  const boundStrokes = Array.isArray(strokes) && strokes.length > 0;
+  return boundFills || boundStrokes;
+}
+function isFrame(node) {
+  return node.type === "FRAME";
+}
+function hasAutoLayout(node) {
+  return node.layoutMode !== void 0 && node.layoutMode !== "NONE";
+}
+function isComponentName(name) {
+  return name.includes("/") || MULTI_WORD_PASCAL.test(name) || COMPONENT_NOUNS.has(name);
+}
+function isDefaultName(name) {
+  return DEFAULT_NAME.test(name);
+}
+function collect3(root) {
+  const nodes = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    nodes.push(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+  return nodes;
+}
+function scoreReadiness(root) {
+  const nodes = collect3(root);
+  const totalNodes = nodes.length;
+  const styleable = nodes.filter(isStyleable);
+  const unbound = styleable.filter((n) => !isPaintBound(n));
+  const boundCoverage = styleable.length === 0 ? 1 : 1 - unbound.length / styleable.length;
+  const frames = nodes.filter(isFrame);
+  const framesWithoutAutoLayout = frames.filter((n) => !hasAutoLayout(n));
+  const autoLayoutCoverage = frames.length === 0 ? 1 : 1 - framesWithoutAutoLayout.length / frames.length;
+  const instanceCount = nodes.filter((n) => n.type === "INSTANCE").length;
+  const suspectNodes = nodes.filter(
+    (n) => n.type !== "INSTANCE" && isComponentName(n.name)
+  );
+  const detachedSuspects = suspectNodes.length;
+  const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
+  const componentRatio = 1 - detachedSuspects / componentDenominator;
+  const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
+  const badNames = badNameNodes.length;
+  const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
+  const deductions = [];
+  if (unbound.length > 0) {
+    const lost = WEIGHT_BINDING * (unbound.length / styleable.length);
+    const perNode = lost / unbound.length;
+    const listed = [...unbound].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(0, BINDING_DEDUCTION_LIMIT);
+    for (const node of listed) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "var-binding",
+        points: perNode,
+        fix: FIX_BINDING
+      });
+    }
+  }
+  if (framesWithoutAutoLayout.length > 0) {
+    const lost = WEIGHT_AUTO_LAYOUT * (framesWithoutAutoLayout.length / frames.length);
+    const perNode = lost / framesWithoutAutoLayout.length;
+    for (const node of framesWithoutAutoLayout) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "auto-layout",
+        points: perNode,
+        fix: FIX_AUTO_LAYOUT
+      });
+    }
+  }
+  if (detachedSuspects > 0) {
+    const lost = WEIGHT_COMPONENT * (1 - componentRatio);
+    const perNode = lost / detachedSuspects;
+    for (const node of suspectNodes) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "component",
+        points: perNode,
+        fix: FIX_COMPONENT
+      });
+    }
+  }
+  if (badNames > 0) {
+    const lost = WEIGHT_NAMING * (badNames / totalNodes);
+    const perNode = lost / badNames;
+    for (const node of badNameNodes) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "naming",
+        points: perNode,
+        fix: FIX_NAMING
+      });
+    }
+  }
+  deductions.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    return a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0;
+  });
+  const rawScore = WEIGHT_BINDING * boundCoverage + WEIGHT_AUTO_LAYOUT * autoLayoutCoverage + WEIGHT_COMPONENT * componentRatio + WEIGHT_NAMING * namingRatio;
+  const score = Math.min(100, Math.max(0, Math.round(rawScore)));
+  return {
+    score,
+    deductions,
+    stats: {
+      totalNodes,
+      boundCoverage,
+      autoLayoutCoverage,
+      instanceCount,
+      detachedSuspects,
+      badNames
+    }
+  };
+}
+
+// src/cli-commands/handoff.ts
+var DEDUCTION_LIMIT = 10;
+var DEFAULT_FIGMA_API_BASE3 = "https://api.figma.com";
+var RULE_LABEL = {
+  "var-binding": "Variable binding",
+  "auto-layout": "Auto layout",
+  component: "Component usage",
+  naming: "Naming"
+};
+var HISTORY_DEDUCTION_LIMIT = 3;
+function appendHandoffHistory(report, frameName, frame) {
+  const stateDir = join17(cwd2(), ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "handoff",
+    score: report.score,
+    frameName,
+    fileKey: frame.fileKey,
+    ...frame.nodeId !== void 0 ? { nodeId: frame.nodeId } : {},
+    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
+  };
+  appendHistoryRecord(stateDir, record);
+}
+function fail9(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage2() {
+  return missingFigmaTokenMessage([
+    "Create the token at figma.com \u2192 Settings \u2192 Security \u2192 Personal access",
+    "tokens, with these scopes:",
+    "  file_content:read, library_content:read, file_versions:read,",
+    "  file_comments:read, file_comments:write",
+    "",
+    "Note: the PAT must come from a Dev or Full seat \u2014 a View seat is rate-",
+    "limited to roughly a handful of requests per month and cannot be used here."
+  ]);
+}
+function clientErrorMessage2(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read (and file_comments:write for --comment).`;
+    case "not-found":
+      return "Figma could not find that file or node. Check the frame URL is correct and the token's account can access the file.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+function formatPoints(points) {
+  return points.toFixed(1).replace(/\.0$/, "");
+}
+function ruleSeverity() {
+  return "error";
+}
+function renderTerm7(report, threshold, color) {
+  const passed = report.score >= threshold;
+  const scoreSeverity = passed ? "ok" : "error";
+  const verdict = passed ? "PASS" : "BELOW THRESHOLD";
+  const scoreLine = severityColor(
+    scoreSeverity,
+    `Readiness ${report.score}/100 (threshold ${threshold}) \u2014 ${verdict}`,
+    { color }
+  );
+  const { stats } = report;
+  const statsRows = [
+    ["nodes", String(stats.totalNodes)],
+    ["bound coverage", `${Math.round(stats.boundCoverage * 100)}%`],
+    ["auto-layout coverage", `${Math.round(stats.autoLayoutCoverage * 100)}%`],
+    ["instances", String(stats.instanceCount)],
+    ["detached suspects", String(stats.detachedSuspects)],
+    ["default names", String(stats.badNames)]
+  ];
+  const statsTable = renderTable(["stat", "value"], statsRows, { color });
+  const lines = [scoreLine, "", statsTable];
+  if (report.deductions.length > 0) {
+    const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
+    const rows = listed.map((d) => [
+      severityColor(ruleSeverity(), RULE_LABEL[d.rule] ?? d.rule, { color }),
+      `${d.nodeName} (${d.nodeId})`,
+      `-${formatPoints(d.points)}`,
+      d.fix
+    ]);
+    const table3 = renderTable(["rule", "node", "points", "fix"], rows, {
+      color
+    });
+    lines.push("", `${report.deductions.length} deduction(s):`, table3);
+    if (report.deductions.length > DEDUCTION_LIMIT) {
+      lines.push(`\u2026 ${report.deductions.length - DEDUCTION_LIMIT} more`);
+    }
+  } else {
+    lines.push("", "No deductions \u2014 this frame is handoff-ready.");
+  }
+  return lines.join("\n");
+}
+function commentBody(report, threshold) {
+  const verdict = report.score >= threshold ? "passes" : "is below";
+  const header = `Handoff readiness: ${report.score}/100 \u2014 ${verdict} the ${threshold} threshold.`;
+  if (report.deductions.length === 0) {
+    return `${header}
+No deductions \u2014 this frame is handoff-ready.`;
+  }
+  const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
+  const lines = listed.map(
+    (d) => `\u2022 ${RULE_LABEL[d.rule] ?? d.rule} (-${formatPoints(d.points)}): ${d.nodeName} \u2014 ${d.fix}`
+  );
+  const more = report.deductions.length > DEDUCTION_LIMIT ? [`\u2026 and ${report.deductions.length - DEDUCTION_LIMIT} more`] : [];
+  return [header, "Top deductions:", ...lines, ...more].join("\n");
+}
+function resolveThreshold(flag, configDefault) {
+  if (flag === void 0) return { kind: "ok", value: configDefault };
+  const n = Number(flag);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    return {
+      kind: "error",
+      message: `--threshold must be a number between 0 and 100 (got ${JSON.stringify(flag)}).`
+    };
+  }
+  return { kind: "ok", value: n };
+}
+function nodeFromFileNodes2(nodes, nodeId) {
+  const direct = nodes[nodeId];
+  if (direct !== void 0) return direct.document;
+  const entries = Object.values(nodes).filter(
+    (v) => v !== void 0
+  );
+  return entries[0]?.document;
+}
+async function fetchRoot2(client, fileKey, nodeId) {
+  if (nodeId !== void 0) {
+    const result2 = await client.getFileNodes(fileKey, [nodeId]);
+    if (result2.kind !== "ok") {
+      return { kind: "error", message: clientErrorMessage2(result2) };
+    }
+    const root = nodeFromFileNodes2(result2.data.nodes, nodeId);
+    if (root === void 0) {
+      return {
+        kind: "error",
+        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
+      };
+    }
+    return { kind: "ok", root };
+  }
+  const result = await client.getFile(fileKey);
+  if (result.kind !== "ok") {
+    return { kind: "error", message: clientErrorMessage2(result) };
+  }
+  return { kind: "ok", root: result.data.document };
+}
+async function runHandoff(url, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail9(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const parsed = parseFigmaUrl(url);
+  if (parsed.kind !== "ok") {
+    fail9(
+      `${parsed.message}
+Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-id=1-2`
+    );
+    return;
+  }
+  const resolved = resolveConfig({ env: process.env });
+  if (resolved.kind !== "ok") {
+    fail9(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail9(missingTokenMessage2());
+    return;
+  }
+  const threshold = resolveThreshold(
+    options.threshold,
+    config.readinessThreshold
+  );
+  if (threshold.kind === "error") {
+    fail9(threshold.message);
+    return;
+  }
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE3;
+  const client = createFigmaClient({
+    token: config.figmaToken.value,
+    baseUrl
+  });
+  const fetched = await fetchRoot2(client, parsed.fileKey, parsed.nodeId);
+  if (fetched.kind !== "ok") {
+    fail9(fetched.message);
+    return;
+  }
+  const report = scoreReadiness(fetched.root);
+  if (options.history) {
+    appendHandoffHistory(report, fetched.root.name, {
+      fileKey: parsed.fileKey,
+      ...parsed.nodeId !== void 0 ? { nodeId: parsed.nodeId } : {}
+    });
+  }
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm7(report, threshold.value, color)}
+`);
+  }
+  if (options.comment) {
+    if (!options.yes) {
+      process.stderr.write(
+        "refusing to comment without --yes (pass --comment --yes to write the summary to Figma)\n"
+      );
+    } else {
+      const clientMeta = parsed.nodeId !== void 0 ? { node_id: parsed.nodeId } : void 0;
+      const posted = await client.postComment(
+        parsed.fileKey,
+        commentBody(report, threshold.value),
+        clientMeta
+      );
+      if (posted.kind !== "ok") {
+        process.stderr.write(
+          `warning: could not post the Figma comment: ${clientErrorMessage2(posted)}
+`
+        );
+      } else {
+        process.stdout.write(`Posted Figma comment ${posted.data.id}.
+`);
+      }
+    }
+  }
+  process.exitCode = report.score >= threshold.value ? 0 : 1;
+}
+function registerHandoffCommand(program2) {
+  program2.command("handoff").description("Score a Figma frame's pre-handoff machine-readability").argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
+    "--threshold <n>",
+    "readiness gate (0-100); exit 1 below it (default from config, 80)"
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--comment",
+    "post the score + top deductions as ONE Figma comment (requires --yes)",
+    false
+  ).option(
+    "--yes",
+    "confirm writing the --comment to Figma without an interactive prompt",
+    false
+  ).option(
+    "--no-history",
+    "do not append a readiness record to .ds-bridge/history.jsonl in the current directory"
+  ).action((url, options) => {
+    void runHandoff(url, options);
+  });
+}
+
+// src/cli-commands/history.ts
+import {
+  appendFileSync as appendFileSync4,
+  existsSync as existsSync14,
+  readFileSync as readFileSync15,
+  statSync as statSync9,
+  writeFileSync as writeFileSync9
+} from "fs";
+import { join as join18, resolve as resolve11 } from "path";
+
+// src/engines/history/compact.ts
+function canonical(value2) {
+  if (Array.isArray(value2)) return `[${value2.map(canonical).join(",")}]`;
+  if (typeof value2 === "object" && value2 !== null) {
+    const obj = value2;
+    return `{${Object.keys(obj).sort().map((k4) => `${JSON.stringify(k4)}:${canonical(obj[k4])}`).join(",")}}`;
+  }
+  return JSON.stringify(value2) ?? "null";
+}
+function payloadIdentity(record) {
+  const payload = {};
+  for (const [key, value2] of Object.entries(record)) {
+    if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
+  }
+  return canonical(payload);
+}
+function parseEntry(raw) {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { raw };
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { raw };
+  }
+  const record = parsed;
+  if (typeof record.kind !== "string") return { raw };
+  return {
+    raw,
+    kind: record.kind,
+    ...typeof record.at === "string" ? { at: record.at } : {},
+    identity: payloadIdentity(record)
+  };
+}
+function compactHistory(text2, options = {}) {
+  const entries = text2.split("\n").map((l) => l.trim()).filter((l) => l !== "").map(parseEntry);
+  const keep = entries.map(() => true);
+  const lastByKind = /* @__PURE__ */ new Map();
+  entries.forEach((entry, index) => {
+    if (entry.kind === void 0) return;
+    const prev = lastByKind.get(entry.kind);
+    if (prev !== void 0 && entries[prev]?.identity === entry.identity) {
+      keep[prev] = false;
+    }
+    lastByKind.set(entry.kind, index);
+  });
+  if (options.keepPerDay === true) {
+    const lastByDay = /* @__PURE__ */ new Map();
+    entries.forEach((entry, index) => {
+      if (!keep[index] || entry.kind === void 0 || entry.at === void 0) {
+        return;
+      }
+      const key = `${entry.kind}\0${entry.at.slice(0, 10)}`;
+      const prev = lastByDay.get(key);
+      if (prev !== void 0) keep[prev] = false;
+      lastByDay.set(key, index);
+    });
+  }
+  const kept = entries.filter((_, i) => keep[i]).map((e4) => e4.raw);
+  return {
+    text: kept.length > 0 ? `${kept.join("\n")}
+` : "",
+    before: entries.length,
+    after: kept.length,
+    removed: entries.length - kept.length
+  };
+}
+
+// src/engines/history/export.ts
+var EXPORT_COLUMNS = [
+  "at",
+  "date",
+  "runId",
+  "sha",
+  "branch",
+  "source",
+  "kind",
+  "subject",
+  "metric",
+  "value"
+];
+var IDENTITY_KEYS = ["mode", "dir", "componentName", "name"];
+function asObject6(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2) ? value2 : void 0;
+}
+function str3(value2) {
+  return typeof value2 === "string" ? value2 : null;
+}
+function identityOf(element) {
+  for (const key of IDENTITY_KEYS) {
+    const id = element[key];
+    if (typeof id === "string") return id;
+  }
+  return void 0;
+}
+function numericLeaves(obj, prefix, out) {
+  for (const [key, value2] of Object.entries(obj)) {
+    const path = prefix === "" ? key : `${prefix}.${key}`;
+    if (typeof value2 === "number") {
+      if (Number.isFinite(value2)) out.push([path, value2]);
+      continue;
+    }
+    if (Array.isArray(value2)) {
+      for (const item of value2) {
+        const element = asObject6(item);
+        if (element === void 0) continue;
+        const id = identityOf(element);
+        if (id !== void 0) numericLeaves(element, `${path}.${id}`, out);
+      }
+      continue;
+    }
+    const nested = asObject6(value2);
+    if (nested !== void 0) numericLeaves(nested, path, out);
+  }
+}
+function subjectOf(record) {
+  const frameName = str3(record.frameName);
+  if (frameName === null) return null;
+  const nodeId = str3(record.nodeId);
+  return nodeId === null ? frameName : `${frameName} (${nodeId})`;
+}
+function exportRows(text2, filter) {
+  const kinds = filter.kinds !== void 0 ? new Set(filter.kinds) : void 0;
+  const rows = [];
+  for (const entry of replayHistory(text2)) {
+    if (entry.at === void 0) continue;
+    if (kinds !== void 0 && !kinds.has(entry.kind)) continue;
+    const atMs = Date.parse(entry.at);
+    if (filter.sinceMs !== void 0 || filter.untilMs !== void 0) {
+      if (Number.isNaN(atMs)) continue;
+      if (filter.sinceMs !== void 0 && atMs < filter.sinceMs) continue;
+      if (filter.untilMs !== void 0) {
+        if (filter.untilExclusive === true && atMs >= filter.untilMs) continue;
+        if (filter.untilExclusive !== true && atMs > filter.untilMs) continue;
+      }
+    }
+    const record = entry.record;
+    const v2 = entry.envelope !== void 0;
+    const git = v2 ? asObject6(record.git) : void 0;
+    const payload = {};
+    for (const [key, value2] of Object.entries(record)) {
+      if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
+    }
+    const subject = subjectOf(record);
+    const leaves = [];
+    numericLeaves(payload, "", leaves);
+    leaves.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    for (const [metric, value2] of leaves) {
+      rows.push({
+        at: entry.at,
+        date: entry.at.slice(0, 10),
+        runId: v2 ? str3(record.runId) : null,
+        sha: git !== void 0 ? str3(git.sha) : null,
+        branch: git !== void 0 ? str3(git.branch) : null,
+        source: v2 ? str3(record.source) : null,
+        kind: entry.kind,
+        subject,
+        metric,
+        value: value2
+      });
+    }
+  }
+  return rows;
+}
+var ISO_DATE2 = /^\d{4}-\d{2}-\d{2}$/;
+var MS_PER_DAY4 = 24 * 60 * 60 * 1e3;
+function resolveUntil(raw, nowIso) {
+  const parsed = parseSince(raw, nowIso);
+  if (parsed.kind !== "ok") return parsed;
+  const ms = Date.parse(parsed.sinceIso);
+  if (ISO_DATE2.test(raw)) {
+    return { kind: "ok", untilMs: ms + MS_PER_DAY4, exclusive: true };
+  }
+  return { kind: "ok", untilMs: ms, exclusive: false };
+}
+var FORMULA_LEAD = /^[=+\-@\t\r]/;
+function csvText(value2) {
+  if (value2 === null) return "";
+  const guarded = FORMULA_LEAD.test(value2) ? `'${value2}` : value2;
+  return /[",\r\n]/.test(guarded) ? `"${guarded.replaceAll('"', '""')}"` : guarded;
+}
+function toCsv(rows) {
+  const lines = [EXPORT_COLUMNS.join(",")];
+  for (const row2 of rows) {
+    lines.push(
+      [
+        csvText(row2.at),
+        csvText(row2.date),
+        csvText(row2.runId),
+        csvText(row2.sha),
+        csvText(row2.branch),
+        csvText(row2.source),
+        csvText(row2.kind),
+        csvText(row2.subject),
+        csvText(row2.metric),
+        String(row2.value)
+      ].join(",")
+    );
+  }
+  return `${lines.join("\n")}
+`;
+}
+function toJsonl(rows) {
+  return rows.map(
+    (row2) => `${JSON.stringify({
+      at: row2.at,
+      date: row2.date,
+      runId: row2.runId,
+      sha: row2.sha,
+      branch: row2.branch,
+      source: row2.source,
+      kind: row2.kind,
+      subject: row2.subject,
+      metric: row2.metric,
+      value: row2.value
+    })}
+`
+  ).join("");
+}
+
+// src/engines/history/gitattributes.ts
+var UNION_MERGE_LINE = ".ds-bridge/history.jsonl merge=union";
+var TARGET = ".ds-bridge/history.jsonl";
+var TARGET_BASENAME = "history.jsonl";
+function escapeChar(ch) {
+  return /[.*+?^${}()|[\]\\/]/.test(ch) ? `\\${ch}` : ch;
+}
+function globToRegExp(glob) {
+  let source = "";
+  let i = 0;
+  while (i < glob.length) {
+    const ch = glob[i];
+    if (ch === "*" && glob[i + 1] === "*") {
+      if (glob[i + 2] === "/") {
+        source += "(?:.*/)?";
+        i += 3;
+      } else {
+        source += ".*";
+        i += 2;
+      }
+    } else if (ch === "*") {
+      source += "[^/]*";
+      i += 1;
+    } else if (ch === "?") {
+      source += "[^/]";
+      i += 1;
+    } else if (ch === "[") {
+      const end = glob.indexOf("]", i + 2);
+      if (end === -1) {
+        source += "\\[";
+        i += 1;
+      } else {
+        let body = glob.slice(i + 1, end);
+        if (body.startsWith("!")) body = `^${body.slice(1)}`;
+        source += `[${body.replace(/\\/g, "\\\\")}]`;
+        i = end + 1;
+      }
+    } else if (ch === "\\" && i + 1 < glob.length) {
+      source += escapeChar(glob[i + 1]);
+      i += 2;
+    } else {
+      source += escapeChar(ch);
+      i += 1;
+    }
+  }
+  return new RegExp(`^${source}$`);
+}
+function patternMatchesTarget(pattern) {
+  if (pattern.endsWith("/")) return false;
+  if (!pattern.includes("/")) {
+    return globToRegExp(pattern).test(TARGET_BASENAME);
+  }
+  const anchored = pattern.startsWith("/") ? pattern.slice(1) : pattern;
+  return globToRegExp(anchored).test(TARGET);
+}
+function mergeSetting(token) {
+  if (token === "merge" || token === "-merge" || token === "!merge") {
+    return token;
+  }
+  if (token === "binary") return "-merge";
+  if (token.startsWith("merge=")) return token;
+  return void 0;
+}
+function effectiveMerge(text2) {
+  let effective;
+  for (const raw of text2.split(/\r?\n/)) {
+    const fields = raw.trim().split(/\s+/);
+    const pattern = fields[0] ?? "";
+    if (pattern === "" || pattern.startsWith("#") || pattern.startsWith("[attr]")) {
+      continue;
+    }
+    if (!patternMatchesTarget(pattern)) continue;
+    for (const token of fields.slice(1)) {
+      const setting = mergeSetting(token);
+      if (setting !== void 0) effective = setting;
+    }
+  }
+  return effective;
+}
+function ensureUnionMerge(text2) {
+  const current = text2 ?? "";
+  const eol = current.includes("\r\n") ? "\r\n" : "\n";
+  if (effectiveMerge(current) === "merge=union") {
+    return { changed: false, text: current };
+  }
+  const separator = current === "" || current.endsWith("\n") ? "" : eol;
+  return {
+    changed: true,
+    text: `${current}${separator}${UNION_MERGE_LINE}${eol}`
+  };
+}
+
+// src/engines/history/migrate.ts
+function migrateLine(raw) {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return void 0;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return void 0;
+  }
+  const record = parsed;
+  if (typeof record.kind !== "string") return void 0;
+  if (envelopeOf(record) !== void 0) return void 0;
+  const out = { v: 2 };
+  if ("at" in record) out.at = record.at;
+  out.kind = record.kind;
+  out.source = "local";
+  out.git = null;
+  out.tool = null;
+  for (const [key, value2] of Object.entries(record)) {
+    if (!RESERVED_ENVELOPE_KEYS.has(key)) out[key] = value2;
+  }
+  return JSON.stringify(out);
+}
+function migrateHistory(text2) {
+  const out = [];
+  let migrated = 0;
+  let unchanged = 0;
+  for (const line of text2.split("\n")) {
+    const raw = line.trim();
+    if (raw === "") continue;
+    const next = migrateLine(raw);
+    if (next === void 0) {
+      out.push(raw);
+      unchanged += 1;
+    } else {
+      out.push(next);
+      migrated += 1;
+    }
+  }
+  return {
+    text: out.length > 0 ? `${out.join("\n")}
+` : "",
+    migrated,
+    unchanged
+  };
+}
+
+// src/engines/history/stats.ts
+function historyStats(text2, bytes) {
+  const lines = text2.split("\n").filter((l) => l.trim() !== "").length;
+  const records = replayHistory(text2);
+  const byKind = {};
+  const bySource = {};
+  const runs = /* @__PURE__ */ new Set();
+  let v2 = 0;
+  let firstAt = null;
+  let lastAt = null;
+  for (const r2 of records) {
+    byKind[r2.kind] = (byKind[r2.kind] ?? 0) + 1;
+    if (r2.envelope !== void 0) {
+      v2 += 1;
+      if (r2.envelope.source !== void 0) {
+        bySource[r2.envelope.source] = (bySource[r2.envelope.source] ?? 0) + 1;
+      }
+      if (r2.envelope.runId !== void 0) runs.add(r2.envelope.runId);
+    }
+    if (r2.at !== void 0) {
+      if (firstAt === null || r2.at < firstAt) firstAt = r2.at;
+      if (lastAt === null || r2.at > lastAt) lastAt = r2.at;
+    }
+  }
+  return {
+    bytes,
+    lines,
+    records: records.length,
+    corrupt: lines - records.length,
+    v1: records.length - v2,
+    v2,
+    byKind,
+    bySource,
+    runs: runs.size,
+    firstAt,
+    lastAt
+  };
+}
+
+// src/cli-commands/history.ts
+function fail10(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function prepare2(path, options) {
+  const format = options.format;
+  if (format !== "term" && format !== "json") {
+    fail10(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    return void 0;
+  }
+  const targetDir = resolve11(path);
+  if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
+    fail10(`Path "${targetDir}" is not a directory.`);
+    return void 0;
+  }
+  return { format, targetDir, stateDir: join18(targetDir, ".ds-bridge") };
+}
+function readText(file) {
+  try {
+    return readFileSync15(file, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function readinessThreshold(targetDir) {
+  const projectFileText = readText(join18(targetDir, ".ds-bridge.json"));
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind !== "ok") {
+    fail10(resolved.message);
+    return void 0;
+  }
+  return resolved.config.readinessThreshold;
+}
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+function runStats(path, options) {
+  const ctx = prepare2(path, options);
+  if (ctx === void 0) return;
+  const threshold = readinessThreshold(ctx.targetDir);
+  if (threshold === void 0) return;
+  const file = historyFilePath(ctx.stateDir);
+  const text2 = readText(file);
+  const bytes = text2 === void 0 ? 0 : statSync9(file).size;
+  const stats = historyStats(text2 ?? "", bytes);
+  const frames = readinessByFrame(
+    replayHistory(text2 ?? ""),
+    threshold
+  );
+  const result = {
+    path: file,
+    exists: text2 !== void 0,
+    ...stats,
+    readinessThreshold: threshold,
+    readinessByFrame: frames
+  };
+  if (ctx.format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
+`);
+    process.exitCode = 0;
+    return;
+  }
+  const lines = [`History: ${file}`];
+  if (!result.exists) {
+    lines.push(
+      "No history yet \u2014 run `ds-bridge record` (or any check) to start one."
+    );
+  } else {
+    lines.push(
+      `${stats.records} records \xB7 ${formatBytes(bytes)} \xB7 v1 ${stats.v1} \xB7 v2 ${stats.v2}${stats.corrupt > 0 ? ` \xB7 ${stats.corrupt} unreadable` : ""}`,
+      `Range: ${stats.firstAt ?? "\u2014"} \u2192 ${stats.lastAt ?? "\u2014"} \xB7 runs ${stats.runs}`
+    );
+    const sources = Object.entries(stats.bySource).map(([s, n]) => `${s} ${n}`).join(" \xB7 ");
+    if (sources !== "") lines.push(`Sources: ${sources}`);
+    lines.push("", "By kind:");
+    for (const [kind, n] of Object.entries(stats.byKind).sort()) {
+      lines.push(`  ${kind.padEnd(16)} ${n}`);
+    }
+    if (frames.length > 0) {
+      lines.push("", `Readiness by frame (pass \u2265 ${threshold}):`);
+      for (const f3 of frames) {
+        lines.push(
+          `  ${f3.frameName || f3.key}${f3.fileKey !== void 0 ? ` [${f3.key}]` : ""}  latest ${f3.latest} \xB7 ${f3.runs} runs \xB7 pass ${f3.passRate}%`
+        );
+      }
+    }
+    if (stats.v1 > 0) {
+      lines.push(
+        "",
+        "Tip: `ds-bridge history migrate` upgrades v1 lines to v2."
+      );
+    }
+  }
+  process.stdout.write(`${lines.join("\n")}
+`);
+  process.exitCode = 0;
+}
+function rewriteUnderLock(stateDir, dryRun, transform) {
+  const file = historyFilePath(stateDir);
+  if (!existsSync14(file)) return { ok: true, existed: false };
+  const release = acquireHistoryLock(stateDir, { timeoutMs: 2e3 });
+  if (release === void 0) {
+    fail10(
+      `History is locked (${file}.lock) \u2014 another ds-bridge run is writing. Retry, or remove a stale lock.`
+    );
+    return { ok: false };
+  }
+  try {
+    const text2 = readFileSync15(file, "utf8");
+    const next = transform(text2);
+    if (!dryRun && next.text !== text2)
+      rewriteHistoryAtomic(stateDir, next.text);
+    return { ok: true, existed: true };
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail10(`Could not rewrite ${file}: ${detail}`);
+    return { ok: false };
+  } finally {
+    release();
+  }
+}
+function runCompact(path, options) {
+  const ctx = prepare2(path, options);
+  if (ctx === void 0) return;
+  let counts = { before: 0, after: 0, removed: 0 };
+  const outcome = rewriteUnderLock(ctx.stateDir, options.dryRun, (text2) => {
+    const result2 = compactHistory(text2, { keepPerDay: options.keepPerDay });
+    counts = {
+      before: result2.before,
+      after: result2.after,
+      removed: result2.removed
+    };
+    return result2;
+  });
+  if (!outcome.ok) return;
+  const result = {
+    path: historyFilePath(ctx.stateDir),
+    ...counts,
+    keepPerDay: options.keepPerDay,
+    dryRun: options.dryRun
+  };
+  if (ctx.format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
+`);
+  } else if (!outcome.existed) {
+    process.stdout.write("No history to compact.\n");
+  } else {
+    const verb = options.dryRun ? "Would remove" : "Removed";
+    process.stdout.write(
+      `${verb} ${counts.removed} of ${counts.before} lines (${counts.after} kept) in ${result.path}
+`
+    );
+  }
+  process.exitCode = 0;
+}
+function runMigrate(path, options) {
+  const ctx = prepare2(path, options);
+  if (ctx === void 0) return;
+  let counts = { migrated: 0, unchanged: 0 };
+  const outcome = rewriteUnderLock(ctx.stateDir, options.dryRun, (text2) => {
+    const result2 = migrateHistory(text2);
+    counts = { migrated: result2.migrated, unchanged: result2.unchanged };
+    return result2;
+  });
+  if (!outcome.ok) return;
+  const result = {
+    path: historyFilePath(ctx.stateDir),
+    ...counts,
+    dryRun: options.dryRun
+  };
+  if (ctx.format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
+`);
+  } else if (!outcome.existed) {
+    process.stdout.write("No history to migrate.\n");
+  } else {
+    const verb = options.dryRun ? "Would migrate" : "Migrated";
+    process.stdout.write(
+      `${verb} ${counts.migrated} v1 records to v2 (${counts.unchanged} unchanged) in ${result.path}
+`
+    );
+  }
+  process.exitCode = 0;
+}
+function runInit(path, options) {
+  const ctx = prepare2(path, options);
+  if (ctx === void 0) return;
+  const file = join18(ctx.targetDir, ".gitattributes");
+  let current;
+  try {
+    current = readFileSync15(file, "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      const detail = error instanceof Error ? error.message : String(error);
+      fail10(`Could not read ${file}: ${detail}`);
+      return;
+    }
+  }
+  const next = ensureUnionMerge(current);
+  if (next.changed && !options.dryRun) {
+    try {
+      if (current === void 0) {
+        writeFileSync9(file, next.text, { encoding: "utf8", flag: "wx" });
+      } else {
+        appendFileSync4(file, next.text.slice(current.length), "utf8");
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      fail10(`Could not write ${file}: ${detail}`);
+      return;
+    }
+  }
+  const result = {
+    path: file,
+    line: UNION_MERGE_LINE,
+    status: next.changed ? "added" : "present",
+    dryRun: options.dryRun
+  };
+  if (ctx.format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
+`);
+  } else if (!next.changed) {
+    process.stdout.write(`Already present in ${file}: ${UNION_MERGE_LINE}
+`);
+  } else {
+    const verb = options.dryRun ? "Would add" : "Added";
+    process.stdout.write(`${verb} "${UNION_MERGE_LINE}" to ${file}
+`);
+    if (!options.dryRun) {
+      process.stdout.write(
+        "Commit .gitattributes so history appends from different machines merge line-by-line instead of conflicting.\n"
+      );
+    }
+  }
+  process.exitCode = 0;
+}
+function runExport(path, options) {
+  const format = options.format;
+  if (format !== "csv" && format !== "jsonl") {
+    fail10(`Unknown --format "${format}". Expected "csv" or "jsonl".`);
+    return;
+  }
+  const targetDir = resolve11(path);
+  if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
+    fail10(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const nowIso = renderInstant();
+  const filter = {};
+  if (options.kind !== void 0) {
+    filter.kinds = options.kind.split(",").map((k4) => k4.trim()).filter((k4) => k4 !== "");
+  }
+  if (options.since !== void 0) {
+    const since = parseSince(options.since, nowIso);
+    if (since.kind !== "ok") {
+      fail10(`Invalid --since "${options.since}". ${since.message}`);
+      return;
+    }
+    filter.sinceMs = Date.parse(since.sinceIso);
+  }
+  if (options.until !== void 0) {
+    const until = resolveUntil(options.until, nowIso);
+    if (until.kind !== "ok") {
+      fail10(`Invalid --until "${options.until}". ${until.message}`);
+      return;
+    }
+    filter.untilMs = until.untilMs;
+    filter.untilExclusive = until.exclusive;
+  }
+  const text2 = readText(historyFilePath(join18(targetDir, ".ds-bridge"))) ?? "";
+  const rows = exportRows(text2, filter);
+  const output = format === "csv" ? toCsv(rows) : toJsonl(rows);
+  if (options.out !== void 0) {
+    const outPath = resolve11(options.out);
+    try {
+      writeFileSync9(outPath, output, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      fail10(`Could not write ${outPath}: ${detail}`);
+      return;
+    }
+    process.stdout.write(`${outPath}
+`);
+  } else {
+    process.stdout.write(output);
+  }
+  process.exitCode = 0;
+}
+function registerHistoryCommand(program2) {
+  const history = program2.command("history").description(
+    "Inspect, maintain and export .ds-bridge/history.jsonl (stats, compact, migrate, init, export)"
+  );
+  history.command("stats").description(
+    "Counts per kind, v1/v2 split, sources, runs, date range, size, per-frame readiness"
+  ).argument("[path]", "project directory", ".").option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runStats(path, options);
+  });
+  history.command("compact").description(
+    "Drop identical consecutive same-kind records (latest kept); atomic, locked"
+  ).argument("[path]", "project directory", ".").option(
+    "--keep-per-day",
+    "also keep only the last record per kind per UTC day",
+    false
+  ).option("--dry-run", "report what would change without writing", false).option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runCompact(path, options);
+  });
+  history.command("migrate").description(
+    'Rewrite v1 records as v2 (source "local", git null); atomic, locked, idempotent'
+  ).argument("[path]", "project directory", ".").option("--dry-run", "report what would change without writing", false).option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runMigrate(path, options);
+  });
+  history.command("init").description(
+    "Opt-in: add `.ds-bridge/history.jsonl merge=union` to the project's .gitattributes (idempotent)"
+  ).argument("[path]", "project directory", ".").option("--dry-run", "report what would change without writing", false).option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runInit(path, options);
+  });
+  history.command("export").description(
+    "Tidy rows for Sheets/Looker/BigQuery: one row per metric per record (at, date, runId, sha, branch, source, kind, subject, metric, value); subject names the frame for per-frame records, arrays keyed by mode/dir/componentName/name flatten as <path>.<id>.<leaf>"
+  ).argument("[path]", "project directory", ".").option("--format <format>", "output format: csv | jsonl", "csv").option("--kind <kinds>", "comma-separated record kinds to keep").option(
+    "--since <when>",
+    'keep records at or after: an ISO date "YYYY-MM-DD" or a relative "<N>d" / "<N>w"'
+  ).option(
+    "--until <when>",
+    'keep records up to: an ISO date "YYYY-MM-DD" (whole day) or a relative "<N>d" / "<N>w"'
+  ).option(
+    "--out <file>",
+    "write the export to a file (and print the path) instead of stdout"
+  ).action((path, options) => {
+    runExport(path, options);
+  });
+}
+
+// src/cli-commands/impact.ts
+import { existsSync as existsSync15, mkdirSync as mkdirSync8, readFileSync as readFileSync16, writeFileSync as writeFileSync10 } from "fs";
+import { dirname as dirname7, join as join19 } from "path";
+import { cwd as cwd3, env as processEnv } from "process";
+import { fileURLToPath as fileURLToPath4 } from "url";
+
+// src/engines/impact/component-diff.ts
+var RENAME_THRESHOLD = 0.5;
+function tokenize3(name) {
+  const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
+  const tokens = [];
+  for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
+    const token = part.toLowerCase();
+    if (token.length > 0) tokens.push(token);
+  }
+  return tokens;
+}
+function nameSimilarity(a, b) {
+  const setA = new Set(tokenize3(a));
+  const setB = new Set(tokenize3(b));
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection += 1;
+  }
+  return 2 * intersection / (setA.size + setB.size);
+}
+function byNameAsc5(a, b) {
+  return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+}
+var IMPACT_RANK = {
+  breaking: 2,
+  additive: 1,
+  cosmetic: 0
+};
+function moreSevere(a, b) {
+  return IMPACT_RANK[a] >= IMPACT_RANK[b] ? a : b;
+}
+function diffVariants(before, after) {
+  const changes = [];
+  const axes = /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)]);
+  for (const axis of [...axes].sort()) {
+    const beforeValues = before[axis];
+    const afterValues = after[axis];
+    if (beforeValues === void 0 && afterValues !== void 0) {
+      changes.push({ axis, kind: "axis-added" });
+      continue;
+    }
+    if (beforeValues !== void 0 && afterValues === void 0) {
+      changes.push({ axis, kind: "axis-removed" });
+      continue;
+    }
+    if (beforeValues === void 0 || afterValues === void 0) continue;
+    const beforeSet = new Set(beforeValues);
+    const afterSet = new Set(afterValues);
+    const added = [];
+    const removed = [];
+    for (const value2 of afterSet) {
+      if (!beforeSet.has(value2)) added.push(value2);
+    }
+    for (const value2 of beforeSet) {
+      if (!afterSet.has(value2)) removed.push(value2);
+    }
+    for (const value2 of removed.sort()) {
+      changes.push({ axis, kind: "value-removed", value: value2 });
+    }
+    for (const value2 of added.sort()) {
+      changes.push({ axis, kind: "value-added", value: value2 });
+    }
+  }
+  return changes;
+}
+function variantChangeImpact(change) {
+  switch (change.kind) {
+    case "axis-removed":
+    case "value-removed":
+      return "breaking";
+    case "axis-added":
+    case "value-added":
+      return "additive";
+  }
+}
+function classifyChanged(before, after) {
+  const variantChanges = diffVariants(before.variantProps, after.variantProps);
+  const descriptionChanged = before.description !== after.description;
+  if (variantChanges.length === 0 && !descriptionChanged) return void 0;
+  let impact = "cosmetic";
+  for (const change of variantChanges) {
+    impact = moreSevere(impact, variantChangeImpact(change));
+  }
+  return {
+    name: after.name,
+    nodeId: after.nodeId,
+    descriptionChanged,
+    variantChanges,
+    impact
+  };
+}
+function matchRenames(removedCandidates, addedCandidates) {
+  const edges = [];
+  for (let b = 0; b < removedCandidates.length; b += 1) {
+    const beforeModel = removedCandidates[b];
+    if (beforeModel === void 0) continue;
+    for (let a = 0; a < addedCandidates.length; a += 1) {
+      const afterModel = addedCandidates[a];
+      if (afterModel === void 0) continue;
+      const score = nameSimilarity(beforeModel.name, afterModel.name);
+      if (score >= RENAME_THRESHOLD) {
+        edges.push({ beforeIndex: b, afterIndex: a, score });
+      }
+    }
+  }
+  edges.sort((x, y) => {
+    if (x.score !== y.score) return y.score - x.score;
+    const bx = removedCandidates[x.beforeIndex]?.name ?? "";
+    const by = removedCandidates[y.beforeIndex]?.name ?? "";
+    if (bx !== by) return bx < by ? -1 : 1;
+    const ax = addedCandidates[x.afterIndex]?.name ?? "";
+    const ay = addedCandidates[y.afterIndex]?.name ?? "";
+    return ax < ay ? -1 : ax > ay ? 1 : 0;
+  });
+  const usedBefore = /* @__PURE__ */ new Set();
+  const usedAfter = /* @__PURE__ */ new Set();
+  const matches = [];
+  for (const edge of edges) {
+    if (usedBefore.has(edge.beforeIndex) || usedAfter.has(edge.afterIndex)) {
+      continue;
+    }
+    usedBefore.add(edge.beforeIndex);
+    usedAfter.add(edge.afterIndex);
+    matches.push(edge);
+  }
+  return matches;
+}
+function diffComponents(before, after) {
+  const beforeById = /* @__PURE__ */ new Map();
+  for (const model of before) {
+    if (!beforeById.has(model.nodeId)) beforeById.set(model.nodeId, model);
+  }
+  const afterById = /* @__PURE__ */ new Map();
+  for (const model of after) {
+    if (!afterById.has(model.nodeId)) afterById.set(model.nodeId, model);
+  }
+  const renamed = [];
+  const changed = [];
+  for (const [nodeId, beforeModel] of beforeById) {
+    const afterModel = afterById.get(nodeId);
+    if (afterModel === void 0) continue;
+    if (beforeModel.name !== afterModel.name) {
+      renamed.push({
+        fromName: beforeModel.name,
+        toName: afterModel.name,
+        nodeId,
+        fromNodeId: nodeId,
+        impact: "breaking"
+      });
+      continue;
+    }
+    const change = classifyChanged(beforeModel, afterModel);
+    if (change !== void 0) changed.push(change);
+  }
+  const removedCandidates = [...beforeById.entries()].filter(([id]) => !afterById.has(id)).map(([, model]) => model);
+  const addedCandidates = [...afterById.entries()].filter(([id]) => !beforeById.has(id)).map(([, model]) => model);
+  const renameMatches = matchRenames(removedCandidates, addedCandidates);
+  const matchedBefore = /* @__PURE__ */ new Set();
+  const matchedAfter = /* @__PURE__ */ new Set();
+  for (const match of renameMatches) {
+    matchedBefore.add(match.beforeIndex);
+    matchedAfter.add(match.afterIndex);
+    const beforeModel = removedCandidates[match.beforeIndex];
+    const afterModel = addedCandidates[match.afterIndex];
+    if (beforeModel === void 0 || afterModel === void 0) continue;
+    renamed.push({
+      fromName: beforeModel.name,
+      toName: afterModel.name,
+      nodeId: afterModel.nodeId,
+      fromNodeId: beforeModel.nodeId,
+      impact: "breaking"
+    });
+  }
+  const removed = [];
+  for (let b = 0; b < removedCandidates.length; b += 1) {
+    if (matchedBefore.has(b)) continue;
+    const model = removedCandidates[b];
+    if (model === void 0) continue;
+    removed.push({
+      name: model.name,
+      nodeId: model.nodeId,
+      impact: "breaking"
+    });
+  }
+  const added = [];
+  for (let a = 0; a < addedCandidates.length; a += 1) {
+    if (matchedAfter.has(a)) continue;
+    const model = addedCandidates[a];
+    if (model === void 0) continue;
+    added.push({ name: model.name, nodeId: model.nodeId, impact: "additive" });
+  }
+  added.sort(byNameAsc5);
+  removed.sort(byNameAsc5);
+  renamed.sort(
+    (x, y) => x.toName < y.toName ? -1 : x.toName > y.toName ? 1 : 0
+  );
+  changed.sort(byNameAsc5);
+  return { added, removed, renamed, changed };
+}
+
+// src/engines/registry/scan-figma.ts
+function isString(value2) {
+  return typeof value2 === "string";
+}
+function asString2(value2) {
+  return isString(value2) ? value2 : "";
+}
+function parseVariantName(name) {
+  const props = {};
+  if (!name.includes("=")) return props;
+  for (const pair of name.split(",")) {
+    const eq = pair.indexOf("=");
+    if (eq === -1) continue;
+    const key = pair.slice(0, eq).trim();
+    const value2 = pair.slice(eq + 1).trim();
+    if (key.length === 0) continue;
+    const existing = props[key];
+    if (existing === void 0) {
+      props[key] = [value2];
+    } else {
+      existing.push(value2);
+    }
+  }
+  return props;
+}
+function normalizeVariantProps(props) {
+  const out = {};
+  for (const key of Object.keys(props).sort()) {
+    const values = props[key] ?? [];
+    out[key] = [...new Set(values)].sort();
+  }
+  return out;
+}
+function mergeVariantProps(into, from) {
+  for (const key of Object.keys(from)) {
+    const incoming = from[key] ?? [];
+    const existing = into[key];
+    if (existing === void 0) {
+      into[key] = [...incoming];
+    } else {
+      existing.push(...incoming);
+    }
+  }
+}
+function compareIds(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function buildPublished(input) {
+  const components = input?.meta?.components;
+  const ids = /* @__PURE__ */ new Set();
+  if (!Array.isArray(components)) return { models: [], ids };
+  const sets = /* @__PURE__ */ new Map();
+  const standalone = [];
+  for (const component of components) {
+    const nodeId = asString2(component.node_id);
+    if (nodeId.length === 0) continue;
+    ids.add(nodeId);
+    const rawName = asString2(component.name);
+    const description = asString2(component.description);
+    const variantProps = parseVariantName(rawName);
+    const isVariant = Object.keys(variantProps).length > 0;
+    const setName = isString(component.containing_frame?.name) ? component.containing_frame.name : void 0;
+    if (isVariant && setName !== void 0) {
+      const existing = sets.get(setName);
+      if (existing === void 0) {
+        sets.set(setName, {
+          name: setName,
+          nodeId,
+          description,
+          variantProps: { ...variantProps }
+        });
+      } else {
+        mergeVariantProps(existing.variantProps, variantProps);
+        if (compareIds(nodeId, existing.nodeId) < 0) existing.nodeId = nodeId;
+        if (existing.description.length === 0 && description.length > 0) {
+          existing.description = description;
+        }
+      }
+    } else {
+      standalone.push({ name: rawName, nodeId, description, variantProps });
+    }
+  }
+  const models = [];
+  for (const acc of [...sets.values(), ...standalone]) {
+    models.push({
+      name: acc.name,
+      nodeId: acc.nodeId,
+      description: acc.description,
+      variantProps: normalizeVariantProps(acc.variantProps),
+      source: "published"
+    });
+  }
+  return { models, ids };
+}
+function variantPropsFromChildren(children) {
+  const props = {};
+  if (!Array.isArray(children)) return props;
+  for (const child of children) {
+    if (child.type !== "COMPONENT") continue;
+    mergeVariantProps(props, parseVariantName(asString2(child.name)));
+  }
+  return props;
+}
+function buildInline(document, publishedIds) {
+  if (document === void 0) return [];
+  const byId = /* @__PURE__ */ new Map();
+  const stack = [document];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    const type = node.type;
+    if (type === "COMPONENT_SET" || type === "COMPONENT") {
+      const nodeId = asString2(node.id);
+      if (nodeId.length > 0 && !publishedIds.has(nodeId) && !byId.has(nodeId)) {
+        const variantProps = type === "COMPONENT_SET" ? variantPropsFromChildren(node.children) : {};
+        byId.set(nodeId, {
+          name: asString2(node.name),
+          nodeId,
+          description: asString2(node.description),
+          variantProps: normalizeVariantProps(variantProps),
+          source: "inline"
+        });
+      }
+      if (type === "COMPONENT_SET") continue;
+    }
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+  return [...byId.values()];
+}
+function buildFigmaComponentModel(input) {
+  const { models: publishedModels, ids } = buildPublished(input.published);
+  const inlineModels = buildInline(input.fileDocument, ids);
+  const byId = /* @__PURE__ */ new Map();
+  for (const model of publishedModels) {
+    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+  }
+  for (const model of inlineModels) {
+    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+  }
+  return [...byId.values()].sort((a, b) => {
+    if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+    return compareIds(a.nodeId, b.nodeId);
+  });
+}
+
+// src/cli-commands/impact.ts
+var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
+function fail11(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage3() {
+  return missingFigmaTokenMessage([
+    "The token needs the library_content:read and file_versions:read scopes, and",
+    "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
+    "be used here."
+  ]);
+}
+function missingFileKeyMessage() {
+  return [
+    "No Figma library file key configured.",
+    "",
+    "Pass --file-key <key>, set the figma_file_key plugin option, or export it:",
+    "",
+    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
+    "",
+    "The key is the segment after /file/ or /design/ in the library file URL."
+  ].join("\n");
+}
+function unknownAliasMessage2(outcome, productFileKeys) {
+  const aliases = Object.keys(productFileKeys);
+  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+  if (outcome.suggestions.length > 0) {
+    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+  }
+  lines.push(
+    "",
+    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
+    "Or pass --file-key <raw-figma-file-key> directly."
+  );
+  return lines.join("\n");
+}
+function clientErrorMessage3(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs library_content:read and file_versions:read.`;
+    case "not-found":
+      return "Figma could not find that file. Check the file key is correct and the token's account can access the library.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+function readProjectConfigText3() {
+  const configPath = join19(cwd3(), ".ds-bridge.json");
+  if (!existsSync15(configPath)) return void 0;
+  try {
+    return readFileSync16(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function cursorPath() {
+  const dataDir = processEnv.CLAUDE_PLUGIN_DATA;
+  if (dataDir !== void 0 && dataDir !== "") {
+    return join19(dataDir, "impact-cursor.json");
+  }
+  return join19(cwd3(), ".ds-bridge", "cache", "impact-cursor.json");
+}
+function readCursor(path) {
+  if (!existsSync15(path)) return void 0;
+  try {
+    const parsed = JSON.parse(readFileSync16(path, "utf8"));
+    if (!Array.isArray(parsed.snapshot)) return void 0;
+    return parsed;
+  } catch {
+    return void 0;
+  }
+}
+function writeCursor(path, cursor) {
+  try {
+    mkdirSync8(dirname7(path), { recursive: true });
+    writeFileSync10(path, `${JSON.stringify(cursor, null, 2)}
+`, "utf8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+function loadRegistry4() {
+  const registryPath = join19(cwd3(), ".ds-bridge", "registry.json");
+  if (!existsSync15(registryPath)) return void 0;
+  try {
+    return JSON.parse(readFileSync16(registryPath, "utf8"));
+  } catch {
+    return void 0;
+  }
+}
+async function mapChangedUsage(registry, changedFigmaNames) {
+  const globals = globalThis;
+  if (typeof globals.__filename !== "string") {
+    const filename = fileURLToPath4(import.meta.url);
+    globals.__filename = filename;
+    globals.__dirname = dirname7(filename);
+  }
+  const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
+  return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
+}
+function changedNames(diff) {
+  const names = [];
+  for (const removed of diff.removed) names.push(removed.name);
+  for (const renamed of diff.renamed) names.push(renamed.fromName);
+  for (const changed of diff.changed) names.push(changed.name);
+  for (const added of diff.added) names.push(added.name);
+  return names;
+}
+function hasBreaking(diff) {
+  if (diff.removed.length > 0) return true;
+  if (diff.renamed.length > 0) return true;
+  return diff.changed.some((c2) => c2.impact === "breaking");
+}
+function countByImpact(diff) {
+  const counts = { breaking: 0, additive: 0, cosmetic: 0 };
+  const all = [
+    ...diff.added,
+    ...diff.removed,
+    ...diff.renamed,
+    ...diff.changed
+  ];
+  for (const entry of all) {
+    if (entry.impact === "breaking") counts.breaking += 1;
+    else if (entry.impact === "additive") counts.additive += 1;
+    else counts.cosmetic += 1;
+  }
+  return counts;
+}
+function buildMigrationSites(diff, usageByName, cap) {
+  const all = [];
+  for (const row2 of diffRows(diff)) {
+    const usage = usageByName.get(row2.lookupName);
+    if (usage === void 0) continue;
+    for (const site of usage.usages) {
+      all.push({
+        file: site.file,
+        line: site.line,
+        subject: row2.component,
+        from: row2.fromName,
+        to: row2.toName
+      });
+    }
+  }
+  const limit = Number.isFinite(cap) && cap > 0 ? cap : all.length;
+  const truncated = all.length > limit;
+  return { sites: truncated ? all.slice(0, limit) : all, truncated };
+}
+function appendImpactHistory(targetDir, diff, usageByName, cap) {
+  const stateDir = join19(targetDir, ".ds-bridge");
+  let touchedCallSites = 0;
+  for (const usage of usageByName.values()) {
+    touchedCallSites += usage.usages.length;
+  }
+  const { sites, truncated } = buildMigrationSites(diff, usageByName, cap);
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "impact",
+    ...countByImpact(diff),
+    touchedCallSites,
+    ...sites.length > 0 ? { sites } : {},
+    ...truncated ? { sitesTruncated: true } : {}
+  };
+  appendHistoryRecord(stateDir, record);
+}
+function renderChecklist(sites, truncated) {
+  if (sites.length === 0) {
+    return "Migration checklist: no mapped call sites (no registry, or no changed component is imported in resolved .tsx files).";
+  }
+  const header = `Migration checklist \u2014 ${sites.length} call site${sites.length === 1 ? "" : "s"}${truncated ? " (truncated to the cap)" : ""}:`;
+  const lines = sites.map((s) => {
+    const move = s.from !== "" && s.to !== "" ? `${s.from} \u2192 ${s.to}` : s.to === "" ? `${s.from} \u2192 (removed)` : `(new) \u2192 ${s.to}`;
+    return `  ${s.file}:${s.line} \xB7 ${s.subject} \xB7 ${move}`;
+  });
+  return [header, ...lines].join("\n");
+}
+function diffRows(diff) {
+  const rows = [];
+  for (const r2 of diff.removed) {
+    rows.push({
+      component: r2.name,
+      lookupName: r2.name,
+      category: "removed",
+      impact: r2.impact,
+      detail: "component removed from the library",
+      fromName: r2.name,
+      toName: ""
+    });
+  }
+  for (const r2 of diff.renamed) {
+    rows.push({
+      component: r2.toName,
+      lookupName: r2.fromName,
+      category: "renamed",
+      impact: r2.impact,
+      detail: `renamed from "${r2.fromName}"`,
+      fromName: r2.fromName,
+      toName: r2.toName
+    });
+  }
+  for (const c2 of diff.changed) {
+    const parts = [];
+    if (c2.descriptionChanged) parts.push("description changed");
+    for (const vc of c2.variantChanges) {
+      if (vc.kind === "axis-added") parts.push(`+axis ${vc.axis}`);
+      else if (vc.kind === "axis-removed") parts.push(`-axis ${vc.axis}`);
+      else if (vc.kind === "value-added") parts.push(`+${vc.axis}=${vc.value}`);
+      else parts.push(`-${vc.axis}=${vc.value}`);
+    }
+    rows.push({
+      component: c2.name,
+      lookupName: c2.name,
+      category: "changed",
+      impact: c2.impact,
+      detail: parts.join(", "),
+      fromName: c2.name,
+      toName: c2.name
+    });
+  }
+  for (const a of diff.added) {
+    rows.push({
+      component: a.name,
+      lookupName: a.name,
+      category: "added",
+      impact: a.impact,
+      detail: "new component",
+      fromName: "",
+      toName: a.name
+    });
+  }
+  const rank3 = {
+    breaking: 0,
+    additive: 1,
+    cosmetic: 2
+  };
+  rows.sort((x, y) => {
+    const byImpact = (rank3[x.impact] ?? 9) - (rank3[y.impact] ?? 9);
+    return byImpact !== 0 ? byImpact : x.component < y.component ? -1 : x.component > y.component ? 1 : 0;
+  });
+  return rows;
+}
+function renderTerm8(diff, usageByName, registryPresent, color) {
+  const rows = diffRows(diff);
+  if (rows.length === 0) {
+    return severityColor(
+      "ok",
+      "No component changes since the last snapshot.",
+      {
+        color
+      }
+    );
+  }
+  const breaking = hasBreaking(diff);
+  const header = severityColor(
+    breaking ? "error" : "ok",
+    breaking ? `${rows.length} change(s) \u2014 BREAKING changes found.` : `${rows.length} change(s) \u2014 no breaking changes.`,
+    { color }
+  );
+  const tableRows = rows.map((row2) => {
+    const usage = usageByName.get(row2.lookupName);
+    const sites = usage?.count ?? 0;
+    const touches = registryPresent ? sites > 0 ? `touches ${sites} call site${sites === 1 ? "" : "s"}` : "no call sites" : "\u2014";
+    const sev = row2.impact === "breaking" ? "error" : row2.impact === "additive" ? "warn" : "info";
+    return [
+      severityColor(sev, row2.impact, { color }),
+      row2.category,
+      row2.component,
+      row2.detail,
+      touches
+    ];
+  });
+  const table3 = renderTable(
+    ["impact", "category", "component", "detail", "code"],
+    tableRows,
+    { color }
+  );
+  const lines = [header, "", table3];
+  if (!registryPresent) {
+    lines.push(
+      "",
+      'No .ds-bridge/registry.json found \u2014 run "ds-bridge registry build" to map changes to code call sites.'
+    );
+  }
+  return lines.join("\n");
+}
+async function runImpact(options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail11(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const projectFileText = readProjectConfigText3();
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind !== "ok") {
+    fail11(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail11(missingTokenMessage3());
+    return;
+  }
+  const fileKeyOutcome = resolveFileKey({
+    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
+    productFileKeys: config.productFileKeys,
+    ...config.figmaFileKey !== void 0 ? { defaultKey: config.figmaFileKey } : {}
+  });
+  if (fileKeyOutcome.kind === "unknown-alias") {
+    fail11(unknownAliasMessage2(fileKeyOutcome, config.productFileKeys));
+    return;
+  }
+  if (fileKeyOutcome.kind === "missing") {
+    fail11(missingFileKeyMessage());
+    return;
+  }
+  const fileKey = fileKeyOutcome.key;
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE4;
+  const client = createFigmaClient({ token: config.figmaToken.value, baseUrl });
+  const componentsResult = await client.getComponents(fileKey);
+  if (componentsResult.kind !== "ok") {
+    fail11(clientErrorMessage3(componentsResult));
+    return;
+  }
+  const versionsResult = await client.getVersions(fileKey);
+  if (versionsResult.kind !== "ok") {
+    fail11(clientErrorMessage3(versionsResult));
+    return;
+  }
+  const freshSnapshot = buildFigmaComponentModel({
+    published: componentsResult.data
+  });
+  const newestVersionId = versionsResult.data.versions[0]?.id ?? "";
+  const capturedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const path = cursorPath();
+  const cursor = readCursor(path);
+  const haveBaseline = cursor !== void 0 && cursor.fileKey === fileKey;
+  const nextCursor = {
+    fileKey,
+    versionId: newestVersionId,
+    capturedAt,
+    snapshot: freshSnapshot
+  };
+  if (!haveBaseline) {
+    if (!writeCursor(path, nextCursor)) {
+      fail11(`Could not write the impact cursor to "${path}".`);
+      return;
+    }
+    const sinceNote = options.since !== void 0 ? ` (--since ${options.since} noted; v2 diffs against the cached snapshot)` : "";
+    if (format === "json") {
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            baseline: true,
+            breaking: false,
+            fileKey,
+            versionId: newestVersionId,
+            componentCount: freshSnapshot.length
+          },
+          null,
+          2
+        )}
+`
+      );
+    } else {
+      process.stdout.write(
+        `Captured a baseline snapshot of ${freshSnapshot.length} component(s)${sinceNote}.
+Run "ds-bridge impact" again after library changes to see the diff.
+`
+      );
+    }
+    process.exitCode = 0;
+    return;
+  }
+  const diff = diffComponents(cursor.snapshot, freshSnapshot);
+  const breaking = hasBreaking(diff);
+  const registry = loadRegistry4();
+  const usageByName = /* @__PURE__ */ new Map();
+  if (registry !== void 0) {
+    const usages = await mapChangedUsage(registry, changedNames(diff));
+    for (const usage of usages) usageByName.set(usage.figmaName, usage);
+  }
+  const { sites, truncated } = buildMigrationSites(
+    diff,
+    usageByName,
+    config.migrationSitesCap
+  );
+  if (format === "json") {
+    const usageList = [...usageByName.values()];
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          baseline: false,
+          breaking,
+          fileKey,
+          fromVersionId: cursor.versionId,
+          toVersionId: newestVersionId,
+          diff,
+          usage: usageList,
+          registryPresent: registry !== void 0,
+          sites,
+          sitesTruncated: truncated
+        },
+        null,
+        2
+      )}
+`
+    );
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(
+      `${renderTerm8(diff, usageByName, registry !== void 0, color)}
+`
+    );
+  }
+  if (options.checklist && format === "term") {
+    process.stdout.write(`
+${renderChecklist(sites, truncated)}
+`);
+  }
+  appendImpactHistory(cwd3(), diff, usageByName, config.migrationSitesCap);
+  if (!writeCursor(path, nextCursor)) {
+    process.stderr.write(
+      `warning: could not update the impact cursor at "${path}".
+`
+    );
+  }
+  process.exitCode = breaking ? 1 : 0;
+}
+function registerImpactCommand(program2) {
+  program2.command("impact").description(
+    "Detect breaking Figma library changes since the last snapshot and map them to code"
+  ).option(
+    "--since <versionId>",
+    "note a baseline version id (v2 diffs against the cached snapshot)"
+  ).option(
+    "--file-key <keyOrAlias>",
+    "Figma file key OR a product_file_keys alias (overrides config)"
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--checklist",
+    "print the per-call-site migration checklist (file:line \xB7 old\u2192new) after the report (term only)",
+    false
+  ).option(
+    "--sites",
+    "alias of --checklist: print the per-call-site migration checklist (term only)",
+    false
+  ).action((options) => {
+    void runImpact({
+      ...options,
+      checklist: options.checklist || options.sites === true
+    });
+  });
+}
+
+// src/cli-commands/library-health.ts
+import { existsSync as existsSync16, mkdirSync as mkdirSync9, readFileSync as readFileSync17, writeFileSync as writeFileSync11 } from "fs";
+import { join as join21 } from "path";
+import { cwd as cwd4, env as processEnv2 } from "process";
+
+// src/engines/figma/library-health.ts
+var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
+var CAP = 20;
+function componentNameOf(file, componentId) {
+  if (componentId === void 0) return void 0;
+  const components = file.components;
+  if (components === void 0) return void 0;
+  return components[componentId]?.name;
+}
+function walk(root, visit) {
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    visit(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (const child of children) {
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+}
+function compareStrings(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function assessLibraryHealth(file, opts) {
+  const deprecatedPattern = opts?.deprecatedPattern ?? DEFAULT_DEPRECATED_PATTERN;
+  const cap = opts?.cap ?? CAP;
+  const hasComponents = file.components !== void 0;
+  const componentNames = /* @__PURE__ */ new Set();
+  if (file.components !== void 0) {
+    for (const id of Object.keys(file.components)) {
+      const entry = file.components[id];
+      if (entry !== void 0) componentNames.add(entry.name);
+    }
+  }
+  const hotspots = [];
+  const deprecatedCounts = /* @__PURE__ */ new Map();
+  const detached = [];
+  walk(file.document, (node) => {
+    const isInstance = node.type === "INSTANCE";
+    if (isInstance) {
+      const overrides = node.overrides;
+      const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
+      if (overrideCount > 0) {
+        const componentName = componentNameOf(file, node.componentId);
+        hotspots.push({
+          nodeId: node.id,
+          name: node.name,
+          ...componentName !== void 0 ? { componentName } : {},
+          overrideCount
+        });
+      }
+      if (hasComponents) {
+        const componentName = componentNameOf(file, node.componentId);
+        if (componentName !== void 0 && deprecatedPattern.test(componentName)) {
+          deprecatedCounts.set(
+            componentName,
+            (deprecatedCounts.get(componentName) ?? 0) + 1
+          );
+        }
+      }
+    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && componentNames.has(node.name)) {
+      detached.push({ nodeId: node.id, name: node.name, heuristic: true });
+    }
+  });
+  let deprecatedUsageTotal = 0;
+  for (const count of deprecatedCounts.values()) deprecatedUsageTotal += count;
+  const totals = {
+    overrideHotspots: hotspots.length,
+    deprecatedUsage: deprecatedUsageTotal,
+    detachedCandidates: detached.length
+  };
+  hotspots.sort((a, b) => {
+    if (a.overrideCount !== b.overrideCount) {
+      return b.overrideCount - a.overrideCount;
+    }
+    return compareStrings(a.name, b.name);
+  });
+  const deprecatedUsage = [
+    ...deprecatedCounts.entries()
+  ].map(([componentName, count]) => ({ componentName, count })).sort((a, b) => compareStrings(a.componentName, b.componentName)).slice(0, cap);
+  const detachedCandidates = [...detached].sort((a, b) => compareStrings(a.nodeId, b.nodeId)).slice(0, cap);
+  return {
+    overrideHotspots: hotspots.slice(0, cap),
+    deprecatedUsage,
+    detachedCandidates,
+    totals
+  };
+}
+
+// src/engines/figma/library-health-top.ts
+function rank(counts, n) {
+  return [...counts.entries()].map(([name, count]) => ({ name, count })).sort(
+    (a, b) => a.count !== b.count ? b.count - a.count : a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+  ).slice(0, Math.max(0, n));
+}
+function bump(map, name, by) {
+  map.set(name, (map.get(name) ?? 0) + by);
+}
+function libraryHealthTopLists(report, n) {
+  const overrides = /* @__PURE__ */ new Map();
+  for (const hotspot of report.overrideHotspots) {
+    bump(
+      overrides,
+      hotspot.componentName ?? hotspot.name,
+      hotspot.overrideCount
+    );
+  }
+  const deprecated = /* @__PURE__ */ new Map();
+  for (const group of report.deprecatedUsage) {
+    bump(deprecated, group.componentName, group.count);
+  }
+  const detached = /* @__PURE__ */ new Map();
+  for (const candidate of report.detachedCandidates) {
+    bump(detached, candidate.name, 1);
+  }
+  return {
+    topN: n,
+    topOverrides: rank(overrides, n),
+    topDeprecated: rank(deprecated, n),
+    topDetached: rank(detached, n)
+  };
+}
+var DEFAULT_TOP_N = 10;
+var MAX_TOP_N = 100;
+function parseTopN(raw) {
+  const text2 = raw.trim();
+  if (!/^\d+$/.test(text2)) return void 0;
+  const n = Number(text2);
+  return n <= MAX_TOP_N ? n : void 0;
+}
+
+// src/io/figma/cache.ts
+import { dirname as dirname8, join as join20 } from "path";
+function cachePath(args) {
+  const fileName = `library-${args.key}.json`;
+  const dataDir = args.env.CLAUDE_PLUGIN_DATA;
+  if (dataDir !== void 0 && dataDir !== "") {
+    return join20(dataDir, "figma", fileName);
+  }
+  return join20(args.cwd, ".ds-bridge", "cache", fileName);
+}
+function isEnvelope(value2) {
+  return typeof value2 === "object" && value2 !== null && typeof value2.stampedAtMs === "number";
+}
+function readCache(args) {
+  const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
+  if (!args.fs.exists(path)) return { kind: "miss" };
+  let envelope;
+  try {
+    const parsed = JSON.parse(args.fs.read(path));
+    if (!isEnvelope(parsed)) return { kind: "miss" };
+    envelope = parsed;
+  } catch {
+    return { kind: "miss" };
+  }
+  const ageMs = args.now - envelope.stampedAtMs;
+  if (ageMs > args.ttlMs) return { kind: "stale", ageMs };
+  return { kind: "hit", data: envelope.data, ageMs };
+}
+function writeCache(args) {
+  const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
+  const envelope = { stampedAtMs: args.now, data: args.data };
+  try {
+    args.fs.mkdir(dirname8(path));
+    args.fs.write(path, `${JSON.stringify(envelope, null, 2)}
+`);
+  } catch {
+  }
+}
+
+// src/cli-commands/library-health.ts
+var DEFAULT_FIGMA_API_BASE5 = "https://api.figma.com";
+var CACHE_TTL_MS = 60 * 60 * 1e3;
+function fail12(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage4() {
+  return missingFigmaTokenMessage([
+    "The token needs the file_content:read scope, and must come from a Dev or",
+    "Full seat \u2014 a View seat is rate-limited and cannot be used here."
+  ]);
+}
+function missingFileKeyMessage2() {
+  return [
+    "No Figma library file key configured.",
+    "",
+    "Pass --file-key <key>, set the figma_file_key plugin option, or export it:",
+    "",
+    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
+    "",
+    "The key is the segment after /file/ or /design/ in the library file URL."
+  ].join("\n");
+}
+function readProjectConfigText4() {
+  const configPath = join21(cwd4(), ".ds-bridge.json");
+  if (!existsSync16(configPath)) return void 0;
+  try {
+    return readFileSync17(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function unknownAliasMessage3(outcome, productFileKeys) {
+  const aliases = Object.keys(productFileKeys);
+  const lines = [`Unknown --file-key alias "${outcome.alias}".`];
+  if (outcome.suggestions.length > 0) {
+    lines.push(`Did you mean ${outcome.suggestions.join(", ")}?`);
+  }
+  lines.push(
+    "",
+    aliases.length > 0 ? `Available product_file_keys aliases: ${aliases.join(", ")}.` : "No product_file_keys aliases are configured.",
+    "Or pass --file-key <raw-figma-file-key> directly."
+  );
+  return lines.join("\n");
+}
+function clientErrorMessage4(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
+    case "not-found":
+      return "Figma could not find that file. Check the file key is correct and the token's account can access the library.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+var fsAdapter = {
+  exists: (path) => existsSync16(path),
+  read: (path) => readFileSync17(path, "utf8"),
+  mkdir: (path) => {
+    mkdirSync9(path, { recursive: true });
+  },
+  write: (path, content) => {
+    writeFileSync11(path, content, "utf8");
+  }
+};
+function appendLibraryHealthHistory(totals, lists, fileKey) {
+  const stateDir = join21(cwd4(), ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "library-health",
+    fileKey,
+    overrideHotspots: totals.overrideHotspots,
+    deprecatedUsage: totals.deprecatedUsage,
+    detachedCandidates: totals.detachedCandidates,
+    // F2 — the top-N lists (new keys; the counts above stay numbers).
+    ...lists !== void 0 ? lists : {}
+  };
+  appendHistoryRecord(stateDir, record);
+}
+function renderTerm9(report, color) {
+  const { totals } = report;
+  const clean = totals.overrideHotspots === 0 && totals.deprecatedUsage === 0 && totals.detachedCandidates === 0;
+  const header = severityColor(
+    clean ? "ok" : "warn",
+    clean ? "Library health: no hygiene signals found." : "Library health \u2014 hygiene signals found (informational).",
+    { color }
+  );
+  const summary = renderTable(
+    ["signal", "count"],
+    [
+      ["override hotspots", String(totals.overrideHotspots)],
+      ["deprecated usage", String(totals.deprecatedUsage)],
+      ["detached candidates", String(totals.detachedCandidates)]
+    ],
+    { color }
+  );
+  const lines = [header, "", summary];
+  if (report.overrideHotspots.length > 0) {
+    lines.push("", "Top override hotspots:");
+    for (const h of report.overrideHotspots) {
+      const named2 = h.componentName !== void 0 ? ` (${h.componentName})` : "";
+      lines.push(`  ${h.name}${named2}: ${h.overrideCount} override(s)`);
+    }
+  }
+  lines.push(
+    "",
+    `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
+  );
+  return lines.join("\n");
+}
+async function runLibraryHealth(options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail12(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const topN = options.top === void 0 ? DEFAULT_TOP_N : parseTopN(options.top);
+  if (topN === void 0) {
+    fail12(
+      `Invalid --top "${options.top}". Expected a whole number from 0 to 100 (0 = counts only).`
+    );
+    return;
+  }
+  const projectFileText = readProjectConfigText4();
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind !== "ok") {
+    fail12(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail12(missingTokenMessage4());
+    return;
+  }
+  const fileKeyOutcome = resolveFileKey({
+    ...options.fileKey !== void 0 ? { flagValue: options.fileKey } : {},
+    productFileKeys: config.productFileKeys,
+    ...config.figmaFileKey !== void 0 ? { defaultKey: config.figmaFileKey } : {}
+  });
+  if (fileKeyOutcome.kind === "unknown-alias") {
+    fail12(unknownAliasMessage3(fileKeyOutcome, config.productFileKeys));
+    return;
+  }
+  if (fileKeyOutcome.kind === "missing") {
+    fail12(missingFileKeyMessage2());
+    return;
+  }
+  const fileKey = fileKeyOutcome.key;
+  const cacheEnv = processEnv2.CLAUDE_PLUGIN_DATA !== void 0 ? { CLAUDE_PLUGIN_DATA: processEnv2.CLAUDE_PLUGIN_DATA } : {};
+  const cacheArgs = {
+    key: fileKey,
+    env: cacheEnv,
+    cwd: cwd4()
+  };
+  let file;
+  if (!options.refresh) {
+    const cached = readCache({
+      ...cacheArgs,
+      fs: fsAdapter,
+      now: Date.now(),
+      ttlMs: CACHE_TTL_MS
+    });
+    if (cached.kind === "hit") {
+      file = cached.data;
+    }
+  }
+  if (file === void 0) {
+    const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE5;
+    const client = createFigmaClient({
+      token: config.figmaToken.value,
+      baseUrl
+    });
+    const result = await client.getFile(fileKey);
+    if (result.kind === "ok") {
+      file = result.data;
+      writeCache({
+        ...cacheArgs,
+        fs: fsAdapter,
+        now: Date.now(),
+        data: result.data
+      });
+    } else if (result.kind === "rate-limited") {
+      process.stderr.write(`warning: ${clientErrorMessage4(result)}
+`);
+      const fallback = existsSync16(cachePath(cacheArgs)) ? readCache({
+        ...cacheArgs,
+        fs: fsAdapter,
+        now: Date.now(),
+        // A huge TTL so any present envelope counts as a hit.
+        ttlMs: Number.MAX_SAFE_INTEGER
+      }) : { kind: "miss" };
+      if (fallback.kind === "hit") {
+        file = fallback.data;
+      } else {
+        process.exitCode = 2;
+        return;
+      }
+    } else {
+      fail12(clientErrorMessage4(result));
+      return;
+    }
+  }
+  const report = assessLibraryHealth(file);
+  const lists = topN > 0 ? libraryHealthTopLists(
+    assessLibraryHealth(file, { cap: Number.POSITIVE_INFINITY }),
+    topN
+  ) : void 0;
+  appendLibraryHealthHistory(report.totals, lists, fileKey);
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm9(report, color)}
+`);
+  }
+  process.exitCode = 0;
+}
+function registerLibraryHealthCommand(program2) {
+  program2.command("library-health").description(
+    "Crawl a Figma file for design-system hygiene signals (override hotspots, deprecated usage, detached-instance candidates)"
+  ).option(
+    "--file-key <keyOrAlias>",
+    "Figma file key OR a product_file_keys alias (overrides config)"
+  ).option("--format <format>", "output format: term | json", "term").option("--refresh", "bypass the response cache and re-crawl", false).option(
+    "--top <n>",
+    "store the top N components per signal in history for trends (0-100, 0 = counts only; default 10)"
+  ).action((options) => {
+    void runLibraryHealth(options);
+  });
+}
+
+// src/cli-commands/lint.ts
+import { spawnSync as spawnSync2 } from "child_process";
+import {
+  existsSync as existsSync17,
+  readdirSync as readdirSync3,
+  readFileSync as readFileSync18,
+  statSync as statSync10,
+  writeFileSync as writeFileSync12
+} from "fs";
+import { isAbsolute as isAbsolute3, join as join22, relative, resolve as resolve12, sep as sep3 } from "path";
+
+// src/engines/lint/extract.ts
+var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
+var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
+var DIM_RE = /-?\d+(?:\.\d+)?(?:px)?/;
+var SPACING_PREFIXES = ["padding", "margin", "inset"];
+var SPACING_EXACT = /* @__PURE__ */ new Set([
+  "gap",
+  "row-gap",
+  "column-gap",
+  "rowGap",
+  "columnGap",
+  "top",
+  "right",
+  "bottom",
+  "left"
+]);
+function isSpacingProperty(property) {
+  const lower = property.toLowerCase();
+  if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
+  for (const prefix of SPACING_PREFIXES) {
+    if (lower === prefix || lower.startsWith(prefix)) return true;
+  }
+  return false;
+}
+function blankComments(text2) {
+  let out = "";
+  let i = 0;
+  while (i < text2.length) {
+    const ch = text2[i];
+    if (ch === "/" && text2[i + 1] === "*") {
+      const end = text2.indexOf("*/", i + 2);
+      const stop = end === -1 ? text2.length : end + 2;
+      for (let j = i; j < stop; j++) out += text2[j] === "\n" ? "\n" : " ";
+      i = stop;
+      continue;
+    }
+    if (ch === "/" && text2[i + 1] === "/" && text2[i - 1] !== ":") {
+      let j = i;
+      while (j < text2.length && text2[j] !== "\n") {
+        out += " ";
+        j += 1;
+      }
+      i = j;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      out += ch;
+      i += 1;
+      while (i < text2.length && text2[i] !== ch) {
+        out += text2[i] === "\n" ? "\n" : " ";
+        i += 1;
+      }
+      if (i < text2.length) {
+        out += text2[i];
+        i += 1;
+      }
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+function* scanValue(value2, property) {
+  const spacing = isSpacingProperty(property);
+  let i = 0;
+  while (i < value2.length) {
+    const rest = value2.slice(i);
+    if (/^var\s*\(/i.test(rest)) {
+      const close = value2.indexOf(")", i);
+      i = close === -1 ? value2.length : close + 1;
+      continue;
+    }
+    const fn5 = COLOR_FN_RE.exec(rest);
+    if (fn5 !== null && fn5.index === 0) {
+      yield { offset: i, raw: fn5[0], valueKind: "color" };
+      i += fn5[0].length;
+      continue;
+    }
+    if (value2[i] === "#") {
+      const hex2 = HEX_RE.exec(rest);
+      if (hex2 !== null && hex2.index === 0) {
+        yield { offset: i, raw: hex2[0], valueKind: "color" };
+        i += hex2[0].length;
+        continue;
+      }
+    }
+    if (spacing && (value2[i] === "-" || /\d/.test(value2[i] ?? ""))) {
+      const prev = value2[i - 1] ?? " ";
+      if (!/[a-zA-Z0-9.#-]/.test(prev)) {
+        const dim = DIM_RE.exec(rest);
+        if (dim !== null && dim.index === 0) {
+          const px = Number.parseFloat(dim[0]);
+          if (Number.isFinite(px) && px !== 0) {
+            yield { offset: i, raw: dim[0], valueKind: "dimension" };
+          }
+          i += dim[0].length;
+          continue;
+        }
+      }
+    }
+    i += 1;
+  }
+}
+function extractCss(text2, lineBase, colBase) {
+  const hits = [];
+  const cleaned = blankComments(text2);
+  const lines = cleaned.split("\n");
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li] ?? "";
+    const colShift = li === 0 ? colBase : 0;
+    const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
+    let m = decl.exec(line);
+    while (m !== null) {
+      const property = m[1] ?? "";
+      const value2 = m[2] ?? "";
+      const valueStart = m.index + m[0].length - value2.length;
+      for (const hit of scanValue(value2, property)) {
+        hits.push({
+          line: lineBase + li,
+          col: colShift + valueStart + hit.offset + 1,
+          raw: hit.raw,
+          property,
+          valueKind: hit.valueKind
+        });
+      }
+      m = decl.exec(line);
+    }
+  }
+  return hits;
+}
+function indexToLineCol(source, index) {
+  let line = 1;
+  let lineStart = 0;
+  for (let i = 0; i < index; i++) {
+    if (source[i] === "\n") {
+      line += 1;
+      lineStart = i + 1;
+    }
+  }
+  return { line, col: index - lineStart + 1 };
+}
+var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
+function extractTsx(source, file) {
+  const out = [];
+  const styleOpen = /style\s*=\s*\{\{/g;
+  let so = styleOpen.exec(source);
+  while (so !== null) {
+    const bodyStart = so.index + so[0].length;
+    const close = source.indexOf("}}", bodyStart);
+    const body = source.slice(bodyStart, close === -1 ? source.length : close);
+    STYLE_OBJ_PROP_RE.lastIndex = 0;
+    let pm = STYLE_OBJ_PROP_RE.exec(body);
+    while (pm !== null) {
+      const property = pm[1] ?? "";
+      const valueCapture = pm[2] ?? "";
+      const rawValue = valueCapture.trim();
+      const leading = valueCapture.length - valueCapture.trimStart().length;
+      const valueIndexInBody = pm.index + pm[0].length - valueCapture.length + leading;
+      const absValueIndex = bodyStart + valueIndexInBody;
+      const quoted = /^(["'])(.*)\1$/.exec(rawValue);
+      if (quoted !== null) {
+        const inner = quoted[2] ?? "";
+        if (isColorLiteral(inner)) {
+          const pos = indexToLineCol(source, absValueIndex);
+          out.push({
+            file,
+            line: pos.line,
+            col: pos.col,
+            raw: rawValue,
+            property,
+            valueKind: "color",
+            context: "style-object"
+          });
+        }
+      } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
+        if (isSpacingProperty(property)) {
+          const num5 = Number.parseFloat(rawValue);
+          if (Number.isFinite(num5) && num5 !== 0) {
+            const pos = indexToLineCol(source, absValueIndex);
+            out.push({
+              file,
+              line: pos.line,
+              col: pos.col,
+              raw: rawValue,
+              property,
+              valueKind: "dimension",
+              context: "style-object"
+            });
+          }
+        }
+      }
+      pm = STYLE_OBJ_PROP_RE.exec(body);
+    }
+    so = styleOpen.exec(source);
+  }
+  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
+  let st = styledOpen.exec(source);
+  while (st !== null) {
+    const backtickIndex = st.index + st[0].length - 1;
+    const bodyStart = backtickIndex + 1;
+    const close = source.indexOf("`", bodyStart);
+    const body = source.slice(bodyStart, close === -1 ? source.length : close);
+    const pos = indexToLineCol(source, bodyStart);
+    const cssHits = extractCss(body, pos.line, pos.col - 1);
+    for (const hit of cssHits) {
+      out.push({
+        file,
+        line: hit.line,
+        col: hit.col,
+        raw: hit.raw,
+        property: hit.property,
+        valueKind: hit.valueKind,
+        context: "styled-template"
+      });
+    }
+    st = styledOpen.exec(source);
+  }
+  return out;
+}
+var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
+var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
+function isColorLiteral(value2) {
+  const v = value2.trim();
+  return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
+}
+function extensionOf(path) {
+  const dot = path.lastIndexOf(".");
+  return dot === -1 ? "" : path.slice(dot).toLowerCase();
+}
+function byLineThenCol(a, b) {
+  if (a.line !== b.line) return a.line - b.line;
+  return a.col - b.col;
+}
+function extractLiterals(file) {
+  const ext = extensionOf(file.path);
+  let result = [];
+  try {
+    if (ext === ".css" || ext === ".scss") {
+      result = extractCss(file.content, 1, 0).map((hit) => ({
+        file: file.path,
+        line: hit.line,
+        col: hit.col,
+        raw: hit.raw,
+        property: hit.property,
+        valueKind: hit.valueKind,
+        context: "css-declaration"
+      }));
+    } else if (ext === ".tsx" || ext === ".jsx") {
+      result = extractTsx(file.content, file.path);
+    }
+  } catch {
+    return [];
+  }
+  return result.sort(byLineThenCol);
+}
+
+// src/engines/lint/adoption.ts
+function countTokenRefs(css) {
+  const masked = blankComments(css);
+  const refRe = /\bvar\s*\(\s*--[\w-]+/gi;
+  let count = 0;
+  while (refRe.exec(masked) !== null) count += 1;
+  return count;
+}
+var BY_DIRECTORY_CAP = 20;
+function dirnameOf(path) {
+  const slash = path.lastIndexOf("/");
+  return slash === -1 ? "" : path.slice(0, slash);
+}
+function pct4(refs, literals) {
+  const denom = refs + literals;
+  return denom === 0 ? 0 : refs / denom;
+}
+function tallyAdoption(files) {
+  const totals = { refs: 0, literals: 0 };
+  const byDir = /* @__PURE__ */ new Map();
+  for (const file of files) {
+    totals.refs += file.refs;
+    totals.literals += file.literals;
+    const dir = dirnameOf(file.path);
+    const bucket = byDir.get(dir);
+    if (bucket === void 0) {
+      byDir.set(dir, { dir, refs: file.refs, literals: file.literals });
+    } else {
+      bucket.refs += file.refs;
+      bucket.literals += file.literals;
+    }
+  }
+  const byDirectory = [...byDir.values()].filter((d) => d.refs + d.literals > 0).sort((a, b) => {
+    const pa = pct4(a.refs, a.literals);
+    const pb = pct4(b.refs, b.literals);
+    if (pa !== pb) return pa - pb;
+    return a.dir < b.dir ? -1 : a.dir > b.dir ? 1 : 0;
+  }).slice(0, BY_DIRECTORY_CAP);
+  return { totals, byDirectory };
+}
+
+// src/engines/lint/fix.ts
+function isCompositeToken(token) {
+  return typeof token.value === "object" && token.value !== null;
+}
+function toCssVar(token) {
+  return `var(--${token.name.replaceAll(".", "-")})`;
+}
+function quoteOf(raw) {
+  const first = raw[0];
+  const last = raw[raw.length - 1];
+  if (raw.length >= 2 && (first === '"' || first === "'") && first === last) {
+    return first;
+  }
+  return void 0;
+}
+function replacementFor(literal, token) {
+  const cssVar = toCssVar(token);
+  if (literal.context !== "style-object") return cssVar;
+  const quote = quoteOf(literal.raw);
+  if (quote !== void 0) return `${quote}${cssVar}${quote}`;
+  return `"${cssVar}"`;
+}
+function compareEdits(a, b) {
+  if (a.file !== b.file) return a.file < b.file ? -1 : 1;
+  if (a.line !== b.line) return b.line - a.line;
+  return b.col - a.col;
+}
+function planFixes(findings) {
+  const edits = [];
+  for (const { literal, match } of findings) {
+    if (match.kind !== "exact") continue;
+    if (isCompositeToken(match.token)) continue;
+    edits.push({
+      file: literal.file,
+      line: literal.line,
+      col: literal.col,
+      length: literal.raw.length,
+      replacement: replacementFor(literal, match.token)
+    });
+  }
+  return edits.sort(compareEdits);
+}
+function applyEdits(content, edits) {
+  if (edits.length === 0) return content;
+  const lines = content.split("\n");
+  const byLine = /* @__PURE__ */ new Map();
+  for (const edit of edits) {
+    const bucket = byLine.get(edit.line);
+    if (bucket === void 0) byLine.set(edit.line, [edit]);
+    else bucket.push(edit);
+  }
+  for (const [line, lineEdits] of byLine) {
+    const index = line - 1;
+    const text2 = lines[index];
+    if (text2 === void 0) continue;
+    let next = text2;
+    for (const edit of [...lineEdits].sort((a, b) => b.col - a.col)) {
+      const start = edit.col - 1;
+      if (start < 0 || start > next.length) continue;
+      next = next.slice(0, start) + edit.replacement + next.slice(start + edit.length);
+    }
+    lines[index] = next;
+  }
+  return lines.join("\n");
+}
+
+// src/engines/lint/match.ts
+var COLOR_NEAR_DELTA_E2 = 2.5;
+var DIMENSION_NEAR_PX2 = 1;
+var NEAR_LIMIT2 = 3;
+function pickPreferred2(tokens) {
+  if (tokens.length === 0) return void 0;
+  const names = new Set(tokens.map((t) => t.name));
+  const semantic = tokens.find(
+    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
+  );
+  return semantic ?? tokens[0];
+}
+function aliasRank(token) {
+  return token.aliasOf !== void 0 ? 0 : 1;
+}
+function stripQuotes(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (trimmed.length >= 2 && (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+function matchColor(literal, index, options) {
+  const canonical3 = normalizeColor(stripQuotes(literal.raw));
+  if (canonical3 === void 0) return { kind: "off-system" };
+  const exact = index.byValue.get(canonical3);
+  if (exact !== void 0 && exact.length > 0) {
+    const token = pickPreferred2(exact);
+    if (token !== void 0) return { kind: "exact", token };
+  }
+  const composite = options?.compositeColors?.get(canonical3);
+  if (composite !== void 0 && composite.length > 0) {
+    const token = pickPreferred2(composite);
+    if (token !== void 0) return { kind: "exact", token };
+  }
+  const near = index.nearest(canonical3, {
+    maxDeltaE: COLOR_NEAR_DELTA_E2,
+    limit: NEAR_LIMIT2
+  });
+  if (near.length === 0) return { kind: "off-system" };
+  const candidates = near.map((m) => ({ token: m.token, distance: m.deltaE })).sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : aliasRank(a.token) - aliasRank(b.token)
+  ).slice(0, NEAR_LIMIT2);
+  return { kind: "near", candidates };
+}
+function matchDimension(literal, index) {
+  const dim = normalizeDimension(stripQuotes(literal.raw));
+  if (dim === void 0) return { kind: "off-system" };
+  const bucket = index.byValue.get(`${dim.px}px`);
+  if (bucket !== void 0) {
+    const exact = bucket.find((t) => t.type === "dimension");
+    if (exact !== void 0) return { kind: "exact", token: exact };
+  }
+  const candidates = [];
+  for (const token of index.byName.values()) {
+    if (token.type !== "dimension") continue;
+    const tokenDim = normalizeDimension(
+      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
+    );
+    if (tokenDim === void 0) continue;
+    const distance = Math.abs(dim.px - tokenDim.px);
+    if (distance === 0 || distance > DIMENSION_NEAR_PX2) continue;
+    candidates.push({ token, distance });
+  }
+  if (candidates.length === 0) return { kind: "off-system" };
+  candidates.sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
+  );
+  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT2) };
+}
+function matchLiteral(literal, index, options) {
+  return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
+}
+function buildCompositeColorLookup(tokens) {
+  const lookup = /* @__PURE__ */ new Map();
+  for (const token of tokens) {
+    const { value: value2 } = token;
+    if (typeof value2 !== "object" || value2 === null) continue;
+    const inner = value2.color;
+    if (typeof inner !== "string") continue;
+    const canonical3 = normalizeColor(inner);
+    if (canonical3 === void 0) continue;
+    const bucket = lookup.get(canonical3);
+    if (bucket === void 0) {
+      lookup.set(canonical3, [token]);
+    } else {
+      bucket.push(token);
+    }
+  }
+  return lookup;
+}
+
+// src/cli-commands/lint.ts
+var PARSERS4 = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "out",
+  ".next",
+  "coverage"
+]);
+var LINTABLE_EXTENSIONS = [".css", ".scss", ".tsx", ".jsx"];
+var KIND_SEVERITY = {
+  exact: "error",
+  near: "warn",
+  "off-system": "info"
+};
+function countByKind(findings) {
+  const byKind = { exact: 0, near: 0, offSystem: 0 };
+  for (const finding of findings) {
+    if (finding.match.kind === "exact") byKind.exact += 1;
+    else if (finding.match.kind === "near") byKind.near += 1;
+    else byKind.offSystem += 1;
+  }
+  return byKind;
+}
+function computeAdoption(files, findings) {
+  const cssFiles = files.filter((f3) => isCssLike(f3.rel));
+  const literalsByFile = /* @__PURE__ */ new Map();
+  for (const finding of findings) {
+    const rel2 = finding.literal.file;
+    if (!isCssLike(rel2)) continue;
+    literalsByFile.set(rel2, (literalsByFile.get(rel2) ?? 0) + 1);
+  }
+  const perFile = cssFiles.map((file) => {
+    let refs = 0;
+    try {
+      refs = countTokenRefs(readFileSync18(file.abs, "utf8"));
+    } catch {
+      refs = 0;
+    }
+    return {
+      path: file.rel,
+      refs,
+      literals: literalsByFile.get(file.rel) ?? 0
+    };
+  });
+  const tally3 = tallyAdoption(perFile);
+  return {
+    refs: tally3.totals.refs,
+    literals: tally3.totals.literals,
+    byDirectory: tally3.byDirectory
+  };
+}
+function isCssLike(path) {
+  const lower = path.toLowerCase();
+  return lower.endsWith(".css") || lower.endsWith(".scss");
+}
+function appendLintHistory(targetDir, findings, files) {
+  const stateDir = join22(targetDir, ".ds-bridge");
+  const record = {
+    at: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: "lint",
+    byKind: countByKind(findings),
+    adoption: computeAdoption(files, findings)
+  };
+  appendHistoryRecord(stateDir, record);
+}
+function hasExtension(name) {
+  const lower = name.toLowerCase();
+  return LINTABLE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+function walkLintableFiles(dir, acc) {
+  let entries;
+  try {
+    entries = readdirSync3(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join22(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
+      walkLintableFiles(full, acc);
+      continue;
+    }
+    if (entry.isFile() && hasExtension(entry.name)) acc.push(full);
+  }
+}
+function resolveTokenSource(targetDir, flagTokens) {
+  if (flagTokens !== void 0) {
+    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve12(process.cwd(), flagTokens);
+    if (!existsSync17(abs2)) {
+      return {
+        kind: "error",
+        message: `Token source "${abs2}" (from --tokens) does not exist.`
+      };
+    }
+    return { kind: "ok", path: abs2 };
+  }
+  const configPath = join22(targetDir, ".ds-bridge.json");
+  if (existsSync17(configPath)) {
+    let projectFileText;
+    try {
+      projectFileText = readFileSync18(configPath, "utf8");
+    } catch {
+      projectFileText = void 0;
+    }
+    if (projectFileText !== void 0) {
+      const resolved = resolveConfig({ projectFileText });
+      if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
+        const src = resolved.config.tokenSource;
+        const abs2 = isAbsolute3(src) ? src : resolve12(targetDir, src);
+        if (existsSync17(abs2)) return { kind: "ok", path: abs2 };
+        return {
+          kind: "error",
+          message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
+        };
+      }
+    }
+  }
+  const discovered = discoverFirstTokenSource2(targetDir);
+  if (discovered !== void 0) return { kind: "ok", path: discovered };
+  return {
+    kind: "error",
+    message: `No design-token source found for "${targetDir}".
+Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
+  };
+}
+function discoverFirstTokenSource2(root) {
+  const candidates = [];
+  collectTokenCandidates2(root, false, candidates);
+  const verified = candidates.filter((path) => detectFileFormat3(path) !== void 0).sort((a, b) => {
+    const depth = depthOf3(a) - depthOf3(b);
+    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
+  });
+  return verified[0];
+}
+function depthOf3(path) {
+  return path.split(sep3).filter((s) => s.length > 0).length;
+}
+function isConventionalTokenFile3(name) {
+  if (!name.endsWith(".json")) return false;
+  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
+}
+function isTokenDir3(name) {
+  return name === "tokens" || name === "design-tokens";
+}
+function collectTokenCandidates2(dir, insideTokenDir, acc) {
+  let entries;
+  try {
+    entries = readdirSync3(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join22(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
+      collectTokenCandidates2(
+        full,
+        insideTokenDir || isTokenDir3(entry.name),
+        acc
+      );
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    if (insideTokenDir || isConventionalTokenFile3(entry.name)) acc.push(full);
+  }
+}
+function detectFileFormat3(absPath) {
+  let raw;
+  try {
+    raw = readFileSync18(absPath, "utf8");
+  } catch {
+    return void 0;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return void 0;
+  }
+  const format = detectFormat(parsed);
+  return format === "unknown" ? void 0 : format;
+}
+function loadTokenMap(tokenPath) {
+  let raw;
+  try {
+    raw = readFileSync18(tokenPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read token source "${tokenPath}": ${detail}`
+    };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
+    };
+  }
+  const format = detectFormat(parsed);
+  if (format === "unknown") {
+    return {
+      kind: "error",
+      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
+    };
+  }
+  const outcome = PARSERS4[format](parsed);
+  if (outcome.kind === "error") {
+    const lines = outcome.errors.map((e4) => {
+      const where = e4.path !== void 0 ? ` (${e4.path})` : "";
+      return `  ${e4.code}${where}: ${e4.message}`;
+    });
+    return {
+      kind: "error",
+      message: `Failed to parse token source "${tokenPath}" as ${format}:
+${lines.join("\n")}`
+    };
+  }
+  return { kind: "ok", map: outcome.map };
+}
+function lintFile(absPath, relPath, tokens) {
+  let content;
+  try {
+    content = readFileSync18(absPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read "${absPath}": ${detail}`
+    };
+  }
+  const literals = extractLiterals({ path: relPath, content });
+  const findings = [];
+  for (const literal of literals) {
+    const match = matchLiteral(literal, tokens.index, {
+      compositeColors: tokens.compositeColors
+    });
+    findings.push({ literal, match });
+  }
+  return { kind: "ok", findings };
+}
+function candidateNames(match) {
+  return match.kind === "near" ? match.candidates.map((candidate) => candidate.token.name) : [];
+}
+function toJsonFinding(finding) {
+  const base = {
+    file: finding.literal.file,
+    line: finding.literal.line,
+    col: finding.literal.col,
+    raw: finding.literal.raw,
+    property: finding.literal.property,
+    kind: finding.match.kind
+  };
+  if (finding.match.kind === "exact") {
+    base.expectedToken = finding.match.token.name;
+  } else if (finding.match.kind === "near") {
+    base.expectedCandidates = candidateNames(finding.match);
+  }
+  return base;
+}
+function suggestionFor(match) {
+  switch (match.kind) {
+    case "exact":
+      return `use token ${match.token.name}`;
+    case "near": {
+      const names = candidateNames(match).join(", ");
+      return `near token(s): ${names}`;
+    }
+    case "off-system":
+      return "no matching token (off-system)";
+  }
+}
+function renderTerm10(findings, color) {
+  const blocks = [];
+  const byFile = /* @__PURE__ */ new Map();
+  for (const finding of findings) {
+    const bucket = byFile.get(finding.literal.file);
+    if (bucket === void 0) byFile.set(finding.literal.file, [finding]);
+    else bucket.push(finding);
+  }
+  for (const [file, fileFindings] of byFile) {
+    const lines = [severityColor("ok", file, { color })];
+    for (const finding of fileFindings) {
+      const { literal, match } = finding;
+      const severity = KIND_SEVERITY[match.kind];
+      const position = `${literal.file}:${literal.line}:${literal.col}`;
+      const label = severityColor(severity, match.kind, { color });
+      lines.push(
+        `  ${position}  ${label}  ${literal.property}: ${literal.raw} \u2014 ${suggestionFor(match)}`
+      );
+    }
+    blocks.push(lines.join("\n"));
+  }
+  const counts = {
+    exact: 0,
+    near: 0,
+    "off-system": 0
+  };
+  for (const finding of findings) counts[finding.match.kind] += 1;
+  const rows = Object.keys(counts).map((kind) => [
+    severityColor(KIND_SEVERITY[kind], kind, { color }),
+    String(counts[kind])
+  ]);
+  const table3 = renderTable(["kind", "count"], rows, { color });
+  const total = findings.length;
+  const heading = `${total} finding${total === 1 ? "" : "s"}`;
+  return [heading, "", ...blocks, "", table3].join("\n");
+}
+function changedFiles(targetDir) {
+  const result = spawnSync2("git", ["diff", "--name-only", "HEAD"], {
+    cwd: targetDir,
+    encoding: "utf8"
+  });
+  if (result.error !== void 0 || result.status !== 0) {
+    return {
+      kind: "error",
+      message: `Could not list changed files in "${targetDir}" \u2014 not a git repository (or git is unavailable). Run without --changed, or lint inside a repo.`
+    };
+  }
+  const files = new Set(
+    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve12(targetDir, rel2))
+  );
+  return { kind: "ok", files };
+}
+function applyFixes(editsByFile) {
+  let changed = 0;
+  for (const [absPath, edits] of editsByFile) {
+    let content;
+    try {
+      content = readFileSync18(absPath, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not read "${absPath}": ${detail}`
+      };
+    }
+    const next = applyEdits(content, edits);
+    if (next === content) continue;
+    try {
+      writeFileSync12(absPath, next, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not write "${absPath}": ${detail}`
+      };
+    }
+    changed += 1;
+  }
+  return { kind: "ok", changed };
+}
+function lintAll(files, tokens) {
+  const all = [];
+  for (const file of files) {
+    const result = lintFile(file.abs, file.rel, tokens);
+    if (result.kind === "error") return result;
+    all.push(...result.findings);
+  }
+  return { kind: "ok", findings: all };
+}
+function fail13(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function registerLintCommand(program2) {
+  program2.command("lint").description("Find raw values that should be design tokens").argument("[path]", "file or directory to lint", ".").option("--fix", "rewrite fixable exact matches to var() in place", false).option("--format <format>", "output format: term | json", "term").option("--tokens <file>", "explicit token source file").option("--changed", "limit to files changed vs git HEAD", false).action((path, options) => {
+    const format = options.format;
+    if (format !== "json" && format !== "term") {
+      fail13(
+        `Unknown --format "${options.format}". Expected "json" or "term".`
+      );
+      return;
+    }
+    const targetPath = resolve12(path);
+    if (!existsSync17(targetPath)) {
+      fail13(`Path "${targetPath}" does not exist.`);
+      return;
+    }
+    const stat2 = statSync10(targetPath);
+    const isFile = stat2.isFile();
+    if (isFile && !hasExtension(targetPath)) {
+      fail13(
+        `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
+      );
+      return;
+    }
+    const targetDir = isFile ? process.cwd() : targetPath;
+    const tokenSource = resolveTokenSource(targetDir, options.tokens);
+    if (tokenSource.kind === "error") {
+      fail13(tokenSource.message);
+      return;
+    }
+    const loaded = loadTokenMap(tokenSource.path);
+    if (loaded.kind === "error") {
+      fail13(loaded.message);
+      return;
+    }
+    const tokens = {
+      map: loaded.map,
+      index: buildTokenIndex(loaded.map.tokens),
+      compositeColors: buildCompositeColorLookup(loaded.map.tokens)
+    };
+    const walked = [];
+    if (isFile) walked.push(targetPath);
+    else walkLintableFiles(targetDir, walked);
+    let inScope = walked;
+    if (options.changed) {
+      const changed = changedFiles(targetDir);
+      if (changed.kind === "error") {
+        fail13(changed.message);
+        return;
+      }
+      inScope = walked.filter((abs2) => changed.files.has(abs2));
+    }
+    const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
+    const linted = lintAll(files, tokens);
+    if (linted.kind === "error") {
+      fail13(linted.message);
+      return;
+    }
+    if (options.fix) {
+      runFix(files, tokens, linted.findings, isFile ? void 0 : targetDir);
+      return;
+    }
+    emitReport(linted.findings, format);
+    if (!isFile) {
+      const adoption = computeAdoption(files, linted.findings);
+      appendLintHistory(targetDir, linted.findings, files);
+      if (format === "term") emitAdoptionSummary(adoption);
+    }
+    process.exitCode = linted.findings.length > 0 ? 1 : 0;
+  });
+}
+function toRelative(targetDir, abs2) {
+  const rel2 = relative(targetDir, abs2);
+  return rel2.split(sep3).join("/");
+}
+function emitAdoptionSummary(adoption) {
+  const total = adoption.refs + adoption.literals;
+  const pct5 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
+  process.stdout.write(
+    `on-system: ${pct5}% (${adoption.refs} token refs / ${total} css/scss values)
+`
+  );
+}
+function emitReport(findings, format) {
+  if (format === "json") {
+    const json = findings.map(toJsonFinding);
+    process.stdout.write(`${JSON.stringify(json, null, 2)}
+`);
+    return;
+  }
+  const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+  process.stdout.write(`${renderTerm10(findings, color)}
+`);
+}
+function runFix(files, tokens, findings, historyDir) {
+  const relToAbs = new Map(files.map((f3) => [f3.rel, f3.abs]));
+  const engineFindings = findings.map((f3) => ({
+    literal: f3.literal,
+    match: f3.match
+  }));
+  const edits = planFixes(engineFindings);
+  const editsByFile = /* @__PURE__ */ new Map();
+  for (const edit of edits) {
+    const abs2 = relToAbs.get(edit.file);
+    if (abs2 === void 0) continue;
+    const bucket = editsByFile.get(abs2);
+    if (bucket === void 0) editsByFile.set(abs2, [edit]);
+    else bucket.push(edit);
+  }
+  const applied = applyFixes(editsByFile);
+  if (applied.kind === "error") {
+    fail13(applied.message);
+    return;
+  }
+  process.stdout.write(
+    `Changed ${applied.changed} file${applied.changed === 1 ? "" : "s"}.
+`
+  );
+  const relinted = lintAll(files, tokens);
+  if (relinted.kind === "error") {
+    fail13(relinted.message);
+    return;
+  }
+  const remaining = relinted.findings.filter((f3) => f3.match.kind !== "exact");
+  const stillExact = relinted.findings.filter((f3) => f3.match.kind === "exact");
+  const hasRemaining = remaining.length > 0 || stillExact.length > 0;
+  if (historyDir !== void 0) {
+    const adoption = computeAdoption(files, relinted.findings);
+    appendLintHistory(historyDir, relinted.findings, files);
+    emitAdoptionSummary(adoption);
+  }
+  process.exitCode = hasRemaining ? 1 : 0;
+}
+
+// src/cli-commands/parity.ts
+import { existsSync as existsSync18, readFileSync as readFileSync19, statSync as statSync11 } from "fs";
+import { join as join23, resolve as resolvePath4 } from "path";
+function fail14(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function normalizeName4(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function statusSeverity2(status) {
+  switch (status) {
+    case "ok":
+      return "ok";
+    case "prop-mismatch":
+      return "warn";
+    case "missing-in-code":
+    case "missing-in-figma":
+      return "error";
+  }
+}
+function loadRegistry5(targetDir) {
+  const registryPath = join23(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync18(registryPath)) {
+    fail14(
+      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
+    );
+    return void 0;
+  }
+  let raw;
+  try {
+    raw = readFileSync19(registryPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail14(`Could not read registry "${registryPath}": ${detail}`);
+    return void 0;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail14(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    return void 0;
+  }
+}
+function filterRows(rows, component) {
+  if (component === void 0 || component === "") return rows;
+  const needle = normalizeName4(component);
+  if (needle === "") return rows;
+  return rows.filter((row2) => normalizeName4(row2.component).includes(needle));
+}
+function summarize(rows) {
+  const summary = {
+    ok: 0,
+    missingInCode: 0,
+    missingInFigma: 0,
+    propMismatch: 0
+  };
+  for (const row2 of rows) {
+    switch (row2.status) {
+      case "ok":
+        summary.ok += 1;
+        break;
+      case "missing-in-code":
+        summary.missingInCode += 1;
+        break;
+      case "missing-in-figma":
+        summary.missingInFigma += 1;
+        break;
+      case "prop-mismatch":
+        summary.propMismatch += 1;
+        break;
+    }
+  }
+  return summary;
+}
+function renderTerm11(report, color) {
+  if (report.rows.length === 0) {
+    return "No components in the registry \u2014 nothing to compare.";
+  }
+  const statusWidth = Math.max(
+    ...report.rows.map((row2) => row2.status.length),
+    "status".length
+  );
+  const componentWidth = Math.max(
+    ...report.rows.map((row2) => row2.component.length),
+    "component".length
+  );
+  const lines = [];
+  for (const row2 of report.rows) {
+    const status = row2.status.padEnd(statusWidth);
+    const component = row2.component.padEnd(componentWidth);
+    const coloredStatus = severityColor(statusSeverity2(row2.status), status, {
+      color
+    });
+    lines.push(`${coloredStatus}  ${component}  ${row2.detail}`);
+  }
+  const { summary } = report;
+  const bars = renderBarChart(
+    [
+      { label: "ok", value: summary.ok },
+      { label: "prop-mismatch", value: summary.propMismatch },
+      { label: "missing-in-code", value: summary.missingInCode },
+      { label: "missing-in-figma", value: summary.missingInFigma }
+    ],
+    { width: 24, color }
+  );
+  const total = report.rows.length;
+  const allOk = total > 0 && summary.ok === total;
+  const verdict = allOk ? severityColor("ok", "All components in parity.", { color }) : severityColor(
+    "error",
+    `${total - summary.ok} of ${total} component(s) out of parity.`,
+    { color }
+  );
+  return [...lines, "", "Summary:", bars, "", verdict].join("\n");
+}
+function mdCell(value2) {
+  return value2.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+function renderMarkdown(report) {
+  const header = "| Component | Status | Detail |";
+  const separator = "| --- | --- | --- |";
+  const rows = report.rows.map(
+    (row2) => `| ${mdCell(row2.component)} | ${mdCell(row2.status)} | ${mdCell(row2.detail)} |`
+  );
+  const { summary } = report;
+  const summaryLine2 = `_ok: ${summary.ok} \xB7 prop-mismatch: ${summary.propMismatch} \xB7 missing-in-code: ${summary.missingInCode} \xB7 missing-in-figma: ${summary.missingInFigma}_`;
+  return [header, separator, ...rows, "", summaryLine2].join("\n");
+}
+function hasRegistry2(candidate) {
+  return existsSync18(
+    join23(resolvePath4(candidate), ".ds-bridge", "registry.json")
+  );
+}
+function disambiguate2(component, path) {
+  if (component !== void 0 && component !== "" && path === "." && !hasRegistry2(".") && hasRegistry2(component)) {
+    return { component: void 0, path: component };
+  }
+  return { component, path };
+}
+function appendParityHistory(targetDir, registry, report) {
+  try {
+    const stateDir = join23(targetDir, ".ds-bridge");
+    const snapshot = typeof registry.generatedAt === "string" ? registry.generatedAt : void 0;
+    let text2 = "";
+    try {
+      text2 = readFileSync19(join23(stateDir, "history.jsonl"), "utf8");
+    } catch {
+      text2 = "";
+    }
+    const latest = replayHistory(text2).filter((r2) => r2.kind === "parity").at(-1);
+    if (snapshot !== void 0 && latest !== void 0 && (latest.at === snapshot || latest.record.registryAt === snapshot)) {
+      return;
+    }
+    const { ok, missingInCode, missingInFigma, propMismatch } = report.summary;
+    const total = ok + missingInCode + missingInFigma + propMismatch;
+    appendHistoryRecord(stateDir, {
+      at: (/* @__PURE__ */ new Date()).toISOString(),
+      kind: "parity",
+      total,
+      ok,
+      missingInCode,
+      missingInFigma,
+      propMismatch,
+      score: total > 0 ? Math.round(100 * ok / total) : 0,
+      ...snapshot !== void 0 ? { registryAt: snapshot } : {}
+    });
+  } catch {
+  }
+}
+function runParity(rawComponent, rawPath, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail14(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const { component, path } = disambiguate2(rawComponent, rawPath);
+  const targetDir = resolvePath4(path);
+  if (!existsSync18(targetDir) || !statSync11(targetDir).isDirectory()) {
+    fail14(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const registry = loadRegistry5(targetDir);
+  if (registry === void 0) return;
+  const full = buildParity(registry);
+  const rows = filterRows(full.rows, component);
+  const report = { rows, summary: summarize(rows) };
+  if (options.markdown) {
+    process.stdout.write(`${renderMarkdown(report)}
+`);
+  } else if (format === "json") {
+    process.stdout.write(`${JSON.stringify(report, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm11(report, color)}
+`);
+  }
+  if (options.history && (component === void 0 || component === "")) {
+    appendParityHistory(targetDir, registry, full);
+  }
+  const allOk = report.rows.every((row2) => row2.status === "ok");
+  process.exitCode = allOk ? 0 : 1;
+}
+function registerParityCommand(program2) {
+  program2.command("parity").description(
+    "Compare code components against the Figma library via the saved registry"
+  ).argument("[component]", "filter rows by normalized name substring").argument(
+    "[path]",
+    "project directory holding .ds-bridge/registry.json",
+    "."
+  ).option("--format <format>", "output format: term | json", "term").option(
+    "--markdown",
+    "emit a GitHub-flavored markdown table to stdout",
+    false
+  ).option(
+    "--no-history",
+    "do not append a parity record to .ds-bridge/history.jsonl (filtered runs never do)"
+  ).action(
+    (component, path, options) => {
+      runParity(component, path, options);
+    }
+  );
+}
+
+// src/cli-commands/record.ts
+import { spawnSync as spawnSync3 } from "child_process";
+import { randomUUID } from "crypto";
+import { existsSync as existsSync19, readFileSync as readFileSync20, statSync as statSync12 } from "fs";
+import { join as join24, resolve as resolve13 } from "path";
+
+// src/engines/history/score-record.ts
+function scoreRecordPayload(text2, profile) {
+  const outcome = scoreFromHistory(text2, profile.weights);
+  if (outcome.kind !== "ok") return void 0;
+  const subScores = {};
+  for (const component of outcome.components) {
+    subScores[component.kind] = component.score;
+  }
+  return {
+    kind: "score",
+    score: outcome.current,
+    subScores,
+    weights: { ...profile.weights },
+    weightsSource: profile.source === "view" ? `view:${profile.name ?? ""}` : profile.source
+  };
+}
+
+// src/cli-commands/record.ts
+function planRecordSteps(ctx) {
+  const figmaRuns = ctx.figma && ctx.figmaConfigured;
+  const figmaReason = !ctx.figma ? "Figma checks need network \u2014 pass --figma" : "Figma not configured (token + library file key)";
+  const json = ["--format", "json"];
+  const figmaStep = (id, kind, args) => figmaRuns ? { id, kind, args, run: true } : { id, kind, args, run: false, reason: figmaReason };
+  const adoptionRuns = ctx.hasRegistry || figmaRuns;
+  return [
+    figmaStep("registry-build", "parity", ["registry", "build", ".", ...json]),
+    { id: "lint", kind: "lint", args: ["lint", ".", ...json], run: true },
+    {
+      id: "tokens-check",
+      kind: "tokens-check",
+      args: ["tokens", "check", ".", ...json],
+      run: true
+    },
+    { id: "a11y", kind: "a11y", args: ["a11y", ".", ...json], run: true },
+    adoptionRuns ? {
+      id: "adoption",
+      kind: "adoption",
+      args: ["adoption", ".", ...json],
+      run: true
+    } : {
+      id: "adoption",
+      kind: "adoption",
+      args: ["adoption", ".", ...json],
+      run: false,
+      reason: "no registry (.ds-bridge/registry.json) \u2014 run registry build"
+    },
+    figmaStep("library-health", "library-health", [
+      "library-health",
+      ...json,
+      ...ctx.libraryTop !== void 0 ? ["--top", String(ctx.libraryTop)] : []
+    ]),
+    ...handoffSteps(ctx)
+  ];
+}
+function handoffSteps(ctx) {
+  const token = ctx.figmaToken ?? ctx.figmaConfigured;
+  const runs = ctx.figma && token;
+  const reason = !ctx.figma ? "Figma checks need network \u2014 pass --figma" : "Figma token not configured";
+  return (ctx.trackedFrames ?? []).map((frame) => ({
+    id: "handoff",
+    kind: "handoff",
+    args: ["handoff", frame, "--format", "json"],
+    frame,
+    run: runs,
+    ...runs ? {} : { reason }
+  }));
+}
+function handoffRecordedFor(records, runId, frameUrl) {
+  const parsed = parseFigmaUrl(frameUrl);
+  if (parsed.kind !== "ok") return false;
+  return records.some((r2) => {
+    if (r2.kind !== "handoff" || r2.envelope?.runId !== runId) return false;
+    const rec = r2.record;
+    if (rec.fileKey !== parsed.fileKey) return false;
+    return parsed.nodeId === void 0 || rec.nodeId === parsed.nodeId;
+  });
+}
+function classifyStep(run, recorded) {
+  if (run.error !== void 0 || run.status === null) {
+    return { status: "error", reason: run.error ?? "check did not exit" };
+  }
+  if (recorded) return { status: "recorded", exitCode: run.status };
+  const firstLine = run.stderr.split("\n").map((l) => l.trim()).find((l) => l !== "");
+  return {
+    status: "skipped",
+    exitCode: run.status,
+    reason: firstLine ?? "no history record written"
+  };
+}
+function spawnSelf(args, options) {
+  const entry = process.argv[1];
+  if (entry === void 0) {
+    return { status: null, stderr: "", error: "cannot locate the CLI entry" };
+  }
+  const run = spawnSync3(
+    process.execPath,
+    [...process.execArgv, entry, ...args],
+    {
+      cwd: options.cwd,
+      env: options.env,
+      encoding: "utf8",
+      stdio: ["ignore", "ignore", "pipe"]
+    }
+  );
+  if (run.error !== void 0) {
+    return { status: null, stderr: "", error: run.error.message };
+  }
+  return { status: run.status, stderr: run.stderr ?? "" };
+}
+function fail15(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function readProjectSettings(targetDir, env) {
+  const configPath = join24(targetDir, ".ds-bridge.json");
+  let projectFileText;
+  if (existsSync19(configPath)) {
+    try {
+      projectFileText = readFileSync20(configPath, "utf8");
+    } catch {
+      projectFileText = void 0;
+    }
+  }
+  const resolved = resolveConfig({
+    env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
+  if (resolved.kind !== "ok")
+    return { kind: "error", message: resolved.message };
+  const { config } = resolved;
+  return {
+    kind: "ok",
+    figmaConfigured: config.figmaToken.kind === "present" && config.figmaFileKey !== void 0,
+    figmaToken: config.figmaToken.kind === "present",
+    trackedFrames: config.trackedFrames,
+    profile: projectFileText !== void 0 ? weightProfileForConfig(config) : resolveWeightProfile(void 0, void 0, void 0)
+  };
+}
+function readHistoryText3(stateDir) {
+  try {
+    return readFileSync20(historyFilePath(stateDir), "utf8");
+  } catch {
+    return "";
+  }
+}
+function renderTerm12(result, color) {
+  const lines = [
+    `ds-bridge record \xB7 run ${result.runId} \xB7 source ${result.source}`,
+    ""
+  ];
+  const width = Math.max(...result.checks.map((c2) => c2.id.length));
+  for (const check of result.checks) {
+    const name = check.id.padEnd(width);
+    const frame = check.frame !== void 0 ? ` \xB7 ${check.frame}` : "";
+    if (check.status === "recorded") {
+      lines.push(
+        `  ${severityColor("ok", "\u2713", { color })} ${name}  recorded${frame}`
+      );
+    } else if (check.status === "skipped") {
+      lines.push(`  \u2013 ${name}  skipped: ${check.reason ?? ""}${frame}`);
+    } else {
+      lines.push(
+        `  ${severityColor("error", "\u2717", { color })} ${name}  error: ${check.reason ?? ""}${frame}`
+      );
+    }
+  }
+  lines.push("");
+  lines.push(
+    result.score === null ? "System score: no score-relevant data yet (nothing stored)" : `System score: ${result.score.score}/100 (stored, weights: ${result.score.weightsSource})`
+  );
+  lines.push(`History: ${result.historyPath}`);
+  return lines.join("\n");
+}
+function runRecord(path, options, deps) {
+  const format = options.format;
+  if (format !== "term" && format !== "json") {
+    fail15(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    return 2;
+  }
+  let source = "local";
+  if (options.source !== void 0) {
+    const parsed = parseSource(options.source);
+    if (parsed === void 0) {
+      fail15(
+        `Unknown --source "${options.source}". Expected "local", "ci" or "hook".`
+      );
+      return 2;
+    }
+    source = parsed;
+  } else {
+    source = parseSource(deps.env.DS_BRIDGE_SOURCE) ?? "local";
+  }
+  let libraryTop;
+  if (options.libraryTop !== void 0) {
+    libraryTop = parseTopN(options.libraryTop);
+    if (libraryTop === void 0) {
+      fail15(
+        `Invalid --library-top "${options.libraryTop}". Expected a whole number from 0 to 100.`
+      );
+      return 2;
+    }
+  }
+  const targetDir = resolve13(path);
+  if (!existsSync19(targetDir) || !statSync12(targetDir).isDirectory()) {
+    fail15(`Path "${targetDir}" is not a directory.`);
+    return 2;
+  }
+  const stateDir = join24(targetDir, ".ds-bridge");
+  const detectEnv = { ...deps.env };
+  loadDotenvInto(join24(targetDir, ".ds-bridge.env"), detectEnv);
+  const settings = readProjectSettings(targetDir, detectEnv);
+  if (settings.kind === "error") {
+    fail15(settings.message);
+    return 2;
+  }
+  const runId = deps.newRunId();
+  const childEnv = {
+    ...deps.env,
+    DS_BRIDGE_RUN_ID: runId,
+    DS_BRIDGE_SOURCE: source
+  };
+  const steps = planRecordSteps({
+    hasRegistry: existsSync19(join24(stateDir, "registry.json")),
+    figmaConfigured: settings.figmaConfigured,
+    figma: options.figma === true,
+    figmaToken: settings.figmaToken,
+    ...settings.trackedFrames !== void 0 ? { trackedFrames: settings.trackedFrames } : {},
+    ...libraryTop !== void 0 ? { libraryTop } : {}
+  });
+  const runs = /* @__PURE__ */ new Map();
+  steps.forEach((step, index) => {
+    if (!step.run) return;
+    runs.set(index, deps.runStep(step.args, { cwd: targetDir, env: childEnv }));
+  });
+  const batchRecords = replayHistory(readHistoryText3(stateDir)).filter(
+    (r2) => r2.envelope?.runId === runId
+  );
+  const recordedKinds = new Set(batchRecords.map((r2) => r2.kind));
+  const checks = steps.map((step, index) => {
+    const frame = step.frame !== void 0 ? { frame: step.frame } : {};
+    const run = runs.get(index);
+    if (run === void 0) {
+      return {
+        id: step.id,
+        kind: step.kind,
+        ...frame,
+        status: "skipped",
+        reason: step.reason ?? "not planned"
+      };
+    }
+    const recorded = step.frame !== void 0 ? handoffRecordedFor(batchRecords, runId, step.frame) : recordedKinds.has(step.kind);
+    return {
+      id: step.id,
+      kind: step.kind,
+      ...frame,
+      ...classifyStep(run, recorded)
+    };
+  });
+  const ran = checks.filter((_c, index) => runs.has(index));
+  if (ran.length > 0 && ran.every((c2) => c2.status === "error")) {
+    fail15(
+      `record: no check could be started (${ran[0]?.reason ?? "unknown error"}).`
+    );
+    return 2;
+  }
+  let score = null;
+  const payload = scoreRecordPayload(
+    readHistoryText3(stateDir),
+    settings.profile
+  );
+  if (payload !== void 0) {
+    try {
+      appendHistoryRecord(stateDir, payload, { env: childEnv, source });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      fail15(`Could not append the score record: ${detail}`);
+      return 2;
+    }
+    const { kind: _kind, ...rest } = payload;
+    score = rest;
+  }
+  const result = {
+    runId,
+    source,
+    historyPath: historyFilePath(stateDir),
+    checks,
+    score
+  };
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}
+`);
+  } else {
+    const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
+    process.stdout.write(`${renderTerm12(result, color)}
+`);
+  }
+  return 0;
+}
+function registerRecordCommand(program2) {
+  program2.command("record").description(
+    "Run the configured checks as one batch (shared runId) and append them plus the system score to history"
+  ).argument("[path]", "project directory to record", ".").option(
+    "--source <source>",
+    "record source: local | ci | hook (default: DS_BRIDGE_SOURCE or local)"
+  ).option(
+    "--figma",
+    "also run the Figma checks (registry build \u2192 parity, library-health: token + library file key; handoff for each tracked_frames URL: token)"
+  ).option("--no-figma", "skip the Figma checks (default)").option(
+    "--library-top <n>",
+    "top N components per library-health signal stored for trends (0-100; default 10)"
+  ).option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    process.exitCode = runRecord(path, options, {
+      runStep: spawnSelf,
+      env: process.env,
+      newRunId: randomUUID
+    });
+  });
+}
+
+// src/cli-commands/registry.ts
+import {
+  existsSync as existsSync20,
+  mkdirSync as mkdirSync10,
+  readFileSync as readFileSync21,
+  statSync as statSync13,
+  writeFileSync as writeFileSync13
+} from "fs";
+import { dirname as dirname9, join as join25, resolve as resolvePath5 } from "path";
+import { fileURLToPath as fileURLToPath5 } from "url";
+
+// src/engines/registry/match.ts
+var MATCH_THRESHOLD = 0.6;
+var AMBIGUITY_GAP = 0.1;
+var TOKEN_SCORE_FLOOR = 0.3;
+var NAME_WEIGHT = 0.7;
+var SHAPE_WEIGHT = 0.3;
+var MAX_CANDIDATES = 3;
+function normalizeName5(name) {
+  return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+function tokenize4(name) {
+  const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
+  const tokens = [];
+  for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
+    const token = part.toLowerCase();
+    if (token.length > 0) tokens.push(token);
+  }
+  return tokens;
+}
+function tokenSetScore(a, b) {
+  const setA = new Set(tokenize4(a));
+  const setB = new Set(tokenize4(b));
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection += 1;
+  }
+  return 2 * intersection / (setA.size + setB.size);
+}
+function nameScore(codeName, figmaName) {
+  if (normalizeName5(codeName) === normalizeName5(figmaName)) return 1;
+  const score = tokenSetScore(codeName, figmaName);
+  return score < TOKEN_SCORE_FLOOR ? 0 : score;
+}
+function valueJaccard(a, b) {
+  const setA = new Set(a);
+  const setB = new Set(b);
+  if (setA.size === 0 && setB.size === 0) return 0;
+  let intersection = 0;
+  for (const value2 of setA) {
+    if (setB.has(value2)) intersection += 1;
+  }
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+function normalizedKeyIndex(variants) {
+  const index = /* @__PURE__ */ new Map();
+  for (const key of Object.keys(variants)) {
+    const values = variants[key] ?? [];
+    const norm = normalizeName5(key);
+    const existing = index.get(norm);
+    if (existing === void 0) {
+      index.set(norm, [...values]);
+    } else {
+      existing.push(...values);
+    }
+  }
+  return index;
+}
+function shapeScore(codeVariants, figmaVariants) {
+  const codeIndex = normalizedKeyIndex(codeVariants);
+  const figmaIndex = normalizedKeyIndex(figmaVariants);
+  const codeEmpty = codeIndex.size === 0;
+  const figmaEmpty = figmaIndex.size === 0;
+  if (codeEmpty && figmaEmpty) return 0.5;
+  if (codeEmpty || figmaEmpty) return 0.25;
+  const keys = /* @__PURE__ */ new Set([...codeIndex.keys(), ...figmaIndex.keys()]);
+  let total = 0;
+  for (const key of keys) {
+    total += valueJaccard(codeIndex.get(key) ?? [], figmaIndex.get(key) ?? []);
+  }
+  return total / keys.size;
+}
+function scorePair(codeComponent, figmaModel) {
+  const name = nameScore(codeComponent.name, figmaModel.name);
+  const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
+  return {
+    nameScore: name,
+    shapeScore: shape,
+    score: NAME_WEIGHT * name + SHAPE_WEIGHT * shape
+  };
+}
+function byNameAsc6(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function rankFigmaCandidates(codeComponent, figma) {
+  return figma.map((figmaModel) => ({
+    figma: figmaModel,
+    score: scorePair(codeComponent, figmaModel).score
+  })).sort(
+    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc6(a.figma.name, b.figma.name)
+  ).slice(0, MAX_CANDIDATES);
+}
+function rankCodeCandidates(figmaModel, code) {
+  return code.map((codeComponent) => ({
+    code: codeComponent,
+    score: scorePair(codeComponent, figmaModel).score
+  })).sort(
+    (a, b) => a.score !== b.score ? b.score - a.score : byNameAsc6(a.code.name, b.code.name)
+  ).slice(0, MAX_CANDIDATES);
+}
+function matchComponents(code, figma) {
+  const edges = [];
+  for (let c2 = 0; c2 < code.length; c2 += 1) {
+    const codeComponent = code[c2];
+    if (codeComponent === void 0) continue;
+    for (let f3 = 0; f3 < figma.length; f3 += 1) {
+      const figmaModel = figma[f3];
+      if (figmaModel === void 0) continue;
+      const parts = scorePair(codeComponent, figmaModel);
+      if (parts.score >= MATCH_THRESHOLD) {
+        edges.push({ codeIndex: c2, figmaIndex: f3, parts });
+      }
+    }
+  }
+  edges.sort((a, b) => {
+    if (a.parts.score !== b.parts.score) return b.parts.score - a.parts.score;
+    const codeA = code[a.codeIndex]?.name ?? "";
+    const codeB = code[b.codeIndex]?.name ?? "";
+    const byCode = byNameAsc6(codeA, codeB);
+    if (byCode !== 0) return byCode;
+    const figmaA = figma[a.figmaIndex]?.name ?? "";
+    const figmaB = figma[b.figmaIndex]?.name ?? "";
+    return byNameAsc6(figmaA, figmaB);
+  });
+  const matchedCode = /* @__PURE__ */ new Set();
+  const matchedFigma = /* @__PURE__ */ new Set();
+  const matches = [];
+  for (const edge of edges) {
+    if (matchedCode.has(edge.codeIndex)) continue;
+    if (matchedFigma.has(edge.figmaIndex)) continue;
+    const codeComponent = code[edge.codeIndex];
+    if (codeComponent === void 0) continue;
+    let best = -1;
+    let second = -1;
+    for (let f3 = 0; f3 < figma.length; f3 += 1) {
+      if (matchedFigma.has(f3)) continue;
+      const figmaModel2 = figma[f3];
+      if (figmaModel2 === void 0) continue;
+      const s = scorePair(codeComponent, figmaModel2).score;
+      if (s > best) {
+        second = best;
+        best = s;
+      } else if (s > second) {
+        second = s;
+      }
+    }
+    const ambiguous = second >= MATCH_THRESHOLD && best >= MATCH_THRESHOLD && best - second < AMBIGUITY_GAP;
+    if (ambiguous) {
+      continue;
+    }
+    matchedCode.add(edge.codeIndex);
+    matchedFigma.add(edge.figmaIndex);
+    const figmaModel = figma[edge.figmaIndex];
+    if (figmaModel === void 0) continue;
+    matches.push({
+      code: codeComponent,
+      figma: figmaModel,
+      score: edge.parts.score,
+      nameScore: edge.parts.nameScore,
+      shapeScore: edge.parts.shapeScore
+    });
+  }
+  matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
+  const unmatchedCode = [];
+  for (let c2 = 0; c2 < code.length; c2 += 1) {
+    if (matchedCode.has(c2)) continue;
+    const codeComponent = code[c2];
+    if (codeComponent === void 0) continue;
+    unmatchedCode.push({
+      code: codeComponent,
+      candidates: rankFigmaCandidates(codeComponent, figma)
+    });
+  }
+  unmatchedCode.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
+  const unmatchedFigma = [];
+  for (let f3 = 0; f3 < figma.length; f3 += 1) {
+    if (matchedFigma.has(f3)) continue;
+    const figmaModel = figma[f3];
+    if (figmaModel === void 0) continue;
+    unmatchedFigma.push({
+      figma: figmaModel,
+      candidates: rankCodeCandidates(figmaModel, code)
+    });
+  }
+  unmatchedFigma.sort((a, b) => byNameAsc6(a.figma.name, b.figma.name));
+  return { matches, unmatchedCode, unmatchedFigma };
+}
+
+// src/cli-commands/registry.ts
+async function scanCode2(targetDir) {
+  const globals = globalThis;
+  if (typeof globals.__filename !== "string") {
+    const filename = fileURLToPath5(import.meta.url);
+    globals.__filename = filename;
+    globals.__dirname = dirname9(filename);
+  }
+  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
+  return scanCodeComponents(targetDir);
+}
+var DEFAULT_FIGMA_API_BASE6 = "https://api.figma.com";
+function fail16(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function missingTokenMessage5() {
+  return missingFigmaTokenMessage([
+    "The token needs the file_content:read and library_content:read scopes, and",
+    "must come from a Dev or Full seat \u2014 a View seat is rate-limited and cannot",
+    "be used here."
+  ]);
+}
+function missingFileKeyMessage3() {
+  return [
+    "No Figma library file key configured.",
+    "",
+    "Set the figma_file_key plugin option, or for standalone CLI use export it:",
+    "",
+    "  export CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY=<key>",
+    "",
+    "The key is the segment after /file/ or /design/ in the library file URL."
+  ].join("\n");
+}
+function clientErrorMessage5(result) {
+  switch (result.kind) {
+    case "auth-error":
+      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+    case "scope-error":
+      return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read and library_content:read.`;
+    case "not-found":
+      return "Figma could not find that file. Check figma_file_key is correct and the token's account can access the library.";
+    case "rate-limited":
+      return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
+    case "network-error":
+      return `Could not reach the Figma API: ${result.message}.`;
+  }
+}
+async function runBuild(path, options) {
+  const format = options.format;
+  if (format !== "json" && format !== "term") {
+    fail16(`Unknown --format "${options.format}". Expected "json" or "term".`);
+    return;
+  }
+  const targetDir = resolvePath5(path);
+  if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
+    fail16(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const resolved = resolveConfig({ env: process.env });
+  if (resolved.kind !== "ok") {
+    fail16(resolved.message);
+    return;
+  }
+  for (const warning of resolved.warnings) {
+    process.stderr.write(`warning: ${warning}
+`);
+  }
+  const { config } = resolved;
+  if (config.figmaToken.kind === "missing") {
+    fail16(missingTokenMessage5());
+    return;
+  }
+  if (config.figmaFileKey === void 0 || config.figmaFileKey === "") {
+    fail16(missingFileKeyMessage3());
+    return;
+  }
+  const code = await scanCode2(targetDir);
+  const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE6;
+  const client = createFigmaClient({
+    token: config.figmaToken.value,
+    baseUrl
+  });
+  const componentsResult = await client.getComponents(config.figmaFileKey);
+  if (componentsResult.kind !== "ok") {
+    fail16(clientErrorMessage5(componentsResult));
+    return;
+  }
+  const fileResult = await client.getFile(config.figmaFileKey);
+  if (fileResult.kind !== "ok") {
+    fail16(clientErrorMessage5(fileResult));
+    return;
+  }
+  const figma = buildFigmaComponentModel({
+    published: componentsResult.data,
+    fileDocument: fileResult.data.document
+  });
+  const matchResult = matchComponents(code, figma);
+  const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const registry = toRegistryFile(matchResult, generatedAt);
+  const stateDir = join25(targetDir, ".ds-bridge");
+  const registryPath = join25(stateDir, "registry.json");
+  try {
+    mkdirSync10(stateDir, { recursive: true });
+    writeFileSync13(
+      registryPath,
+      `${JSON.stringify(registry, null, 2)}
+`,
+      "utf8"
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail16(`Could not write registry to "${registryPath}": ${detail}`);
+    return;
+  }
+  const parityRecord = parityRecordFrom(registry, generatedAt);
+  appendParityHistory2(stateDir, parityRecord);
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(registry, null, 2)}
+`);
+  } else {
+    process.stdout.write(
+      `${renderBuildSummary(registry, registryPath, parityRecord)}
+`
+    );
+  }
+  process.exitCode = 0;
+}
+function parityRecordFrom(registry, generatedAt) {
+  const { ok, missingInCode, missingInFigma, propMismatch } = buildParity(registry).summary;
+  const total = ok + missingInCode + missingInFigma + propMismatch;
+  const score = total > 0 ? Math.round(100 * ok / total) : 0;
+  return {
+    at: generatedAt,
+    kind: "parity",
+    total,
+    ok,
+    missingInCode,
+    missingInFigma,
+    propMismatch,
+    score
+  };
+}
+function appendParityHistory2(stateDir, record) {
+  try {
+    appendHistoryRecord(stateDir, record);
+  } catch {
+  }
+}
+function worstAmbiguities(registry) {
+  const lines = [];
+  const ranked2 = [...registry.unmatchedCode].map((u) => ({
+    name: u.name,
+    top: u.candidates[0]
+  })).filter((u) => u.top !== void 0).sort((a, b) => (b.top?.score ?? 0) - (a.top?.score ?? 0)).slice(0, 3);
+  for (const entry of ranked2) {
+    const top2 = entry.top;
+    if (top2 === void 0) continue;
+    lines.push(
+      `  ${entry.name} \u2014 closest: ${top2.figmaName} (${top2.nodeId}) @ ${top2.score}`
+    );
+  }
+  return lines;
+}
+function renderBuildSummary(registry, registryPath, parity) {
+  const lines = [
+    `Registry written to ${registryPath}`,
+    `  matched:        ${registry.matches.length}`,
+    `  unmatched code: ${registry.unmatchedCode.length}`,
+    `  unmatched figma:${registry.unmatchedFigma.length}`,
+    `  parity score: ${parity.score} (${parity.ok}/${parity.total})`
+  ];
+  const ambiguities = worstAmbiguities(registry);
+  if (ambiguities.length > 0) {
+    lines.push("", "Closest near-misses:", ...ambiguities);
+  }
+  return lines.join("\n");
+}
+function loadRegistry6(targetDir) {
+  const registryPath = join25(targetDir, ".ds-bridge", "registry.json");
+  if (!existsSync20(registryPath)) {
+    fail16(
+      `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
+    );
+    return void 0;
+  }
+  let raw;
+  try {
+    raw = readFileSync21(registryPath, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail16(`Could not read registry "${registryPath}": ${detail}`);
+    return void 0;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail16(`Registry "${registryPath}" is not valid JSON: ${detail}`);
+    return void 0;
+  }
+}
+function runResolve(nodeNameOrId, path) {
+  const targetDir = resolvePath5(path);
+  if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
+    fail16(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const registry = loadRegistry6(targetDir);
+  if (registry === void 0) return;
+  const outcome = resolveEntry(registry, nodeNameOrId);
+  switch (outcome.kind) {
+    case "match":
+      process.stdout.write(`${JSON.stringify(outcome.entry, null, 2)}
+`);
+      process.exitCode = 0;
+      return;
+    case "candidates":
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            kind: "candidates",
+            node: nodeNameOrId,
+            candidates: outcome.entries
+          },
+          null,
+          2
+        )}
+`
+      );
+      process.exitCode = 1;
+      return;
+    case "not-found":
+      process.stderr.write(
+        `No registry entry found for "${nodeNameOrId}". It is neither a matched node nor an unmatched Figma component in the registry.
+`
+      );
+      process.exitCode = 1;
+      return;
+  }
+}
+function registerRegistryCommand(program2) {
+  const registry = program2.command("registry").description("Build and query the Figma\u2194code component registry");
+  registry.command("build").description(
+    "Scan code components, fetch the Figma library, and write .ds-bridge/registry.json"
+  ).argument("[path]", "project directory to scan", ".").option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    void runBuild(path, options);
+  });
+  registry.command("resolve").description("Resolve a Figma node id or name against the saved registry").argument("<nodeNameOrId>", "Figma node id (e.g. 10:42) or component name").argument(
+    "[path]",
+    "project directory holding .ds-bridge/registry.json",
+    "."
+  ).action((nodeNameOrId, path) => {
+    runResolve(nodeNameOrId, path);
+  });
+}
+
+// src/cli-commands/release-check.ts
+import { existsSync as existsSync21, readFileSync as readFileSync22, statSync as statSync14 } from "fs";
+import { join as join26, resolve as resolve14 } from "path";
+function fail17(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function readHistoryText4(stateDir) {
+  try {
+    return readFileSync22(join26(stateDir, "history.jsonl"), "utf8");
+  } catch {
+    return "";
+  }
+}
+function renderTerm13(readiness) {
+  const headline2 = `RELEASE: ${readiness.go ? "GO" : "NO-GO"}`;
+  const rows = readiness.checks.map((check) => [
+    check.name,
+    check.pass ? "pass" : "fail",
+    check.detail ?? ""
+  ]);
+  const table3 = renderTable(["gate", "status", "detail"], rows, {
+    color: false
+  });
+  return `${headline2}
+${table3}`;
+}
+function runReleaseCheck(path, options) {
+  const format = options.format;
+  if (format !== "term" && format !== "json") {
+    fail17(`Unknown --format "${options.format}". Expected "term" or "json".`);
+    return;
+  }
+  const targetDir = resolve14(path);
+  if (!existsSync21(targetDir) || !statSync14(targetDir).isDirectory()) {
+    fail17(`Path "${targetDir}" is not a directory.`);
+    return;
+  }
+  const stateDir = join26(targetDir, ".ds-bridge");
+  const signals = extractReleaseSignals(
+    replayHistory(readHistoryText4(stateDir))
+  );
+  const readiness = evaluateReleaseReadiness(signals);
+  if (format === "json") {
+    process.stdout.write(`${JSON.stringify(readiness, null, 2)}
+`);
+  } else {
+    process.stdout.write(`${renderTerm13(readiness)}
+`);
+  }
+  process.exitCode = readiness.go ? 0 : 1;
+}
+function registerReleaseCheckCommand(program2) {
+  program2.command("release-check").description(
+    "Pre-publish go/no-go gate over the project history (exit 0 go / 1 no-go / 2 error)"
+  ).argument(
+    "[path]",
+    "project directory holding .ds-bridge/history.jsonl",
+    "."
+  ).option("--format <format>", "output format: term | json", "term").action((path, options) => {
+    runReleaseCheck(path, options);
+  });
+}
+
+// src/cli-commands/rollup.ts
+import { existsSync as existsSync22, mkdirSync as mkdirSync11, readFileSync as readFileSync24, writeFileSync as writeFileSync14 } from "fs";
+import { basename as basename2, dirname as dirname10, join as join28, resolve as resolve15 } from "path";
+
+// src/engines/rollup/rollup.ts
+var ROLLUP_SCHEMA = "ds-bridge/rollup";
+var ROLLUP_SCHEMA_VERSION = 1;
+var TREND_POINTS = 12;
+var NO_TEAM = "(no team)";
+var MS_PER_DAY5 = 24 * 60 * 60 * 1e3;
+var BAND_ORDER = ["unknown", "green", "amber", "red"];
+function asNumber14(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function asRecord4(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function mean(values) {
+  if (values.length === 0) return void 0;
+  return Math.round(values.reduce((s, v) => s + v, 0) / values.length);
+}
+function pooledOnSystem(repos) {
+  let refs = 0;
+  let total = 0;
+  for (const r2 of repos) {
+    if (r2.onSystemCounts === void 0) continue;
+    refs += r2.onSystemCounts.refs;
+    total += r2.onSystemCounts.refs + r2.onSystemCounts.literals;
+  }
+  return total > 0 ? Math.round(100 * refs / total) : void 0;
+}
+function latestAdoption(text2) {
+  let latest;
+  for (const { kind, record } of replayHistory(text2)) {
+    if (kind !== "lint") continue;
+    const adoption = asRecord4(record.adoption);
+    if (adoption === void 0) continue;
+    latest = {
+      refs: asNumber14(adoption.refs),
+      literals: asNumber14(adoption.literals)
+    };
+  }
+  return latest;
+}
+function freshnessOf(text2, nowIso) {
+  const records = replayHistory(text2);
+  let lastAt;
+  for (const r2 of records) {
+    if (r2.at !== void 0 && (lastAt === void 0 || r2.at > lastAt)) {
+      lastAt = r2.at;
+    }
+  }
+  const rows = buildFreshness(records, nowIso, void 0);
+  let band = "unknown";
+  for (const row2 of rows) {
+    if (BAND_ORDER.indexOf(row2.band) > BAND_ORDER.indexOf(band))
+      band = row2.band;
+  }
+  const out = {
+    band,
+    staleKinds: rows.filter((r2) => r2.band === "red").map((r2) => r2.kind)
+  };
+  if (lastAt !== void 0) {
+    out.lastAt = lastAt;
+    const last = Date.parse(`${lastAt.slice(0, 10)}T00:00:00.000Z`);
+    const now = Date.parse(nowIso);
+    if (!Number.isNaN(last) && !Number.isNaN(now)) {
+      out.ageDays = Math.max(0, Math.floor((now - last) / MS_PER_DAY5));
+    }
+  }
+  return out;
+}
+function latestEnvelope(text2) {
+  const out = {};
+  for (const { envelope } of replayHistory(text2)) {
+    if (envelope === void 0) continue;
+    if (envelope.git != null) {
+      out.git = { branch: envelope.git.branch, sha: envelope.git.sha };
+    }
+    if (envelope.tool != null) out.toolVersion = envelope.tool.version;
+  }
+  return out;
+}
+function summarizeRepo(input, nowIso) {
+  const base = {
+    name: input.name,
+    source: input.source,
+    ...input.team !== void 0 ? { team: input.team } : {},
+    status: "unavailable",
+    trend: [],
+    freshness: { band: "unknown", staleKinds: [] },
+    history: { records: 0, v1: 0, v2: 0, corrupt: 0 },
+    notes: []
+  };
+  if (input.load.kind !== "ok") {
+    base.notes.push(input.load.message);
+    return base;
+  }
+  const text2 = input.load.text;
+  const stats = historyStats(text2, 0);
+  base.history = {
+    records: stats.records,
+    v1: stats.v1,
+    v2: stats.v2,
+    corrupt: stats.corrupt
+  };
+  base.status = "no-data";
+  if (stats.records === 0) {
+    base.notes.push("History has no readable records.");
+    return base;
+  }
+  if (stats.corrupt > 0) {
+    base.notes.push(`${stats.corrupt} unreadable line(s) skipped.`);
+  }
+  if (stats.v1 > 0 && stats.v2 === 0) {
+    base.notes.push(
+      "v1 history (no envelope): commit/branch unknown \u2014 run ds-bridge history migrate."
+    );
+  }
+  Object.assign(base, latestEnvelope(text2));
+  base.freshness = freshnessOf(text2, nowIso);
+  const score = scoreFromHistory(text2, DEFAULT_WEIGHTS);
+  if (score.kind === "no-data") {
+    base.notes.push(
+      "No score-relevant checks recorded yet \u2014 run ds-bridge record."
+    );
+    return base;
+  }
+  base.status = "ok";
+  base.score = score.current;
+  base.trend = score.trend.slice(-TREND_POINTS);
+  const card = buildScorecard(text2, void 0, DEFAULT_WEIGHTS);
+  if (card.kind === "ok") {
+    for (const row2 of card.rows) {
+      if (row2.id === "on-system" && row2.now !== void 0) {
+        base.onSystem = row2.now;
+      } else if (row2.id === "contrast" && row2.now !== void 0) {
+        base.contrast = row2.now;
+      } else if (row2.id === "drift" && row2.now !== void 0) {
+        base.drift = row2.now;
+      } else if (row2.id === "readiness" && row2.now !== void 0) {
+        base.readiness = row2.now;
+      }
+    }
+  }
+  const adoption = latestAdoption(text2);
+  if (adoption !== void 0) {
+    const size = adoption.refs + adoption.literals;
+    if (size > 0) {
+      base.onSystemCounts = adoption;
+      base.size = size;
+    }
+  }
+  return base;
+}
+var STATUS_ORDER = {
+  ok: 0,
+  "no-data": 1,
+  unavailable: 2
+};
+function rank2(repos) {
+  const sorted = [...repos].sort(
+    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.score ?? 0) - (a.score ?? 0) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+  );
+  let position = 0;
+  let prev;
+  for (const repo of sorted) {
+    if (repo.status !== "ok") continue;
+    position += 1;
+    repo.rank = prev !== void 0 && prev.score === repo.score ? prev.rank ?? position : position;
+    prev = repo;
+  }
+  return sorted.map(
+    ({ rank: r2, ...rest }) => r2 === void 0 ? rest : { rank: r2, ...rest }
+  );
+}
+function aggregate(repos) {
+  const scored = repos.filter((r2) => r2.score !== void 0);
+  const sized = scored.filter((r2) => r2.size !== void 0);
+  const out = {
+    repos: repos.length,
+    scored: scored.length,
+    sized: sized.length,
+    staleRepos: repos.filter((r2) => r2.freshness.band === "red").length
+  };
+  const meanScore = mean(scored.map((r2) => r2.score));
+  if (meanScore !== void 0) out.meanScore = meanScore;
+  const totalSize = sized.reduce((s, r2) => s + r2.size, 0);
+  if (totalSize > 0) {
+    out.weightedScore = Math.round(
+      sized.reduce((s, r2) => s + r2.score * r2.size, 0) / totalSize
+    );
+  }
+  const onSystem = mean(
+    repos.flatMap((r2) => r2.onSystem === void 0 ? [] : [r2.onSystem])
+  );
+  if (onSystem !== void 0) out.meanOnSystem = onSystem;
+  const pooled = pooledOnSystem(repos);
+  if (pooled !== void 0) out.weightedOnSystem = pooled;
+  const contrast = mean(
+    repos.flatMap((r2) => r2.contrast === void 0 ? [] : [r2.contrast])
+  );
+  if (contrast !== void 0) out.meanContrast = contrast;
+  const readiness = mean(
+    repos.flatMap(
+      (r2) => r2.readiness === void 0 ? [] : [r2.readiness.score]
+    )
+  );
+  if (readiness !== void 0) out.meanReadiness = readiness;
+  const drifted = repos.filter((r2) => r2.drift !== void 0);
+  if (drifted.length > 0) {
+    out.drift = drifted.reduce(
+      (acc, r2) => ({
+        stale: acc.stale + (r2.drift?.stale ?? 0),
+        missing: acc.missing + (r2.drift?.missing ?? 0),
+        orphan: acc.orphan + (r2.drift?.orphan ?? 0)
+      }),
+      { stale: 0, missing: 0, orphan: 0 }
+    );
+  }
+  if (repos.some((r2) => r2.team !== void 0)) {
+    const teams = /* @__PURE__ */ new Map();
+    for (const r2 of repos) {
+      const key = r2.team ?? NO_TEAM;
+      teams.set(key, [...teams.get(key) ?? [], r2]);
+    }
+    out.byTeam = [...teams.keys()].sort().map((team) => {
+      const members = teams.get(team) ?? [];
+      const row2 = {
+        team,
+        repos: members.length,
+        scored: members.filter((m2) => m2.score !== void 0).length
+      };
+      const m = mean(
+        members.flatMap((x) => x.score === void 0 ? [] : [x.score])
+      );
+      if (m !== void 0) row2.meanScore = m;
+      const w = pooledOnSystem(members);
+      if (w !== void 0) row2.weightedOnSystem = w;
+      return row2;
+    });
+  }
+  return out;
+}
+function buildRollup(inputs, opts) {
+  const repos = rank2(inputs.map((i) => summarizeRepo(i, opts.nowIso)));
+  return {
+    schema: ROLLUP_SCHEMA,
+    schemaVersion: ROLLUP_SCHEMA_VERSION,
+    generatedAt: opts.nowIso,
+    weights: "default",
+    aggregate: aggregate(repos),
+    repos
+  };
+}
+
+// src/engines/rollup/sources.ts
+function parseSourceArg(raw, exists) {
+  if (exists(raw)) return { path: raw };
+  const at = raw.lastIndexOf("@");
+  if (at > 0 && at < raw.length - 1) {
+    return { path: raw.slice(0, at), ref: raw.slice(at + 1) };
+  }
+  return { path: raw };
+}
+var HISTORY_EXT = /\.jsonl?$/i;
+function segments2(path) {
+  return path.split(/[\\/]+/).filter((s) => s !== "" && s !== ".");
+}
+function defaultName(spec) {
+  const parts = segments2(spec.path);
+  const last = parts[parts.length - 1] ?? spec.path;
+  if (spec.ref === void 0 && HISTORY_EXT.test(last)) {
+    const parent = parts[parts.length - 2];
+    const grand = parts[parts.length - 3];
+    if (parent === ".ds-bridge" && grand !== void 0) return grand;
+    return last.replace(HISTORY_EXT, "");
+  }
+  return last;
+}
+function uniqueNames(names) {
+  const seen = /* @__PURE__ */ new Map();
+  return names.map((name) => {
+    const count = (seen.get(name) ?? 0) + 1;
+    seen.set(name, count);
+    return count === 1 ? name : `${name} (${count})`;
+  });
+}
+function nonEmptyString2(value2) {
+  return typeof value2 === "string" && value2.trim() !== "";
+}
+function parseRollupConfig(text2) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text2);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `rollup config is not valid JSON: ${detail}`
+    };
+  }
+  if (!Array.isArray(parsed)) {
+    return {
+      kind: "error",
+      message: 'rollup config must be an array of {"name", "source", "team"?} entries.'
+    };
+  }
+  const entries = [];
+  for (let i = 0; i < parsed.length; i += 1) {
+    const raw = parsed[i];
+    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+      return {
+        kind: "error",
+        message: `rollup config [${i}] must be an object.`
+      };
+    }
+    const entry = raw;
+    if (!nonEmptyString2(entry.name)) {
+      return {
+        kind: "error",
+        message: `rollup config [${i}].name must be a non-empty string.`
+      };
+    }
+    if (!nonEmptyString2(entry.source)) {
+      return {
+        kind: "error",
+        message: `rollup config [${i}].source must be a non-empty string.`
+      };
+    }
+    if (entry.team !== void 0 && !nonEmptyString2(entry.team)) {
+      return {
+        kind: "error",
+        message: `rollup config [${i}].team must be a non-empty string when set.`
+      };
+    }
+    const out = { name: entry.name, source: entry.source };
+    if (entry.team !== void 0) out.team = entry.team;
+    entries.push(out);
+  }
+  return { kind: "ok", entries };
+}
+
+// src/io/rollup-sources.ts
+import { readFileSync as readFileSync23, statSync as statSync15 } from "fs";
+import { join as join27 } from "path";
+var HISTORY_REL = join27(".ds-bridge", "history.jsonl");
+var RECORD_HINT = "run ds-bridge record there to start one.";
+function kindOf(path) {
+  try {
+    const s = statSync15(path);
+    if (s.isDirectory()) return "dir";
+    return s.isFile() ? "file" : "none";
+  } catch {
+    return "none";
+  }
+}
+function readText2(file, label) {
+  try {
+    return { kind: "ok", text: readFileSync23(file, "utf8") };
+  } catch (error) {
+    const code = error.code;
+    const detail = code ?? (error instanceof Error ? error.message : String(error));
+    return { kind: "error", message: `Could not read ${label}: ${detail}` };
+  }
+}
+function loadRollupSource(spec, exec) {
+  const label = spec.label ?? spec.path;
+  const kind = kindOf(spec.path);
+  if (spec.ref !== void 0) {
+    if (kind !== "dir") {
+      return {
+        kind: "missing",
+        message: `${label} is not a directory (a <path>@<ref> source must be a repo).`
+      };
+    }
+    const out = readFileAtRef({
+      ref: spec.ref,
+      path: ".ds-bridge/history.jsonl",
+      cwd: spec.path,
+      exec
+    });
+    if (out.kind === "ok") return out;
+    if (out.kind === "missing") {
+      return {
+        kind: "missing",
+        message: `No .ds-bridge/history.jsonl committed at ${spec.ref} in ${label}.`
+      };
+    }
+    return {
+      kind: "error",
+      message: `Could not read ${spec.ref} in ${label}: ${out.message || "git error"} \u2014 run git fetch in that repo?`
+    };
+  }
+  if (kind === "file") return readText2(spec.path, label);
+  if (kind === "dir") {
+    const file = join27(spec.path, HISTORY_REL);
+    if (kindOf(file) !== "file") {
+      return {
+        kind: "missing",
+        message: `No history in ${label} \u2014 ${RECORD_HINT}`
+      };
+    }
+    return readText2(file, label);
+  }
+  return { kind: "missing", message: `${label} does not exist.` };
+}
+
+// src/render/rollup-cells.ts
+var DASH = "\u2014";
+function pctText(value2) {
+  return value2 === void 0 ? DASH : `${value2}%`;
+}
+function numText(value2) {
+  return value2 === void 0 ? DASH : String(value2);
+}
+function driftText(repo) {
+  const d = repo.drift;
+  return d === void 0 ? DASH : `${d.stale}/${d.missing}/${d.orphan}`;
+}
+function readinessText(repo) {
+  return repo.readiness === void 0 ? DASH : String(repo.readiness.score);
+}
+function trendText(repo) {
+  return repo.trend.length < 2 ? DASH : sparkline(repo.trend.map((p4) => p4.score));
+}
+function freshText(repo) {
+  const f3 = repo.freshness;
+  if (f3.ageDays === void 0) return DASH;
+  const age3 = f3.ageDays === 0 ? "today" : `${f3.ageDays}d`;
+  return f3.band === "unknown" ? age3 : `${age3} (${f3.band})`;
+}
+function rankText(repo) {
+  return repo.rank === void 0 ? DASH : String(repo.rank);
+}
+var DRIFT_LABEL = "Drift (stale/missing/orphan)";
+var DRIFT_SHORT = "Drift";
+var DRIFT_LEGEND = "Drift = stale/missing/orphan tokens.";
+var TABLE_HEADERS = [
+  "#",
+  "Repo",
+  "Score",
+  "Trend",
+  "On-system",
+  DRIFT_LABEL,
+  "Contrast",
+  "Readiness",
+  "Fresh"
+];
+function repoCells(repo) {
+  return [
+    rankText(repo),
+    repo.team === void 0 ? repo.name : `${repo.name} \xB7 ${repo.team}`,
+    numText(repo.score),
+    trendText(repo),
+    pctText(repo.onSystem),
+    driftText(repo),
+    pctText(repo.contrast),
+    readinessText(repo),
+    freshText(repo)
+  ];
+}
+function aggregateLines(a) {
+  return [
+    ["Mean score", numText(a.meanScore)],
+    [
+      "Size-weighted score",
+      a.weightedScore === void 0 ? DASH : `${a.weightedScore} (${a.sized} sized repo${a.sized === 1 ? "" : "s"})`
+    ],
+    ["Mean on-system", pctText(a.meanOnSystem)],
+    ["Pooled on-system", pctText(a.weightedOnSystem)],
+    ["Mean contrast", pctText(a.meanContrast)],
+    ["Mean readiness", numText(a.meanReadiness)],
+    [DRIFT_LABEL, driftText(a)],
+    ["Stale repos", String(a.staleRepos)]
+  ];
+}
+function headline(model) {
+  const a = model.aggregate;
+  return `Org rollup \u2014 ${a.repos} repo${a.repos === 1 ? "" : "s"} (${a.scored} scored)`;
+}
+var EMPTY_TEXT = "No repos to roll up. Pass repo paths (or <path>@<ref>) or add .ds-bridge/rollup.json.";
+var WEIGHTS_NOTE = "Scores use the default weights for every repo (like-for-like ranking).";
+var DRILL_DOWN_NOTE = "Drill into one repo with `ds-bridge report <repo> --view org` (uses that repo's own score weights and working-tree history, so its score can differ from the default-weight rollup).";
+var NO_TRENDS_TEXT = "Trends appear after a second recorded run.";
+
+// src/render/html/rollup.ts
+var PAGE_STYLE2 = `
+.page { max-width: 1100px; }
+.empty-line { color: var(--text-subtle); font-size: 13px; margin: 0; }
+ul.notes { margin: 0; padding-left: 20px; font-size: 13px; }
+@media print {
+	body { background: #ffffff; }
+	section.panel, .kpi { break-inside: avoid; }
+}
+`.trim();
+function panel4(title, body) {
+  return `<section class="panel"><h2>${escapeHtml(title)}</h2>${body}</section>`;
+}
+function kpi(label, value2, sub, toned = true) {
+  const tone = toned && value2 !== void 0 && /^\d+/.test(value2) ? ` ${toneFor(Number.parseInt(value2, 10))}` : "";
+  return [
+    `<div class="kpi${tone}">`,
+    `<span class="kpi-label">${escapeHtml(label)}</span>`,
+    `<span class="kpi-value">${escapeHtml(value2 ?? "\u2014")}</span>`,
+    `<span class="kpi-sub">${escapeHtml(value2 === void 0 ? "not measured" : sub)}</span>`,
+    "</div>"
+  ].join("");
+}
+function tableHtml2(headers, rows) {
+  const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
+  const body = rows.map(
+    (r2) => `<tr>${r2.map((c2) => `<td>${escapeHtml(c2)}</td>`).join("")}</tr>`
+  ).join("");
+  return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function trendSeries(model) {
+  const dates = [
+    ...new Set(
+      model.repos.filter((r2) => r2.trend.length >= 2).flatMap((r2) => r2.trend.map((p4) => p4.date))
+    )
+  ].sort();
+  const index = new Map(dates.map((d, i) => [d, i]));
+  const series = model.repos.filter((r2) => r2.trend.length >= 2).map((r2) => ({
+    label: r2.name,
+    points: r2.trend.map((p4) => ({ x: index.get(p4.date) ?? 0, y: p4.score }))
+  }));
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  return first !== void 0 && last !== void 0 ? { series, xLabels: [first, last] } : { series };
+}
+function renderRollupHtml(model) {
+  const a = model.aggregate;
+  const parts = [
+    '<header class="dash"><div class="bar">',
+    `<h1>Design system org rollup</h1>`,
+    `<span class="generated">${escapeHtml(readableInstant(model.generatedAt))} \xB7 ${escapeHtml(headline(model))}</span>`,
+    "</div></header>",
+    '<div class="wrap page">'
+  ];
+  if (model.repos.length === 0) {
+    parts.push(`<p class="empty-line">${escapeHtml(EMPTY_TEXT)}</p>`);
+  } else {
+    parts.push(
+      `<div class="kpis">${[
+        kpi(
+          "Mean score",
+          a.meanScore === void 0 ? void 0 : String(a.meanScore),
+          `over ${a.scored} scored repo${a.scored === 1 ? "" : "s"}`
+        ),
+        kpi(
+          "Size-weighted score",
+          a.weightedScore === void 0 ? void 0 : String(a.weightedScore),
+          `${a.sized} sized repo${a.sized === 1 ? "" : "s"}`
+        ),
+        kpi(
+          "Pooled on-system",
+          a.weightedOnSystem === void 0 ? void 0 : `${a.weightedOnSystem}%`,
+          "tokens vs literals, all repos"
+        ),
+        kpi("Repos", String(a.repos), `${a.staleRepos} stale`, false)
+      ].join("")}</div>`
+    );
+    const scored = model.repos.filter((r2) => r2.score !== void 0);
+    const bars = barChart(
+      scored.map((r2) => ({
+        label: r2.name,
+        value: r2.score,
+        color: TONE[toneFor(r2.score)]
+      })),
+      { width: 520, max: 100 }
+    );
+    const { series, xLabels } = trendSeries(model);
+    parts.push(
+      '<div class="grid">',
+      panel4("Ranked System Score", `<div class="chart">${bars}</div>`),
+      panel4(
+        "Score trends",
+        series.length === 0 ? `<p class="empty-line">${escapeHtml(NO_TRENDS_TEXT)}</p>` : `<div class="chart">${lineChart(series, { width: 520, height: 220, ...xLabels !== void 0 ? { xLabels } : {} })}</div>`
+      ),
+      "</div>",
+      panel4("Repos", tableHtml2(TABLE_HEADERS, model.repos.map(repoCells))),
+      panel4("Aggregate", tableHtml2(["Aggregate", "Value"], aggregateLines(a)))
+    );
+    if (a.byTeam !== void 0) {
+      parts.push(
+        panel4(
+          "By team",
+          tableHtml2(
+            ["Team", "Repos", "Scored", "Mean score", "Pooled on-system"],
+            a.byTeam.map((t) => [
+              t.team,
+              String(t.repos),
+              String(t.scored),
+              t.meanScore === void 0 ? "\u2014" : String(t.meanScore),
+              t.weightedOnSystem === void 0 ? "\u2014" : `${t.weightedOnSystem}%`
+            ])
+          )
+        )
+      );
+    }
+    const notes = model.repos.flatMap(
+      (r2) => r2.notes.map(
+        (n) => `<li><strong>${escapeHtml(r2.name)}</strong>: ${escapeHtml(n)}</li>`
+      )
+    );
+    if (notes.length > 0) {
+      parts.push(panel4("Notes", `<ul class="notes">${notes.join("")}</ul>`));
+    }
+  }
+  parts.push(
+    `<div class="meta">${escapeHtml(WEIGHTS_NOTE)} Generated by ds-bridge rollup from each repo's .ds-bridge/history.jsonl. \u201C\u2014\u201D means never measured, not zero.</div>`,
+    "</div>"
+  );
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    "<title>Design system org rollup</title>",
+    `<style>${STYLE}
+${PAGE_STYLE2}</style>`,
+    "</head>",
+    "<body>",
+    parts.join(""),
+    "</body>",
+    "</html>",
+    ""
+  ].join("\n");
+}
+
+// src/render/markdown/rollup.ts
+function cell2(value2) {
+  return value2.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+function table2(headers, rows) {
+  return [
+    `| ${headers.map(cell2).join(" | ")} |`,
+    `|${headers.map(() => " --- ").join("|")}|`,
+    ...rows.map((r2) => `| ${r2.map(cell2).join(" | ")} |`)
+  ];
+}
+function renderRollupMarkdown(model) {
+  const out = [
+    "## Design-system org rollup",
+    "",
+    `${headline(model)} \xB7 ${model.generatedAt.slice(0, 10)}`,
+    ""
+  ];
+  if (model.repos.length === 0) {
+    out.push(EMPTY_TEXT);
+    return `${out.join("\n")}
+`;
+  }
+  out.push(
+    ...table2(
+      ["Aggregate", "Value"],
+      aggregateLines(model.aggregate).map(([l, v]) => [l, v])
+    ),
+    "",
+    ...table2(TABLE_HEADERS, model.repos.map(repoCells)),
+    ""
+  );
+  const teams = model.aggregate.byTeam;
+  if (teams !== void 0) {
+    out.push(
+      "### By team",
+      "",
+      ...table2(
+        ["Team", "Repos", "Scored", "Mean score", "Pooled on-system"],
+        teams.map((t) => [
+          t.team,
+          String(t.repos),
+          String(t.scored),
+          t.meanScore === void 0 ? DASH : String(t.meanScore),
+          t.weightedOnSystem === void 0 ? DASH : `${t.weightedOnSystem}%`
+        ])
+      ),
+      ""
+    );
+  }
+  const notes = model.repos.flatMap(
+    (r2) => r2.notes.map((n) => `- **${cell2(r2.name)}**: ${n}`)
+  );
+  if (notes.length > 0) out.push("### Notes", "", ...notes, "");
+  out.push(`_${WEIGHTS_NOTE} ${DRILL_DOWN_NOTE}_`);
+  return `${out.join("\n")}
+`;
+}
+
+// src/render/terminal/rollup.ts
+function renderRollupTerm(model) {
+  const lines = [headline(model), ""];
+  if (model.repos.length === 0) {
+    lines.push(EMPTY_TEXT);
+    return `${lines.join("\n")}
+`;
+  }
+  const pairs = aggregateLines(model.aggregate);
+  const width = Math.max(...pairs.map(([label]) => label.length));
+  for (const [label, value2] of pairs) {
+    lines.push(`${label.padEnd(width)}  ${value2}`);
+  }
+  lines.push("");
+  lines.push(
+    renderTable(
+      TABLE_HEADERS.map((h) => h === DRIFT_LABEL ? DRIFT_SHORT : h),
+      model.repos.map(repoCells),
+      {
+        color: false,
+        // Numeric columns stay right-aligned when a row is "—" (unmeasured).
+        align: [
+          "right",
+          "left",
+          "right",
+          "left",
+          "right",
+          "left",
+          "right",
+          "right",
+          "left"
+        ]
+      }
+    )
+  );
+  const teams = model.aggregate.byTeam;
+  if (teams !== void 0) {
+    lines.push("");
+    lines.push(
+      renderTable(
+        ["Team", "Repos", "Scored", "Mean score", "Pooled on-system"],
+        teams.map((t) => [
+          t.team,
+          String(t.repos),
+          String(t.scored),
+          t.meanScore === void 0 ? "\u2014" : String(t.meanScore),
+          t.weightedOnSystem === void 0 ? "\u2014" : `${t.weightedOnSystem}%`
+        ]),
+        { color: false, align: ["left", "right", "right", "right", "right"] }
+      )
+    );
+  }
+  const notes = model.repos.flatMap(
+    (r2) => r2.notes.map((n) => `  ${r2.name}: ${n}`)
+  );
+  if (notes.length > 0) {
+    lines.push("", "Notes", ...notes);
+  }
+  lines.push("", WEIGHTS_NOTE, DRIFT_LEGEND);
+  return `${lines.join("\n")}
+`;
+}
+
+// src/cli-commands/rollup.ts
+var FORMATS = ["term", "md", "json", "html"];
+function fail18(message) {
+  process.stderr.write(`${message}
+`);
+  process.exitCode = 2;
+}
+function configBase(configPath) {
+  const dir = dirname10(configPath);
+  return basename2(dir) === ".ds-bridge" ? dirname10(dir) : dir;
+}
+function specFor(raw, base) {
+  const spec = parseSourceArg(raw, (p4) => existsSync22(resolve15(base, p4)));
+  const out = { path: resolve15(base, spec.path), label: spec.path };
+  if (spec.ref !== void 0) out.ref = spec.ref;
+  return out;
+}
+function loadConfig(path) {
+  let text2;
+  try {
+    text2 = readFileSync24(path, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail18(`Could not read rollup config ${path}: ${detail}`);
+    return void 0;
+  }
+  const parsed = parseRollupConfig(text2);
+  if (parsed.kind === "error") {
+    fail18(`${path}: ${parsed.message}`);
+    return void 0;
+  }
+  const base = configBase(path);
+  return parsed.entries.map((e4) => ({
+    name: e4.name,
+    raw: e4.source,
+    spec: specFor(e4.source, base),
+    ...e4.team !== void 0 ? { team: e4.team } : {}
+  }));
+}
+function runRollup(sources, options) {
+  const format = options.format;
+  if (!FORMATS.includes(format)) {
+    fail18(
+      `Unknown --format "${options.format}". Expected one of: ${FORMATS.join(", ")}.`
+    );
+    return;
+  }
+  const cwd5 = process.cwd();
+  const pending = [];
+  const defaultConfig = join28(cwd5, ".ds-bridge", "rollup.json");
+  const configPath = options.config !== void 0 ? resolve15(options.config) : sources.length === 0 && existsSync22(defaultConfig) ? defaultConfig : void 0;
+  if (configPath !== void 0) {
+    const entries = loadConfig(configPath);
+    if (entries === void 0) return;
+    pending.push(...entries);
+  }
+  for (const raw of sources) {
+    pending.push({ name: void 0, raw, spec: specFor(raw, cwd5) });
+  }
+  if (pending.length === 0) {
+    fail18(
+      "No sources. Pass repo paths (or <path>@<git-ref>), --config <file>, or add .ds-bridge/rollup.json."
+    );
+    return;
+  }
+  const names = uniqueNames(pending.map((p4) => p4.name ?? defaultName(p4.spec)));
+  const inputs = pending.map((p4, i) => ({
+    name: names[i] ?? p4.raw,
+    source: p4.raw,
+    ...p4.team !== void 0 ? { team: p4.team } : {},
+    load: loadRollupSource(p4.spec, spawnGitExec)
+  }));
+  const model = buildRollup(inputs, { nowIso: renderInstant() });
+  const rendered = format === "json" ? `${JSON.stringify(model, null, 2)}
+` : format === "md" ? renderRollupMarkdown(model) : format === "html" ? renderRollupHtml(model) : renderRollupTerm(model);
+  if (options.out === void 0) {
+    process.stdout.write(rendered);
+    process.exitCode = 0;
+    return;
+  }
+  const outPath = resolve15(options.out);
+  try {
+    mkdirSync11(dirname10(outPath), { recursive: true });
+    writeFileSync14(outPath, rendered, "utf8");
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail18(`Could not write ${outPath}: ${detail}`);
+    return;
+  }
+  process.stdout.write(`${outPath}
+`);
+  process.exitCode = 0;
+}
+function registerRollupCommand(program2) {
+  program2.command("rollup").description(
+    "Org view across repos: rank several repos' recorded history (local paths, history files or <path>@<git-ref>) by System Score, with on-system %, drift, contrast, readiness and freshness \u2014 local only, nothing hosted"
+  ).argument(
+    "[sources...]",
+    "repo directories, history.jsonl files, or <path>@<git-ref> (e.g. ../web@origin/ds-bridge-data); default: ./.ds-bridge/rollup.json"
+  ).option(
+    "--config <file>",
+    `rollup config: a JSON array of {"name", "source", "team"?} (sources resolve against the config's project dir)`
+  ).option(
+    "--format <format>",
+    "output format: term | md | json | html",
+    "term"
+  ).option("--out <file>", "write the output to a file instead of stdout").action((sources, options) => {
+    runRollup(sources, options);
+  });
+}
+
 // src/cli-commands/tokens.ts
 import {
-  appendFileSync as appendFileSync12,
-  existsSync as existsSync18,
-  mkdirSync as mkdirSync15,
+  existsSync as existsSync23,
+  mkdirSync as mkdirSync12,
   readdirSync as readdirSync4,
-  readFileSync as readFileSync20,
-  statSync as statSync11,
-  writeFileSync as writeFileSync11
+  readFileSync as readFileSync25,
+  statSync as statSync16,
+  writeFileSync as writeFileSync15
 } from "fs";
-import { isAbsolute as isAbsolute4, join as join23, relative as relative2, resolve as resolve12, sep as sep4 } from "path";
+import { isAbsolute as isAbsolute4, join as join29, relative as relative2, resolve as resolve16, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
   return name.toLowerCase().replace(/\./g, "-");
 }
-function canonical(type, raw) {
+function canonical2(type, raw) {
   if (type === "color" && typeof raw === "string") {
     return normalizeColor(raw) ?? raw.trim();
   }
@@ -21636,7 +26159,7 @@ function classifyDrift(source, outputs) {
       continue;
     }
     matchedOutputKeys.add(key);
-    if (canonical(token.type, token.value) === canonical(token.type, output.raw)) {
+    if (canonical2(token.type, token.value) === canonical2(token.type, output.raw)) {
       inSync += 1;
     } else {
       entries.push({ kind: "stale-output", token, output });
@@ -21790,10 +26313,10 @@ function scanTsTheme(content) {
         const value2 = parseString();
         if (value2 !== void 0) values.push({ name, raw: value2 });
       } else {
-        const num3 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
-        if (num3 !== null) {
-          values.push({ name, raw: num3[0] });
-          i += num3[0].length;
+        const num5 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
+        if (num5 !== null) {
+          values.push({ name, raw: num5[0] });
+          i += num5[0].length;
         } else {
           warnings.push(`non-literal value for "${name}" \u2014 skipped`);
           skipExpression();
@@ -21824,12 +26347,12 @@ function countsByType(map) {
   }
   return [...counts.entries()].map(([label, value2]) => ({ label, value: value2 })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
 }
-function renderTerm13(filePath, map, color) {
+function renderTerm14(filePath, map, color) {
   const heading = `${filePath} \u2014 format: ${map.format} \u2014 ${map.tokens.length} tokens`;
   const chart = renderBarChart(countsByType(map), { width: 24, color });
   const rows = map.tokens.slice(0, TABLE_LIMIT).map((token) => [token.name, token.type, previewValue(token.value)]);
-  const table = renderTable(["name", "type", "value"], rows, { color });
-  const lines = [heading, "", chart, "", table];
+  const table3 = renderTable(["name", "type", "value"], rows, { color });
+  const lines = [heading, "", chart, "", table3];
   if (map.tokens.length > TABLE_LIMIT) {
     lines.push("", `\u2026 ${map.tokens.length - TABLE_LIMIT} more`);
   }
@@ -21838,7 +26361,7 @@ function renderTerm13(filePath, map, color) {
 function loadTokenMap2(filePath) {
   let raw;
   try {
-    raw = readFileSync20(filePath, "utf8");
+    raw = readFileSync25(filePath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     process.stderr.write(`Could not read file "${filePath}": ${detail}
@@ -21915,7 +26438,7 @@ function walkOutputFiles(dir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join23(dir, entry.name);
+    const full = join29(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS4.has(entry.name)) continue;
       walkOutputFiles(full, acc);
@@ -21942,7 +26465,7 @@ function collectTokenCandidates3(dir, insideTokenDir, acc) {
     return;
   }
   for (const entry of entries) {
-    const full = join23(dir, entry.name);
+    const full = join29(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS4.has(entry.name)) continue;
       collectTokenCandidates3(
@@ -21959,7 +26482,7 @@ function collectTokenCandidates3(dir, insideTokenDir, acc) {
 function detectFileFormat4(absPath) {
   let raw;
   try {
-    raw = readFileSync20(absPath, "utf8");
+    raw = readFileSync25(absPath, "utf8");
   } catch {
     return void 0;
   }
@@ -21983,8 +26506,8 @@ function discoverFirstTokenSource3(root) {
 }
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve12(process.cwd(), flagTokens);
-    if (!existsSync18(abs2)) {
+    const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve16(process.cwd(), flagTokens);
+    if (!existsSync23(abs2)) {
       return {
         kind: "error",
         message: `Token source "${abs2}" (from --tokens) does not exist.`
@@ -21992,11 +26515,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join23(targetDir, ".ds-bridge.json");
-  if (existsSync18(configPath)) {
+  const configPath = join29(targetDir, ".ds-bridge.json");
+  if (existsSync23(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync20(configPath, "utf8");
+      projectFileText = readFileSync25(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -22004,8 +26527,8 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute4(src) ? src : resolve12(targetDir, src);
-        if (existsSync18(abs2)) return { kind: "ok", path: abs2 };
+        const abs2 = isAbsolute4(src) ? src : resolve16(targetDir, src);
+        if (existsSync23(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
           message: `token_source "${abs2}" from .ds-bridge.json does not exist.`
@@ -22024,7 +26547,7 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
 function loadTokenMapForCheck(tokenPath) {
   let raw;
   try {
-    raw = readFileSync20(tokenPath, "utf8");
+    raw = readFileSync25(tokenPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -22071,10 +26594,10 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    if (resolve12(file) === resolve12(tokenSourcePath)) continue;
+    if (resolve16(file) === resolve16(tokenSourcePath)) continue;
     let content;
     try {
-      content = readFileSync20(file, "utf8");
+      content = readFileSync25(file, "utf8");
     } catch {
       continue;
     }
@@ -22164,19 +26687,13 @@ function checkJson(result) {
   );
 }
 function appendHistory(stateDir, record) {
-  mkdirSync15(stateDir, { recursive: true });
-  appendFileSync12(
-    join23(stateDir, "history.jsonl"),
-    `${JSON.stringify(record)}
-`,
-    "utf8"
-  );
+  appendHistoryRecord(stateDir, record);
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join23(stateDir, "history.jsonl");
+  const historyPath = join29(stateDir, "history.jsonl");
   let text2;
   try {
-    text2 = readFileSync20(historyPath, "utf8");
+    text2 = readFileSync25(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -22208,11 +26725,11 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join23(stateDir, "reports");
-  mkdirSync15(reportsDir, { recursive: true });
+  const reportsDir = join29(stateDir, "reports");
+  mkdirSync12(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join23(reportsDir, `tokens-${date}.html`);
-  writeFileSync11(reportPath, html, "utf8");
+  const reportPath = join29(reportsDir, `tokens-${date}.html`);
+  writeFileSync15(reportPath, html, "utf8");
   return reportPath;
 }
 function failCheck(message) {
@@ -22228,8 +26745,8 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve12(path);
-  if (!existsSync18(targetDir) || !statSync11(targetDir).isDirectory()) {
+  const targetDir = resolve16(path);
+  if (!existsSync23(targetDir) || !statSync16(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -22243,8 +26760,8 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve12(options.outputs) : targetDir;
-  if (!existsSync18(outputsDir) || !statSync11(outputsDir).isDirectory()) {
+  const outputsDir = options.outputs !== void 0 ? resolve16(options.outputs) : targetDir;
+  if (!existsSync23(outputsDir) || !statSync16(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -22256,7 +26773,7 @@ function runCheck(path, options) {
   const result = classifyDrift(loaded.map, values);
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join23(targetDir, ".ds-bridge");
+  const stateDir = join29(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -22308,7 +26825,7 @@ function registerTokensCommand(program2) {
       return;
     }
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm13(path, map, color)}
+    process.stdout.write(`${renderTerm14(path, map, color)}
 `);
   });
 }
@@ -22338,9 +26855,13 @@ function buildProgram() {
   registerDigestCommand(program2);
   registerConfigCommand(program2);
   registerReleaseCheckCommand(program2);
+  registerRecordCommand(program2);
+  registerHistoryCommand(program2);
+  registerAnalyticsCommand(program2);
+  registerRollupCommand(program2);
   return program2;
 }
-loadDotenvInto(join24(process.cwd(), ".ds-bridge.env"), process.env);
+loadDotenvInto(join30(process.cwd(), ".ds-bridge.env"), process.env);
 buildProgram().parse();
 export {
   buildProgram

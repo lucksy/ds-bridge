@@ -44,8 +44,10 @@ describe("buildDebt", () => {
 		expect(rollup.pct).toBe(20);
 		const it = item(rollup, "off-system values");
 		expect(it).toMatchObject({ kind: "off-system", count: 10, weight: 2 });
+		// `lint --fix` never touches off-system values, so the advice names the
+		// CLI listing command instead (SPEC-exec-report §3, review fix).
 		expect(it?.recommendation).toBe(
-			"Tokenize 10 off-system values (run /ds-bridge:ds-lint --fix)",
+			"Replace 10 off-system values with design tokens (run ds-bridge lint to list them)",
 		);
 		// Zero off-system → no item at all.
 		expect(buildDebt({ offSystem: 0 }).items).toHaveLength(0);
@@ -131,5 +133,75 @@ describe("buildDebt", () => {
 		});
 		expect(rollup.items.map((i) => i.subject)).toEqual(["Real"]);
 		expect(rollup.pct).toBe(8);
+	});
+});
+
+// X1 (SPEC-exec-report §3) — counts-only library-health lines still count.
+describe("buildDebt — aggregate fallback for counts-only library-health", () => {
+	it("deprecatedCount with no list → one aggregate item, magnitude = count", () => {
+		const rollup = buildDebt({ deprecatedCount: 3 });
+		expect(rollup.pct).toBe(24);
+		expect(rollup.items).toEqual([
+			{
+				kind: "deprecated",
+				subject: "deprecated components",
+				count: 3,
+				weight: 8,
+				recommendation:
+					"Replace 3 usages of deprecated components (run ds-bridge library-health for the list)",
+			},
+		]);
+	});
+
+	it("detachedCount with no list → one aggregate item, heuristic caveat", () => {
+		const rollup = buildDebt({ detachedCount: 2 });
+		expect(rollup.pct).toBe(10);
+		expect(rollup.items[0]).toMatchObject({
+			kind: "detached",
+			subject: "detached instances",
+			count: 2,
+			weight: 5,
+		});
+		expect(rollup.items[0]?.recommendation).toBe(
+			"Re-attach 2 detached instances to their DS components (heuristic — verify)",
+		);
+	});
+
+	it("lists win over counts (no double count)", () => {
+		const rollup = buildDebt({
+			deprecatedUsage: [{ componentName: "LegacyButton", count: 1 }],
+			deprecatedCount: 5,
+			detachedCandidates: [{ nodeId: "1:1", name: "Card", heuristic: true }],
+			detachedCount: 4,
+		});
+		expect(rollup.items.map((i) => i.subject).sort()).toEqual([
+			"Card",
+			"LegacyButton",
+		]);
+		expect(rollup.pct).toBe(13);
+	});
+
+	it("a count of 1 reads in the singular (usage · instance · value)", () => {
+		const rollup = buildDebt({
+			deprecatedCount: 1,
+			detachedCount: 1,
+			offSystem: 1,
+		});
+		expect(rollup.items.map((i) => i.recommendation)).toEqual([
+			"Replace 1 usage of deprecated components (run ds-bridge library-health for the list)",
+			"Re-attach 1 detached instance to its DS component (heuristic — verify)",
+			"Replace 1 off-system value with design tokens (run ds-bridge lint to list them)",
+		]);
+	});
+
+	it("zero, negative or malformed counts add nothing", () => {
+		expect(
+			buildDebt({
+				deprecatedCount: 0,
+				detachedCount: -2,
+				// biome-ignore lint/suspicious/noExplicitAny: malformed-tolerance test
+				...({ deprecatedCount: "x" } as any),
+			}),
+		).toEqual({ pct: 0, level: "low", items: [] });
 	});
 });

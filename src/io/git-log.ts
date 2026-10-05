@@ -183,8 +183,17 @@ export function readFileAtRef(input: ReadFileAtRefInput): ReadFileAtRefResult {
 }
 
 /** Default real-git exec for the CLI edge — wraps spawnSync. */
+/** stdout cap for one git run (256 MiB) — well above any realistic history. */
+export const GIT_MAX_BUFFER = 256 * 1024 * 1024;
+
 export function spawnGitExec(args: string[], cwd: string): GitExecResult {
-	const run = spawnSync("git", args, { cwd, encoding: "utf8" });
+	// Node's spawnSync default maxBuffer is 1 MiB; a CI history on a data branch
+	// passes that after a few thousand records (`git show <ref>:history.jsonl`).
+	const run = spawnSync("git", args, {
+		cwd,
+		encoding: "utf8",
+		maxBuffer: GIT_MAX_BUFFER,
+	});
 	if (run.error !== undefined) {
 		return { status: -1, stdout: "", stderr: "", error: run.error.message };
 	}

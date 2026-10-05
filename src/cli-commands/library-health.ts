@@ -19,21 +19,23 @@
 //
 // On success → assessLibraryHealth over the (fetched or cached) file → append one
 // `library-health` history line (the three TOTALS as counts → the artifact trend)
-// + print the term/json report.
+// + print the term/json report. The line also carries the top-N per-component
+// lists (`topN`, `topOverrides`, `topDeprecated`, `topDetached`; `--top`, default
+// 10, `0` = counts only) so the dashboard can trend specific components (F2).
 //
 // Exit codes: 0 success (findings are informational) · 2 config/operational error.
-import {
-	appendFileSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cwd, env as processEnv } from "node:process";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import { assessLibraryHealth } from "../engines/figma/library-health.js";
+import {
+	DEFAULT_TOP_N,
+	type LibraryHealthTopLists,
+	libraryHealthTopLists,
+	parseTopN,
+} from "../engines/figma/library-health-top.js";
 import {
 	type CacheEnv,
 	type CacheFs,
@@ -47,6 +49,7 @@ import {
 	type FigmaResult,
 } from "../io/figma/client.js";
 import { resolveFileKey } from "../io/figma/file-key.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderTable,
 	severityColor,
@@ -66,6 +69,7 @@ interface LibraryHealthOptions {
 	fileKey: string | undefined;
 	format: string;
 	refresh: boolean;
+	top: string | undefined;
 }
 
 /** Print a fatal operational error and set exit code 2. */
@@ -162,9 +166,11 @@ const fsAdapter: CacheFs = {
  * keeps the line lean — the section's bars come from these totals; the lists are
  * reconstructed empty downstream).
  */
-interface LibraryHealthHistoryRecord {
+interface LibraryHealthHistoryRecord extends Partial<LibraryHealthTopLists> {
 	at: string;
 	kind: "library-health";
+	/** The resolved Figma file key (additive): the hotspots trend follows one file. */
+	fileKey: string;
 	overrideHotspots: number;
 	deprecatedUsage: number;
 	detachedCandidates: number;
@@ -175,25 +181,27 @@ interface LibraryHealthHistoryRecord {
  * project state dir (NOT the cache location), so `report` finds it beside the
  * other history kinds. `at` is read from the system clock at this io edge.
  */
-function appendLibraryHealthHistory(totals: {
-	overrideHotspots: number;
-	deprecatedUsage: number;
-	detachedCandidates: number;
-}): void {
+function appendLibraryHealthHistory(
+	totals: {
+		overrideHotspots: number;
+		deprecatedUsage: number;
+		detachedCandidates: number;
+	},
+	lists: LibraryHealthTopLists | undefined,
+	fileKey: string,
+): void {
 	const stateDir = join(cwd(), ".ds-bridge");
 	const record: LibraryHealthHistoryRecord = {
 		at: new Date().toISOString(),
 		kind: "library-health",
+		fileKey,
 		overrideHotspots: totals.overrideHotspots,
 		deprecatedUsage: totals.deprecatedUsage,
 		detachedCandidates: totals.detachedCandidates,
+		// F2 — the top-N lists (new keys; the counts above stay numbers).
+		...(lists !== undefined ? lists : {}),
 	};
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Render the human-readable term report for the three hygiene signals. */
@@ -251,6 +259,14 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 	const format = options.format as LibraryHealthFormat;
 	if (format !== "json" && format !== "term") {
 		fail(`Unknown --format "${options.format}". Expected "json" or "term".`);
+		return;
+	}
+	const topN =
+		options.top === undefined ? DEFAULT_TOP_N : parseTopN(options.top);
+	if (topN === undefined) {
+		fail(
+			`Invalid --top "${options.top}". Expected a whole number from 0 to 100 (0 = counts only).`,
+		);
 		return;
 	}
 
@@ -367,8 +383,16 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 	// 3) Assess the (fetched or cached) file — pure, never throws.
 	const report = assessLibraryHealth(file);
 
-	// 4) Append the history line (counts only) for the dashboard trend (L6).
-	appendLibraryHealthHistory(report.totals);
+	// 4) Append the history line for the dashboard trends: the counts (L6) plus,
+	//    unless --top 0, the per-component top-N lists from an UNCAPPED pass (F2).
+	const lists =
+		topN > 0
+			? libraryHealthTopLists(
+					assessLibraryHealth(file, { cap: Number.POSITIVE_INFINITY }),
+					topN,
+				)
+			: undefined;
+	appendLibraryHealthHistory(report.totals, lists, fileKey);
 
 	// 5) Emit the report.
 	if (format === "json") {
@@ -394,6 +418,10 @@ export function registerLibraryHealthCommand(program: Command): void {
 		)
 		.option("--format <format>", "output format: term | json", "term")
 		.option("--refresh", "bypass the response cache and re-crawl", false)
+		.option(
+			"--top <n>",
+			"store the top N components per signal in history for trends (0-100, 0 = counts only; default 10)",
+		)
 		.action((options: LibraryHealthOptions) => {
 			void runLibraryHealth(options);
 		});

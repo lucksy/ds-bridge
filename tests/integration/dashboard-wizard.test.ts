@@ -229,6 +229,15 @@ describe("runSetupWizard (injected streams)", () => {
 		const written = await readConfig();
 		expect(written.dashboard_view).toBe("ds-designer");
 	});
+
+	it("never offers the curated non-persona views (`exec`, `org` — SPEC-rollup §4)", async () => {
+		// Only 1..7 exist: 8 (would be exec/org) is re-prompted; 7 is everything.
+		const { exitCode, output } = await drive(["8", "7"]);
+		expect(exitCode).toBe(0);
+		expect(output).toContain("between 1 and 7");
+		expect(output).not.toMatch(/\borg\b/);
+		expect(await configExists()).toBe(false);
+	});
 });
 
 interface ExecResult {

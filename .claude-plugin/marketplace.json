@@ -1,6 +1,6 @@
 {
 	"name": "ds-bridge",
-	"description": "The ds-bridge Claude Code plugin: design-token linting, drift detection, Figma handoff QA and the insights pane",
+	"description": "The ds-bridge Claude Code plugin: design-system analytics, design-token linting, drift detection, Figma handoff QA and the insights pane",
 	"owner": {
 		"name": "lucksy"
 	},

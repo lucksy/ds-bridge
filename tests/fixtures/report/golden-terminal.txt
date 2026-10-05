@@ -12,7 +12,7 @@ System score [██████████████████▎░░░
 │ lint      │        74 │     25 │
 │ readiness │        72 │     15 │
 │ a11y      │        85 │     15 │
-│ adoption  │        75 │     20 │
+│ on-system │        75 │     20 │
 └───────────┴───────────┴────────┘
 
 Drift trend
@@ -182,3 +182,47 @@ Measurement age per check-kind · band signals trust
 │ changelog      │ never      │ never  │ unknown │
 │ frame-impl     │ never      │ never  │ unknown │
 └────────────────┴────────────┴────────┴─────────┘
+
+Consistency
+───────────
+Consistency [███████████████▋░░░░░░░░] 65%
+┌────────────┬───────┬────────┐
+│ Signal     │ Score │ Weight │
+├────────────┼───────┼────────┤
+│ tokens     │    75 │     40 │
+│ components │    50 │     40 │
+│ overrides  │    76 │     20 │
+└────────────┴───────┴────────┘
+overrides is a documented-opinion penalty (8 per hotspot)
+
+Design debt
+───────────
+41% · medium
+┌───────────────────────┬────────────┬───────┬───────────────────────────────────────────────────────────────────────────────────────┐
+│ Subject               │ Kind       │ Count │ Recommendation                                                                        │
+├───────────────────────┼────────────┼───────┼───────────────────────────────────────────────────────────────────────────────────────┤
+│ deprecated components │ deprecated │     3 │ Replace 3 usages of deprecated components (run ds-bridge library-health for the list) │
+│ detached instances    │ detached   │     3 │ Re-attach 3 detached instances to their DS components (heuristic — verify)            │
+│ off-system values     │ off-system │     1 │ Replace 1 off-system value with design tokens (run ds-bridge lint to list them)       │
+└───────────────────────┴────────────┴───────┴───────────────────────────────────────────────────────────────────────────────────────┘
+
+Executive summary
+─────────────────
+System score     76
+Import coverage  33%
+Consistency      65
+Design debt      41%
+Trend            ▁▇▇▇█
+
+Library hotspots trend
+──────────────────────
+No data yet — run `ds-bridge library-health` to populate this section.
+
+Frame readiness trend
+─────────────────────
+1 of 1 frame below the 80 gate
+  Card / Primary  72 · ✗ below gate · 1 run
+
+Handoff pass rate
+─────────────────
+0% · 0 of 1 frame ≥ 80

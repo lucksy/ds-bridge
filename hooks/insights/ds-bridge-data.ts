@@ -116,9 +116,14 @@ export function kindLabel(kind: string): string {
 	return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** Lint's score is its on-system share, so it is named for that, not "Lint score". */
+/**
+ * Lint's score is its on-system share, so it is named for that, not "Lint score";
+ * the `score` kind is the stored composite (`ds-bridge record`), "System score".
+ */
 function scoreLabel(kind: string): string {
-	return kind === "lint" ? "On-system" : `${kindLabel(kind)} score`;
+	if (kind === "lint") return "On-system";
+	if (kind === "score") return "System score";
+	return `${kindLabel(kind)} score`;
 }
 
 const FINDINGS_LABELS: Record<string, string> = {

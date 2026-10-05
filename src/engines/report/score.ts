@@ -8,6 +8,9 @@
 // `asNumber` coercion of count fields. We re-parse rather than reuse
 // `aggregateHistory` because its output is lossy (fields renamed into drift
 // buckets, timestamps dropped) and reverse-mapping would be fragile.
+// H2: the per-line parse now runs through the shared `replayHistory` iterator
+// (identical tolerance); v1 and v2-enveloped lines score identically.
+import { replayHistory } from "./history-lines.js";
 
 /** The weightable sub-score components (adoption joined in A4; parity in C3). */
 export type ComponentKind =
@@ -393,20 +396,10 @@ export function scoreFromHistory(
 	}
 	const entries: Entry[] = [];
 
-	const lines = text.split("\n");
-	for (let i = 0; i < lines.length; i += 1) {
-		const trimmed = (lines[i] ?? "").trim();
-		if (trimmed === "") continue;
-
-		let record: Record<string, unknown>;
-		try {
-			record = JSON.parse(trimmed) as Record<string, unknown>;
-		} catch {
-			// Corrupted line — skip (tolerance mirrors aggregateHistory).
-			continue;
-		}
-		if (typeof record !== "object" || record === null) continue;
-
+	// H2: the shared tolerant iterator (history-lines.ts) does the per-line parse
+	// with the IDENTICAL tolerance this loop used to own (corrupt / non-object /
+	// kindless lines skipped); unknown kinds are skipped below.
+	for (const { record } of replayHistory(text)) {
 		const component = componentKindFor(record.kind);
 		if (component === undefined) continue; // unknown kind → skip silently
 

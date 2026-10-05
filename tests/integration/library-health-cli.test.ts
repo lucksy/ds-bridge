@@ -403,4 +403,107 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		expect(result.stderr.toLowerCase()).toContain("chekcout");
 		expect(result.stderr).toContain("checkout");
 	});
+
+	// ---------- F2 — top-N lists in the history record (SPEC-figma-trends §2) ----------
+
+	it("F2: the appended line also carries topN + the three per-component lists (default N=10)", async () => {
+		const dir = await freshTmp("ds-lh-top-");
+		const result = await runCli(dir, ["library-health", "--format=json"]);
+		expect(result.code).toBe(0);
+		const [record] = (await readHistory(dir)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		// The count keys are unchanged numbers (every existing reader).
+		expect(record?.overrideHotspots).toBe(3);
+		expect(record?.topN).toBe(10);
+		expect(record?.topOverrides).toEqual([
+			{ name: "Button / Primary", count: 4 },
+			{ name: "[deprecated] OldButton", count: 2 },
+		]);
+		expect(record?.topDeprecated).toEqual([
+			{ name: "[deprecated] OldButton", count: 2 },
+			{ name: "⚠ Banner (do not use)", count: 1 },
+		]);
+		expect(record?.topDetached).toEqual([
+			{ name: "Button", count: 1 },
+			{ name: "Button / Primary", count: 1 },
+			{ name: "Card / Default", count: 1 },
+		]);
+		// The printed report is unchanged (no list keys leak into stdout JSON).
+		expect(JSON.parse(result.stdout)).not.toHaveProperty("topN");
+	});
+
+	it("F2: the appended line carries the RESOLVED fileKey (alias → key), even with --top 0", async () => {
+		const dir = await freshTmp("ds-lh-filekey-");
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ product_file_keys: { checkout: FILE_KEY } }, null, 2)}\n`,
+			"utf8",
+		);
+		const env = { CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "UNSERVED_DEFAULT_KEY" };
+		expect(
+			(await runCli(dir, ["library-health", "--file-key=checkout"], env)).code,
+		).toBe(0);
+		expect(
+			(
+				await runCli(
+					dir,
+					["library-health", "--file-key=checkout", "--top", "0"],
+					env,
+				)
+			).code,
+		).toBe(0);
+		const records = (await readHistory(dir)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		expect(records.map((r) => r.fileKey)).toEqual([FILE_KEY, FILE_KEY]);
+	});
+
+	it("F2: --top 1 caps every list at one entry", async () => {
+		const dir = await freshTmp("ds-lh-top1-");
+		const result = await runCli(dir, ["library-health", "--top", "1"]);
+		expect(result.code).toBe(0);
+		const [record] = (await readHistory(dir)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		expect(record?.topN).toBe(1);
+		expect(record?.topDetached).toEqual([{ name: "Button", count: 1 }]);
+	});
+
+	it("F2: --top 0 writes the lean counts-only line", async () => {
+		const dir = await freshTmp("ds-lh-top0-");
+		const result = await runCli(dir, ["library-health", "--top", "0"]);
+		expect(result.code).toBe(0);
+		const [record] = (await readHistory(dir)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		expect(record?.detachedCandidates).toBe(3);
+		for (const key of [
+			"topN",
+			"topOverrides",
+			"topDeprecated",
+			"topDetached",
+		]) {
+			expect(record).not.toHaveProperty(key);
+		}
+	});
+
+	it.each([
+		["-1"],
+		["abc"],
+		["101"],
+		["2.5"],
+	])("F2: an invalid --top %s exits 2 before any fetch and appends nothing", async (value) => {
+		const dir = await freshTmp("ds-lh-topbad-");
+		const before = fetchCount;
+		const result = await runCli(dir, ["library-health", `--top=${value}`]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("--top");
+		expect(fetchCount).toBe(before);
+		expect(await readHistory(dir)).toEqual([]);
+	});
 });

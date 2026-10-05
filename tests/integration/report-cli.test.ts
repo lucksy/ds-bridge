@@ -423,8 +423,16 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 
 		const reportPath = join(dir, ".ds-bridge", "reports", "dashboard.html");
 		const html = await readFile(reportPath, "utf8");
+		// Scoped to the readiness section: since F6 the frame-readiness-trend
+		// section deliberately lists EVERY frame (Old Frame included), so the
+		// last-wins contract is asserted on the readiness panel itself.
+		const readiness =
+			/<section class="panel[^"]*"><h2>Readiness<\/h2>[\s\S]*?<\/section>/.exec(
+				html,
+			)?.[0] ?? "";
+		expect(readiness).toContain("New Frame");
+		expect(readiness).not.toContain("Old Frame");
 		expect(html).toContain("New Frame");
-		expect(html).not.toContain("Old Frame");
 	});
 
 	it("T5.5b: a hand-written registry.json populates the parity heat-grid", async () => {
@@ -870,7 +878,7 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		expect(html).toContain("No data yet");
 	});
 
-	it("B6 ACCEPTANCE: all thirteen artifacts present → FIFTEEN svg charts", async () => {
+	it("B6 ACCEPTANCE: all thirteen artifacts present → SEVENTEEN svg charts (X7 executive layer)", async () => {
 		const dir = await freshTmp("ds-report-six-");
 		await seedHistory(dir, [
 			tokensCheckLine("2026-06-01T10:00:00.000Z", 1, 1, 0),
@@ -915,7 +923,11 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// chart) → +2 → 15. The other three populated sections are a stat block
 		// (C8 score-velocity) and lists (C4 data-freshness, C13 release-readiness),
 		// which draw NO svg.
-		expect(countSvgs(html)).toBe(15);
+		// X7 (AN5/AN7): the executive layer populates from the same seed — the
+		// consistency donut (+1) and the executive score-trend line (+1) → 17; the
+		// design-debt section is a list (no svg). All three populate, so the
+		// empty-state count below is unchanged.
+		expect(countSvgs(html)).toBe(17);
 		// None of the thirteen DATA sections falls back to the empty state; of the 11
 		// metric-artifact stubs (C1–C13), five now POPULATE from this seed — C6
 		// library-health-trend (a dated library-health line), C8 score-velocity
@@ -924,7 +936,10 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// readiness/a11y join into per-component rows), and C13 release-readiness (the
 		// impact + tokens-check lines compose three gates — no-go, parity insufficient,
 		// but the section populates) → 6 empty-state stubs remain.
-		expect(html.split("No data yet").length - 1).toBe(6);
+		// F6: of the three Figma/frame trend sections, the seed's handoff line
+		// populates frame-readiness-trend + handoff-pass-rate (text, no svg); its
+		// counts-only library-health line leaves library-hotspots-trend empty → 7.
+		expect(html.split("No data yet").length - 1).toBe(7);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {
@@ -1095,6 +1110,10 @@ describe("ds-bridge report — dashboard composer (M1.3)", () => {
 		// appended library-health section + its seed; every other byte is unchanged
 		// (system-score still 2 charts, composite numeral STAYS 76). New bytes, same
 		// contract. (B3 added the three owner sections; B5 adds library-health.)
+		// X7 RE-ANCHOR (SPEC-exec-report §1.6): the executive layer adds the
+		// Consistency + Design debt KPI tiles and appends the three sections
+		// (consistency · design-debt · executive). Verified: removing exactly those
+		// yields the prior golden byte-for-byte.
 		//
 		// The golden's project name is its directory basename ("report-golden"),
 		// so seed under a fixed-name subdir of a fresh tmp dir.

@@ -9,8 +9,9 @@
 // `(kind, date, record)` form (incl. the adoption-bearing-lint parallel entry).
 // This module lifts the tolerance contract into one place; scorecard.ts now
 // REBUILDS its last-wins map from this list (its suite is the refactor net).
-// score.ts and report.ts keep their own parsers this wave — their suites pin
-// behavior and consolidation is a later cleanup (see BACKLOG process notes).
+// score.ts now replays through this iterator too (H2). report.ts's
+// aggregateHistory keeps its own parse deliberately: it reports corrupted line
+// numbers via onWarning, which this silent-skip iterator cannot (SPEC-history-v2 §3).
 //
 // Tolerance contract (the blessed wave-2 shape):
 //   - lines are split on "\n"; blank / whitespace-only lines are skipped;
@@ -26,6 +27,11 @@
 //     consumer, which skips the kinds it does not recognize.
 // No coercion happens here: the raw record is carried verbatim so each consumer
 // owns its own `asNumber`/field reads and the iterator stays a single replay.
+//
+// H2 (SPEC-history-v2 §3) — v1 and v2 lines replay identically: the v2 envelope
+// keeps `at`/`kind` top-level, so the only addition is an OPTIONAL `envelope`
+// view, present ONLY for v2+ records (a v1 record's output is unchanged).
+import { envelopeOf, type RecordEnvelope } from "../history/envelope.js";
 
 /** One tolerant history record in source order. */
 export interface HistoryRecord {
@@ -35,6 +41,8 @@ export interface HistoryRecord {
 	at?: string;
 	/** The full parsed object, verbatim (consumers coerce on read). */
 	record: Record<string, unknown>;
+	/** The v2 envelope (source, runId, git, tool) — present ONLY for v2+ lines. */
+	envelope?: RecordEnvelope;
 }
 
 /** A non-null object record, or undefined. */
@@ -68,6 +76,8 @@ export function replayHistory(text: string): HistoryRecord[] {
 
 		const entry: HistoryRecord = { kind: record.kind, record };
 		if (typeof record.at === "string") entry.at = record.at;
+		const envelope = envelopeOf(record);
+		if (envelope !== undefined) entry.envelope = envelope;
 		records.push(entry);
 	}
 	return records;

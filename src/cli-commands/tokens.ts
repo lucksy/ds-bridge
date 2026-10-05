@@ -5,7 +5,6 @@
 // throw, so every bad-input path is a typed outcome we translate to a message.
 import type { Dirent } from "node:fs";
 import {
-	appendFileSync,
 	existsSync,
 	mkdirSync,
 	readdirSync,
@@ -36,6 +35,7 @@ import type {
 	TokenMap,
 	TokenSourceFormat,
 } from "../engines/tokens/types.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 import {
 	type BarChartItem,
@@ -526,12 +526,7 @@ function checkJson(result: DriftResult): string {
 
 /** Append one history record to <stateDir>/history.jsonl (creating the dir). */
 function appendHistory(stateDir: string, record: HistoryRecord): void {
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Map history lines to drift-trend points (stale/missing/orphan per run). */

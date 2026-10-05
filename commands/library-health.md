@@ -43,7 +43,10 @@ Otherwise:
    the count or overridden props), so the producer knows exactly what to fix.
 3. **Point at the dashboard.** Note that the `library-health` and
    `library-health-trend` panels in `/ds-bridge:dashboard` track these counts
-   over time (run `ds-bridge report` to render them).
+   over time, and `library-hotspots-trend` tracks the top components per
+   signal (each run stores the top 10; `--top <n>` changes it) — so a designer
+   can see whether a specific component is getting better or worse (run
+   `ds-bridge report` to render them).
 
 ## Rules
 

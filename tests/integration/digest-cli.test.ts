@@ -143,7 +143,7 @@ describe("ds-bridge digest (built dist/cli.mjs)", () => {
 		// the 05-20 line is the baseline: an exact "Drift ▼ 5 → 2" row.
 		expect(result.stdout).toContain("- Drift ▼ 5 → 2");
 		// stale>0 in window → the token-check action fires.
-		expect(result.stdout).toContain("1. Run `/ds-bridge:token-check`");
+		expect(result.stdout).toContain("1. Run `ds-bridge tokens check`");
 	});
 
 	it("--audience designers renders a single section and filters developer-only rows", async () => {
@@ -223,7 +223,7 @@ describe("ds-bridge digest (built dist/cli.mjs)", () => {
 		const result = await runCli(dir, ["digest", "--since", "2026-06-01"]);
 		expect(result.code).toBe(0);
 		// 85 is fine under the default 80, but the project raised the gate to 90.
-		expect(result.stdout).toContain("Run `/ds-bridge:handoff-qa`");
+		expect(result.stdout).toContain("Run `ds-bridge handoff <frame-url>`");
 	});
 
 	it("an invalid .ds-bridge.json exits 2", async () => {
@@ -271,5 +271,83 @@ describe("ds-bridge digest (built dist/cli.mjs)", () => {
 		]);
 		expect(result.code).toBe(0);
 		expect(result.stdout).toContain("Readiness");
+	});
+
+	// ---------- F7 — manager audience + HTML format (SPEC-figma-trends §4) ----------
+
+	it("F7: --audience manager renders ONE For managers section with every movement", async () => {
+		const dir = await freshTmp("ds-digest-mgr-");
+		await seedHistory(dir, [
+			line({ at: "2026-06-02T00:00:00.000Z", kind: "handoff", score: 90 }),
+			line({
+				at: "2026-06-02T00:00:00.000Z",
+				kind: "lint",
+				byKind: { offSystem: 1 },
+			}),
+		]);
+		for (const audience of ["manager", "managers"]) {
+			const result = await runCli(dir, [
+				"digest",
+				"--since",
+				"2026-06-01",
+				"--audience",
+				audience,
+			]);
+			expect(result.code).toBe(0);
+			expect(result.stdout).toContain("## For managers");
+			expect(result.stdout).not.toContain("## For designers");
+			expect(result.stdout).not.toContain("## For developers");
+			expect(result.stdout).toContain("Readiness");
+			expect(result.stdout).toContain("Lint violations");
+		}
+	});
+
+	it("F7: --format html --out writes an offline page", async () => {
+		const dir = await freshTmp("ds-digest-html-");
+		await seedHistory(dir, [
+			line({ at: "2026-06-03T00:00:00.000Z", kind: "handoff", score: 90 }),
+		]);
+		const outFile = join(dir, "site", "digest.html");
+		const result = await runCli(dir, [
+			"digest",
+			"--since",
+			"2026-06-01",
+			"--audience",
+			"manager",
+			"--format",
+			"html",
+			"--out",
+			outFile,
+		]);
+		expect(result.code).toBe(0);
+		expect(result.stdout.trim()).toBe(outFile);
+		const html = await readFile(outFile, "utf8");
+		expect(html.startsWith("<!DOCTYPE html>")).toBe(true);
+		expect(html).toContain("<h2>For managers</h2>");
+		expect(html).toContain("Readiness");
+	});
+
+	it("F7: --format md is the default output, byte-identical", async () => {
+		const dir = await freshTmp("ds-digest-md-");
+		await seedHistory(dir, [
+			line({ at: "2026-06-03T00:00:00.000Z", kind: "handoff", score: 90 }),
+		]);
+		const plain = await runCli(dir, ["digest", "--since", "2026-06-01"]);
+		const md = await runCli(dir, [
+			"digest",
+			"--since",
+			"2026-06-01",
+			"--format",
+			"md",
+		]);
+		expect(md.code).toBe(0);
+		expect(md.stdout).toBe(plain.stdout);
+	});
+
+	it("F7: a bad --format exits 2", async () => {
+		const dir = await freshTmp("ds-digest-fmt-");
+		const result = await runCli(dir, ["digest", "--format", "pdf"]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("--format");
 	});
 });

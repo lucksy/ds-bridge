@@ -16,6 +16,17 @@ import type {
 	ParityStatus,
 	ReportData,
 } from "../../engines/report/types.js";
+import {
+	belowGateMeta,
+	dateSpan,
+	frameDetail,
+	frameOverflow,
+	hotspotDetail,
+	passRateSub,
+	passRateTrendLine,
+	SIGNAL_LABEL,
+	SIGNAL_ORDER,
+} from "../figma-trend-format.js";
 import type { LineSeries } from "./charts.js";
 import {
 	bandColor,
@@ -273,7 +284,7 @@ const COMPONENT_LABEL: Record<string, string> = {
 	lint: "lint",
 	readiness: "readiness",
 	a11y: "a11y",
-	adoption: "adoption",
+	adoption: "on-system",
 	parity: "parity",
 };
 
@@ -1264,6 +1275,233 @@ function dataFreshnessSection(data: ReportData): string {
 	);
 }
 
+// ─── Executive layer (AN7, SPEC-exec-report §4) ─────────────────────────────
+
+/** Design-debt % → tone: ok < 25 · warn < 60 · error (the AN2 level bands). */
+function debtTone(pct: number): "ok" | "warn" | "error" {
+	if (pct < 25) return "ok";
+	if (pct < 60) return "warn";
+	return "error";
+}
+
+/** One headline tile (reuses the KPI tile markup); "—" when not measured. */
+function headlineTile(
+	label: string,
+	value: string | undefined,
+	tone: "ok" | "warn" | "error" | undefined,
+	sub?: string,
+): string {
+	return [
+		`<div class="kpi${value !== undefined && tone !== undefined ? ` ${tone}` : ""}">`,
+		`<span class="kpi-label">${escapeHtml(label)}</span>`,
+		`<span class="kpi-value">${escapeHtml(value ?? "—")}</span>`,
+		`<span class="kpi-sub">${escapeHtml(value === undefined ? "not measured" : (sub ?? ""))}</span>`,
+		"</div>",
+	].join("");
+}
+
+/**
+ * Executive summary → the four leadership headlines (system score · import
+ * coverage · consistency · debt — the one-pager's names) as tiles + the score trend line when it has ≥ 2 points.
+ * Absent headlines read "—" / not measured (absent-not-zero). Absent section →
+ * the shared empty state.
+ */
+function executiveSection(data: ReportData): string {
+	const exec = data.executive;
+	if (exec === undefined) {
+		return panel("Executive summary", emptyState("record"));
+	}
+	const tiles = [
+		headlineTile(
+			"System score",
+			exec.health === undefined ? undefined : String(exec.health),
+			exec.health === undefined ? undefined : toneFor(exec.health),
+			"out of 100",
+		),
+		headlineTile(
+			"Import coverage",
+			exec.adoption === undefined ? undefined : `${exec.adoption}%`,
+			exec.adoption === undefined ? undefined : toneFor(exec.adoption),
+			"components imported",
+		),
+		headlineTile(
+			"Consistency",
+			exec.consistency === undefined ? undefined : String(exec.consistency),
+			exec.consistency === undefined ? undefined : toneFor(exec.consistency),
+			"on-system blend",
+		),
+		headlineTile(
+			"Design debt",
+			exec.debt === undefined ? undefined : `${exec.debt}%`,
+			exec.debt === undefined ? undefined : debtTone(exec.debt),
+			"lower is better",
+		),
+	].join("");
+	const trend = exec.trend ?? [];
+	const chart =
+		trend.length >= 2
+			? `<div class="chart">${lineChart(
+					[
+						{
+							label: "score",
+							points: trend.map((p, i) => ({ x: i, y: p.score })),
+						},
+					],
+					{
+						width: CARD_W,
+						height: 140,
+						colors: [PALETTE[0]],
+						xLabels: dateEnds(trend),
+					},
+				)}</div>`
+			: "";
+	return panel(
+		"Executive summary",
+		[`<div class="kpis">${tiles}</div>`, chart].join(""),
+	);
+}
+
+/**
+ * Consistency → donut gauge of the AN1 score + the sub-signal legend (signal ·
+ * score · weight) + the documented-opinion caveat for the override penalty.
+ */
+function consistencySection(data: ReportData): string {
+	const consistency = data.consistency;
+	if (consistency === undefined) {
+		return panel("Consistency", emptyState("lint <dir>"));
+	}
+	const rows = consistency.components
+		.map(
+			(c) =>
+				`<tr><td>${escapeHtml(c.kind)}</td><td class="num">${escapeHtml(String(c.score))}</td><td class="num">${escapeHtml(String(c.weight))}</td></tr>`,
+		)
+		.join("");
+	return panel(
+		"Consistency",
+		[
+			`<div class="chart center">${donutGauge(consistency.score, { label: "Consistency" })}</div>`,
+			'<table class="weights">',
+			"<thead><tr><th>Signal</th><th>Score</th><th>Weight</th></tr></thead>",
+			`<tbody>${rows}</tbody>`,
+			"</table>",
+			'<div class="meta">tokens and components are true ratios · overrides is a documented-opinion penalty (8 per hotspot)</div>',
+		].join(""),
+	);
+}
+
+/** How many debt items the dashboard lists before "… and N more". */
+const DEBT_ITEMS_SHOWN = 8;
+
+/**
+ * Design debt → `pct% · level` stat + the itemized, worst-first list (subject ·
+ * count · directed recommendation). A real zero-debt rollup renders "0%" with
+ * no list (zero debt is meaningful, not an empty state).
+ */
+function designDebtSection(data: ReportData): string {
+	const debt = data.debt;
+	if (debt === undefined) {
+		return panel("Design debt", emptyState("lint <dir>"));
+	}
+	const tone = debtTone(debt.pct);
+	const shown = debt.items.slice(0, DEBT_ITEMS_SHOWN);
+	const items = shown
+		.map(
+			(item) =>
+				`<li><span class="date">${escapeHtml(item.subject)} <span class="badge">${escapeHtml(item.kind)} · ${escapeHtml(String(item.count))}</span></span><span class="detail">${escapeHtml(item.recommendation)}</span></li>`,
+		)
+		.join("");
+	const more =
+		debt.items.length > shown.length
+			? `<div class="meta">… and ${escapeHtml(String(debt.items.length - shown.length))} more</div>`
+			: "";
+	return panel(
+		"Design debt",
+		[
+			`<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(debt.pct))}%</span><span class="stat-sub">${escapeHtml(debt.level)} · ${escapeHtml(String(debt.items.length))} item${debt.items.length === 1 ? "" : "s"}</span></div>`,
+			items === "" ? "" : `<ul class="calendar stack">${items}</ul>`,
+			more,
+		].join(""),
+	);
+}
+
+/**
+ * Library hotspots trend (F6) → one list per hygiene signal: component · text
+ * sparkline · latest (Δ) · status. Unknown points (below the stored top-N) are
+ * skipped in the sparkline and shown as "below top N", never as resolved.
+ */
+function libraryHotspotsTrendSection(data: ReportData): string {
+	const trend = data.libraryHotspotsTrend;
+	if (trend === undefined || trend.rows.length === 0) {
+		return panel("Library hotspots trend", emptyState("library-health"));
+	}
+	const blocks = SIGNAL_ORDER.flatMap((signal) => {
+		const rows = trend.rows.filter((r) => r.signal === signal);
+		if (rows.length === 0) return [];
+		const items = rows
+			.map(
+				(row) =>
+					`<li><code>${escapeHtml(row.name)}</code><span class="detail">${escapeHtml(hotspotDetail(row))}</span></li>`,
+			)
+			.join("");
+		return [
+			`<div class="cols"><b>${escapeHtml(SIGNAL_LABEL[signal])}</b></div>`,
+			`<ul class="calendar stack">${items}</ul>`,
+		];
+	});
+	return panel(
+		"Library hotspots trend",
+		[
+			`<div class="meta">Top components per signal · ${escapeHtml(dateSpan(trend.dates))}</div>`,
+			...blocks,
+		].join(""),
+		"wide",
+	);
+}
+
+/**
+ * Frame readiness trend (F6) → one row per frame, frames below the gate first:
+ * frame · sparkline · latest (Δ) · gate marker · runs.
+ */
+function frameReadinessTrendSection(data: ReportData): string {
+	const trend = data.frameReadinessTrend;
+	if (trend === undefined || trend.frames.length === 0) {
+		return panel("Frame readiness trend", emptyState("handoff <frame-url>"));
+	}
+	const items = trend.frames
+		.map(
+			(frame) =>
+				`<li><code>${escapeHtml(frame.frameName === "" ? frame.key : frame.frameName)}</code><span class="detail">${escapeHtml(frameDetail(frame))}</span></li>`,
+		)
+		.join("");
+	const more = frameOverflow(trend);
+	return panel(
+		"Frame readiness trend",
+		[
+			`<div class="meta">${escapeHtml(belowGateMeta(trend))}</div>`,
+			`<ul class="calendar stack">${items}</ul>`,
+			more === undefined ? "" : `<div class="meta">${escapeHtml(more)}</div>`,
+		].join(""),
+		"wide",
+	);
+}
+
+/** Handoff pass rate (F6) → the headline share of ready frames + its trend line. */
+function handoffPassRateSection(data: ReportData): string {
+	const rate = data.handoffPassRate;
+	if (rate === undefined || rate.frames === 0) {
+		return panel("Handoff pass rate", emptyState("handoff <frame-url>"));
+	}
+	const tone = toneFor(rate.pct);
+	const line = passRateTrendLine(rate);
+	return panel(
+		"Handoff pass rate",
+		[
+			`<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(rate.pct))}%</span><span class="stat-sub">${escapeHtml(passRateSub(rate))}</span></div>`,
+			line === undefined ? "" : `<div class="meta">${escapeHtml(line)}</div>`,
+		].join(""),
+	);
+}
+
 // Each artifact id maps to the section renderer for its ReportData slice. The
 // keys mirror the catalog's ArtifactId↔reportDataKey bridge; iterating a
 // caller-supplied selection over this map is what gates DOM inclusion (an id
@@ -1295,6 +1533,14 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"frame-implementability": frameImplementabilitySection,
 	"release-readiness": releaseReadinessSection,
 	"data-freshness": dataFreshnessSection,
+	// Executive layer (AN7) — the completeness gate is now 27 via the Record type.
+	consistency: consistencySection,
+	"design-debt": designDebtSection,
+	executive: executiveSection,
+	// Figma + per-frame trends (F6) — the completeness gate is now 30.
+	"library-hotspots-trend": libraryHotspotsTrendSection,
+	"frame-readiness-trend": frameReadinessTrendSection,
+	"handoff-pass-rate": handoffPassRateSection,
 };
 
 /** One headline number in the summary strip above the cards. */
@@ -1409,6 +1655,24 @@ function kpis(data: ReportData, selection: readonly ArtifactId[]): Kpi[] {
 			value: release.go ? "Go" : "No-go",
 			tone: release.go ? "ok" : "error",
 			sub: `${passed}/${release.checks.length} checks pass`,
+		});
+	}
+
+	if (on.has("consistency") && data.consistency !== undefined) {
+		out.push({
+			label: "Consistency",
+			value: String(data.consistency.score),
+			tone: toneFor(data.consistency.score),
+			sub: `${data.consistency.components.length} signal${data.consistency.components.length === 1 ? "" : "s"}`,
+		});
+	}
+
+	if (on.has("design-debt") && data.debt !== undefined) {
+		out.push({
+			label: "Design debt",
+			value: `${data.debt.pct}%`,
+			tone: debtTone(data.debt.pct),
+			sub: `${data.debt.level} · ${data.debt.items.length} item${data.debt.items.length === 1 ? "" : "s"}`,
 		});
 	}
 

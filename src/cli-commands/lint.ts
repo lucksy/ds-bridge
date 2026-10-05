@@ -9,9 +9,7 @@
 import { spawnSync } from "node:child_process";
 import type { Dirent } from "node:fs";
 import {
-	appendFileSync,
 	existsSync,
-	mkdirSync,
 	readdirSync,
 	readFileSync,
 	statSync,
@@ -50,6 +48,7 @@ import type {
 	TokenMap,
 	TokenSourceFormat,
 } from "../engines/tokens/types.js";
+import { appendHistoryRecord } from "../io/history-writer.js";
 import {
 	renderTable,
 	type Severity,
@@ -198,12 +197,7 @@ function appendLintHistory(
 		byKind: countByKind(findings),
 		adoption: computeAdoption(files, findings),
 	};
-	mkdirSync(stateDir, { recursive: true });
-	appendFileSync(
-		join(stateDir, "history.jsonl"),
-		`${JSON.stringify(record)}\n`,
-		"utf8",
-	);
+	appendHistoryRecord(stateDir, record);
 }
 
 /** Process-level outcome of a lint run, before exit-code translation. */

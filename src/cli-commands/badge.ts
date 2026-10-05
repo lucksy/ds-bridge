@@ -20,11 +20,12 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { type ResolvedConfig, resolveConfig } from "../config.js";
 import { resolveView } from "../engines/report/presets.js";
 import {
 	resolveWeightProfile,
 	scoreFromHistory,
+	type WeightProfile,
 } from "../engines/report/score.js";
 import { renderBadge } from "../render/html/badge.js";
 
@@ -68,6 +69,33 @@ function readProjectConfigText(targetDir: string): string | undefined {
 	}
 }
 
+/**
+ * The project's effective score weights with the SAME C2 precedence the
+ * dashboard uses (active view's by-view override > global score_weights >
+ * engine defaults). The active view is the project's configured dashboard_view
+ * (resolveView over the project config alone); a custom artifact list or the
+ * default carries no viewName → no by-view profile. Shared with `record` (H5)
+ * so the stored score equals the badge and the dashboard.
+ */
+export function weightProfileForConfig(cfg: ResolvedConfig): WeightProfile {
+	const view = resolveView(
+		{},
+		{
+			...(cfg.dashboardView !== undefined ? { view: cfg.dashboardView } : {}),
+			...(cfg.dashboardArtifacts !== undefined
+				? { artifacts: cfg.dashboardArtifacts }
+				: {}),
+		},
+	);
+	const viewName =
+		view.kind === "ok" && view.source !== "default" ? view.viewName : undefined;
+	return resolveWeightProfile(
+		viewName,
+		cfg.scoreWeights,
+		cfg.scoreWeightsByView,
+	);
+}
+
 /** Execute the `badge` command. Exit codes: 0 success · 2 operational error. */
 function runBadge(path: string, options: BadgeOptions): void {
 	const targetDir = resolve(path);
@@ -103,25 +131,7 @@ function runBadge(path: string, options: BadgeOptions): void {
 			fail(resolved.message);
 			return;
 		}
-		const cfg = resolved.config;
-		const view = resolveView(
-			{},
-			{
-				...(cfg.dashboardView !== undefined ? { view: cfg.dashboardView } : {}),
-				...(cfg.dashboardArtifacts !== undefined
-					? { artifacts: cfg.dashboardArtifacts }
-					: {}),
-			},
-		);
-		const viewName =
-			view.kind === "ok" && view.source !== "default"
-				? view.viewName
-				: undefined;
-		weightProfile = resolveWeightProfile(
-			viewName,
-			cfg.scoreWeights,
-			cfg.scoreWeightsByView,
-		);
+		weightProfile = weightProfileForConfig(resolved.config);
 	}
 
 	const outcome = scoreFromHistory(historyText, weightProfile.weights);

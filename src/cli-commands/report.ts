@@ -30,19 +30,28 @@ import {
 	resolveConfig,
 	type ScoreWeightsByView,
 } from "../config.js";
+import { readinessByFrame } from "../engines/history/readiness-frames.js";
 import { buildParity, toParitySection } from "../engines/registry/parity.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import { buildAudienceChangelog } from "../engines/report/audience-changelog.js";
 import type { ArtifactId } from "../engines/report/catalog.js";
 import { buildComponentHealth } from "../engines/report/component-health.js";
+import { buildConsistency } from "../engines/report/consistency.js";
 import {
 	buildBreakingCalendar,
 	buildChangeFrequency,
 } from "../engines/report/consumer.js";
+import { buildDebt } from "../engines/report/debt.js";
+import { buildExecutive } from "../engines/report/executive.js";
+import { executiveInputs } from "../engines/report/executive-inputs.js";
 import { buildFrameImplementability } from "../engines/report/frame-implementability.js";
+import { buildFrameReadinessTrend } from "../engines/report/frame-readiness-trend.js";
 import { buildFreshness } from "../engines/report/freshness.js";
+import { buildHandoffPassRate } from "../engines/report/handoff-pass-rate.js";
 import { replayHistory } from "../engines/report/history-lines.js";
 import { buildLibraryHealthTrend } from "../engines/report/library-health-trend.js";
+import { buildLibraryHotspotsTrend } from "../engines/report/library-hotspots-trend.js";
+import { buildManagerReport } from "../engines/report/manager-report.js";
 import { buildMigrationChecklist } from "../engines/report/migration-checklist.js";
 import {
 	type DirectoryAdoption,
@@ -55,6 +64,7 @@ import {
 	evaluateReleaseReadiness,
 	extractReleaseSignals,
 } from "../engines/report/release-readiness.js";
+import { reportJsonDocument } from "../engines/report/report-json.js";
 import {
 	resolveWeightProfile,
 	scoreFromHistory,
@@ -92,6 +102,7 @@ import type {
 	ParityTrendPoint,
 	Readiness,
 	ReleaseReadiness,
+	ReportData,
 	ScoreVelocity,
 	SystemScore,
 	SystemScoreTrendPoint,
@@ -106,7 +117,9 @@ import {
 import { readFileAtRef, spawnGitExec } from "../io/git-log.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 import { type IndexEntry, renderIndex } from "../render/html/index.js";
+import { renderManagerHtml } from "../render/html/manager.js";
 import { normalizeSnapshot } from "../render/html/snapshot.js";
+import { renderManagerMarkdown } from "../render/markdown/manager.js";
 import { renderTerminalDashboard } from "../render/terminal/dashboard.js";
 import { shouldColor } from "../render/terminal/index.js";
 
@@ -525,6 +538,32 @@ function computeConsumerArtifacts(stateDir: string): {
  */
 function computeParityTrend(stateDir: string): ParityTrendPoint[] {
 	return buildParityTrend(replayHistory(readHistoryText(stateDir)));
+}
+
+/**
+ * Replay <stateDir>/history.jsonl into the three Figma/frame trend sections
+ * (F6): library hotspots (F3), per-frame readiness (F4) and the handoff pass
+ * rate (F4). Each key is present only when its engine found source lines.
+ */
+function computeFigmaTrends(
+	stateDir: string,
+	readinessThreshold: number,
+): Pick<
+	ReportData,
+	"libraryHotspotsTrend" | "frameReadinessTrend" | "handoffPassRate"
+> {
+	const records = replayHistory(readHistoryText(stateDir));
+	const libraryHotspotsTrend = buildLibraryHotspotsTrend(records);
+	const frameReadinessTrend = buildFrameReadinessTrend(
+		records,
+		readinessThreshold,
+	);
+	const handoffPassRate = buildHandoffPassRate(records, readinessThreshold);
+	return {
+		...(libraryHotspotsTrend !== undefined ? { libraryHotspotsTrend } : {}),
+		...(frameReadinessTrend !== undefined ? { frameReadinessTrend } : {}),
+		...(handoffPassRate !== undefined ? { handoffPassRate } : {}),
+	};
 }
 
 /**
@@ -980,6 +1019,187 @@ function readParity(
 	return section;
 }
 
+/** Read <stateDir>/registry.json silently (absent / unreadable → undefined). */
+function readRegistryFile(stateDir: string): RegistryFile | undefined {
+	try {
+		return JSON.parse(
+			readFileSync(join(stateDir, "registry.json"), "utf8"),
+		) as RegistryFile;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * The executive layer (AN5, SPEC-exec-report §3): replay the SAME history +
+ * registry into the AN1 consistency input and the AN2 debt input, then compose
+ * the AN3 rollup over the already-computed score + import coverage. Each
+ * section is returned only when present (absent-not-zero): consistency when
+ * AN1 is ok, debt when a lint / library-health line exists, executive when it
+ * carries ≥ 1 headline.
+ */
+function computeExecutiveLayer(
+	stateDir: string,
+	systemScore: SystemScore | undefined,
+	importCoverage: ImportCoverage | undefined,
+): Partial<Pick<ReportData, "consistency" | "debt" | "executive">> {
+	const inputs = executiveInputs(
+		replayHistory(readHistoryText(stateDir)),
+		readRegistryFile(stateDir),
+	);
+	const outcome = buildConsistency(inputs.consistency);
+	const debt = inputs.debt !== undefined ? buildDebt(inputs.debt) : undefined;
+	const executive = buildExecutive({
+		...(systemScore !== undefined ? { systemScore } : {}),
+		...(importCoverage !== undefined ? { coverage: importCoverage } : {}),
+		consistency: outcome,
+		...(debt !== undefined ? { debt } : {}),
+	});
+	return {
+		...(outcome.kind === "ok"
+			? {
+					consistency: {
+						score: outcome.score,
+						components: outcome.components,
+					},
+				}
+			: {}),
+		...(debt !== undefined ? { debt } : {}),
+		...(Object.keys(executive).length > 0 ? { executive } : {}),
+	};
+}
+
+/** X9 — the latest a11y summary → failing pairs + the modes that fail. */
+function managerContrast(
+	a11y: A11ySummary | undefined,
+): { failed: number; level: "AA" | "AAA"; modes: string[] } | undefined {
+	if (a11y === undefined) return undefined;
+	let failed = 0;
+	const modes: string[] = [];
+	for (const m of a11y.modes) {
+		if (typeof m.failed === "number" && m.failed > 0) {
+			failed += m.failed;
+			modes.push(m.mode);
+		}
+	}
+	return { failed, level: a11y.level, modes };
+}
+
+/**
+ * X10 — stored `kind:"score"` records dated inside the velocity window
+ * (`[now − windowDays, now]`), in file order, as `{date, score}`.
+ */
+function storedScorePoints(
+	replayed: ReturnType<typeof replayHistory>,
+	nowIso: string,
+	windowDays: number,
+): { date: string; score: number }[] {
+	const nowMs = Date.parse(nowIso);
+	const startMs = Number.isNaN(nowMs)
+		? Number.NEGATIVE_INFINITY
+		: nowMs - windowDays * 24 * 60 * 60 * 1000;
+	const out: { date: string; score: number }[] = [];
+	for (const entry of replayed) {
+		if (entry.kind !== "score") continue;
+		const r = entry.record as { at?: unknown; score?: unknown };
+		if (typeof r.at !== "string") continue;
+		if (typeof r.score !== "number" || !Number.isFinite(r.score)) continue;
+		const atMs = Date.parse(r.at);
+		if (Number.isNaN(atMs) || atMs < startMs) continue;
+		out.push({ date: r.at.slice(0, 10), score: r.score });
+	}
+	return out;
+}
+
+/**
+ * Render the DS-manager one-page report (SPEC-exec-report §5/§6) from the SAME
+ * assembled ReportData the dashboard uses, plus per-frame readiness (H7) from
+ * the replayed history. `exec` → paste-ready Markdown on stdout (or `--out`);
+ * `exec-html` → one offline page at `--out` or .ds-bridge/reports/exec.html.
+ */
+function runManagerReport(
+	format: "exec" | "exec-html",
+	stateDir: string,
+	options: ReportOptions,
+	selection: ResolvedSelection,
+	data: ReportData,
+	windowDays: number,
+): void {
+	const replayed = replayHistory(readHistoryText(stateDir));
+	const frames = readinessByFrame(replayed, selection.readinessThreshold);
+	const lastDrift = data.driftTrend?.[data.driftTrend.length - 1];
+	const contrast = managerContrast(data.a11y);
+	const scorePoints = storedScorePoints(replayed, data.generatedAt, windowDays);
+	const report = buildManagerReport({
+		project: data.project,
+		generatedAt: data.generatedAt,
+		windowDays,
+		readinessThreshold: selection.readinessThreshold,
+		...(data.systemScore !== undefined
+			? { systemScore: data.systemScore }
+			: {}),
+		...(data.scoreVelocity !== undefined
+			? { scoreVelocity: data.scoreVelocity }
+			: {}),
+		...(data.adoptionTrend !== undefined
+			? { adoptionTrend: data.adoptionTrend }
+			: {}),
+		...(data.importCoverage !== undefined
+			? { importCoverage: data.importCoverage }
+			: {}),
+		...(data.targets !== undefined ? { targets: data.targets } : {}),
+		...(data.consistency !== undefined
+			? { consistency: data.consistency }
+			: {}),
+		...(data.debt !== undefined ? { debt: data.debt } : {}),
+		...(data.dataFreshness !== undefined
+			? { dataFreshness: data.dataFreshness }
+			: {}),
+		frames,
+		...(lastDrift !== undefined
+			? {
+					breakingDrift: lastDrift.breaking,
+					tokenGaps: {
+						missing: lastDrift.additive,
+						orphan: lastDrift.cosmetic,
+					},
+				}
+			: {}),
+		...(contrast !== undefined ? { contrast } : {}),
+		...(scorePoints.length > 0 ? { scorePoints } : {}),
+	});
+
+	if (format === "exec") {
+		const markdown = renderManagerMarkdown(report);
+		if (options.out !== undefined) {
+			const outPath = resolve(options.out);
+			const written = writeDashboard(outPath, markdown);
+			if (written.kind === "error") {
+				failReport(written.message);
+				return;
+			}
+			process.stdout.write(`${outPath}\n`);
+		} else {
+			process.stdout.write(markdown);
+		}
+		process.exitCode = 0;
+		return;
+	}
+
+	const outPath =
+		options.out !== undefined
+			? resolve(options.out)
+			: join(stateDir, "reports", "exec.html");
+	const written = writeDashboard(outPath, renderManagerHtml(report));
+	if (written.kind === "error") {
+		failReport(written.message);
+		return;
+	}
+	process.stdout.write(`${outPath}\n`);
+	if (options.open) openReport(outPath, process.env);
+	process.exitCode = 0;
+}
+
 /** Render the dashboard and write it to `outPath`, or fail with exit code 2. */
 function writeDashboard(
 	outPath: string,
@@ -1079,6 +1299,8 @@ interface ResolvedSelection {
 	metricTargets?: MetricTargets;
 	/** Score-velocity window in days (C8); the config default (30) when no file. */
 	scoreVelocityWindow: number;
+	/** Handoff readiness bar (`readiness_threshold`) — the manager report's per-frame pass line. */
+	readinessThreshold: number;
 	/** Per-kind `freshness_thresholds` map (C4); undefined → engine defaults. */
 	freshnessThresholds?: FreshnessThresholds;
 	/** Component-health join keys (`component_aliases`, C5); undefined when absent. */
@@ -1119,6 +1341,7 @@ function parseArtifactsFlag(raw: string | undefined): string[] | undefined {
 interface DashboardContext {
 	migrationSitesCap: number;
 	scoreVelocityWindow: number;
+	readinessThreshold: number;
 	scoreWeights: Weights | undefined;
 	scoreWeightsByView: ScoreWeightsByView | undefined;
 	metricTargets: MetricTargets | undefined;
@@ -1205,6 +1428,7 @@ function resolveDashboardSelection(
 		artifacts: outcome.artifacts,
 		migrationSitesCap: ctx.migrationSitesCap,
 		scoreVelocityWindow: ctx.scoreVelocityWindow,
+		readinessThreshold: ctx.readinessThreshold,
 		viewLabel: read.dashboard.name,
 		...(read.dashboard.reportType !== undefined
 			? { reportType: read.dashboard.reportType }
@@ -1252,6 +1476,8 @@ function resolveSelection(
 		defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
 	let scoreVelocityWindow =
 		defaults.kind === "ok" ? defaults.config.scoreVelocityWindow : 30;
+	let readinessThreshold =
+		defaults.kind === "ok" ? defaults.config.readinessThreshold : 80;
 
 	const configPath = join(targetDir, ".ds-bridge.json");
 	if (existsSync(configPath)) {
@@ -1277,6 +1503,7 @@ function resolveSelection(
 		migrationSitesCap = resolved.config.migrationSitesCap;
 		metricTargets = resolved.config.metricTargets;
 		scoreVelocityWindow = resolved.config.scoreVelocityWindow;
+		readinessThreshold = resolved.config.readinessThreshold;
 		freshnessThresholds = resolved.config.freshnessThresholds;
 		componentAliases = resolved.config.componentAliases;
 		ownership = resolved.config.ownership;
@@ -1304,6 +1531,7 @@ function resolveSelection(
 		return resolveDashboardSelection(targetDir, activeDashboard, {
 			migrationSitesCap,
 			scoreVelocityWindow,
+			readinessThreshold,
 			scoreWeights,
 			scoreWeightsByView,
 			metricTargets,
@@ -1376,6 +1604,7 @@ function resolveSelection(
 				artifacts: outcome.artifacts,
 				migrationSitesCap,
 				scoreVelocityWindow,
+				readinessThreshold,
 				...(viewLabel !== undefined ? { viewLabel } : {}),
 				...(viewName !== undefined ? { viewName } : {}),
 				...(scoreWeights !== undefined ? { scoreWeights } : {}),
@@ -1718,94 +1947,26 @@ function runSiteReport(
 	process.exitCode = 0;
 }
 
-/** Execute the `report` command. Exit codes: 0 success · 2 operational error. */
-function runReport(path: string, options: ReportOptions): void {
-	// An EXPLICIT --format is two-valued (html | md) — reject a bad value before any
-	// I/O. When the flag is omitted, the effective format is resolved AFTER the
-	// selection (a saved dashboard's report_type defaults it, M9.3).
-	if (
-		options.format !== undefined &&
-		options.format !== "html" &&
-		options.format !== "md" &&
-		options.format !== "terminal" &&
-		options.format !== "site"
-	) {
-		failReport(
-			`Unknown --format "${options.format}". Expected "html", "md", "terminal", or "site".`,
-		);
-		return;
-	}
-	// --velocity-window (C8): parse the flag grammar up front so a malformed value
-	// exits 2 before any I/O. `ok.days` undefined → fall back to config / the default.
-	const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
-	if (velocityWindowFlag.kind === "error") {
-		failReport(velocityWindowFlag.message);
-		return;
-	}
+/** The assembled report: the ReportData plus what the renderers also need. */
+interface AssembledReport {
+	data: ReportData;
+	stateDir: string;
+	generatedAt: string;
+	velocityWindowDays: number;
+	weightProfile: ReturnType<typeof resolveWeightProfile>;
+}
 
-	const targetDir = resolve(path);
-	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
-		failReport(`Path "${targetDir}" is not a directory.`);
-		return;
-	}
-
-	// Resolve which artifacts to render (flags > .ds-bridge.json > everything)
-	// before any history/registry work — a usage/config error should exit 2 fast.
-	// (Also resolves the CURRENT-side score weights + a saved dashboard's report_type.)
-	const selection = resolveSelection(targetDir, options);
-	if ("kind" in selection) {
-		failReport(selection.message);
-		return;
-	}
-
-	// Effective format (M9.3): the explicit --format flag wins; else a saved
-	// dashboard's report_type; else html. `site` lands in M11 — until then an
-	// unsupported resolved target is a typed error.
-	const format = options.format ?? selection.reportType ?? "html";
-	if (
-		format !== "html" &&
-		format !== "md" &&
-		format !== "terminal" &&
-		format !== "site"
-	) {
-		failReport(
-			`report_type "${format}" is not a supported render target — pass --format html|md|terminal|site.`,
-		);
-		return;
-	}
-	// Combo validations against the EFFECTIVE format: --delta/--gate require md;
-	// --open is only valid with the file-producing html target.
-	if (options.delta !== undefined && format !== "md") {
-		failReport("--delta requires --format md.");
-		return;
-	}
-	if (options.open && format !== "html") {
-		failReport(
-			`--open is not valid with --format ${format} (there is no file to open).`,
-		);
-		return;
-	}
-	if (options.gate && format !== "md") {
-		failReport(
-			"--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard).",
-		);
-		return;
-	}
-	// --snapshot writes normalized HTML snapshots; it is incompatible with the
-	// text targets (md/terminal). html/site are fine (site implies html pages).
-	if (options.snapshot && format !== "html" && format !== "site") {
-		failReport(
-			`--snapshot renders HTML snapshots — not valid with --format ${format}.`,
-		);
-		return;
-	}
-
-	// The md path emits a markdown scorecard and RETURNS before the html tail.
-	if (format === "md") {
-		runMarkdownReport(targetDir, options, selection);
-		return;
-	}
-
+/**
+ * Assemble the full ReportData for `targetDir` under a resolved selection — the
+ * ONE assembly every render target (html/md-free targets, exec, json) and the
+ * `analytics` command share (SPEC-analytics-export §1.1). Extracted verbatim
+ * from runReport; warnings go to stderr.
+ */
+function assembleReportData(
+	targetDir: string,
+	selection: ResolvedSelection,
+	velocityWindowFlagDays: number | undefined,
+): AssembledReport {
 	const stateDir = join(targetDir, ".ds-bridge");
 	const warn = (message: string): void => {
 		process.stderr.write(`${message}\n`);
@@ -1863,6 +2024,14 @@ function runReport(path: string, options: ReportOptions): void {
 	// a hygiene-count series. Only spread in when NON-empty so an absent (or only
 	// dateless) library-health history keeps the section's empty state.
 	const libraryHealthTrend = computeLibraryHealthTrend(stateDir);
+	// Figma + per-frame trends (F6, SPEC-figma-trends §3): the stored top-N
+	// lists as per-component series, and per-frame readiness + the handoff pass
+	// rate against the CONFIGURED gate. Each is undefined without its source
+	// lines, so a history without them keeps the empty states (golden-neutral).
+	const figmaTrends = computeFigmaTrends(
+		stateDir,
+		selection.readinessThreshold,
+	);
 
 	// The single io-edge clock read — the renderer is otherwise pure.
 	// Optional sections are only spread in when present so
@@ -1874,7 +2043,7 @@ function runReport(path: string, options: ReportOptions): void {
 	// Window precedence: --velocity-window flag > score_velocity_window config > 30.
 	// Only spread in when DEFINED (<2 trend points → undefined → empty state).
 	const velocityWindowDays =
-		velocityWindowFlag.days ?? selection.scoreVelocityWindow;
+		velocityWindowFlagDays ?? selection.scoreVelocityWindow;
 	const scoreVelocity =
 		systemScore !== undefined
 			? computeScoreVelocity(systemScore.trend, generatedAt, velocityWindowDays)
@@ -1914,7 +2083,14 @@ function runReport(path: string, options: ReportOptions): void {
 	// still yields three insufficient-data checks → no-go), so any project with a
 	// history populates the section (flipping it out of its empty state).
 	const releaseReadiness = computeReleaseReadiness(stateDir);
-	const data = {
+	// Executive layer (AN5, SPEC-exec-report §3): consistency (AN1), debt (AN2)
+	// and the rollup (AN3), each spread in only when present (absent-not-zero).
+	const executiveLayer = computeExecutiveLayer(
+		stateDir,
+		systemScore,
+		aggregation.importCoverage,
+	);
+	const data: ReportData = {
 		generatedAt,
 		project: basename(targetDir),
 		...(systemScore !== undefined ? { systemScore } : {}),
@@ -1951,7 +2127,175 @@ function runReport(path: string, options: ReportOptions): void {
 		...(componentHealth.length > 0 ? { componentHealth } : {}),
 		...(ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {}),
 		...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
+		...executiveLayer,
+		...figmaTrends,
 	};
+	return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
+}
+
+/**
+ * The shared assembly for non-`report` callers (the `analytics` command, E5):
+ * resolve the project's selection/config with no flags, then assemble the full
+ * ReportData. A usage/config error is returned, never thrown or printed.
+ */
+export function loadReportData(
+	targetDir: string,
+): { kind: "ok"; data: ReportData } | { kind: "error"; message: string } {
+	const selection = resolveSelection(targetDir, {
+		open: false,
+		out: undefined,
+		view: undefined,
+		artifacts: undefined,
+		format: undefined,
+		delta: undefined,
+		gate: false,
+		velocityWindow: undefined,
+		dashboard: undefined,
+		dashboards: undefined,
+		allDashboards: undefined,
+		snapshot: undefined,
+	});
+	if ("kind" in selection) {
+		return { kind: "error", message: selection.message };
+	}
+	return {
+		kind: "ok",
+		data: assembleReportData(targetDir, selection, undefined).data,
+	};
+}
+
+/** Execute the `report` command. Exit codes: 0 success · 2 operational error. */
+function runReport(path: string, options: ReportOptions): void {
+	// An EXPLICIT --format is two-valued (html | md) — reject a bad value before any
+	// I/O. When the flag is omitted, the effective format is resolved AFTER the
+	// selection (a saved dashboard's report_type defaults it, M9.3).
+	if (
+		options.format !== undefined &&
+		options.format !== "html" &&
+		options.format !== "md" &&
+		options.format !== "terminal" &&
+		options.format !== "site" &&
+		options.format !== "exec" &&
+		options.format !== "exec-html" &&
+		options.format !== "json"
+	) {
+		failReport(
+			`Unknown --format "${options.format}". Expected "html", "md", "terminal", "site", "exec", "exec-html", or "json".`,
+		);
+		return;
+	}
+	// --velocity-window (C8): parse the flag grammar up front so a malformed value
+	// exits 2 before any I/O. `ok.days` undefined → fall back to config / the default.
+	const velocityWindowFlag = parseVelocityWindow(options.velocityWindow);
+	if (velocityWindowFlag.kind === "error") {
+		failReport(velocityWindowFlag.message);
+		return;
+	}
+
+	const targetDir = resolve(path);
+	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
+		failReport(`Path "${targetDir}" is not a directory.`);
+		return;
+	}
+
+	// Resolve which artifacts to render (flags > .ds-bridge.json > everything)
+	// before any history/registry work — a usage/config error should exit 2 fast.
+	// (Also resolves the CURRENT-side score weights + a saved dashboard's report_type.)
+	const selection = resolveSelection(targetDir, options);
+	if ("kind" in selection) {
+		failReport(selection.message);
+		return;
+	}
+
+	// Effective format (M9.3): the explicit --format flag wins; else a saved
+	// dashboard's report_type; else html. `site` lands in M11 — until then an
+	// unsupported resolved target is a typed error.
+	const format = options.format ?? selection.reportType ?? "html";
+	if (
+		format !== "html" &&
+		format !== "md" &&
+		format !== "terminal" &&
+		format !== "site" &&
+		format !== "exec" &&
+		format !== "exec-html" &&
+		format !== "json"
+	) {
+		failReport(
+			`report_type "${format}" is not a supported render target — pass --format html|md|terminal|site|exec|exec-html|json.`,
+		);
+		return;
+	}
+	// Combo validations against the EFFECTIVE format: --delta/--gate require md;
+	// --open is only valid with the file-producing html target.
+	if (options.delta !== undefined && format !== "md") {
+		failReport("--delta requires --format md.");
+		return;
+	}
+	if (options.open && format !== "html" && format !== "exec-html") {
+		failReport(
+			`--open is not valid with --format ${format} (there is no file to open).`,
+		);
+		return;
+	}
+	if (options.gate && format !== "md") {
+		failReport(
+			"--gate requires --format md (the gate acts on the text scorecard, not the HTML dashboard).",
+		);
+		return;
+	}
+	// --snapshot writes normalized HTML snapshots; it is incompatible with the
+	// text targets (md/terminal). html/site are fine (site implies html pages).
+	if (options.snapshot && format !== "html" && format !== "site") {
+		failReport(
+			`--snapshot renders HTML snapshots — not valid with --format ${format}.`,
+		);
+		return;
+	}
+
+	// The md path emits a markdown scorecard and RETURNS before the html tail.
+	if (format === "md") {
+		runMarkdownReport(targetDir, options, selection);
+		return;
+	}
+
+	const { data, stateDir, generatedAt, velocityWindowDays, weightProfile } =
+		assembleReportData(targetDir, selection, velocityWindowFlag.days);
+
+	// JSON (E3, SPEC-analytics-export §2): the full ReportData in a versioned
+	// envelope (schemas/report.v1.schema.json), stdout or --out.
+	if (format === "json") {
+		const text = `${JSON.stringify(
+			reportJsonDocument(data, selection.artifacts, selection.viewLabel),
+			null,
+			2,
+		)}\n`;
+		if (options.out !== undefined) {
+			const outPath = resolve(options.out);
+			const written = writeDashboard(outPath, text);
+			if (written.kind === "error") {
+				failReport(written.message);
+				return;
+			}
+			process.stdout.write(`${outPath}\n`);
+		} else {
+			process.stdout.write(text);
+		}
+		process.exitCode = 0;
+		return;
+	}
+
+	// The DS-manager one-pager (SPEC-exec-report §6) renders from the SAME data.
+	if (format === "exec" || format === "exec-html") {
+		runManagerReport(
+			format,
+			stateDir,
+			options,
+			selection,
+			data,
+			velocityWindowDays,
+		);
+		return;
+	}
 
 	// Snapshots (M12.1): write normalized committed HTML snapshots and return,
 	// regardless of the (html/site) format. Reuses the publish set, so canonical
@@ -2044,7 +2388,7 @@ export function registerReportCommand(program: Command): void {
 		.argument("[path]", "project directory to report on", ".")
 		.option(
 			"--view <preset>",
-			"render a persona preset: owner | engineering | design | consumer | everything",
+			"render a preset: ds-designer | ds-manager | ds-engineer | product-designer | product-manager | product-engineer | everything | exec | org",
 		)
 		.option(
 			"--artifacts <ids>",
@@ -2052,7 +2396,7 @@ export function registerReportCommand(program: Command): void {
 		)
 		.option(
 			"--format <format>",
-			"output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY). A saved --dashboard's report_type defaults it.",
+			"output format: html (default, the offline dashboard) | md (a markdown scorecard for PR comments / $GITHUB_STEP_SUMMARY) | terminal | site | exec (the paste-ready markdown DS-manager one-pager) | exec-html (the same one-pager as offline HTML, default .ds-bridge/reports/exec.html) | json (the full ReportData, versioned — schemas/report.v1.schema.json). A saved --dashboard's report_type defaults it.",
 		)
 		.option(
 			"--delta <ref>",
@@ -2087,7 +2431,7 @@ export function registerReportCommand(program: Command): void {
 		)
 		.option(
 			"--out <file>",
-			"output file (default <path>/.ds-bridge/reports/dashboard.html; with --format md, redirects the scorecard to a file instead of stdout)",
+			"output file (default <path>/.ds-bridge/reports/dashboard.html; exec-html → .ds-bridge/reports/exec.html; with --format md|exec|json, writes to the file instead of stdout)",
 		)
 		.option(
 			"--open",

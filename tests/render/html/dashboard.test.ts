@@ -210,6 +210,95 @@ const fullData: ReportData = {
 	dataFreshness: [
 		{ kind: "a11y", lastRun: "2026-06-05", ageDays: 0, band: "green" },
 	],
+	// AN7 (X4) — the executive layer.
+	consistency: {
+		score: 84,
+		components: [
+			{ kind: "tokens", score: 75, weight: 40 },
+			{ kind: "components", score: 100, weight: 40 },
+			{ kind: "overrides", score: 76, weight: 20 },
+		],
+	},
+	debt: {
+		pct: 30,
+		level: "medium",
+		items: [
+			{
+				kind: "deprecated",
+				subject: "LegacyButton",
+				count: 2,
+				weight: 8,
+				recommendation:
+					'Replace deprecated "LegacyButton" with its supported DS component',
+			},
+			{
+				kind: "off-system",
+				subject: "off-system values",
+				count: 7,
+				weight: 2,
+				recommendation:
+					"Tokenize 7 off-system values (run /ds-bridge:ds-lint --fix)",
+			},
+		],
+	},
+	executive: {
+		health: 78,
+		adoption: 60,
+		consistency: 84,
+		debt: 30,
+		trend: [
+			{ date: "2026-06-01", score: 70 },
+			{ date: "2026-06-05", score: 78 },
+		],
+	},
+	// F6 — the Figma/frame trends (text + sparklines, no svg).
+	libraryHotspotsTrend: {
+		dates: ["2026-06-01", "2026-06-05"],
+		rows: [
+			{
+				signal: "overrides",
+				name: "Button",
+				points: [
+					{ date: "2026-06-01", count: 4 },
+					{ date: "2026-06-05", count: 7 },
+				],
+				first: 4,
+				latest: 7,
+				delta: 3,
+				status: "rising",
+			},
+		],
+	},
+	frameReadinessTrend: {
+		threshold: 80,
+		total: 1,
+		failing: 0,
+		frames: [
+			{
+				key: "F1:1:2",
+				frameName: "Checkout",
+				points: [
+					{ date: "2026-06-01", score: 70 },
+					{ date: "2026-06-05", score: 85 },
+				],
+				latest: 85,
+				first: 70,
+				delta: 15,
+				runs: 2,
+				passing: true,
+			},
+		],
+	},
+	handoffPassRate: {
+		threshold: 80,
+		frames: 2,
+		passing: 1,
+		pct: 50,
+		trend: [
+			{ date: "2026-06-01", frames: 1, passing: 0, pct: 0 },
+			{ date: "2026-06-05", frames: 2, passing: 1, pct: 50 },
+		],
+	},
 };
 
 const emptyData: ReportData = {
@@ -288,7 +377,7 @@ describe("renderDashboard — full data", () => {
 		expect(html).toMatch(/Change frequency/i);
 	});
 
-	it("emits exactly nineteen <svg> charts (one per chart section + the score gauge & trend)", () => {
+	it("emits exactly twenty-one <svg> charts (one per chart section + the score gauge & trend)", () => {
 		// six wave-1 sections (one svg each) + system-score's gauge + trend (2) +
 		// the three owner sections (adoption-trend line, coverage donut,
 		// leaderboard bar) = 6 + 2 + 3 = 11 (B2) + library-health's totals bar = 12
@@ -300,7 +389,63 @@ describe("renderDashboard — full data", () => {
 		// frame-implementability (donut) = +6 → 19. The LIST/stat-block sections
 		// (migration-checklist, score-velocity, audience-changelog,
 		// release-readiness, data-freshness) draw NO svg.
-		expect(countMatches(html, /<svg\b/g)).toBe(19);
+		// X4 (AN7): consistency's donut gauge + the executive trend line = +2 →
+		// 21. The executive tiles and the design-debt list draw NO svg.
+		// F6: the three Figma/frame trend sections are text + unicode sparklines
+		// — NO svg, so the count stays 21.
+		expect(countMatches(html, /<svg\b/g)).toBe(21);
+	});
+
+	it("renders the executive headline tiles (system score · import coverage · consistency · debt)", () => {
+		expect(html).toMatch(TITLE_FOR.executive);
+		const start = html.indexOf("<h2>Executive summary</h2>");
+		const section = html.slice(start, html.indexOf("</section>", start));
+		// The one-pager's names: one metric, one name (SPEC-exec-report §4).
+		for (const label of [
+			"System score",
+			"Import coverage",
+			"Consistency",
+			"Design debt",
+		]) {
+			expect(section).toContain(`<span class="kpi-label">${label}</span>`);
+		}
+		expect(section).not.toContain('<span class="kpi-label">Adoption</span>');
+		expect(section).not.toContain('<span class="kpi-label">Health</span>');
+		expect(section).toContain("78");
+		expect(section).toContain("60%");
+		expect(section).toContain("30%");
+	});
+
+	it("renders consistency as a gauge + sub-signal legend with the override caveat", () => {
+		const start = html.indexOf("<h2>Consistency</h2>");
+		expect(start).toBeGreaterThan(-1);
+		const section = html.slice(start, html.indexOf("</section>", start));
+		expect(section).toContain("<svg");
+		for (const kind of ["tokens", "components", "overrides"]) {
+			expect(section).toContain(kind);
+		}
+		expect(section).toMatch(/opinion/i);
+	});
+
+	it("renders design debt as pct + level + itemized recommendations", () => {
+		const start = html.indexOf("<h2>Design debt</h2>");
+		expect(start).toBeGreaterThan(-1);
+		const section = html.slice(start, html.indexOf("</section>", start));
+		expect(section).toContain("30%");
+		expect(section).toContain("medium");
+		expect(section).toContain("LegacyButton");
+		expect(section).toContain("Tokenize 7 off-system values");
+	});
+
+	it("adds Consistency + Design debt KPI tiles when selected", () => {
+		const strip = html.slice(
+			html.indexOf('<div class="kpis">'),
+			html.indexOf('<div class="grid">'),
+		);
+		expect(strip).toContain('<span class="kpi-label">Consistency</span>');
+		expect(strip).toContain('<span class="kpi-label">Design debt</span>');
+		const without = renderDashboard(fullData, ["system-score"]);
+		expect(without).not.toContain('<span class="kpi-label">Design debt</span>');
 	});
 
 	it("renders the breaking-calendar as a date-grouped list with source badges (B6)", () => {
@@ -379,7 +524,8 @@ describe("renderDashboard — full data", () => {
 		// polylines from the wave-1/owner sections.
 		// M4: parity-trend's single pct series adds one and library-health-trend's
 		// three hygiene series add three → +4 → nine polylines document-wide.
-		expect(countMatches(html, /<polyline\b/g)).toBe(9);
+		// X4 (AN7): the executive score-trend line adds one → ten.
+		expect(countMatches(html, /<polyline\b/g)).toBe(10);
 	});
 
 	it("includes lint counts in the bar chart", () => {
@@ -462,7 +608,7 @@ describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
 	it("renders all thirteen empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(24);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 	});
 
 	it("emits zero <svg> charts", () => {
@@ -488,6 +634,12 @@ describe("renderDashboard — empty data", () => {
 	it("mentions the ds-bridge command in each empty state", () => {
 		expect(countMatches(html, /ds-bridge/g)).toBeGreaterThanOrEqual(13);
 	});
+
+	it("the executive empty state points at `record`, the command that fills it", () => {
+		const exec = renderDashboard(emptyData, ["executive"]);
+		expect(exec).toContain("<code>ds-bridge record</code>");
+		expect(exec).not.toContain("<code>ds-bridge report</code>");
+	});
 });
 
 describe("renderDashboard — partial mixes", () => {
@@ -503,7 +655,7 @@ describe("renderDashboard — partial mixes", () => {
 		// two charts present, eleven empty states (incl. absent system-score + the
 		// three owner sections + library-health + the two B6 consumer sections).
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(22);
+		expect(countMatches(html, /No data yet/gi)).toBe(28);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -518,7 +670,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(23);
+		expect(countMatches(html, /No data yet/gi)).toBe(29);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -528,7 +680,7 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(24);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 	});
 
 	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
@@ -538,7 +690,7 @@ describe("renderDashboard — partial mixes", () => {
 			a11y: { level: "AA", modes: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(24);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 	});
 
 	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
@@ -548,7 +700,7 @@ describe("renderDashboard — partial mixes", () => {
 			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(23);
+		expect(countMatches(html, /No data yet/gi)).toBe(29);
 	});
 
 	it("treats an empty adoptionTrend / leaderboard array as an empty state (B2)", () => {
@@ -559,7 +711,7 @@ describe("renderDashboard — partial mixes", () => {
 			leaderboard: [],
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(24);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 	});
 
 	it("renders import coverage even when nothing is uncovered (B2)", () => {
@@ -575,7 +727,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// the donut gauge renders (a real chart), the other twelve sections stay empty.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(23);
+		expect(countMatches(html, /No data yet/gi)).toBe(29);
 		expect(html).toMatch(/<text[^>]*>100<\/text>/);
 	});
 });
@@ -662,6 +814,14 @@ const TITLE_FOR: Record<ArtifactId, RegExp> = {
 	"frame-implementability": /<h2>Frame implementability<\/h2>/,
 	"release-readiness": /<h2>Release readiness<\/h2>/,
 	"data-freshness": /<h2>Data freshness<\/h2>/,
+	// Executive layer (AN7, X4).
+	consistency: /<h2>Consistency<\/h2>/,
+	"design-debt": /<h2>Design debt<\/h2>/,
+	executive: /<h2>Executive summary<\/h2>/,
+	// Figma + per-frame trends (F6).
+	"library-hotspots-trend": /<h2>Library hotspots trend<\/h2>/,
+	"frame-readiness-trend": /<h2>Frame readiness trend<\/h2>/,
+	"handoff-pass-rate": /<h2>Handoff pass rate<\/h2>/,
 };
 
 describe("renderDashboard — default-call equivalence", () => {

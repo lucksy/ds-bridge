@@ -50,9 +50,9 @@ describe("renderDigestMarkdown — full both-audience", () => {
 				},
 			],
 			actions: [
-				{ command: "/ds-bridge:token-check", audience: "both" },
-				{ command: "/ds-bridge:ds-lint --fix", audience: "developer" },
-				{ command: "/ds-bridge:handoff-qa", audience: "designer" },
+				{ command: "ds-bridge tokens check", audience: "both" },
+				{ command: "ds-bridge lint", audience: "developer", count: 4 },
+				{ command: "ds-bridge handoff <frame-url>", audience: "designer" },
 			],
 		};
 
@@ -60,7 +60,7 @@ describe("renderDigestMarkdown — full both-audience", () => {
 		expect(md).toBe(
 			`# Design-system digest
 
-_Window: changes since 2026-06-01T00:00:00.000Z._
+_Window: changes since 2026-06-01._
 
 ## For designers
 
@@ -76,9 +76,9 @@ _Window: changes since 2026-06-01T00:00:00.000Z._
 
 ## Actions
 
-1. Run \`/ds-bridge:token-check\` — review breaking token drift
-2. Run \`/ds-bridge:ds-lint --fix\` — clear off-system lint violations
-3. Run \`/ds-bridge:handoff-qa\` — readiness is below the gate
+1. Run \`ds-bridge tokens check\` — review breaking token drift
+2. Replace 4 off-system values with design tokens (run \`ds-bridge lint\` to list them)
+3. Run \`ds-bridge handoff <frame-url>\` — readiness is below the gate
 `,
 		);
 	});
@@ -108,14 +108,16 @@ describe("renderDigestMarkdown — designers-only filter", () => {
 					direction: "up",
 				},
 			],
-			actions: [{ command: "/ds-bridge:handoff-qa", audience: "designer" }],
+			actions: [
+				{ command: "ds-bridge handoff <frame-url>", audience: "designer" },
+			],
 		};
 
 		const md = renderDigestMarkdown(model);
 		expect(md).toBe(
 			`# Design-system digest
 
-_Window: changes since 2026-06-01T00:00:00.000Z._
+_Window: changes since 2026-06-01._
 
 ## For designers
 
@@ -124,7 +126,7 @@ _Window: changes since 2026-06-01T00:00:00.000Z._
 
 ## Actions
 
-1. Run \`/ds-bridge:handoff-qa\` — readiness is below the gate
+1. Run \`ds-bridge handoff <frame-url>\` — readiness is below the gate
 `,
 		);
 	});
@@ -140,7 +142,7 @@ describe("renderDigestMarkdown — quiet", () => {
 		expect(renderDigestMarkdown(model)).toBe(
 			`# Design-system digest
 
-_Quiet week — no design-system movement since 2026-06-01T00:00:00.000Z._
+_Quiet week — no design-system movement since 2026-06-01._
 `,
 		);
 	});
@@ -162,16 +164,20 @@ describe("renderDigestMarkdown — actions capped at 3", () => {
 				},
 			],
 			actions: [
-				{ command: "/ds-bridge:token-check", audience: "both" },
-				{ command: "/ds-bridge:ds-lint --fix", audience: "developer" },
-				{ command: "/ds-bridge:handoff-qa", audience: "designer" },
+				{ command: "ds-bridge tokens check", audience: "both" },
+				{ command: "ds-bridge lint", audience: "developer", count: 4 },
+				{ command: "ds-bridge handoff <frame-url>", audience: "designer" },
 			],
 		};
 
 		const md = renderDigestMarkdown(model);
-		expect(md).toContain("1. Run `/ds-bridge:token-check`");
-		expect(md).toContain("2. Run `/ds-bridge:ds-lint --fix`");
-		expect(md).toContain("3. Run `/ds-bridge:handoff-qa`");
+		expect(md).toContain("1. Run `ds-bridge tokens check`");
+		expect(md).toContain(
+			"2. Replace 4 off-system values with design tokens (run `ds-bridge lint` to list them)",
+		);
+		expect(md).not.toContain("/ds-bridge:");
+		expect(md).not.toContain("--fix");
+		expect(md).toContain("3. Run `ds-bridge handoff <frame-url>`");
 		expect(md).not.toContain("4.");
 	});
 });
