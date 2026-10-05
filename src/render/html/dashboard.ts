@@ -361,7 +361,7 @@ export function renderDashboard(
 		.join("");
 	const header = [
 		'<header class="dash"><div class="bar top">',
-		`<div class="brand">${LOGO_IMG}<h1>ds-bridge report · <span class="project">${project}</span></h1></div>`,
+		`<div class="brand"><h1>${LOGO_IMG}<span class="report">report</span> · <span class="project">${project}</span></h1></div>`,
 		hasTimeline ? timelineNav(stops) : "<div></div>",
 		`<div class="bar-meta">${viewLabel}${asOf}<span class="generated">Generated ${generatedAt}</span></div>`,
 		"</div></header>",

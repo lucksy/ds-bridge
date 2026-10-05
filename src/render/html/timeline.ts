@@ -99,7 +99,9 @@ header.dash .bar.top {
 	padding: 14px 24px;
 }
 header.dash .brand { display: flex; align-items: center; gap: 10px; min-width: 0; justify-self: start; }
-header.dash .brand .logo { flex: none; border-radius: 7px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16); }
+/* The wordmark stands in for "ds-bridge" in the heading: one em tall, its
+   baseline on the text's (the viewBox runs down to the "g" descender). */
+header.dash .brand .logo { height: 1em; width: auto; vertical-align: -0.2em; margin-right: 0.3em; }
 header.dash .brand h1 { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header.dash .bar-meta { display: flex; align-items: center; gap: 12px; justify-self: end; white-space: nowrap; }
 @media (max-width: 780px) {

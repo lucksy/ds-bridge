@@ -32,14 +32,16 @@ const PAST = [
 const count = (html: string, re: RegExp) => (html.match(re) ?? []).length;
 
 describe("dashboard header", () => {
-	it("puts the logo + title left and the view + Generated right", () => {
+	it("puts the wordmark + title left and the view + Generated right", () => {
 		const html = renderDashboard(NOW, ["system-score"], { viewLabel: "exec" });
 		const header = html.slice(
 			html.indexOf("<header"),
 			html.indexOf("</header>"),
 		);
 		expect(header).toMatch(
-			/<div class="bar top"><div class="brand"><img class="logo"[^>]*alt=""[^>]*\/><h1>ds-bridge report · <span class="project">acme<\/span><\/h1><\/div>/,
+			// The brand wordmark (alt "ds-bridge") leads the heading: it reads
+			// "ds-bridge report · acme".
+			/<div class="bar top"><div class="brand"><h1><img class="logo"[^>]*alt="ds-bridge"[^>]*\/><span class="report">report<\/span> · <span class="project">acme<\/span><\/h1><\/div>/,
 		);
 		expect(header).toContain(
 			'<div class="bar-meta"><span class="view">exec</span><span class="generated">Generated 4 Oct 2026, 16:00 UTC</span></div>',
