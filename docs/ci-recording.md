@@ -98,7 +98,7 @@ render a dashboard from a checkout of that branch.
 |---|---|---|
 | `path` | `.` | Project directory holding `.ds-bridge/` |
 | `data-branch` | `ds-bridge-data` | Branch that stores the CI series (never the default branch) |
-| `mode` | `auto` | `auto` (push/schedule/dispatch → record, pull_request → check), `record`, `check`, `site` (seed + render `site-dir` only — no record, no publish) |
+| `mode` | `auto` | `auto` (push/schedule/dispatch on the default branch → record; pull_request or any other ref → check), `record`, `check`, `site` (seed + render `site-dir` only — no record, no publish). Only the default branch is ever recorded: `auto` on another ref (a dispatch from a feature branch, an unfiltered push, a tag) only checks, and an explicit `record` there fails |
 | `figma` | `"false"` | `"true"`: also run `registry build` + `library-health` and `handoff` for each `tracked_frames` URL; `"auto"`: only when `FIGMA_TOKEN` is set |
 | `library-top` | `"10"` | Components per library-health signal stored for the hotspot trends (`record --library-top`, 0–100) |
 | `site-dir` | `""` | Render the dashboard site there (`report --format site`), in modes `record` / `site` |
@@ -107,7 +107,8 @@ render a dashboard from a checkout of that branch.
 | `pr-comment` | `"false"` | Opt in: post/update **one** scorecard comment on the PR |
 | `gate` | `"false"` | `report --gate`: fail the PR when a `metric_targets` verdict is red |
 | `cli` | action's `dist/cli.mjs` | Path to the CLI bundle |
-| `github-token` | `github.token` | Token used for the PR comment |
+| `github-token` | `github.token` | Token used for the PR comment; only a scorecard comment written by this token's account is ever updated |
+| `allow-any-ref` | `"false"` | `"true"`: let `record` record a ref other than the default branch |
 
 ## Scheduled runs: Figma trends and a monthly manager digest
 
@@ -159,8 +160,14 @@ publish** — the PR's measurements stay in the ephemeral runner. With
 `pr-comment: "true"` it renders `ds-bridge report --format md --delta
 origin/ds-bridge-data` (the PR against the latest default-branch measurements;
 current-only on the very first PR) and posts it as one comment, updated in place
-on later pushes (it finds its own comment by a hidden marker). Comments are
-opt-in by design.
+on later pushes (it finds its own comment by a hidden marker **and** the token's
+account, so a comment someone else starts with the marker is never edited). A
+comment that cannot be posted shows as a workflow warning; the `gate` result
+still decides the check. Comments are opt-in by design.
+
+Under `pull_request_target` the action only checks and warns: that trigger runs
+with a write token and secrets, so never check out the pull request's head in
+the same job.
 
 ## Hygiene for a committed history
 

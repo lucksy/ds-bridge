@@ -58,8 +58,8 @@ describe(".github/actions/ds-bridge-record/action.yml (H8)", () => {
 		const yml = await readFile(actionPath, "utf8");
 		expect(yml).toContain("--format md");
 		expect(yml).toContain('--delta "origin/$DATA_BRANCH"');
-		expect(yml).toContain("ds-bridge-scorecard");
-		expect(yml).toContain("gh api");
+		// The comment itself (marker, own-account only) lives in the script.
+		expect(yml).toContain('ci-pr-comment.mjs" --repo "$REPO" --pr "$PR"');
 		expect(yml).toMatch(/inputs\.pr-comment == 'true'/);
 	});
 });
@@ -117,7 +117,8 @@ describe("action.yml — scheduled runs (F8)", () => {
 
 	it("adds a site mode that renders without recording or publishing", async () => {
 		const yml = await readFile(actionPath, "utf8");
-		expect(yml).toMatch(/record\|check\|site/);
+		expect(yml).toMatch(/record \| check \| site/);
+		expect(yml).toContain('node "$root/scripts/ci-mode.mjs"');
 		// The record step is skipped in site mode; publishing stays record-only.
 		expect(yml).toMatch(/if: steps\.ctx\.outputs\.mode != 'site'/);
 		expect(yml).toMatch(

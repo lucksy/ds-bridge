@@ -181,6 +181,31 @@ describe("ci-data-branch.mjs (H8)", () => {
 		expect(remoteFile(remote, "ds-bridge-data")).toBe("from-b\nfrom-a");
 	});
 
+	it("publish without seed state never duplicates the remote series", () => {
+		const remote = makeRemote();
+		const first = clone(remote);
+		const s1 = join(tmp("ds-data-state-"), "s1.json");
+		run(first, ["seed", "--branch", "ds-bridge-data", "--file", FILE], s1);
+		mkdirSync(join(first, "app", ".ds-bridge"), { recursive: true });
+		writeFileSync(join(first, FILE), "A\nB\n", "utf8");
+		run(first, ["publish", "--branch", "ds-bridge-data", "--file", FILE], s1);
+
+		// A later job publishes a file that already holds the remote lines + one
+		// new line, but its seed state is gone (RUNNER_TEMP cleared).
+		const later = clone(remote);
+		mkdirSync(join(later, "app", ".ds-bridge"), { recursive: true });
+		writeFileSync(join(later, FILE), "A\nB\nC\n", "utf8");
+		const missing = join(tmp("ds-data-state-"), "never-written.json");
+		expect(
+			run(
+				later,
+				["publish", "--branch", "ds-bridge-data", "--file", FILE],
+				missing,
+			).code,
+		).toBe(0);
+		expect(remoteFile(remote, "ds-bridge-data")).toBe("A\nB\nC");
+	});
+
 	it("keeps other files already on the data branch", () => {
 		const remote = makeRemote();
 		const work = clone(remote);

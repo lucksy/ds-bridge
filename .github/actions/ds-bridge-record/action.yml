@@ -1,6 +1,10 @@
 # H8 — ds-bridge CI recorder (SPEC-history-v2 §4; PLAN-analytics-positioning §4
 # B-P0 #3, decisions §6.2/§6.3). Composite action:
 #
+#   Only the DEFAULT branch is recorded (scripts/ci-mode.mjs): `auto` on any
+#   other ref (a dispatch from a feature branch, an unfiltered push, a tag)
+#   only checks; an explicit `record` there fails unless `allow-any-ref: "true"`.
+#
 #   push (default branch) → seed .ds-bridge/history.jsonl from the data branch,
 #                           `ds-bridge record --source ci`, publish the file back
 #                           to the data branch (git plumbing — main is never
@@ -32,7 +36,7 @@ inputs:
     description: Branch that stores the CI history series. Never the default branch.
     default: ds-bridge-data
   mode:
-    description: "auto (push/schedule/dispatch → record, pull_request → check) | record | check | site (seed + render site-dir only)"
+    description: "auto (push/schedule/dispatch on the default branch → record; pull_request or any other ref → check) | record | check | site (seed + render site-dir only)"
     default: auto
   figma:
     description: '"true" also runs the Figma checks (needs FIGMA_TOKEN + a library file key in the env/config); "auto" runs them only when FIGMA_TOKEN is set (scheduled runs, forks without secrets).'
@@ -59,8 +63,11 @@ inputs:
     description: Path to the ds-bridge CLI bundle. Default the dist/cli.mjs shipped with this action's ref (release tags commit dist/).
     default: ""
   github-token:
-    description: Token for the PR comment (gh).
+    description: Token for the PR comment (gh). Only a scorecard comment written by this token's account is ever updated.
     default: ${{ github.token }}
+  allow-any-ref:
+    description: '"true" lets record mode record a ref other than the default branch (otherwise auto only checks there and an explicit record fails).'
+    default: "false"
 runs:
   using: composite
   steps:
@@ -71,21 +78,18 @@ runs:
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_CLI: ${{ inputs.cli }}
         EVENT_NAME: ${{ github.event_name }}
+        REF_NAME: ${{ github.ref_name }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        ALLOW_ANY_REF: ${{ inputs.allow-any-ref }}
       run: |
         set -euo pipefail
         root="$(cd "$GITHUB_ACTION_PATH/../../.." && pwd)"
-        mode="$INPUT_MODE"
-        if [ "$mode" = "auto" ]; then
-          case "$EVENT_NAME" in
-            pull_request|pull_request_target) mode=check ;;
-            *) mode=record ;;
-          esac
-        fi
-        case "$mode" in record|check|site) ;; *) echo "::error::unknown mode '$mode'"; exit 1 ;; esac
+        # Writes mode=… to $GITHUB_OUTPUT; fails on an unknown mode or an
+        # explicit record of a non-default ref.
+        node "$root/scripts/ci-mode.mjs"
         cli="${INPUT_CLI:-$root/dist/cli.mjs}"
         if [ ! -f "$cli" ]; then echo "::error::ds-bridge CLI not found at $cli (set the 'cli' input)"; exit 1; fi
         {
-          echo "mode=$mode"
           echo "cli=$cli"
           echo "scripts=$root/scripts"
         } >> "$GITHUB_OUTPUT"
@@ -156,6 +160,7 @@ runs:
         GH_TOKEN: ${{ inputs.github-token }}
         PR: ${{ github.event.pull_request.number }}
         REPO: ${{ github.repository }}
+        SCRIPTS: ${{ steps.ctx.outputs.scripts }}
       run: |
         set -uo pipefail
         gate=()
@@ -168,15 +173,9 @@ runs:
         out="$RUNNER_TEMP/ds-bridge-scorecard.md"
         node "$CLI" report "$PROJECT" --format md "${delta[@]}" "${gate[@]}" > "$out"
         status=$?
-        marker='<!-- ds-bridge-scorecard -->'
-        body="$(printf '%s\n' "$marker"; cat "$out")"
-        id="$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-          --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n1)"
-        if [ -n "$id" ]; then
-          gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" > /dev/null
-        else
-          gh api "repos/$REPO/issues/$PR/comments" -f body="$body" > /dev/null
-        fi
+        # One marker comment by THIS token's account, updated in place; a failed
+        # post is a workflow warning (the gate status below still decides).
+        node "$SCRIPTS/ci-pr-comment.mjs" --repo "$REPO" --pr "$PR" --body-file "$out" || true
         exit "$status"
 
     - name: Scorecard gate (no comment)

@@ -15,9 +15,11 @@
 //          hash-object + update-index + write-tree + commit-tree — then push
 //          <commit>:refs/heads/<branch>. The working tree, HEAD and the default
 //          branch are never touched. A rejected push (someone else recorded) is
-//          retried up to 3 times by re-fetching and appending OUR new lines onto
-//          the remote file (append-only merge). Refuses main/master/the default
-//          branch outright.
+//          retried up to 3 times (with jitter) by re-fetching and appending OUR
+//          new lines onto the remote file (append-only merge); any other push
+//          failure (e.g. no `contents: write`) stops at once. Without seed state
+//          the remote file is the merge seed, so nothing is appended twice.
+//          Refuses main/master/the default branch outright (case-insensitive).
 //
 // Exit codes: 0 ok (incl. nothing to publish) · 1 refused / failed.
 import { spawnSync } from "node:child_process";
@@ -50,8 +52,8 @@ export function validateDataBranch(branch, defaultBranch) {
 		return `"${branch}" is not a valid branch name`;
 	}
 	const forbidden = new Set(["main", "master"]);
-	if (defaultBranch) forbidden.add(defaultBranch);
-	if (forbidden.has(branch)) {
+	if (defaultBranch) forbidden.add(defaultBranch.toLowerCase());
+	if (forbidden.has(branch.toLowerCase())) {
 		return `refusing to write history to "${branch}" — the data branch must not be the default branch`;
 	}
 	return undefined;
@@ -80,6 +82,26 @@ export function appendOnlyMerge(remoteText, seededText, currentText) {
 			? remoteText
 			: `${remoteText}\n`;
 	return base + appended;
+}
+
+/**
+ * The seed a retried push merges against. With no usable seed state (publish
+ * ran without seed, or RUNNER_TEMP was cleared) the remote file itself is the
+ * seed: lines already on the remote are never appended a second time.
+ */
+export function mergeSeed(saved, remoteText) {
+	return saved.known ? saved.seeded : remoteText;
+}
+
+/** A push that lost a race (retry) vs. one that can never succeed (stop). */
+export function isRetryablePushError(stderr) {
+	return /rejected|non-fast-forward|fetch first|failed to update ref|cannot lock ref/i.test(
+		stderr,
+	);
+}
+
+function sleepMs(ms) {
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 function git(args, { cwd, input, env } = {}) {
@@ -165,12 +187,19 @@ function publish(opts) {
 		return;
 	}
 	const current = readFileSync(ctx.file, "utf8");
-	let saved = { tip: null, seeded: "" };
+	let saved = { tip: null, seeded: "", known: false };
 	if (existsSync(ctx.state)) {
 		try {
-			saved = JSON.parse(readFileSync(ctx.state, "utf8"));
+			const parsed = JSON.parse(readFileSync(ctx.state, "utf8"));
+			if (typeof parsed?.seeded === "string") {
+				saved = {
+					tip: typeof parsed.tip === "string" ? parsed.tip : null,
+					seeded: parsed.seeded,
+					known: true,
+				};
+			}
 		} catch {
-			// no usable seed state — treat as an unseeded start
+			// no usable seed state — the remote file becomes the seed (mergeSeed)
 		}
 	}
 
@@ -195,10 +224,15 @@ function publish(opts) {
 
 	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
 		const tip = fetchTip(ctx);
-		const content =
-			tip !== null && tip !== saved.tip
-				? appendOnlyMerge(fileAt(tip, ctx.relpath) ?? "", saved.seeded, current)
-				: current;
+		let content = current;
+		if (tip !== null && (tip !== saved.tip || !saved.known)) {
+			const remoteText = fileAt(tip, ctx.relpath) ?? "";
+			content = appendOnlyMerge(
+				remoteText,
+				mergeSeed(saved, remoteText),
+				current,
+			);
+		}
 
 		const blob = git(["hash-object", "-w", "--stdin"], { input: content });
 		if (!blob.ok) die(`hash-object failed: ${blob.stderr}`);
@@ -254,9 +288,13 @@ function publish(opts) {
 			);
 			return;
 		}
+		if (!isRetryablePushError(pushed.stderr)) {
+			die(`push failed: ${pushed.stderr.split("\n")[0]}`);
+		}
 		process.stderr.write(
 			`ci-data-branch: push attempt ${attempt} rejected (${pushed.stderr.split("\n")[0]}); retrying\n`,
 		);
+		sleepMs(250 + Math.floor(Math.random() * 750));
 	}
 	die(`could not publish to ${ctx.branch} after ${MAX_ATTEMPTS} attempts`);
 }
