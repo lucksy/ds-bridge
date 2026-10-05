@@ -3,6 +3,7 @@
 // (git / tool version), and an advisory lock shared with compact/migrate.
 import { spawnSync } from "node:child_process";
 import {
+	appendFileSync,
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
@@ -265,6 +266,17 @@ describe("acquireHistoryLock", () => {
 		expect(release).toBeTypeOf("function");
 		release?.();
 	});
+
+	it("release leaves a lock that was taken over by another owner", () => {
+		const stateDir = join(freshTmp(), ".ds-bridge");
+		mkdirSync(stateDir, { recursive: true });
+		const lockPath = join(stateDir, LOCK_FILE);
+		const release = acquireHistoryLock(stateDir, { timeoutMs: 0 });
+		// Our lock went stale and another process took it over.
+		writeFileSync(lockPath, "4242:someone-else\n", "utf8");
+		release?.();
+		expect(readFileSync(lockPath, "utf8")).toBe("4242:someone-else\n");
+	});
 });
 
 describe("rewriteHistoryAtomic", () => {
@@ -274,6 +286,31 @@ describe("rewriteHistoryAtomic", () => {
 		writeFileSync(join(stateDir, HISTORY_FILE), "old\n", "utf8");
 		rewriteHistoryAtomic(stateDir, "new\n");
 		expect(readFileSync(join(stateDir, HISTORY_FILE), "utf8")).toBe("new\n");
+		expect(readdirSync(stateDir)).toEqual([HISTORY_FILE]);
+	});
+
+	it("keeps a record appended after the rewrite read the file", () => {
+		const stateDir = join(freshTmp(), ".ds-bridge");
+		mkdirSync(stateDir, { recursive: true });
+		const file = join(stateDir, HISTORY_FILE);
+		writeFileSync(file, "a\na\n", "utf8");
+		const readBytes = readFileSync(file).length;
+		// An append that gave up waiting for the lock lands mid-rewrite.
+		appendFileSync(file, '{"kind":"lint","late":true}\n', "utf8");
+		rewriteHistoryAtomic(stateDir, "a\n", readBytes);
+		expect(readFileSync(file, "utf8")).toBe('a\n{"kind":"lint","late":true}\n');
+		expect(readdirSync(stateDir)).toEqual([HISTORY_FILE]);
+	});
+
+	it("refuses to replace a file that shrank since it was read", () => {
+		const stateDir = join(freshTmp(), ".ds-bridge");
+		mkdirSync(stateDir, { recursive: true });
+		const file = join(stateDir, HISTORY_FILE);
+		writeFileSync(file, "x\n", "utf8");
+		expect(() => rewriteHistoryAtomic(stateDir, "new\n", 100)).toThrow(
+			/shrank/,
+		);
+		expect(readFileSync(file, "utf8")).toBe("x\n");
 		expect(readdirSync(stateDir)).toEqual([HISTORY_FILE]);
 	});
 });

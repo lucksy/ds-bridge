@@ -7,8 +7,12 @@
 // write — git absent / not a repo → `git: null`, an unreadable package.json →
 // `tool: null`, a held lock → append anyway after a short wait (a single
 // O_APPEND line write; losing a measurement is worse than a rare interleave).
+// Because such an append can land while compact/migrate holds the lock,
+// `rewriteHistoryAtomic` carries any bytes appended after the rewrite's read
+// into the new file before the rename, so a late append is never dropped.
 // Only the append itself (mkdir / write) can throw, exactly as the per-command
 // `appendFileSync` calls it replaces did.
+import { randomUUID } from "node:crypto";
 import {
 	appendFileSync,
 	closeSync,
@@ -16,6 +20,7 @@ import {
 	mkdirSync,
 	openSync,
 	readFileSync,
+	readSync,
 	renameSync,
 	statSync,
 	unlinkSync,
@@ -159,10 +164,24 @@ export function readGitContext(
 	}
 }
 
+/** The lock file's content, or undefined when it is unreadable / gone. */
+function readLockOwner(lockPath: string): string | undefined {
+	try {
+		return readFileSync(lockPath, "utf8");
+	} catch {
+		return undefined;
+	}
+}
+
 /**
  * Take the advisory history lock (`O_EXCL` create of history.jsonl.lock). A lock
  * older than `staleMs` is taken over. Returns a release function, or undefined
  * when the lock stayed held for `timeoutMs`.
+ *
+ * The lock holds a unique owner token: release only removes the lock while it
+ * still holds OUR token (a lock taken over as stale is someone else's now), and
+ * a stale takeover only removes the lock it judged stale (same token) — two
+ * waiters racing for one stale lock cannot delete each other's fresh lock.
  */
 export function acquireHistoryLock(
 	stateDir: string,
@@ -171,13 +190,15 @@ export function acquireHistoryLock(
 	const timeoutMs = options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
 	const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
 	const lockPath = join(stateDir, LOCK_FILE);
+	const token = `${process.pid}:${randomUUID()}\n`;
 	const deadline = Date.now() + timeoutMs;
 	for (;;) {
 		try {
 			const fd = openSync(lockPath, "wx");
-			writeFileSync(fd, `${process.pid}\n`);
+			writeFileSync(fd, token);
 			closeSync(fd);
 			return () => {
+				if (readLockOwner(lockPath) !== token) return; // not ours any more
 				try {
 					unlinkSync(lockPath);
 				} catch {
@@ -190,8 +211,9 @@ export function acquireHistoryLock(
 		}
 		// Held: take over a stale lock, else wait (bounded).
 		try {
+			const owner = readLockOwner(lockPath);
 			if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
-				unlinkSync(lockPath);
+				if (readLockOwner(lockPath) === owner) unlinkSync(lockPath);
 				continue;
 			}
 		} catch {
@@ -247,12 +269,23 @@ export function appendHistoryRecord<T extends { kind: string; at?: string }>(
 /**
  * Replace the whole history file atomically (temp file in the same dir +
  * rename). The CALLER holds the lock (compact/migrate).
+ *
+ * `readBytes` is the size of the content the caller read and transformed. Any
+ * bytes appended past it since (an append that gave up waiting for the lock)
+ * are copied verbatim onto the end of the new file before the rename, so they
+ * are not lost. A file that SHRANK below `readBytes` was rewritten by someone
+ * else — the rewrite aborts rather than clobber it.
  */
-export function rewriteHistoryAtomic(stateDir: string, text: string): void {
+export function rewriteHistoryAtomic(
+	stateDir: string,
+	text: string,
+	readBytes?: number,
+): void {
 	const target = historyFilePath(stateDir);
 	const temp = join(stateDir, `.${HISTORY_FILE}.tmp-${process.pid}`);
 	try {
 		writeFileSync(temp, text, "utf8");
+		if (readBytes !== undefined) carryAppendedTail(target, temp, readBytes);
 		renameSync(temp, target);
 	} catch (error) {
 		try {
@@ -261,5 +294,28 @@ export function rewriteHistoryAtomic(stateDir: string, text: string): void {
 			// best effort
 		}
 		throw error;
+	}
+}
+
+/** Append `target`'s bytes past `from` onto `temp` until `target` stops growing. */
+function carryAppendedTail(target: string, temp: string, from: number): void {
+	let offset = from;
+	for (;;) {
+		const size = statSync(target).size;
+		if (size < offset) {
+			throw new Error(
+				"history changed underneath the rewrite (file shrank) — not replaced",
+			);
+		}
+		if (size === offset) return;
+		const tail = Buffer.alloc(size - offset);
+		const fd = openSync(target, "r");
+		try {
+			readSync(fd, tail, 0, tail.length, offset);
+		} finally {
+			closeSync(fd);
+		}
+		appendFileSync(temp, tail);
+		offset = size;
 	}
 }

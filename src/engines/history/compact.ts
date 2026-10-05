@@ -1,19 +1,24 @@
 // H6 — `history compact` (SPEC-history-v2 §1.5, §4, gap G4). PURE: history text in
 // → compacted text + counts out; the CLI owns the lock and the atomic rewrite.
 //
-// Dedupe: a run of IDENTICAL consecutive records of the same kind (consecutive
-// per kind — other kinds in between do not break it) collapses to its LATEST
-// member. "Identical" compares the payload only: the envelope keys (`v`, `at`,
+// Records are grouped by SUBJECT: kind + `frameKeyOf` (fileKey:nodeId > fileKey
+// > frame name), so one `record --figma` run's per-frame handoff lines, or
+// library-health lines for two files, are separate series and never collapse
+// into each other. Kinds without a frame/file (lint, tokens…) have one subject.
+//
+// Dedupe: a run of IDENTICAL consecutive records of the same subject (other
+// subjects in between do not break it) collapses to its LATEST member. "Identical" compares the payload only: the envelope keys (`v`, `at`,
 // `source`, `git`, `tool`, `runId`) are ignored and key order does not matter.
 // Keeping the latest leaves every last-wins reader and data freshness unchanged.
 //
-// `keepPerDay` then keeps the last surviving record per kind per UTC day (dated
+// `keepPerDay` then keeps the last surviving record per subject per UTC day (dated
 // records only). Corrupt, kindless and dateless lines are never dropped — data
 // the tool cannot read is not the tool's to delete.
 import { RESERVED_ENVELOPE_KEYS } from "./envelope.js";
+import { frameKeyOf } from "./readiness-frames.js";
 
 export interface CompactOptions {
-	/** Keep at most one record per kind per UTC day (the last of the day). */
+	/** Keep at most one record per subject per UTC day (the last of the day). */
 	keepPerDay?: boolean;
 }
 
@@ -52,7 +57,8 @@ function payloadIdentity(record: Record<string, unknown>): string {
 
 interface Entry {
 	raw: string;
-	kind?: string;
+	/** `kind` + NUL + frame/file subject; absent for unreadable lines. */
+	subject?: string;
 	at?: string;
 	identity?: string;
 }
@@ -71,7 +77,7 @@ function parseEntry(raw: string): Entry {
 	if (typeof record.kind !== "string") return { raw };
 	return {
 		raw,
-		kind: record.kind,
+		subject: `${record.kind}\u0000${frameKeyOf(record)}`,
 		...(typeof record.at === "string" ? { at: record.at } : {}),
 		identity: payloadIdentity(record),
 	};
@@ -89,25 +95,29 @@ export function compactHistory(
 		.map(parseEntry);
 	const keep = entries.map(() => true);
 
-	// 1) Dedupe identical consecutive same-kind records → keep the latest.
-	const lastByKind = new Map<string, number>();
+	// 1) Dedupe identical consecutive same-subject records → keep the latest.
+	const lastBySubject = new Map<string, number>();
 	entries.forEach((entry, index) => {
-		if (entry.kind === undefined) return;
-		const prev = lastByKind.get(entry.kind);
+		if (entry.subject === undefined) return;
+		const prev = lastBySubject.get(entry.subject);
 		if (prev !== undefined && entries[prev]?.identity === entry.identity) {
 			keep[prev] = false;
 		}
-		lastByKind.set(entry.kind, index);
+		lastBySubject.set(entry.subject, index);
 	});
 
-	// 2) Optionally keep the last surviving record per kind per UTC day.
+	// 2) Optionally keep the last surviving record per subject per UTC day.
 	if (options.keepPerDay === true) {
 		const lastByDay = new Map<string, number>();
 		entries.forEach((entry, index) => {
-			if (!keep[index] || entry.kind === undefined || entry.at === undefined) {
+			if (
+				!keep[index] ||
+				entry.subject === undefined ||
+				entry.at === undefined
+			) {
 				return;
 			}
-			const key = `${entry.kind}\u0000${entry.at.slice(0, 10)}`;
+			const key = `${entry.subject}\u0000${entry.at.slice(0, 10)}`;
 			const prev = lastByDay.get(key);
 			if (prev !== undefined) keep[prev] = false;
 			lastByDay.set(key, index);

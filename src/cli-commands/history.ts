@@ -199,10 +199,11 @@ function rewriteUnderLock(
 		return { ok: false };
 	}
 	try {
-		const text = readFileSync(file, "utf8");
+		const bytes = readFileSync(file);
+		const text = bytes.toString("utf8");
 		const next = transform(text);
 		if (!dryRun && next.text !== text)
-			rewriteHistoryAtomic(stateDir, next.text);
+			rewriteHistoryAtomic(stateDir, next.text, bytes.length);
 		return { ok: true, existed: true };
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);

@@ -103,4 +103,88 @@ describe("compactHistory — keepPerDay", () => {
 			j({ kind: "lint", n: 4 }),
 		]);
 	});
+
+	it("keeps one record per FRAME per day — per-frame handoff lines never collapse", () => {
+		const text = [
+			j({
+				at: "2026-01-01T08:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+				score: 70,
+			}),
+			j({
+				at: "2026-01-01T08:00:01Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "2:2",
+				score: 90,
+			}),
+			j({
+				at: "2026-01-01T12:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+				score: 75,
+			}),
+			j({
+				at: "2026-01-01T12:00:01Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "2:2",
+				score: 91,
+			}),
+		].join("\n");
+		expect(lines(compactHistory(text, { keepPerDay: true }).text)).toEqual([
+			j({
+				at: "2026-01-01T12:00:00Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "1:1",
+				score: 75,
+			}),
+			j({
+				at: "2026-01-01T12:00:01Z",
+				kind: "handoff",
+				fileKey: "F",
+				nodeId: "2:2",
+				score: 91,
+			}),
+		]);
+	});
+
+	it("keeps one library-health record per FILE per day", () => {
+		const text = [
+			j({
+				at: "2026-01-01T08:00:00Z",
+				kind: "library-health",
+				fileKey: "A",
+				deprecatedUsage: 1,
+			}),
+			j({
+				at: "2026-01-01T08:00:01Z",
+				kind: "library-health",
+				fileKey: "B",
+				deprecatedUsage: 2,
+			}),
+		].join("\n");
+		expect(compactHistory(text, { keepPerDay: true }).removed).toBe(0);
+	});
+});
+
+describe("compactHistory — subjects", () => {
+	it("dedupes identical records of one frame even when other frames interleave", () => {
+		const a = { kind: "handoff", fileKey: "F", nodeId: "1:1", score: 80 };
+		const b = { kind: "handoff", fileKey: "F", nodeId: "2:2", score: 60 };
+		const text = [
+			j({ at: "1", ...a }),
+			j({ at: "2", ...b }),
+			j({ at: "3", ...a }),
+			j({ at: "4", ...b }),
+		].join("\n");
+		expect(lines(compactHistory(text).text)).toEqual([
+			j({ at: "3", ...a }),
+			j({ at: "4", ...b }),
+		]);
+	});
 });

@@ -1,10 +1,12 @@
 // H6 — `history migrate` (SPEC-history-v2 §4). PURE: history text in → v2 text
 // + counts out; the CLI owns the lock and the atomic rewrite.
 //
-// A v1 record (an object with a string `kind` and no numeric `v ≥ 2`) becomes
-// `{v:2, at?, kind, source:"local", git:null, tool:null, ...payload}` — `at` is
-// kept exactly as it was (or stays absent), the payload is verbatim. v2 lines,
-// corrupt lines and kindless objects are left untouched. Blank lines are dropped.
+// A v1 record (an object with a string `kind`, a string `at` and no numeric
+// `v ≥ 2`) becomes `{v:2, at, kind, source:"local", git:null, tool:null,
+// ...payload}` — the payload is verbatim. v2 lines, corrupt lines, kindless
+// objects and v1 lines without a string `at` are left untouched: the v2 schema
+// requires `at`, so a line that cannot satisfy it must not claim to be v2.
+// Blank lines are dropped.
 // Idempotent: a migrated file migrates to itself.
 import { envelopeOf, RESERVED_ENVELOPE_KEYS } from "./envelope.js";
 
@@ -29,10 +31,11 @@ function migrateLine(raw: string): string | undefined {
 	}
 	const record = parsed as Record<string, unknown>;
 	if (typeof record.kind !== "string") return undefined;
+	if (typeof record.at !== "string") return undefined; // v2 requires `at`
 	if (envelopeOf(record) !== undefined) return undefined; // already v2+
 
 	const out: Record<string, unknown> = { v: 2 };
-	if ("at" in record) out.at = record.at;
+	out.at = record.at;
 	out.kind = record.kind;
 	out.source = "local";
 	out.git = null;
