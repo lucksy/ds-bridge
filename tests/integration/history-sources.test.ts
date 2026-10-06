@@ -45,9 +45,4 @@ describe("history source writers (H16)", () => {
 		);
 		expect(yml).toMatch(/record "\$PROJECT" --source ci/);
 	});
-
-	it("the spec documents hook as reserved", () => {
-		const spec = readFileSync(join(repoRoot, "SPEC-history-v2.md"), "utf8");
-		expect(spec).toMatch(/`hook` \| \*\*reserved\.\*\*/);
-	});
 });

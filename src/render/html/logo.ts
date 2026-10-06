@@ -1,6 +1,6 @@
-// The ds-bridge wordmark on dark (brand/logo/ds-bridge-wordmark-on-dark.svg:
-// white letters, the hyphen as the coral bar) for the dashboard header — one
-// wordmark, no icon, per the brand kit. An inline data-URI <img> keeps the page
+// The ds-bridge wordmark on dark — white letters, the hyphen as the coral bar —
+// for the dashboard header: one wordmark, no icon, per the brand kit. An
+// inline data-URI <img> keeps the page
 // offline and the mark out of the page's <svg> charts. alt="ds-bridge" so the
 // heading reads "ds-bridge report · <project>".
 const LOGO_DATA_URI =

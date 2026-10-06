@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="brand/github/readme-hero-dark.png">
-    <img src="brand/github/readme-hero-light.png" alt="ds-bridge — Catch design token drift before it ships. Lint, Drift, Handoff, Measure." width="100%">
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme-hero-dark.png">
+    <img src=".github/assets/readme-hero-light.png" alt="ds-bridge — Catch design token drift before it ships. Lint, Drift, Handoff, Measure." width="100%">
   </picture>
 </p>
 
@@ -30,10 +30,7 @@ Professional+** (the remote Figma MCP server is available on all plans).
 
 > **Status:** released and free to use — the current version and its notes
 > are on the [releases page](https://github.com/lucksy/ds-bridge/releases).
-> Spec-driven, strict TDD. See [`SPEC.md`](./SPEC.md)
-> (contract), [`PLAN.md`](./PLAN.md) (build strategy), [`TASKS.md`](./TASKS.md)
-> (live task tracker). The marketing site under [`website/`](./website) is built
-> and live at **<https://ds-bridge.com>** (Cloudflare Pages).
+> Strict TDD. Website and docs: **<https://ds-bridge.com>**.
 
 ## Who it serves
 
@@ -237,7 +234,7 @@ committed `.ds-bridge.json` and the whole team shares them.
   (token masked) and **which source won** each value — flag, env, `.ds-bridge.env`,
   or `.ds-bridge.json`.
 
-New to the Figma side? The [Connect ds-bridge to Figma](website/content/tutorials/connect-figma.mdx)
+New to the Figma side? The [Connect ds-bridge to Figma](https://ds-bridge.com/tutorials/connect-figma/)
 tutorial walks the whole flow start to finish.
 
 ## Commands
@@ -420,8 +417,7 @@ npm run typecheck:mod  # type-check the mod (after `claude --plugin-dir .` has w
 npm run check          # typecheck + lint + test + validate + test:mod (pre-commit gate)
 ```
 
-The marketing site is its own package under [`website/`](./website) (Next.js
-static export), live at <https://ds-bridge.com> — tutorials: <https://ds-bridge.com/tutorials/>.
+Website and tutorials: <https://ds-bridge.com/tutorials/>.
 
 ## Live Figma smoke test
 
@@ -470,8 +466,6 @@ surface is fifteen slash commands over a fully tested CLI, the analytics and
 parity subagents, three fail-quiet settings hooks, the insights pane (a Claude
 Code mod), the offline HTML dashboard and manager report, the CI recorder
 (composite action + sample workflow), and a Figma REST client with a nightly
-live smoke test. The website is live at <https://ds-bridge.com>, deployed
-from `website/` via Cloudflare Pages. Planned work lives in
-[`TASKS.md`](./TASKS.md).
+live smoke test. The website is live at <https://ds-bridge.com>.
 
 License: [MIT](./LICENSE)

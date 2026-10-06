@@ -39,10 +39,9 @@ npm-debug.log*
 # (tsconfig.mod.json reads them); regenerated per Claude Code build, never committed.
 .claude-plugin/types/
 
-# Next.js (website/)
-website/.next/
-website/out/
-website/node_modules/
-
 # ds-bridge CLI state (test/capture residue in this dev repo; user projects commit theirs)
 .ds-bridge/
+
+# Private working material — specs, plans, task trackers, brand/marketing assets and
+# the marketing website. Kept locally under docs/internal/, never published.
+docs/internal/

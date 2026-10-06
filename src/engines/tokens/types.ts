@@ -1,6 +1,6 @@
 // T1.1 — FROZEN CONTRACT for the parser trio (T1.2 W3C, T1.3 Tokens Studio,
 // T1.4 Style Dictionary). All three parsers emit this normalized model.
-// Changing this file mid-trio breaks parallel work — coordinate via TASKS.md.
+// Changing this file mid-trio breaks parallel work.
 
 /** Token categories the engines reason about. Parsers map source types onto these. */
 export type TokenType =
