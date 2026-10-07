@@ -10031,6 +10031,13 @@ function buildFrameImplementability(latest) {
 }
 
 // src/engines/history/readiness-frames.ts
+function isBlockedHandoff(record) {
+  const blockers = record.blockers;
+  return typeof blockers === "number" && blockers > 0;
+}
+function handoffPasses(record, score, threshold) {
+  return score >= threshold && !isBlockedHandoff(record);
+}
 function str(value2) {
   return typeof value2 === "string" && value2 !== "" ? value2 : void 0;
 }
@@ -10082,8 +10089,9 @@ function readinessByFrame(records, threshold) {
       latest: score,
       ...at !== void 0 ? { at } : {},
       runs: (prev?.runs ?? 0) + 1,
-      passes: (prev?.passes ?? 0) + (score >= threshold ? 1 : 0),
-      passRate: 0
+      passes: (prev?.passes ?? 0) + (handoffPasses(record, score, threshold) ? 1 : 0),
+      passRate: 0,
+      ...isBlockedHandoff(record) ? { blocked: true } : {}
     };
     rows.set(key, row2);
   }
@@ -10115,19 +10123,21 @@ function buildFrameReadinessTrend(records, threshold, opts = {}) {
       latest: score,
       first: score,
       runs: 0,
-      byDate: /* @__PURE__ */ new Map()
+      byDate: /* @__PURE__ */ new Map(),
+      blocked: false
     };
     row2.frameName = str2(record.frameName) ?? row2.frameName;
     if (fileKey !== void 0) row2.fileKey = fileKey;
     if (nodeId !== void 0) row2.nodeId = nodeId;
     row2.latest = score;
+    row2.blocked = isBlockedHandoff(record);
     row2.runs += 1;
     if (at !== void 0) row2.byDate.set(at.slice(0, 10), score);
     frames.set(key, row2);
   }
   if (frames.size === 0) return void 0;
   const rows = [...frames.values()].map(
-    ({ byDate, ...row2 }) => ({
+    ({ byDate, blocked, ...row2 }) => ({
       key: row2.key,
       frameName: row2.frameName,
       ...row2.fileKey !== void 0 ? { fileKey: row2.fileKey } : {},
@@ -10137,7 +10147,7 @@ function buildFrameReadinessTrend(records, threshold, opts = {}) {
       first: row2.first,
       delta: row2.latest - row2.first,
       runs: row2.runs,
-      passing: row2.latest >= threshold
+      passing: row2.latest >= threshold && !blocked
     })
   );
   rows.sort(
@@ -11590,8 +11600,9 @@ function buildHandoffPassRate(records, threshold) {
   const keyOf = frameKeyResolver(records);
   for (const { kind, at, record } of records) {
     if (kind !== "handoff") continue;
-    const score = record.score;
-    if (typeof score !== "number" || !Number.isFinite(score)) continue;
+    const recorded = record.score;
+    if (typeof recorded !== "number" || !Number.isFinite(recorded)) continue;
+    const score = isBlockedHandoff(record) ? Number.NEGATIVE_INFINITY : recorded;
     const key = keyOf(record);
     latest.set(key, score);
     if (at !== void 0) dated.push({ date: at.slice(0, 10), key, score });
@@ -17113,7 +17124,9 @@ function renderTerm6(impl, color) {
       )
     );
     if (impl.gapCount > impl.topGaps.length) {
-      lines.push(`\u2026 ${impl.gapCount - impl.topGaps.length} more (--format=json)`);
+      lines.push(
+        `\u2026 ${impl.gapCount - impl.topGaps.length} more (--format=json)`
+      );
     }
   }
   return lines.join("\n");
@@ -17252,10 +17265,11 @@ import { join as join18 } from "path";
 import { cwd as cwd2 } from "process";
 
 // src/engines/handoff/score.ts
-var WEIGHT_BINDING = 40;
-var WEIGHT_AUTO_LAYOUT = 25;
+var WEIGHT_BINDING = 35;
+var WEIGHT_AUTO_LAYOUT = 20;
 var WEIGHT_COMPONENT = 20;
-var WEIGHT_NAMING = 15;
+var WEIGHT_TYPOGRAPHY = 15;
+var WEIGHT_NAMING = 10;
 var BINDING_DEDUCTION_LIMIT = 10;
 var DEFAULT_NAME = /^(Frame|Rectangle|Group|Ellipse|Vector|Text) \d+$/;
 var MULTI_WORD_PASCAL = /^[A-Z][a-z0-9]+(?:[A-Z][A-Za-z0-9]*)+$/;
@@ -17292,6 +17306,18 @@ var FIX_AUTO_LAYOUT = "Add auto layout";
 var FIX_COMPONENT = "Reattach to the published component or rename";
 var fixDeprecated = (name) => `Swap to the current component \u2014 "${name}" is deprecated`;
 var FIX_NAMING = "Rename meaningfully";
+var FIX_TYPOGRAPHY = "Apply a text style (or bind its type variables)";
+var TYPE_VARIABLES = ["fontSize", "fontFamily"];
+function isTypedText(node) {
+  const style = node.styles?.text;
+  if (typeof style === "string" && style !== "") return true;
+  const bound = node.boundVariables;
+  if (bound === void 0) return false;
+  return TYPE_VARIABLES.some((key) => {
+    const value2 = bound[key];
+    return Array.isArray(value2) ? value2.length > 0 : value2 !== void 0;
+  });
+}
 function isStyleable(node) {
   const hasFills = Array.isArray(node.fills) && node.fills.length > 0;
   const hasStrokes = Array.isArray(node.strokes) && node.strokes.length > 0;
@@ -17364,6 +17390,9 @@ function scoreReadiness(root, options = {}) {
   const deprecatedInstances = deprecated.length;
   const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
   const componentRatio = 1 - (detachedSuspects + deprecatedInstances) / componentDenominator;
+  const textNodes = nodes.filter((n) => n.type === "TEXT");
+  const untypedText = textNodes.filter((n) => !isTypedText(n));
+  const typedTextCoverage = textNodes.length === 0 ? 1 : 1 - untypedText.length / textNodes.length;
   const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
   const badNames = badNameNodes.length;
   const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
@@ -17418,6 +17447,19 @@ function scoreReadiness(root, options = {}) {
       });
     }
   }
+  if (untypedText.length > 0) {
+    const lost = WEIGHT_TYPOGRAPHY * (untypedText.length / textNodes.length);
+    const perNode = lost / untypedText.length;
+    for (const node of untypedText) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "typography",
+        points: perNode,
+        fix: FIX_TYPOGRAPHY
+      });
+    }
+  }
   if (badNames > 0) {
     const lost = WEIGHT_NAMING * (badNames / totalNodes);
     const perNode = lost / badNames;
@@ -17435,11 +17477,18 @@ function scoreReadiness(root, options = {}) {
     if (b.points !== a.points) return b.points - a.points;
     return a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0;
   });
-  const rawScore = WEIGHT_BINDING * boundCoverage + WEIGHT_AUTO_LAYOUT * autoLayoutCoverage + WEIGHT_COMPONENT * componentRatio + WEIGHT_NAMING * namingRatio;
+  const rawScore = WEIGHT_BINDING * boundCoverage + WEIGHT_AUTO_LAYOUT * autoLayoutCoverage + WEIGHT_COMPONENT * componentRatio + WEIGHT_TYPOGRAPHY * typedTextCoverage + WEIGHT_NAMING * namingRatio;
   const score = Math.min(100, Math.max(0, Math.round(rawScore)));
+  const blockers = deprecated.map(({ node, name }) => ({
+    nodeId: node.id,
+    nodeName: node.name,
+    reason: "deprecated-component",
+    fix: fixDeprecated(name)
+  })).sort((a, b) => a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0);
   return {
     score,
     deductions,
+    blockers,
     stats: {
       totalNodes,
       boundCoverage,
@@ -17447,6 +17496,8 @@ function scoreReadiness(root, options = {}) {
       instanceCount,
       detachedSuspects,
       deprecatedInstances,
+      textNodes: textNodes.length,
+      typedTextCoverage,
       badNames
     }
   };
@@ -17459,6 +17510,7 @@ var RULE_LABEL = {
   "var-binding": "Variable binding",
   "auto-layout": "Auto layout",
   component: "Component usage",
+  typography: "Typography",
   naming: "Naming"
 };
 var HISTORY_DEDUCTION_LIMIT = 3;
@@ -17471,7 +17523,8 @@ function appendHandoffHistory(report, frameName, frame) {
     frameName,
     fileKey: frame.fileKey,
     ...frame.nodeId !== void 0 ? { nodeId: frame.nodeId } : {},
-    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points }))
+    deductions: report.deductions.slice(0, HISTORY_DEDUCTION_LIMIT).map((d) => ({ rule: d.rule, points: d.points })),
+    ...report.blockers.length > 0 ? { blockers: report.blockers.length } : {}
   };
   appendHistoryRecord(stateDir, record);
 }
@@ -17512,9 +17565,9 @@ function ruleSeverity() {
   return "error";
 }
 function renderTerm7(report, threshold, color) {
-  const passed = report.score >= threshold;
+  const passed = gatePasses(report, threshold);
   const scoreSeverity = passed ? "ok" : "error";
-  const verdict = passed ? "PASS" : "BELOW THRESHOLD";
+  const verdict = passed ? "PASS" : report.blockers.length > 0 ? `BLOCKED (${report.blockers.length} blocker${report.blockers.length === 1 ? "" : "s"})` : "BELOW THRESHOLD";
   const scoreLine = severityColor(
     scoreSeverity,
     `Readiness ${report.score}/100 (threshold ${threshold}) \u2014 ${verdict}`,
@@ -17527,10 +17580,22 @@ function renderTerm7(report, threshold, color) {
     ["auto-layout coverage", `${Math.round(stats.autoLayoutCoverage * 100)}%`],
     ["instances", String(stats.instanceCount)],
     ["detached suspects", String(stats.detachedSuspects)],
+    ["styled text", `${Math.round(stats.typedTextCoverage * 100)}%`],
     ["default names", String(stats.badNames)]
   ];
   const statsTable = renderTable(["stat", "value"], statsRows, { color });
   const lines = [scoreLine, "", statsTable];
+  if (report.blockers.length > 0) {
+    const rows = report.blockers.map((b) => [
+      severityColor("error", `${b.nodeName} (${b.nodeId})`, { color }),
+      b.fix
+    ]);
+    lines.push(
+      "",
+      "Blockers \u2014 fail the gate whatever the score:",
+      renderTable(["node", "fix"], rows, { color })
+    );
+  }
   if (report.deductions.length > 0) {
     const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
     const rows = listed.map((d) => [
@@ -17551,19 +17616,30 @@ function renderTerm7(report, threshold, color) {
   }
   return lines.join("\n");
 }
+function gatePasses(report, threshold) {
+  return report.score >= threshold && report.blockers.length === 0;
+}
 function commentBody(report, threshold) {
-  const verdict = report.score >= threshold ? "passes" : "is below";
+  const verdict = report.blockers.length > 0 ? `is blocked (${report.blockers.length} deprecated component${report.blockers.length === 1 ? "" : "s"} in use) at` : report.score >= threshold ? "passes" : "is below";
   const header = `Handoff readiness: ${report.score}/100 \u2014 ${verdict} the ${threshold} threshold.`;
+  const blockerLines = report.blockers.map(
+    (b) => `\u2022 Blocker: ${b.nodeName} \u2014 ${b.fix}`
+  );
   if (report.deductions.length === 0) {
-    return `${header}
-No deductions \u2014 this frame is handoff-ready.`;
+    return [
+      header,
+      ...blockerLines,
+      ...blockerLines.length === 0 ? ["No deductions \u2014 this frame is handoff-ready."] : []
+    ].join("\n");
   }
   const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
   const lines = listed.map(
     (d) => `\u2022 ${RULE_LABEL[d.rule] ?? d.rule} (-${formatPoints(d.points)}): ${d.nodeName} \u2014 ${d.fix}`
   );
   const more = report.deductions.length > DEDUCTION_LIMIT ? [`\u2026 and ${report.deductions.length - DEDUCTION_LIMIT} more`] : [];
-  return [header, "Top deductions:", ...lines, ...more].join("\n");
+  return [header, ...blockerLines, "Top deductions:", ...lines, ...more].join(
+    "\n"
+  );
 }
 function resolveThreshold(flag, configDefault) {
   if (flag === void 0) return { kind: "ok", value: configDefault };
@@ -17703,7 +17779,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
       }
     }
   }
-  process.exitCode = report.score >= threshold.value ? 0 : 1;
+  process.exitCode = gatePasses(report, threshold.value) ? 0 : 1;
 }
 function registerHandoffCommand(program2) {
   program2.command("handoff").description("Score a Figma frame's pre-handoff machine-readability").argument("<url>", "Figma frame URL (file/design/proto, optional node-id)").option(
@@ -19654,6 +19730,14 @@ var SPACING_EXACT = /* @__PURE__ */ new Set([
   "bottom",
   "left"
 ]);
+function isRadiusProperty(property) {
+  return /^border(?:-?(?:top|bottom|start|end)-?(?:left|right|start|end))?-?radius$/i.test(
+    property
+  );
+}
+function isDimensionProperty(property) {
+  return isSpacingProperty(property) || isRadiusProperty(property);
+}
 function isSpacingProperty(property) {
   const lower = property.toLowerCase();
   if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
@@ -19702,7 +19786,7 @@ function blankComments(text2) {
   return out;
 }
 function* scanValue(value2, property) {
-  const spacing = isSpacingProperty(property);
+  const spacing = isDimensionProperty(property);
   let i = 0;
   while (i < value2.length) {
     const rest = value2.slice(i);
@@ -19855,7 +19939,7 @@ function extractTsx(source, file) {
           }
         }
       } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
-        if (isSpacingProperty(property)) {
+        if (isDimensionProperty(property)) {
           const num4 = Number.parseFloat(rawValue);
           if (Number.isFinite(num4) && num4 !== 0) {
             const pos = indexToLineCol(source, absValueIndex);
@@ -20172,6 +20256,26 @@ function matchDimension(literal, index) {
   );
   return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT2) };
 }
+var RADIUS_TOKEN = /(radius|corner|rounded)/i;
+var radiusScaleCache = /* @__PURE__ */ new WeakMap();
+function hasRadiusScale(index) {
+  const cached = radiusScaleCache.get(index);
+  if (cached !== void 0) return cached;
+  let found = false;
+  for (const token of index.byName.values()) {
+    if (token.type === "dimension" && RADIUS_TOKEN.test(token.name)) {
+      found = true;
+      break;
+    }
+  }
+  radiusScaleCache.set(index, found);
+  return found;
+}
+function isLintable(literal, index) {
+  if (literal.valueKind !== "dimension") return true;
+  if (!isRadiusProperty(literal.property)) return true;
+  return hasRadiusScale(index);
+}
 function matchLiteral(literal, index, options) {
   return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
 }
@@ -20353,6 +20457,7 @@ function lintFile(absPath, relPath, tokens) {
   const literals = extractLiterals({ path: relPath, content });
   const findings = [];
   for (const literal of literals) {
+    if (!isLintable(literal, tokens.index)) continue;
     const match = matchLiteral(literal, tokens.index, {
       compositeColors: tokens.compositeColors
     });
@@ -21956,7 +22061,9 @@ function buildHeadline(input) {
   const frames = input.frames ?? [];
   if (frames.length > 0) {
     headline2.handoff = {
-      ready: frames.filter((f3) => f3.latest >= input.readinessThreshold).length,
+      ready: frames.filter(
+        (f3) => f3.latest >= input.readinessThreshold && f3.blocked !== true
+      ).length,
       frames: frames.length
     };
   }
@@ -22001,12 +22108,14 @@ function buildRisks(input, frames, stale, never) {
       text: `Design debt is ${debt.level} at ${debt.pct}/100${largest !== void 0 ? ` (largest: ${largest})` : ""}`
     });
   }
-  const below = frames.filter((f3) => f3.latest < input.readinessThreshold);
+  const below = frames.filter(
+    (f3) => f3.latest < input.readinessThreshold || f3.blocked === true
+  );
   const lowest = below[0];
   if (lowest !== void 0) {
     out.push({
       rank: 2,
-      text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`
+      text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar${below.some((f3) => f3.blocked === true) ? " or blocked by a deprecated component" : ""} (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`
     });
   }
   const consistency = input.consistency;
@@ -22093,8 +22202,14 @@ function buildActions(input, frames, stale, never) {
       text: `Resolve the ${drift} breaking token ${plural(drift, "change", "changes")} (run ds-bridge tokens check)`
     });
   }
+  const blocked = frames.find((f3) => f3.blocked === true);
   const lowest = frames.find((f3) => f3.latest < input.readinessThreshold);
-  if (lowest !== void 0) {
+  if (blocked !== void 0) {
+    out.push({
+      rank: 2,
+      text: `Swap the deprecated component in "${frameLabel(blocked)}" \u2014 it blocks handoff (run ds-bridge handoff)`
+    });
+  } else if (lowest !== void 0) {
     out.push({
       rank: 2,
       text: `Raise handoff readiness of "${frameLabel(lowest)}" from ${lowest.latest} to ${input.readinessThreshold}+ (run ds-bridge handoff)`
