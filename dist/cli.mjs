@@ -8683,6 +8683,39 @@ import { existsSync as existsSync3, readFileSync as readFileSync3, statSync as s
 import { dirname as dirname2, join as join4, resolve as resolve5 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
+// src/engines/registry/parts.ts
+function compoundParent(entry, all) {
+  let parent;
+  for (const other of all) {
+    if (other.importPath !== entry.importPath || other.name === entry.name) {
+      continue;
+    }
+    const next = entry.name.charAt(other.name.length);
+    if (!entry.name.startsWith(other.name) || !/[A-Z]/.test(next)) continue;
+    if (parent === void 0 || other.name.length > parent.length) {
+      parent = other.name;
+    }
+  }
+  return parent;
+}
+function codeExports(registry) {
+  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const unmatched = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
+  return [
+    ...matches.map((m) => ({ name: m.codeName, importPath: m.importPath })),
+    ...unmatched.map((u) => ({ name: u.name, importPath: u.importPath }))
+  ];
+}
+function componentOf(entry, all) {
+  let name = entry.name;
+  for (let guard = 0; guard < 8; guard += 1) {
+    const parent = compoundParent({ name, importPath: entry.importPath }, all);
+    if (parent === void 0) return name;
+    name = parent;
+  }
+  return name;
+}
+
 // src/engines/registry/coverage.ts
 var UNCOVERED_CAP = 20;
 function byNameAsc(a, b) {
@@ -8695,19 +8728,22 @@ function computeCoverage(registry, usage) {
       importedNames.add(u.codeName);
     }
   }
-  const codeNames = /* @__PURE__ */ new Set();
-  for (const m of registry.matches) codeNames.add(m.codeName);
-  for (const u of registry.unmatchedCode) codeNames.add(u.name);
+  const exports = codeExports(registry);
+  const members = /* @__PURE__ */ new Map();
+  for (const entry of exports) {
+    const component = componentOf(entry, exports);
+    members.set(component, [...members.get(component) ?? [], entry.name]);
+  }
   let imported = 0;
   const uncovered = [];
-  for (const name of codeNames) {
-    if (importedNames.has(name)) imported += 1;
-    else uncovered.push(name);
+  for (const [component, names] of members) {
+    if (names.some((name) => importedNames.has(name))) imported += 1;
+    else uncovered.push(component);
   }
   uncovered.sort(byNameAsc);
   return {
     imported,
-    total: codeNames.size,
+    total: members.size,
     uncovered: uncovered.slice(0, UNCOVERED_CAP),
     uncoveredTotal: uncovered.length
   };
@@ -9142,6 +9178,31 @@ import { readFileSync as readFileSync7 } from "fs";
 import { basename, join as join8, resolve as resolve6 } from "path";
 
 // src/engines/figma/library-health.ts
+var LAYOUT_ONLY_FIELDS = /* @__PURE__ */ new Set([
+  "width",
+  "height",
+  "x",
+  "y",
+  "size",
+  "relativeTransform",
+  "constraints",
+  "layoutAlign",
+  "layoutGrow",
+  "layoutPositioning",
+  "layoutSizingHorizontal",
+  "layoutSizingVertical",
+  "primaryAxisSizingMode",
+  "counterAxisSizingMode",
+  "minWidth",
+  "maxWidth",
+  "minHeight",
+  "maxHeight"
+]);
+function isDesignOverride(override) {
+  const fields = override.overriddenFields;
+  if (!Array.isArray(fields) || fields.length === 0) return true;
+  return fields.some((field) => !LAYOUT_ONLY_FIELDS.has(field));
+}
 var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
 var CAP = 20;
 function componentNameOf(file, componentId) {
@@ -9182,7 +9243,7 @@ function assessLibraryHealth(file, opts) {
     const isInstance = node.type === "INSTANCE";
     if (isInstance) {
       const overrides = node.overrides;
-      const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
+      const overrideCount = Array.isArray(overrides) ? overrides.filter(isDesignOverride).length : 0;
       if (overrideCount > 0) {
         const componentName = componentNameOf(file, node.componentId);
         hotspots.push({
@@ -9257,22 +9318,8 @@ function buildParity(registry) {
   const matches = Array.isArray(registry?.matches) ? registry.matches : [];
   const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
   const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
-  const codeSide = [
-    ...matches.map((m) => ({ name: m.codeName, importPath: m.importPath })),
-    ...unmatchedCode.map((u) => ({ name: u.name, importPath: u.importPath }))
-  ];
-  const parentOf = (name, importPath) => {
-    let parent;
-    for (const other of codeSide) {
-      if (other.importPath !== importPath || other.name === name) continue;
-      const next = name.charAt(other.name.length);
-      if (!name.startsWith(other.name) || !/[A-Z]/.test(next)) continue;
-      if (parent === void 0 || other.name.length > parent.length) {
-        parent = other.name;
-      }
-    }
-    return parent;
-  };
+  const codeSide = codeExports(registry);
+  const parentOf = (name, importPath) => compoundParent({ name, importPath }, codeSide);
   const partsByParent = /* @__PURE__ */ new Map();
   const isPart = /* @__PURE__ */ new Set();
   for (const entry of unmatchedCode) {
@@ -19668,14 +19715,36 @@ function indexToLineCol(source, index) {
 }
 var QUOTED_COLOR_RE = /(["'])(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)"']*\))\1/g;
 var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
+function styleRegions(source) {
+  const regions = [];
+  const styleOpen = /style\s*=\s*\{\{/g;
+  for (const open of source.matchAll(styleOpen)) {
+    const start = (open.index ?? 0) + open[0].length;
+    const close = source.indexOf("}}", start);
+    regions.push({
+      kind: "style-object",
+      start,
+      end: close === -1 ? source.length : close
+    });
+  }
+  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
+  for (const open of source.matchAll(styledOpen)) {
+    const start = (open.index ?? 0) + open[0].length;
+    const close = source.indexOf("`", start);
+    regions.push({
+      kind: "styled-template",
+      start,
+      end: close === -1 ? source.length : close
+    });
+  }
+  return regions;
+}
 function extractTsx(source, file) {
   const out = [];
-  const styleOpen = /style\s*=\s*\{\{/g;
-  let so = styleOpen.exec(source);
-  while (so !== null) {
-    const bodyStart = so.index + so[0].length;
-    const close = source.indexOf("}}", bodyStart);
-    const body = source.slice(bodyStart, close === -1 ? source.length : close);
+  for (const region of styleRegions(source)) {
+    if (region.kind !== "style-object") continue;
+    const bodyStart = region.start;
+    const body = source.slice(region.start, region.end);
     STYLE_OBJ_PROP_RE.lastIndex = 0;
     let pm = STYLE_OBJ_PROP_RE.exec(body);
     while (pm !== null) {
@@ -19746,15 +19815,11 @@ function extractTsx(source, file) {
       }
       pm = STYLE_OBJ_PROP_RE.exec(body);
     }
-    so = styleOpen.exec(source);
   }
-  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
-  let st = styledOpen.exec(source);
-  while (st !== null) {
-    const backtickIndex = st.index + st[0].length - 1;
-    const bodyStart = backtickIndex + 1;
-    const close = source.indexOf("`", bodyStart);
-    const body = source.slice(bodyStart, close === -1 ? source.length : close);
+  for (const region of styleRegions(source)) {
+    if (region.kind !== "styled-template") continue;
+    const bodyStart = region.start;
+    const body = source.slice(region.start, region.end);
     const pos = indexToLineCol(source, bodyStart);
     const cssHits = extractCss(body, pos.line, pos.col - 1);
     for (const hit of cssHits) {
@@ -19768,7 +19833,6 @@ function extractTsx(source, file) {
         context: "styled-template"
       });
     }
-    st = styledOpen.exec(source);
   }
   return out;
 }
@@ -19815,6 +19879,15 @@ function countTokenRefs(css) {
   const refRe = /\bvar\s*\(\s*--[\w-]+/gi;
   let count = 0;
   while (refRe.exec(masked) !== null) count += 1;
+  return count;
+}
+function countInlineStyleTokenRefs(source) {
+  const refRe = /\bvar\s*\(\s*--[\w-]+/gi;
+  let count = 0;
+  for (const region of styleRegions(source)) {
+    const body = source.slice(region.start, region.end);
+    count += [...body.matchAll(refRe)].length;
+  }
   return count;
 }
 var BY_DIRECTORY_CAP = 20;
@@ -19920,13 +19993,32 @@ function applyEdits(content, edits) {
 var COLOR_NEAR_DELTA_E2 = 2.5;
 var DIMENSION_NEAR_PX2 = 1;
 var NEAR_LIMIT2 = 3;
-function pickPreferred2(tokens) {
+function pickPreferred2(tokens, property) {
   if (tokens.length === 0) return void 0;
+  const role = propertyRole(property);
+  const candidates = role === void 0 ? tokens : tokens.filter((t) => isForegroundToken(t.name) === (role === "fg"));
+  const pool = candidates.length > 0 ? candidates : tokens;
   const names = new Set(tokens.map((t) => t.name));
-  const semantic = tokens.find(
+  const semantic = pool.find(
     (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
   );
-  return semantic ?? tokens[0];
+  return semantic ?? pool[0];
+}
+function propertyRole(property) {
+  if (property === void 0) return void 0;
+  const p4 = property.replace(/-/g, "").toLowerCase();
+  if (/^(?:color|caretcolor|textdecorationcolor|webkittextfillcolor)$/.test(p4)) {
+    return "fg";
+  }
+  if (/^(?:background|border|outline|boxshadow|columnrule)/.test(p4)) {
+    return "bg";
+  }
+  return void 0;
+}
+function isForegroundToken(name) {
+  return /(^|[.\-/])(?:foreground|fg|text|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
+    name
+  );
 }
 function aliasRank(token) {
   return token.aliasOf !== void 0 ? 0 : 1;
@@ -19944,7 +20036,7 @@ function matchColor(literal, index, options) {
   if (canonical3 === void 0) return { kind: "off-system" };
   const exact = index.byValue.get(canonical3);
   if (exact !== void 0 && exact.length > 0) {
-    const token = pickPreferred2(exact);
+    const token = pickPreferred2(exact, literal.property);
     if (token !== void 0) return { kind: "exact", token };
   }
   const composite = options?.compositeColors?.get(canonical3);
@@ -20039,17 +20131,17 @@ function countByKind(findings) {
   return byKind;
 }
 function computeAdoption(files, findings) {
-  const cssFiles = files.filter((f3) => isCssLike(f3.rel));
+  const scoped = files.filter((f3) => isCssLike(f3.rel) || isJsxLike(f3.rel));
   const literalsByFile = /* @__PURE__ */ new Map();
   for (const finding of findings) {
     const rel2 = finding.literal.file;
-    if (!isCssLike(rel2)) continue;
     literalsByFile.set(rel2, (literalsByFile.get(rel2) ?? 0) + 1);
   }
-  const perFile = cssFiles.map((file) => {
+  const perFile = scoped.map((file) => {
     let refs = 0;
     try {
-      refs = countTokenRefs(readFileSync19(file.abs, "utf8"));
+      const text2 = readFileSync19(file.abs, "utf8");
+      refs = isCssLike(file.rel) ? countTokenRefs(text2) : countInlineStyleTokenRefs(text2);
     } catch {
       refs = 0;
     }
@@ -20065,6 +20157,10 @@ function computeAdoption(files, findings) {
     literals: tally3.totals.literals,
     byDirectory: tally3.byDirectory
   };
+}
+function isJsxLike(path) {
+  const lower = path.toLowerCase();
+  return lower.endsWith(".tsx") || lower.endsWith(".jsx");
 }
 function isCssLike(path) {
   const lower = path.toLowerCase();
@@ -20459,7 +20555,7 @@ function registerLintCommand(program2) {
     if (!isFile) {
       const adoption = computeAdoption(files, linted.findings);
       appendLintHistory(projectDir, linted.findings, files);
-      if (format === "term") emitAdoptionSummary(adoption, linted.findings);
+      if (format === "term") emitAdoptionSummary(adoption);
     }
     process.exitCode = linted.findings.length > 0 ? 1 : 0;
   });
@@ -20472,15 +20568,11 @@ function toRelative(targetDir, abs2) {
   const rel2 = relative(targetDir, abs2);
   return rel2.split(sep3).join("/");
 }
-function emitAdoptionSummary(adoption, findings) {
+function emitAdoptionSummary(adoption) {
   const total = adoption.refs + adoption.literals;
   const pct5 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
-  const outside = findings.filter(
-    (f3) => /\.(?:tsx|jsx)$/i.test(f3.literal.file)
-  ).length;
-  const note = outside === 0 ? "" : ` \xB7 ${outside} finding${outside === 1 ? "" : "s"} in .tsx/.jsx not counted`;
   process.stdout.write(
-    `on-system: ${pct5}% of css/scss values (${adoption.refs} token refs / ${total})${note}
+    `on-system: ${pct5}% of css/scss + inline style values (${adoption.refs} token refs / ${total})
 `
   );
 }
@@ -20530,7 +20622,7 @@ function runFix(files, tokens, findings, historyDir) {
   if (historyDir !== void 0) {
     const adoption = computeAdoption(files, relinted.findings);
     appendLintHistory(historyDir, relinted.findings, files);
-    emitAdoptionSummary(adoption, relinted.findings);
+    emitAdoptionSummary(adoption);
   }
   process.exitCode = hasRemaining ? 1 : 0;
 }
@@ -23236,7 +23328,7 @@ function adoptionTrendSection(data) {
     "Adoption trend",
     [
       `<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE2[1]] })}</div>`,
-      `<div class="meta">On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)</div>`
+      `<div class="meta">On-system % over ${dateRange} \xB7 css/scss + inline style values (var(--\u2026) vs literals)</div>`
     ].join("")
   );
 }
@@ -23288,7 +23380,7 @@ function leaderboardSection(data) {
   return panel(
     "Adoption leaderboard",
     [
-      `<div class="meta">On-system % by directory, worst-first \xB7 css/scss values only</div>`,
+      `<div class="meta">On-system % by directory, worst-first \xB7 css/scss + inline style values</div>`,
       `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
       labels
     ].join("")
@@ -23772,7 +23864,7 @@ function ownershipLeaderboardSection(data) {
   return panel(
     "Ownership leaderboard",
     [
-      `<div class="meta">On-system % by owner, worst-first \xB7 css/scss values only</div>`,
+      `<div class="meta">On-system % by owner, worst-first \xB7 css/scss + inline style values</div>`,
       `<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
       labels
     ].join("")
@@ -24799,7 +24891,7 @@ function adoptionTrendTerminalSection(data, _color) {
   const dateRange = `${trend[0]?.date ?? ""} \u2192 ${trend[trend.length - 1]?.date ?? ""}`;
   const body = [
     `on-system %  ${spark}`,
-    `On-system % over ${dateRange} \xB7 css/scss values only (var(--\u2026) vs literals)`
+    `On-system % over ${dateRange} \xB7 css/scss + inline style values (var(--\u2026) vs literals)`
   ].join("\n");
   return panel2("Adoption trend", body);
 }
@@ -24839,7 +24931,9 @@ function leaderboardTerminalSection(data, color) {
     value: onSystemPct4(row2.refs, row2.literals)
   }));
   const lines = [];
-  lines.push("On-system % by directory, worst-first \xB7 css/scss values only");
+  lines.push(
+    "On-system % by directory, worst-first \xB7 css/scss + inline style values"
+  );
   lines.push(renderBarChart(bars, { width: 24, color }));
   return panel2("Adoption leaderboard", lines.join("\n"));
 }
@@ -25031,7 +25125,7 @@ function ownershipLeaderboardTerminalSection(data, color) {
     (row2) => `${row2.owner}: ${row2.pct}% \xB7 ${row2.refs} refs / ${row2.literals} literals`
   ).join("\n");
   const body = [
-    "On-system % by owner, worst-first \xB7 css/scss values only",
+    "On-system % by owner, worst-first \xB7 css/scss + inline style values",
     renderBarChart(bars, { width: 24, color }),
     labels
   ].join("\n");
