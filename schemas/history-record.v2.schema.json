@@ -1,0 +1,67 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "ds-bridge history record v2 (one line of .ds-bridge/history.jsonl)",
+	"description": "One v2 history line (SPEC-history-v2 §2): the envelope keys, then the kind's payload keys verbatim. A line without `v` is v1 (not covered). The payload is open by design (each kind has its own fields); `history export` flattens it to rows.",
+	"type": "object",
+	"required": ["v", "at", "kind", "source", "git", "tool"],
+	"properties": {
+		"v": {
+			"const": 2
+		},
+		"at": {
+			"type": "string",
+			"description": "ISO instant."
+		},
+		"kind": {
+			"type": "string",
+			"description": "lint, tokens-check, a11y, handoff, adoption, parity, library-health, impact, changelog, frame-impl, score, …"
+		},
+		"source": {
+			"enum": ["local", "ci", "hook"],
+			"description": "`hook` is reserved (no shipped hook records history)."
+		},
+		"git": {
+			"anyOf": [
+				{
+					"type": "null"
+				},
+				{
+					"type": "object",
+					"required": ["sha", "branch", "dirty"],
+					"properties": {
+						"sha": {
+							"type": "string"
+						},
+						"branch": {
+							"type": ["string", "null"]
+						},
+						"dirty": {
+							"type": "boolean"
+						}
+					}
+				}
+			]
+		},
+		"tool": {
+			"anyOf": [
+				{
+					"type": "null"
+				},
+				{
+					"type": "object",
+					"required": ["version"],
+					"properties": {
+						"version": {
+							"type": "string"
+						}
+					}
+				}
+			]
+		},
+		"runId": {
+			"type": "string",
+			"description": "Present only inside a `record` batch."
+		}
+	},
+	"additionalProperties": true
+}

@@ -1,0 +1,64 @@
+{
+	"name": "ds-bridge",
+	"version": "1.15.0",
+	"description": "Design-system analytics in Claude Code: measure adoption and health over time (recorded in CI, rolled up across repos, exported for BI), then find and fix what is off-system with token drift detection, DS-aware linting, design-to-code, and pre-handoff QA.",
+	"author": {
+		"name": "lucksy"
+	},
+	"userConfig": {
+		"figma_file_key": {
+			"type": "string",
+			"title": "Figma library file key",
+			"description": "Key from the library file URL",
+			"required": false
+		},
+		"figma_token": {
+			"type": "string",
+			"title": "Figma personal access token",
+			"description": "Dev/Full-seat PAT; scopes: file_content:read, library_content:read, file_versions:read, file_comments:read+write",
+			"sensitive": true
+		},
+		"token_source": {
+			"type": "file",
+			"title": "Design token source file",
+			"description": "W3C/Tokens Studio/Style Dictionary entry file. Auto-detected if unset"
+		},
+		"report_style": {
+			"type": "string",
+			"title": "Report output",
+			"description": "html | terminal | both",
+			"default": "both"
+		},
+		"readiness_threshold": {
+			"type": "number",
+			"title": "Handoff readiness gate",
+			"description": "Minimum readiness score (0-100) for /ds-bridge:handoff-qa to pass a frame",
+			"default": 80,
+			"min": 0,
+			"max": 100
+		},
+		"insights_palette": {
+			"type": "string",
+			"title": "Insights pane: chart palette",
+			"description": "Colours of the insights pane's charts in /ds-insights: harvest | nivo | echarts | ds-bridge | mono",
+			"default": "harvest",
+			"options": ["harvest", "nivo", "echarts", "ds-bridge", "mono"]
+		},
+		"insights_share_style": {
+			"type": "string",
+			"title": "Insights pane: share charts",
+			"description": "How the Desktop app draws the parts of a whole: donut | pie | bar",
+			"default": "donut",
+			"options": ["donut", "pie", "bar"]
+		},
+		"insights_corner_radius": {
+			"type": "number",
+			"title": "Insights pane: corner radius",
+			"description": "Rounding of bars and slices in the Desktop app's charts, in pixels",
+			"default": 4,
+			"min": 0,
+			"max": 12
+		}
+	},
+	"types": "./types/index.d.ts"
+}

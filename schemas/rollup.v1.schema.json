@@ -1,0 +1,279 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "ds-bridge rollup (rollup --format json)",
+	"description": "Output of `ds-bridge rollup --format json` (SPEC-rollup). Unmeasured values are absent, never 0. Additive changes keep schemaVersion 1. Objects are open; ds-bridge's tests check every emitted key is declared.",
+	"type": "object",
+	"required": [
+		"schema",
+		"schemaVersion",
+		"generatedAt",
+		"weights",
+		"aggregate",
+		"repos"
+	],
+	"properties": {
+		"schema": {
+			"const": "ds-bridge/rollup"
+		},
+		"schemaVersion": {
+			"const": 1
+		},
+		"generatedAt": {
+			"type": "string"
+		},
+		"weights": {
+			"const": "default"
+		},
+		"aggregate": {
+			"$ref": "#/$defs/Aggregate"
+		},
+		"repos": {
+			"type": "array",
+			"items": {
+				"$ref": "#/$defs/Repo"
+			}
+		}
+	},
+	"$defs": {
+		"Drift": {
+			"type": "object",
+			"required": ["stale", "missing", "orphan"],
+			"properties": {
+				"stale": {
+					"type": "number"
+				},
+				"missing": {
+					"type": "number"
+				},
+				"orphan": {
+					"type": "number"
+				}
+			}
+		},
+		"TrendPoint": {
+			"type": "object",
+			"required": ["date", "score"],
+			"properties": {
+				"date": {
+					"type": "string"
+				},
+				"score": {
+					"type": "number"
+				}
+			}
+		},
+		"Freshness": {
+			"type": "object",
+			"required": ["band", "staleKinds"],
+			"properties": {
+				"lastAt": {
+					"type": "string"
+				},
+				"ageDays": {
+					"type": "number"
+				},
+				"band": {
+					"enum": ["green", "amber", "red", "unknown"]
+				},
+				"staleKinds": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"Repo": {
+			"type": "object",
+			"required": [
+				"name",
+				"source",
+				"status",
+				"trend",
+				"freshness",
+				"history",
+				"notes"
+			],
+			"properties": {
+				"rank": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Rank by system score; absent for an unscored repo."
+				},
+				"name": {
+					"type": "string"
+				},
+				"source": {
+					"type": "string"
+				},
+				"team": {
+					"type": "string"
+				},
+				"status": {
+					"enum": ["ok", "no-data", "unavailable"]
+				},
+				"score": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100,
+					"description": "System score with the DEFAULT weights (like-for-like ranking)."
+				},
+				"trend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/TrendPoint"
+					}
+				},
+				"onSystem": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"onSystemCounts": {
+					"type": "object",
+					"required": ["refs", "literals"],
+					"properties": {
+						"refs": {
+							"type": "number"
+						},
+						"literals": {
+							"type": "number"
+						}
+					}
+				},
+				"contrast": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"drift": {
+					"$ref": "#/$defs/Drift"
+				},
+				"readiness": {
+					"type": "object",
+					"required": ["score", "frame"],
+					"properties": {
+						"score": {
+							"type": "number"
+						},
+						"frame": {
+							"type": "string"
+						}
+					}
+				},
+				"size": {
+					"type": "number",
+					"description": "Style values measured (refs + literals) — the repo's weight."
+				},
+				"freshness": {
+					"$ref": "#/$defs/Freshness"
+				},
+				"history": {
+					"type": "object",
+					"required": ["records", "v1", "v2", "corrupt"],
+					"properties": {
+						"records": {
+							"type": "number"
+						},
+						"v1": {
+							"type": "number"
+						},
+						"v2": {
+							"type": "number"
+						},
+						"corrupt": {
+							"type": "number"
+						}
+					}
+				},
+				"git": {
+					"type": "object",
+					"required": ["branch", "sha"],
+					"properties": {
+						"branch": {
+							"type": ["string", "null"]
+						},
+						"sha": {
+							"type": "string"
+						}
+					}
+				},
+				"toolVersion": {
+					"type": "string"
+				},
+				"notes": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"Team": {
+			"type": "object",
+			"required": ["team", "repos", "scored"],
+			"properties": {
+				"team": {
+					"type": "string"
+				},
+				"repos": {
+					"type": "number"
+				},
+				"scored": {
+					"type": "number"
+				},
+				"meanScore": {
+					"type": "number"
+				},
+				"weightedOnSystem": {
+					"type": "number"
+				}
+			}
+		},
+		"Aggregate": {
+			"type": "object",
+			"required": ["repos", "scored", "sized", "staleRepos"],
+			"properties": {
+				"repos": {
+					"type": "number"
+				},
+				"scored": {
+					"type": "number"
+				},
+				"sized": {
+					"type": "number"
+				},
+				"meanScore": {
+					"type": "number"
+				},
+				"weightedScore": {
+					"type": "number"
+				},
+				"meanOnSystem": {
+					"type": "number"
+				},
+				"weightedOnSystem": {
+					"type": "number"
+				},
+				"meanContrast": {
+					"type": "number"
+				},
+				"meanReadiness": {
+					"type": "number"
+				},
+				"drift": {
+					"$ref": "#/$defs/Drift"
+				},
+				"staleRepos": {
+					"type": "number"
+				},
+				"byTeam": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/Team"
+					}
+				}
+			}
+		}
+	}
+}

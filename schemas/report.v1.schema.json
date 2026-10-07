@@ -1,0 +1,1120 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "ds-bridge report (report --format json)",
+	"description": "Output of `ds-bridge report --format json` (SPEC-analytics-export §2). Additive changes keep schemaVersion 1; a removal or type change bumps it. Objects are deliberately open (no additionalProperties: false) so a newer ds-bridge's additive output still validates against this v1 schema; ds-bridge's own tests check that every field is documented.",
+	"type": "object",
+	"required": ["schema", "schemaVersion", "view", "artifacts", "data"],
+	"properties": {
+		"schema": {
+			"const": "ds-bridge/report"
+		},
+		"schemaVersion": {
+			"const": 1
+		},
+		"view": {
+			"type": ["string", "null"],
+			"description": "Resolved view label, or null for the default (everything)."
+		},
+		"artifacts": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"description": "Resolved artifact ids, in render order."
+		},
+		"data": {
+			"type": "object",
+			"description": "The full ReportData (src/engines/report/types.ts). Every section is optional: absent means not measured, never 0.",
+			"required": ["generatedAt", "project"],
+			"properties": {
+				"generatedAt": {
+					"type": "string",
+					"description": "ISO instant of the render (SOURCE_DATE_EPOCH pins it)."
+				},
+				"project": {
+					"type": "string",
+					"description": "The project directory's basename."
+				},
+				"systemScore": {
+					"$ref": "#/$defs/SystemScore"
+				},
+				"driftTrend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/DriftTrendPoint"
+					}
+				},
+				"lintSummary": {
+					"$ref": "#/$defs/LintSummary"
+				},
+				"readiness": {
+					"$ref": "#/$defs/Readiness"
+				},
+				"parity": {
+					"$ref": "#/$defs/Parity"
+				},
+				"a11y": {
+					"$ref": "#/$defs/A11ySummary"
+				},
+				"impact": {
+					"$ref": "#/$defs/ImpactSummary"
+				},
+				"adoptionTrend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/AdoptionTrendPoint"
+					}
+				},
+				"importCoverage": {
+					"$ref": "#/$defs/ImportCoverage"
+				},
+				"leaderboard": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/LeaderboardRow"
+					}
+				},
+				"libraryHealth": {
+					"$ref": "#/$defs/LibraryHealth"
+				},
+				"breakingCalendar": {
+					"$ref": "#/$defs/BreakingCalendar"
+				},
+				"changeFrequency": {
+					"$ref": "#/$defs/ChangeFrequency"
+				},
+				"targets": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/TargetVerdict"
+					}
+				},
+				"parityTrend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/ParityTrendPoint"
+					}
+				},
+				"componentHealth": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/ComponentHealthRow"
+					}
+				},
+				"libraryHealthTrend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/LibraryHealthTrendPoint"
+					}
+				},
+				"migrationChecklist": {
+					"$ref": "#/$defs/MigrationChecklist"
+				},
+				"scoreVelocity": {
+					"$ref": "#/$defs/ScoreVelocity"
+				},
+				"ownershipLeaderboard": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/OwnershipRow"
+					}
+				},
+				"audienceChangelog": {
+					"$ref": "#/$defs/AudienceChangelog"
+				},
+				"frameImplementability": {
+					"$ref": "#/$defs/FrameImplementability"
+				},
+				"releaseReadiness": {
+					"$ref": "#/$defs/ReleaseReadiness"
+				},
+				"dataFreshness": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/FreshnessRow"
+					}
+				},
+				"consistency": {
+					"$ref": "#/$defs/Consistency"
+				},
+				"debt": {
+					"$ref": "#/$defs/Debt"
+				},
+				"executive": {
+					"$ref": "#/$defs/Executive"
+				},
+				"libraryHotspotsTrend": {
+					"$ref": "#/$defs/LibraryHotspotsTrend"
+				},
+				"frameReadinessTrend": {
+					"$ref": "#/$defs/FrameReadinessTrend"
+				},
+				"handoffPassRate": {
+					"$ref": "#/$defs/HandoffPassRate"
+				}
+			}
+		}
+	},
+	"$defs": {
+		"IsoDate": {
+			"type": "string",
+			"description": "ISO date (YYYY-MM-DD) or ISO instant."
+		},
+		"SystemScore": {
+			"type": "object",
+			"description": "Weighted 0–100 composite replayed from history (SPEC-score).",
+			"required": ["current", "components", "trend"],
+			"properties": {
+				"current": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"components": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["kind", "score", "weight"],
+						"properties": {
+							"kind": {
+								"enum": [
+									"drift",
+									"lint",
+									"readiness",
+									"a11y",
+									"adoption",
+									"parity"
+								]
+							},
+							"score": {
+								"type": "number",
+								"minimum": 0,
+								"maximum": 100
+							},
+							"weight": {
+								"type": "number"
+							}
+						}
+					}
+				},
+				"trend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/ScorePoint"
+					}
+				}
+			}
+		},
+		"ScorePoint": {
+			"type": "object",
+			"required": ["date", "score"],
+			"properties": {
+				"date": {
+					"$ref": "#/$defs/IsoDate"
+				},
+				"score": {
+					"type": "number"
+				}
+			}
+		},
+		"DriftTrendPoint": {
+			"type": "object",
+			"required": ["date", "breaking", "additive", "cosmetic"],
+			"properties": {
+				"date": {
+					"$ref": "#/$defs/IsoDate"
+				},
+				"breaking": {
+					"type": "number"
+				},
+				"additive": {
+					"type": "number"
+				},
+				"cosmetic": {
+					"type": "number"
+				}
+			}
+		},
+		"LintSummary": {
+			"type": "object",
+			"required": ["byKind", "topOffenders"],
+			"properties": {
+				"byKind": {
+					"type": "object",
+					"required": ["exact", "near", "offSystem"],
+					"properties": {
+						"exact": {
+							"type": "number"
+						},
+						"near": {
+							"type": "number"
+						},
+						"offSystem": {
+							"type": "number"
+						}
+					}
+				},
+				"topOffenders": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["file", "count"],
+						"properties": {
+							"file": {
+								"type": "string"
+							},
+							"count": {
+								"type": "number"
+							}
+						}
+					}
+				}
+			}
+		},
+		"Readiness": {
+			"type": "object",
+			"required": ["score", "frameName", "deductions"],
+			"properties": {
+				"score": {
+					"type": "number"
+				},
+				"frameName": {
+					"type": "string"
+				},
+				"deductions": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["reason", "points"],
+						"properties": {
+							"reason": {
+								"type": "string"
+							},
+							"points": {
+								"type": "number"
+							}
+						}
+					}
+				}
+			}
+		},
+		"Parity": {
+			"type": "object",
+			"required": ["columns", "rows"],
+			"properties": {
+				"columns": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"rows": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["component", "cells"],
+						"properties": {
+							"component": {
+								"type": "string"
+							},
+							"cells": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"required": ["status"],
+									"properties": {
+										"status": {
+											"enum": [
+												"ok",
+												"missing-in-code",
+												"missing-in-figma",
+												"prop-mismatch"
+											]
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"A11ySummary": {
+			"type": "object",
+			"required": ["level", "modes"],
+			"properties": {
+				"level": {
+					"enum": ["AA", "AAA"]
+				},
+				"modes": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["mode", "passed", "failed"],
+						"properties": {
+							"mode": {
+								"type": "string"
+							},
+							"passed": {
+								"type": "number"
+							},
+							"failed": {
+								"type": "number"
+							}
+						}
+					}
+				}
+			}
+		},
+		"ImpactSummary": {
+			"type": "object",
+			"required": ["breaking", "additive", "cosmetic", "touchedCallSites"],
+			"properties": {
+				"breaking": {
+					"type": "number"
+				},
+				"additive": {
+					"type": "number"
+				},
+				"cosmetic": {
+					"type": "number"
+				},
+				"touchedCallSites": {
+					"type": "number"
+				}
+			}
+		},
+		"AdoptionTrendPoint": {
+			"type": "object",
+			"required": ["date", "pct"],
+			"properties": {
+				"date": {
+					"$ref": "#/$defs/IsoDate"
+				},
+				"pct": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				}
+			}
+		},
+		"ImportCoverage": {
+			"type": "object",
+			"required": ["imported", "total", "uncovered", "uncoveredTotal"],
+			"properties": {
+				"imported": {
+					"type": "number"
+				},
+				"total": {
+					"type": "number"
+				},
+				"uncovered": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"uncoveredTotal": {
+					"type": "number"
+				}
+			}
+		},
+		"LeaderboardRow": {
+			"type": "object",
+			"required": ["dir", "refs", "literals"],
+			"properties": {
+				"dir": {
+					"type": "string"
+				},
+				"refs": {
+					"type": "number"
+				},
+				"literals": {
+					"type": "number"
+				}
+			}
+		},
+		"LibraryHealth": {
+			"type": "object",
+			"required": [
+				"overrideHotspots",
+				"deprecatedUsage",
+				"detachedCandidates",
+				"totals"
+			],
+			"properties": {
+				"overrideHotspots": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["nodeId", "name", "overrideCount"],
+						"properties": {
+							"nodeId": {
+								"type": "string"
+							},
+							"name": {
+								"type": "string"
+							},
+							"componentName": {
+								"type": "string"
+							},
+							"overrideCount": {
+								"type": "number"
+							}
+						}
+					}
+				},
+				"deprecatedUsage": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["componentName", "count"],
+						"properties": {
+							"componentName": {
+								"type": "string"
+							},
+							"count": {
+								"type": "number"
+							}
+						}
+					}
+				},
+				"detachedCandidates": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["nodeId", "name", "heuristic"],
+						"properties": {
+							"nodeId": {
+								"type": "string"
+							},
+							"name": {
+								"type": "string"
+							},
+							"heuristic": {
+								"const": true
+							}
+						}
+					}
+				},
+				"totals": {
+					"type": "object",
+					"required": [
+						"overrideHotspots",
+						"deprecatedUsage",
+						"detachedCandidates"
+					],
+					"properties": {
+						"overrideHotspots": {
+							"type": "number"
+						},
+						"deprecatedUsage": {
+							"type": "number"
+						},
+						"detachedCandidates": {
+							"type": "number"
+						}
+					}
+				}
+			}
+		},
+		"BreakingCalendar": {
+			"type": "object",
+			"required": ["entries", "total"],
+			"properties": {
+				"entries": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["date", "source", "count"],
+						"properties": {
+							"date": {
+								"$ref": "#/$defs/IsoDate"
+							},
+							"source": {
+								"enum": ["tokens", "figma"]
+							},
+							"count": {
+								"type": "number"
+							},
+							"detail": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"total": {
+					"type": "number"
+				}
+			}
+		},
+		"ChangeFrequency": {
+			"type": "object",
+			"required": ["byKind"],
+			"properties": {
+				"byKind": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["kind", "count"],
+						"properties": {
+							"kind": {
+								"type": "string"
+							},
+							"count": {
+								"type": "number"
+							}
+						}
+					}
+				},
+				"windowFirst": {
+					"type": "string"
+				},
+				"windowLast": {
+					"type": "string"
+				}
+			}
+		},
+		"TargetVerdict": {
+			"type": "object",
+			"description": "measured is omitted when the metric was never recorded.",
+			"required": ["metric", "target", "op", "band"],
+			"properties": {
+				"metric": {
+					"type": "string"
+				},
+				"measured": {
+					"type": "number"
+				},
+				"target": {
+					"type": "number"
+				},
+				"op": {
+					"enum": [">=", "<=", "=="]
+				},
+				"band": {
+					"enum": ["green", "amber", "red", "unknown"]
+				}
+			}
+		},
+		"ParityTrendPoint": {
+			"type": "object",
+			"required": ["date", "pct"],
+			"properties": {
+				"date": {
+					"$ref": "#/$defs/IsoDate"
+				},
+				"pct": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				}
+			}
+		},
+		"ComponentHealthRow": {
+			"type": "object",
+			"required": ["component", "healthScore", "issues"],
+			"properties": {
+				"component": {
+					"type": "string"
+				},
+				"healthScore": {
+					"type": "number"
+				},
+				"issues": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"LibraryHealthTrendPoint": {
+			"type": "object",
+			"required": ["date", "overrides", "deprecated", "detached"],
+			"properties": {
+				"date": {
+					"$ref": "#/$defs/IsoDate"
+				},
+				"overrides": {
+					"type": "number"
+				},
+				"deprecated": {
+					"type": "number"
+				},
+				"detached": {
+					"type": "number"
+				}
+			}
+		},
+		"MigrationChecklist": {
+			"type": "object",
+			"required": ["sites", "truncated"],
+			"properties": {
+				"sites": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["file", "line", "subject", "from", "to"],
+						"properties": {
+							"file": {
+								"type": "string"
+							},
+							"line": {
+								"type": "number"
+							},
+							"subject": {
+								"type": "string"
+							},
+							"from": {
+								"type": "string"
+							},
+							"to": {
+								"type": "string"
+							}
+						}
+					}
+				},
+				"truncated": {
+					"type": "boolean"
+				}
+			}
+		},
+		"ScoreVelocity": {
+			"type": "object",
+			"required": ["delta", "windowDays", "direction", "regressionStreak"],
+			"properties": {
+				"delta": {
+					"type": "number"
+				},
+				"windowDays": {
+					"type": "number"
+				},
+				"direction": {
+					"enum": ["up", "down", "flat"]
+				},
+				"regressionStreak": {
+					"type": "number"
+				}
+			}
+		},
+		"OwnershipRow": {
+			"type": "object",
+			"required": ["owner", "refs", "literals", "pct"],
+			"properties": {
+				"owner": {
+					"type": "string"
+				},
+				"refs": {
+					"type": "number"
+				},
+				"literals": {
+					"type": "number"
+				},
+				"pct": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				}
+			}
+		},
+		"AudienceChangelog": {
+			"type": "object",
+			"required": ["slices"],
+			"properties": {
+				"slices": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": [
+							"audience",
+							"breaking",
+							"additive",
+							"cosmetic",
+							"recent"
+						],
+						"properties": {
+							"audience": {
+								"enum": ["designers", "developers"]
+							},
+							"breaking": {
+								"type": "number"
+							},
+							"additive": {
+								"type": "number"
+							},
+							"cosmetic": {
+								"type": "number"
+							},
+							"recent": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"FrameImplementability": {
+			"type": "object",
+			"required": ["pct", "resolved", "total", "gaps"],
+			"properties": {
+				"pct": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"resolved": {
+					"type": "number"
+				},
+				"total": {
+					"type": "number"
+				},
+				"gaps": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["reason", "count"],
+						"properties": {
+							"reason": {
+								"type": "string"
+							},
+							"count": {
+								"type": "number"
+							}
+						}
+					}
+				}
+			}
+		},
+		"ReleaseReadiness": {
+			"type": "object",
+			"required": ["go", "checks"],
+			"properties": {
+				"go": {
+					"type": "boolean"
+				},
+				"checks": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["name", "pass"],
+						"properties": {
+							"name": {
+								"type": "string"
+							},
+							"pass": {
+								"type": "boolean"
+							},
+							"detail": {
+								"type": "string"
+							}
+						}
+					}
+				}
+			}
+		},
+		"FreshnessRow": {
+			"type": "object",
+			"required": ["kind", "band"],
+			"properties": {
+				"kind": {
+					"type": "string"
+				},
+				"lastRun": {
+					"type": "string"
+				},
+				"ageDays": {
+					"type": "number"
+				},
+				"band": {
+					"enum": ["green", "amber", "red", "unknown"]
+				}
+			}
+		},
+		"Consistency": {
+			"type": "object",
+			"description": "AN1 consistency score (SPEC-analytics §2).",
+			"required": ["score", "components"],
+			"properties": {
+				"score": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"components": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["kind", "score", "weight"],
+						"properties": {
+							"kind": {
+								"enum": ["tokens", "components", "overrides"]
+							},
+							"score": {
+								"type": "number"
+							},
+							"weight": {
+								"type": "number"
+							}
+						}
+					}
+				}
+			}
+		},
+		"Debt": {
+			"type": "object",
+			"description": "AN2 design-debt rollup (SPEC-analytics §3).",
+			"required": ["pct", "level", "items"],
+			"properties": {
+				"pct": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"level": {
+					"enum": ["low", "medium", "high"]
+				},
+				"items": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": [
+							"kind",
+							"subject",
+							"count",
+							"weight",
+							"recommendation"
+						],
+						"properties": {
+							"kind": {
+								"enum": ["deprecated", "detached", "off-system", "duplicate"]
+							},
+							"subject": {
+								"type": "string"
+							},
+							"count": {
+								"type": "number"
+							},
+							"weight": {
+								"type": "number"
+							},
+							"recommendation": {
+								"type": "string"
+							}
+						}
+					}
+				}
+			}
+		},
+		"Executive": {
+			"type": "object",
+			"description": "AN3 executive rollup; each headline absent when not measured.",
+			"required": [],
+			"properties": {
+				"health": {
+					"type": "number"
+				},
+				"adoption": {
+					"type": "number"
+				},
+				"consistency": {
+					"type": "number"
+				},
+				"debt": {
+					"type": "number"
+				},
+				"trend": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/ScorePoint"
+					}
+				}
+			}
+		},
+		"LibraryHotspotsTrend": {
+			"type": "object",
+			"description": "F3 per-component library hygiene series from the stored top-N lists (SPEC-figma-trends §3.1). A null count is unknown (below the stored top-N), never zero.",
+			"required": ["dates", "rows"],
+			"properties": {
+				"dates": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/IsoDate"
+					}
+				},
+				"rows": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["signal", "name", "points", "latest", "status"],
+						"properties": {
+							"signal": {
+								"enum": ["overrides", "deprecated", "detached"]
+							},
+							"name": {
+								"type": "string"
+							},
+							"points": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"required": ["date", "count"],
+									"properties": {
+										"date": {
+											"$ref": "#/$defs/IsoDate"
+										},
+										"count": {
+											"type": ["number", "null"]
+										}
+									}
+								}
+							},
+							"first": {
+								"type": "number"
+							},
+							"latest": {
+								"type": ["number", "null"]
+							},
+							"delta": {
+								"type": "number"
+							},
+							"status": {
+								"enum": [
+									"new",
+									"rising",
+									"falling",
+									"flat",
+									"resolved",
+									"below-top"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		"FrameReadinessTrend": {
+			"type": "object",
+			"description": "F4 per-frame handoff readiness series (SPEC-figma-trends §3.2); failing frames first.",
+			"required": ["threshold", "total", "failing", "frames"],
+			"properties": {
+				"threshold": {
+					"type": "number"
+				},
+				"total": {
+					"type": "number"
+				},
+				"failing": {
+					"type": "number"
+				},
+				"frames": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": [
+							"key",
+							"frameName",
+							"points",
+							"latest",
+							"first",
+							"delta",
+							"runs",
+							"passing"
+						],
+						"properties": {
+							"key": {
+								"type": "string"
+							},
+							"frameName": {
+								"type": "string"
+							},
+							"fileKey": {
+								"type": "string"
+							},
+							"nodeId": {
+								"type": "string"
+							},
+							"points": {
+								"type": "array",
+								"items": {
+									"type": "object",
+									"required": ["date", "score"],
+									"properties": {
+										"date": {
+											"$ref": "#/$defs/IsoDate"
+										},
+										"score": {
+											"type": "number"
+										}
+									}
+								}
+							},
+							"latest": {
+								"type": "number"
+							},
+							"first": {
+								"type": "number"
+							},
+							"delta": {
+								"type": "number"
+							},
+							"runs": {
+								"type": "number"
+							},
+							"passing": {
+								"type": "boolean"
+							}
+						}
+					}
+				}
+			}
+		},
+		"HandoffPassRate": {
+			"type": "object",
+			"description": "F4 share of frames at/above the readiness gate, latest score per frame, with a cumulative day trend (SPEC-figma-trends §3.3).",
+			"required": ["threshold", "frames", "passing", "pct", "trend"],
+			"properties": {
+				"threshold": {
+					"type": "number"
+				},
+				"frames": {
+					"type": "number"
+				},
+				"passing": {
+					"type": "number"
+				},
+				"pct": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 100
+				},
+				"trend": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["date", "frames", "passing", "pct"],
+						"properties": {
+							"date": {
+								"$ref": "#/$defs/IsoDate"
+							},
+							"frames": {
+								"type": "number"
+							},
+							"passing": {
+								"type": "number"
+							},
+							"pct": {
+								"type": "number",
+								"minimum": 0,
+								"maximum": 100
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
