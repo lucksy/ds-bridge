@@ -30,7 +30,7 @@
 //     additionalContext carries whichever nudges apply (newline-joined), or stays
 //     silent when none do, and exits 0.
 //   • ANY error anywhere → exit 0, silent. NEVER lints, never spawns the CLI.
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 
 /** Conventional token-source basenames, in probe order. */
@@ -66,6 +66,27 @@ function fileMtimeMs(path) {
 }
 
 /**
+ * Newest mtime of the *.json files directly inside `dir` — a multi-file token
+ * set (Material's md.ref / md.sys.color.light / …dark files). One readdir, no
+ * walk. undefined when `dir` is not a directory or holds fewer than two.
+ */
+function tokenSetMtimeMs(dir) {
+	let names;
+	try {
+		names = readdirSync(dir).filter((n) => n.endsWith(".json"));
+	} catch {
+		return undefined;
+	}
+	if (names.length < 2) return undefined;
+	let newest;
+	for (const name of names) {
+		const ms = fileMtimeMs(join(dir, name));
+		if (ms !== undefined && (newest === undefined || ms > newest)) newest = ms;
+	}
+	return newest;
+}
+
+/**
  * Read `token_source` from <cwd>/.ds-bridge.json, resolved against cwd. Returns
  * undefined when the config is absent, unreadable, not JSON, or has no string
  * token_source. Stays cheap (one read of a small file) and never throws.
@@ -94,12 +115,13 @@ function configuredTokenSource(cwd) {
  *   1. .ds-bridge.json token_source (if it points at an existing file)
  *   2. <cwd>/<name> for each conventional name
  *   3. <cwd>/tokens/<name> for each conventional name
+ *   4. <cwd>/tokens/ itself when it holds a multi-file token set
  * Returns { path, mtimeMs } or undefined when nothing matches.
  */
 function findTokenSource(cwd) {
 	const configured = configuredTokenSource(cwd);
 	if (configured !== undefined) {
-		const mtimeMs = fileMtimeMs(configured);
+		const mtimeMs = fileMtimeMs(configured) ?? tokenSetMtimeMs(configured);
 		if (mtimeMs !== undefined) return { path: configured, mtimeMs };
 	}
 
@@ -114,6 +136,11 @@ function findTokenSource(cwd) {
 			const candidate = join(cwd, subdir, name);
 			const mtimeMs = fileMtimeMs(candidate);
 			if (mtimeMs !== undefined) return { path: candidate, mtimeMs };
+		}
+		// 4. A folder of token files read as one set.
+		const setMtimeMs = tokenSetMtimeMs(join(cwd, subdir));
+		if (setMtimeMs !== undefined) {
+			return { path: join(cwd, subdir), mtimeMs: setMtimeMs };
 		}
 	}
 
