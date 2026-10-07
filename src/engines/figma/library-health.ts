@@ -29,6 +29,8 @@ export interface OverrideHotspot {
 	name: string;
 	componentName?: string;
 	overrideCount: number;
+	/** The design fields overridden (fills, strokes…), sorted; omitted when unknown. */
+	fields?: string[];
 }
 
 export interface DeprecatedUsageGroup {
@@ -94,12 +96,34 @@ const LAYOUT_ONLY_FIELDS = new Set([
 	"maxHeight",
 ]);
 
-/** An override that changes how the instance looks or reads (not just its size). */
+/**
+ * Fields an instance overrides when someone types its text: the content and
+ * Figma's bookkeeping for it. A label typed into a Chip is using the
+ * component, not drifting from it.
+ */
+const TEXT_CONTENT_FIELDS = new Set([
+	"characters",
+	"characterStyleOverrides",
+	"styleOverrideTable",
+	"lineTypes",
+	"lineIndentations",
+]);
+
+/** The fields of an override that are drift: not layout, not text content. */
+function designFields(override: { overriddenFields?: string[] }): string[] {
+	const fields = override.overriddenFields ?? [];
+	return fields.filter(
+		(field) =>
+			!LAYOUT_ONLY_FIELDS.has(field) && !TEXT_CONTENT_FIELDS.has(field),
+	);
+}
+
+/** An override that changes how the instance looks (not its size or its text). */
 function isDesignOverride(override: { overriddenFields?: string[] }): boolean {
 	const fields = override.overriddenFields;
 	// No field list: count it, as before (older payloads omit the fields).
 	if (!Array.isArray(fields) || fields.length === 0) return true;
-	return fields.some((field) => !LAYOUT_ONLY_FIELDS.has(field));
+	return designFields(override).length > 0;
 }
 
 export const DEFAULT_DEPRECATED_PATTERN =
@@ -169,16 +193,19 @@ export function assessLibraryHealth(
 
 		if (isInstance) {
 			const overrides = node.overrides;
-			const overrideCount = Array.isArray(overrides)
-				? overrides.filter(isDesignOverride).length
-				: 0;
+			const drifted = Array.isArray(overrides)
+				? overrides.filter(isDesignOverride)
+				: [];
+			const overrideCount = drifted.length;
 			if (overrideCount > 0) {
 				const componentName = componentNameOf(file, node.componentId);
+				const fields = [...new Set(drifted.flatMap(designFields))].sort();
 				hotspots.push({
 					nodeId: node.id,
 					name: node.name,
 					...(componentName !== undefined ? { componentName } : {}),
 					overrideCount,
+					...(fields.length > 0 ? { fields } : {}),
 				});
 			}
 

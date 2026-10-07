@@ -19,6 +19,8 @@ export interface ComponentMatch {
 	nameScore: number;
 	/** Variant-shape similarity in [0, 1]. */
 	shapeScore: number;
+	/** Variant axes that still differ (see {@link variantGaps}); empty when none. */
+	variantGaps: string[];
 }
 
 /** A code component with no confident match, plus its ranked top candidates. */
@@ -101,10 +103,15 @@ function nameScore(codeName: string, figmaName: string): number {
 
 // ── Shape scoring ──
 
-/** Value-set Jaccard: |A∩B| / |A∪B|. Empty/empty -> 0 (no contribution). */
+/** Compare variant values case- and punctuation-insensitively (`Filled` = `filled`). */
+function normValue(value: string): string {
+	return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** Value-set Jaccard over normalized values: |A∩B| / |A∪B|. Empty/empty -> 0. */
 function valueJaccard(a: readonly string[], b: readonly string[]): number {
-	const setA = new Set(a);
-	const setB = new Set(b);
+	const setA = new Set(a.map(normValue));
+	const setB = new Set(b.map(normValue));
 	if (setA.size === 0 && setB.size === 0) return 0;
 	let intersection = 0;
 	for (const value of setA) {
@@ -114,55 +121,186 @@ function valueJaccard(a: readonly string[], b: readonly string[]): number {
 	return union === 0 ? 0 : intersection / union;
 }
 
-/** Index a variant record by normalized key for case-insensitive key matching. */
+/** One variant axis as declared: its display key and raw values. */
+interface Axis {
+	key: string;
+	values: string[];
+}
+
+/** Index a variant record by normalized key, keeping the first display key. */
 function normalizedKeyIndex(
 	variants: Record<string, string[]>,
-): Map<string, string[]> {
-	const index = new Map<string, string[]>();
+): Map<string, Axis> {
+	const index = new Map<string, Axis>();
 	for (const key of Object.keys(variants)) {
 		const values = variants[key] ?? [];
 		const norm = normalizeName(key);
 		const existing = index.get(norm);
 		if (existing === undefined) {
-			index.set(norm, [...values]);
+			index.set(norm, { key, values: [...values] });
 		} else {
-			existing.push(...values);
+			existing.values.push(...values);
 		}
 	}
 	return index;
 }
 
+/** A Figma axis naming interaction state, which code expresses as booleans / CSS. */
+const STATE_AXIS = new Set([
+	"state",
+	"states",
+	"interaction",
+	"interactionstate",
+]);
+
+/** Below this value agreement two differently named axes are not the same axis. */
+const AXIS_PAIR_THRESHOLD = 0.5;
+
+/** A code axis, a Figma axis, or both when they describe the same dimension. */
+interface AxisPair {
+	code?: Axis;
+	figma?: Axis;
+	agreement: number;
+}
+
 /**
- * shapeScore: overlap of variant dimensions. Both empty -> 0.5 (neutral, no
- * signal); exactly one empty -> 0.25; otherwise average the per-key value
- * Jaccard across the UNION of normalized keys (a key on only one side scores 0).
- * Figma true/false axes without a same-named code axis are ignored first.
+ * Pair the two sides' variant axes: same normalized key first, then remaining
+ * axes whose VALUES agree (Figma's `Style=Filled` is code's `variant: filled`).
+ * Figma true/false axes and a `State` axis without a same-named code axis are
+ * dropped first. Undefined when both sides end up empty.
  */
-function shapeScore(
+function pairAxes(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
-): number {
+): { pairs: AxisPair[]; codeEmpty: boolean; figmaEmpty: boolean } {
 	const codeIndex = normalizedKeyIndex(codeVariants);
 	const figmaIndex = normalizedKeyIndex(figmaVariants);
 	// A Figma axis of only true/false (`checked=true`) is how Figma models a
 	// boolean; in code it is a boolean prop, which is never a string variant —
 	// so it carries no shape signal unless code has a string axis of that name.
-	for (const [key, values] of figmaIndex) {
-		const boolean = values.every((v) => /^(?:true|false)$/i.test(v));
-		if (boolean && !codeIndex.has(key)) figmaIndex.delete(key);
+	for (const [key, axis] of figmaIndex) {
+		const boolean = axis.values.every((v) => /^(?:true|false)$/i.test(v));
+		if ((boolean || STATE_AXIS.has(key)) && !codeIndex.has(key)) {
+			figmaIndex.delete(key);
+		}
 	}
-	const codeEmpty = codeIndex.size === 0;
-	const figmaEmpty = figmaIndex.size === 0;
 
+	const pairs: AxisPair[] = [];
+	const codeLeft = new Map(codeIndex);
+	const figmaLeft = new Map(figmaIndex);
+	for (const [key, codeAxis] of codeIndex) {
+		const figmaAxis = figmaIndex.get(key);
+		if (figmaAxis === undefined) continue;
+		pairs.push({
+			code: codeAxis,
+			figma: figmaAxis,
+			agreement: valueJaccard(codeAxis.values, figmaAxis.values),
+		});
+		codeLeft.delete(key);
+		figmaLeft.delete(key);
+	}
+
+	const candidates: { c: string; f: string; agreement: number }[] = [];
+	for (const [c, codeAxis] of codeLeft) {
+		for (const [f, figmaAxis] of figmaLeft) {
+			const agreement = valueJaccard(codeAxis.values, figmaAxis.values);
+			if (agreement >= AXIS_PAIR_THRESHOLD)
+				candidates.push({ c, f, agreement });
+		}
+	}
+	candidates.sort((a, b) =>
+		a.agreement !== b.agreement
+			? b.agreement - a.agreement
+			: byNameAsc(`${a.c}\u0000${a.f}`, `${b.c}\u0000${b.f}`),
+	);
+	for (const { c, f, agreement } of candidates) {
+		const codeAxis = codeLeft.get(c);
+		const figmaAxis = figmaLeft.get(f);
+		if (codeAxis === undefined || figmaAxis === undefined) continue;
+		pairs.push({ code: codeAxis, figma: figmaAxis, agreement });
+		codeLeft.delete(c);
+		figmaLeft.delete(f);
+	}
+	for (const axis of codeLeft.values())
+		pairs.push({ code: axis, agreement: 0 });
+	for (const axis of figmaLeft.values())
+		pairs.push({ figma: axis, agreement: 0 });
+
+	return {
+		pairs,
+		codeEmpty: codeIndex.size === 0,
+		figmaEmpty: figmaIndex.size === 0,
+	};
+}
+
+/**
+ * shapeScore: overlap of variant dimensions. Both empty -> 0.5 (neutral, no
+ * signal); exactly one empty -> 0.25; otherwise average the per-axis value
+ * Jaccard across the paired axes (an axis on only one side scores 0).
+ */
+function shapeScore(
+	codeVariants: Record<string, string[]>,
+	figmaVariants: Record<string, string[]>,
+): number {
+	const { pairs, codeEmpty, figmaEmpty } = pairAxes(
+		codeVariants,
+		figmaVariants,
+	);
 	if (codeEmpty && figmaEmpty) return 0.5;
 	if (codeEmpty || figmaEmpty) return 0.25;
-
-	const keys = new Set<string>([...codeIndex.keys(), ...figmaIndex.keys()]);
 	let total = 0;
-	for (const key of keys) {
-		total += valueJaccard(codeIndex.get(key) ?? [], figmaIndex.get(key) ?? []);
+	for (const pair of pairs) total += pair.agreement;
+	return total / pairs.length;
+}
+
+/** Raw values of `a` whose normalized form `b` lacks, in declared order. */
+function missingFrom(a: readonly string[], b: readonly string[]): string[] {
+	const have = new Set(b.map(normValue));
+	return a.filter((v) => !have.has(normValue(v)));
+}
+
+/**
+ * The variant axes that still differ after pairing, as short readable lines:
+ * `size: Figma also has Extended`, `color: code only (primary|surface)`,
+ * `lines: code one|two|three ≠ Figma Lines 1|2|3`. Code-keyed lines first
+ * (by code key), then Figma-only axes (by Figma key).
+ */
+export function variantGaps(
+	codeVariants: Record<string, string[]>,
+	figmaVariants: Record<string, string[]>,
+): string[] {
+	const { pairs } = pairAxes(codeVariants, figmaVariants);
+	const codeKeyed: { key: string; line: string }[] = [];
+	const figmaOnly: { key: string; line: string }[] = [];
+	for (const { code, figma } of pairs) {
+		if (code !== undefined && figma === undefined) {
+			codeKeyed.push({
+				key: code.key,
+				line: `${code.key}: code only (${code.values.join("|")})`,
+			});
+		} else if (code === undefined && figma !== undefined) {
+			figmaOnly.push({
+				key: figma.key,
+				line: `${figma.key}: Figma only (${figma.values.join("|")})`,
+			});
+		} else if (code !== undefined && figma !== undefined) {
+			const extraFigma = missingFrom(figma.values, code.values);
+			const extraCode = missingFrom(code.values, figma.values);
+			if (extraFigma.length === 0 && extraCode.length === 0) continue;
+			const line =
+				extraCode.length === 0
+					? `${code.key}: Figma also has ${extraFigma.join("|")}`
+					: extraFigma.length === 0
+						? `${code.key}: code also has ${extraCode.join("|")}`
+						: `${code.key}: code ${code.values.join("|")} ≠ Figma ${figma.key} ${figma.values.join("|")}`;
+			codeKeyed.push({ key: code.key, line });
+		}
 	}
-	return total / keys.size;
+	const byKey = (a: { key: string }, b: { key: string }) =>
+		byNameAsc(a.key.toLowerCase(), b.key.toLowerCase());
+	return [...codeKeyed.sort(byKey), ...figmaOnly.sort(byKey)].map(
+		(g) => g.line,
+	);
 }
 
 // ── Combined scoring ──
@@ -318,6 +456,7 @@ export function matchComponents(
 			score: edge.parts.score,
 			nameScore: edge.parts.nameScore,
 			shapeScore: edge.parts.shapeScore,
+			variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps),
 		});
 	}
 

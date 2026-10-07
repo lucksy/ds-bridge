@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
 	type ComponentUsage,
+	mapCodeUsage,
 	mapUsage,
 } from "../../../src/engines/impact/usage.js";
 import type {
@@ -266,6 +267,73 @@ describe("mapUsage — tsconfig path aliases", () => {
 		expect(usage?.resolution).toBe("matched");
 		expect(usage?.usages).toEqual([
 			{ file: "src/pages/Home.tsx", line: 1, importName: "Button" },
+		]);
+	});
+});
+
+// Real-user finding (Material 3 testbed): a design system is usually imported
+// through a barrel (`components/m3/index.ts` re-exporting every component), so
+// the import path never equals the component's own file. Follow the barrel.
+describe("mapUsage — barrel re-exports", () => {
+	const m3Dir = join(import.meta.dirname, "..", "..", "fixtures", "m3-project");
+
+	it("counts an import through `export *` and a named re-export", () => {
+		const result = mapUsage({
+			registry: registry([
+				match({
+					codeName: "Button",
+					importPath: "src/components/m3/Button.tsx",
+					figmaName: "Button",
+				}),
+				match({
+					codeName: "Chip",
+					importPath: "src/components/m3/Chip.tsx",
+					figmaName: "Chip",
+				}),
+			]),
+			changedFigmaNames: ["Button", "Chip"],
+			projectDir: m3Dir,
+		});
+		expect(result.map((r) => [r.codeName, r.usages])).toEqual([
+			[
+				"Button",
+				[{ file: "src/screens/Home.tsx", line: 1, importName: "Button" }],
+			],
+			["Chip", [{ file: "src/screens/Home.tsx", line: 1, importName: "Chip" }]],
+		]);
+	});
+});
+
+// Import coverage's denominator is every code component in the registry, so
+// its numerator must scan every one too — not only the Figma-matched ones.
+describe("mapCodeUsage — every registry code component", () => {
+	const m3Dir = join(import.meta.dirname, "..", "..", "fixtures", "m3-project");
+
+	it("scans matched and unmatched code components alike", () => {
+		const result = mapCodeUsage({
+			registry: {
+				...registry([
+					match({
+						codeName: "Button",
+						importPath: "src/components/m3/Button.tsx",
+						figmaName: "Button",
+					}),
+				]),
+				unmatchedCode: [
+					{
+						name: "Chip",
+						importPath: "src/components/m3/Chip.tsx",
+						candidates: [],
+					},
+					{ name: "Home", importPath: "src/screens/Home.tsx", candidates: [] },
+				],
+			},
+			projectDir: m3Dir,
+		});
+		expect(result.map((r) => [r.codeName, r.count])).toEqual([
+			["Button", 1],
+			["Chip", 1],
+			["Home", 0],
 		]);
 	});
 });

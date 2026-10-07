@@ -210,3 +210,27 @@ describe("scanCodeComponents — inherited attributes and helpers", () => {
 		});
 	});
 });
+
+// Real-user finding (Material 3 testbed): `icon?: ReactNode` rendered as the
+// whole expanded union (~400 chars) in the docs props table and llms.txt.
+describe("scanCodeComponents — readable prop types", () => {
+	const m3Components = join(
+		import.meta.dirname,
+		"..",
+		"..",
+		"fixtures",
+		"m3-project",
+	);
+
+	it("prints a long resolved type as it is written (ReactNode)", () => {
+		const button = byName(scanCodeComponents(m3Components), "Button");
+		const icon = button.props.find((p) => p.name === "icon");
+		expect(icon?.type).toBe("ReactNode");
+	});
+
+	it("keeps a short string-literal union resolved", () => {
+		const button = byName(scanCodeComponents(m3Components), "Button");
+		const variant = button.props.find((p) => p.name === "variant");
+		expect(variant?.type).toBe('"filled" | "tonal" | "outlined"');
+	});
+});

@@ -15,9 +15,14 @@ Follow these steps in order. Stop at the first one that fails.
 
 ### 0. MCP preflight
 
-Confirm the Figma MCP is connected and authenticated by calling the figma MCP
-tool **`whoami`**. If it is unavailable or returns unauthenticated, emit these
-instructions verbatim and **STOP** (do not proceed, do not guess):
+Confirm a Figma MCP server is connected and authenticated by calling its
+**`whoami`** tool. **Any** connected Figma MCP server counts — the one this plugin
+bundles (`plugin:ds-bridge:figma`), the official Figma plugin's, or a claude.ai
+Figma connector (tools named like `mcp__figma__whoami`). Try each that is
+available and use the first that answers authenticated, for this step and every
+figma MCP call below; an unauthenticated server is not a failure while another
+one works. Only if **none** answers authenticated, emit these instructions
+verbatim and **STOP** (do not proceed, do not guess):
 
 > Connect the Figma MCP server: run `/mcp`, choose **figma**, and
 > **authenticate**. The remote server is `https://mcp.figma.com/mcp`. Note: this

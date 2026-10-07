@@ -6,13 +6,13 @@
 // Impure edge only: reads <path>/.ds-bridge/registry.json, lazy-ts-morph-scans
 // the project for import sites, writes to stdout/stderr, and appends one
 // `adoption` history line for the dashboard (T7.22). All judgement is delegated
-// to the pure engines (mapUsage + computeCoverage); bad input becomes an exit
+// to the pure engines (mapCodeUsage + computeCoverage); bad input becomes an exit
 // code + actionable stderr, never a thrown stack trace.
 //
 // HONEST SCOPE (mirrors the css/scss ratio note in SPEC §1 and the coverage
-// engine's doc comment): mapUsage scans resolved `.tsx` imports ONLY —
-// `.ts`/`.jsx`/barrel re-exports may undercount, so coverage is a floor. The
-// term output surfaces this caveat.
+// engine's doc comment): mapCodeUsage scans resolved `.ts`/`.tsx` imports,
+// following barrel re-exports; `.js`/`.jsx` and dynamic imports are not seen,
+// so coverage is a floor. The term output surfaces this caveat.
 //
 // Exit codes (lint convention, SPEC §11.7):
 //   0  success (coverage gaps are informational, not a failure)
@@ -21,7 +21,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
-import type { ComponentUsage } from "../engines/impact/usage.js";
+import type { CodeUsage } from "../engines/impact/usage.js";
 import type { CoverageResult } from "../engines/registry/coverage.js";
 import { computeCoverage } from "../engines/registry/coverage.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
@@ -79,27 +79,24 @@ function loadRegistry(targetDir: string): RegistryFile | undefined {
 }
 
 /**
- * Scan the project for import sites of every matched code component. Deferred
+ * Scan the project for import sites of every registry code component. Deferred
  * import: ts-morph references the CJS globals `__filename`/`__dirname` during its
  * eager module init that the single-file ESM bundle leaves undefined, so we
  * backfill them (mirrors impact.ts) and only load the usage chunk on this path —
- * ts-morph stays out of cli.mjs. We pass every match's figmaName as the "changed"
- * set so each resolves to its code component and gets scanned; computeCoverage
- * then joins by codeName.
+ * ts-morph stays out of cli.mjs. computeCoverage then joins by codeName.
  */
 async function scanUsage(
 	registry: RegistryFile,
 	projectDir: string,
-): Promise<ComponentUsage[]> {
+): Promise<CodeUsage[]> {
 	const globals = globalThis as Record<string, unknown>;
 	if (typeof globals.__filename !== "string") {
 		const filename = fileURLToPath(import.meta.url);
 		globals.__filename = filename;
 		globals.__dirname = dirname(filename);
 	}
-	const { mapUsage } = await import("../engines/impact/usage.js");
-	const changedFigmaNames = registry.matches.map((m) => m.figmaName);
-	return mapUsage({ registry, changedFigmaNames, projectDir });
+	const { mapCodeUsage } = await import("../engines/impact/usage.js");
+	return mapCodeUsage({ registry, projectDir });
 }
 
 /**
@@ -169,8 +166,8 @@ function renderTerm(coverage: CoverageResult, color: boolean): string {
 	// Honest-scope caveat (SPEC §1 / coverage engine doc comment).
 	lines.push(
 		"",
-		"Note: coverage counts resolved .tsx imports only — .ts/.jsx/barrel",
-		"re-exports may undercount, so this is a floor, not an exact census.",
+		"Note: coverage counts resolved .ts/.tsx imports (barrels followed) —",
+		".js/.jsx and dynamic imports are not seen, so this is a floor.",
 	);
 
 	return lines.join("\n");

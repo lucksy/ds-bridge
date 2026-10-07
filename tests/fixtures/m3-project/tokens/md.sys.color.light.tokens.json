@@ -1,0 +1,13 @@
+{
+	"md": {
+		"sys": {
+			"color": {
+				"$type": "color",
+				"primary": { "$value": "{md.ref.palette.primary40}" },
+				"on-primary": { "$value": "{md.ref.palette.primary100}" },
+				"surface": { "$value": "{md.ref.palette.neutral98}" },
+				"on-surface": { "$value": "{md.ref.palette.neutral10}" }
+			}
+		}
+	}
+}

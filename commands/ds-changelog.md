@@ -10,7 +10,8 @@ argument-hint: "[--since YYYY-MM-DD|<N>d|<N>w] [--audience designers|developers|
 ## Your task
 
 The block above is the JSON output of `ds-bridge changelog` for the user's
-arguments (`$ARGUMENTS`). It has the shape `{ "since": "<date>", "entries": [...] }`.
+arguments (`$ARGUMENTS`). It has the shape
+`{ "since": "<date>", "entries": [...], "sources": { "figma": {...} } }`.
 Each entry is one change with these fields:
 
 - `dateIso` — when the change happened (ISO timestamp).
@@ -29,6 +30,13 @@ instead of JSON — e.g. "not a git repository" or a bad `--format`/`--audience`
 surface that one message, explain the fix, and stop. The Figma side is optional:
 if no token / file key is configured the run is still valid — it just contains
 `code` and `tokens` entries only, and that is fine to report.
+
+`sources.figma` says what happened on the Figma side — report it from there,
+never guess: `status: "skipped"` with a `note` (no token / file key, or an API
+error), or `status: "ok"` with `versions` (seen) and `labeled` (named versions
+in the window). `labeled: 0` means Figma is connected but nobody named a version
+(File → Save to version history) — say that, and do **not** blame the
+connection or the Figma MCP server (this command uses the REST token only).
 
 If `entries` is empty, tell the user there were no changes in the selected window
 (mention the `since` date) and stop.

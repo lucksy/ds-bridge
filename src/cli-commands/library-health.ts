@@ -235,7 +235,13 @@ function renderTerm(
 		for (const h of report.overrideHotspots) {
 			const named =
 				h.componentName !== undefined ? ` (${h.componentName})` : "";
-			lines.push(`  ${h.name}${named}: ${h.overrideCount} override(s)`);
+			const fields =
+				h.fields !== undefined && h.fields.length > 0
+					? ` — ${h.fields.join(", ")}`
+					: "";
+			lines.push(
+				`  ${h.name}${named}: ${h.overrideCount} override(s)${fields}`,
+			);
 		}
 	}
 

@@ -197,6 +197,23 @@ describe("ds-bridge registry (built dist/cli.mjs)", () => {
 		expect(button?.importPath).toBe("components/button.tsx");
 	}, 60_000);
 
+	it("leaves page folders (pages/, screens/) out of a whole-project scan", async () => {
+		const dir = await freshProject();
+		for (const folder of ["pages", join("src", "screens")]) {
+			await mkdir(join(dir, folder), { recursive: true });
+			await writeFile(
+				join(dir, folder, "Settings.tsx"),
+				"export function Settings() { return <main />; }\n",
+			);
+		}
+		const result = await runCli(["registry", "build", dir]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("minus page folders");
+		const names = (await readRegistry(dir)).unmatchedCode.map((c) => c.name);
+		expect(names).not.toContain("Settings");
+		expect(names).toContain("Button");
+	}, 60_000);
+
 	it("build writes a schema-versioned registry.json under .ds-bridge", async () => {
 		const dir = await freshProject();
 		const result = await runCli(["registry", "build", dir]);

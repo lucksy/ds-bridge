@@ -1,0 +1,16 @@
+{
+	"md": {
+		"sys": {
+			"spacing": {
+				"$type": "dimension",
+				"4": { "$value": "16px" }
+			},
+			"shape": {
+				"corner": {
+					"$type": "dimension",
+					"medium": { "$value": "12px" }
+				}
+			}
+		}
+	}
+}

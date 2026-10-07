@@ -213,13 +213,13 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		};
 		// The fixture seeds exactly 3 / 3 / 3 (see library-health.test.ts).
 		expect(parsed.totals).toEqual({
-			overrideHotspots: 3,
+			overrideHotspots: 2,
 			deprecatedUsage: 3,
 			detachedCandidates: 3,
 		});
 		// Ranked desc by override count — the Primary CTA (3 overrides) leads.
 		expect(parsed.overrideHotspots[0]?.nodeId).toBe("1:10");
-		expect(parsed.overrideHotspots[0]?.overrideCount).toBe(3);
+		expect(parsed.overrideHotspots[0]?.overrideCount).toBe(2);
 	});
 
 	it("appends ONE library-health history line carrying the three counts", async () => {
@@ -232,7 +232,7 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		const record = history[0];
 		expect(record?.kind).toBe("library-health");
 		expect(record?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-		expect(record?.overrideHotspots).toBe(3);
+		expect(record?.overrideHotspots).toBe(2);
 		expect(record?.deprecatedUsage).toBe(3);
 		expect(record?.detachedCandidates).toBe(3);
 	});
@@ -319,7 +319,7 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		const parsed = JSON.parse(result.stdout) as {
 			totals: { overrideHotspots: number };
 		};
-		expect(parsed.totals.overrideHotspots).toBe(3);
+		expect(parsed.totals.overrideHotspots).toBe(2);
 	}, 30_000);
 
 	it("a missing token exits 2 with connect-Figma guidance", async () => {
@@ -374,7 +374,7 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		const parsed = JSON.parse(result.stdout) as {
 			totals: { overrideHotspots: number };
 		};
-		expect(parsed.totals.overrideHotspots).toBe(3);
+		expect(parsed.totals.overrideHotspots).toBe(2);
 	});
 
 	it("M1.3: --file-key passes a raw figma key straight through", async () => {
@@ -388,7 +388,7 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 		const parsed = JSON.parse(result.stdout) as {
 			totals: { overrideHotspots: number };
 		};
-		expect(parsed.totals.overrideHotspots).toBe(3);
+		expect(parsed.totals.overrideHotspots).toBe(2);
 	});
 
 	it("M1.3: an unknown --file-key alias exits 2 with a nearest-match suggestion", async () => {
@@ -415,11 +415,11 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 			unknown
 		>[];
 		// The count keys are unchanged numbers (every existing reader).
-		expect(record?.overrideHotspots).toBe(3);
+		expect(record?.overrideHotspots).toBe(2);
 		expect(record?.topN).toBe(10);
 		expect(record?.topOverrides).toEqual([
-			{ name: "Button / Primary", count: 4 },
-			{ name: "[deprecated] OldButton", count: 2 },
+			{ name: "Button / Primary", count: 2 },
+			{ name: "[deprecated] OldButton", count: 1 },
 		]);
 		expect(record?.topDeprecated).toEqual([
 			{ name: "[deprecated] OldButton", count: 2 },

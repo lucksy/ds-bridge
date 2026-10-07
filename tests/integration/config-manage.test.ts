@@ -77,6 +77,39 @@ describe("config set-library", () => {
 		const json = await projectJson();
 		expect(json.figma_file_key).toBe("xfXJSaAWt65rlq486RKvJB");
 	});
+
+	// Real-user finding: `config connect` writes the library key into
+	// .ds-bridge.env, which outranks .ds-bridge.json — so set-library used to
+	// report success while every command kept reading the old library.
+	it("updates a stale library key that .ds-bridge.env holds, keeping the token", async () => {
+		await writeFile(
+			join(dir, ".ds-bridge.env"),
+			"FIGMA_TOKEN=figd_test\nFIGMA_DESIGN_SYSTEM_FILE=OldLib0000000000000000\n",
+		);
+		const { code, stdout } = await run([
+			"config",
+			"set-library",
+			"NewLib0000000000000000",
+			".",
+		]);
+		expect(code).toBe(0);
+		expect(stdout).toContain(".ds-bridge.env");
+		expect(await readFile(join(dir, ".ds-bridge.env"), "utf8")).toBe(
+			"FIGMA_TOKEN=figd_test\nFIGMA_DESIGN_SYSTEM_FILE=NewLib0000000000000000\n",
+		);
+		const show = await run(["config", "show", "."]);
+		expect(show.stdout).toContain("NewLib0000000000000000");
+	});
+
+	it("warns when an environment variable still overrides the new key", async () => {
+		const { code, stdout } = await run(
+			["config", "set-library", "NewLib0000000000000000", "."],
+			{ CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "PluginLib000000000000000" },
+		);
+		expect(code).toBe(0);
+		expect(stdout).toContain("warning");
+		expect(stdout).toContain("CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY");
+	});
 });
 
 describe("config add-product", () => {

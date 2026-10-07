@@ -7,7 +7,6 @@
 // resolved `.tsx` imports ONLY — `.ts`/`.jsx`/barrel re-exports may undercount,
 // so the coverage number is a floor, not an exact census. This caveat must be
 // surfaced wherever the number renders.
-import type { ComponentUsage } from "../impact/usage.js";
 import { codeExports, componentOf } from "./parts.js";
 import type { RegistryFile } from "./persist.js";
 
@@ -43,7 +42,7 @@ function byNameAsc(a: string, b: string): number {
  */
 export function computeCoverage(
 	registry: RegistryFile,
-	usage: readonly ComponentUsage[],
+	usage: readonly { codeName?: string; count: number }[],
 ): CoverageResult {
 	// Code names that the project imports (>=1 resolved .tsx site).
 	const importedNames = new Set<string>();

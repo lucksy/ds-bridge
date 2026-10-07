@@ -24,6 +24,8 @@ export interface RegistryMatch {
 	score: number;
 	/** The Figma component's description; omitted when it has none. */
 	description?: string;
+	/** Variant axes that differ between code and Figma; omitted when none. */
+	variantGaps?: string[];
 }
 
 /** A persisted code component with no confident match + its figma candidates. */
@@ -93,6 +95,9 @@ export function toRegistryFile(
 			nodeId: m.figma.nodeId,
 			score: round3(m.score),
 			...describedBy(m.figma.description),
+			...(m.variantGaps !== undefined && m.variantGaps.length > 0
+				? { variantGaps: m.variantGaps }
+				: {}),
 		}))
 		.sort((a, b) => byNameAsc(a.codeName, b.codeName));
 

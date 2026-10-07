@@ -13,7 +13,7 @@
 // State: a DIRECTORY run appends one a11y line to .ds-bridge/history.jsonl for
 // the dashboard (T7.22); a single-file run stays side-effect-free. HTML lives
 // in `ds-bridge report`.
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Command } from "commander";
 import {
@@ -23,17 +23,9 @@ import {
 	type ModeTokenMap,
 } from "../engines/a11y/audit.js";
 import type { ContrastLevel } from "../engines/a11y/contrast.js";
-import { detectFormat } from "../engines/tokens/detect.js";
-import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
-import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
-import { parseW3c } from "../engines/tokens/parse-w3c.js";
-import { readThemes, themeSubDocument } from "../engines/tokens/themes.js";
-import type {
-	ParseOutcome,
-	TokenSourceFormat,
-} from "../engines/tokens/types.js";
-import { discoverTokenSources } from "../io/discover-tokens.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
+import { loadTokens } from "../io/load-tokens.js";
+import { findTokenSource } from "../io/token-set.js";
 import {
 	renderTable,
 	type Severity,
@@ -49,12 +41,6 @@ interface A11yOptions {
 	format: string;
 }
 
-const PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
-	w3c: parseW3c,
-	"tokens-studio": parseTokensStudio,
-	"style-dictionary": parseStyleDictionary,
-};
-
 /** The single mode name used for formats without explicit theme/modes. */
 const DEFAULT_MODE = "default";
 
@@ -69,116 +55,45 @@ function fail(message: string): void {
 	process.exitCode = 2;
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /**
- * Read the token file and project it into one ModeTokenMap per mode. Tokens
- * Studio documents with `$themes` produce one mode per theme; every other shape
- * (and theme-less Tokens Studio) produces a single "default" mode.
+ * Read the token source (file or folder) and project it into one ModeTokenMap
+ * per mode: Tokens Studio `$themes`, or a folder's per-mode files (Material's
+ * `*.light.*` / `*.dark.*`). A source with no modes is one "default" mode.
  */
 function loadModeMaps(
 	tokenPath: string,
 ): { kind: "ok"; modes: ModeTokenMap[] } | RunError {
-	let raw: string;
-	try {
-		raw = readFileSync(tokenPath, "utf8");
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Could not read token source "${tokenPath}": ${detail}`,
-		};
-	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Token source "${tokenPath}" is not valid JSON: ${detail}`,
-		};
-	}
-
-	const format = detectFormat(parsed);
-	if (format === "unknown") {
-		return {
-			kind: "error",
-			message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`,
-		};
-	}
-
-	const themes =
-		format === "tokens-studio" && isPlainObject(parsed)
-			? readThemes(parsed)
-			: undefined;
-
-	if (themes !== undefined && isPlainObject(parsed)) {
-		const modes: ModeTokenMap[] = [];
-		for (const theme of themes) {
-			const outcome = parseTokensStudio(themeSubDocument(parsed, theme));
-			if (outcome.kind === "error") {
-				const lines = outcome.errors.map((e) => {
-					const where = e.path !== undefined ? ` (${e.path})` : "";
-					return `  ${e.code}${where}: ${e.message}`;
-				});
-				return {
-					kind: "error",
-					message: `Failed to parse mode "${theme.name}" of "${tokenPath}":\n${lines.join("\n")}`,
-				};
-			}
-			modes.push({ mode: theme.name, map: outcome.map });
-		}
-		return { kind: "ok", modes };
-	}
-
-	const outcome = PARSERS[format](parsed);
-	if (outcome.kind === "error") {
-		const lines = outcome.errors.map((e) => {
-			const where = e.path !== undefined ? ` (${e.path})` : "";
-			return `  ${e.code}${where}: ${e.message}`;
-		});
-		return {
-			kind: "error",
-			message: `Failed to parse token source "${tokenPath}" as ${format}:\n${lines.join("\n")}`,
-		};
-	}
-	return { kind: "ok", modes: [{ mode: DEFAULT_MODE, map: outcome.map }] };
+	const loaded = loadTokens(tokenPath);
+	if (loaded.kind === "error") return loaded;
+	return {
+		kind: "ok",
+		modes: loaded.modes ?? [{ mode: DEFAULT_MODE, map: loaded.map }],
+	};
 }
 
 /**
- * Resolve `[path]` to a single token file. A file path is used directly; a
- * directory is scanned for the shallowest conventional token source.
+ * Resolve `[path]` to a token source. A file path is used directly; a
+ * directory resolves to its token file, or its multi-file token folder.
  */
-async function resolveTokenPath(
+function resolveTokenPath(
 	target: string,
-): Promise<{ kind: "ok"; path: string } | RunError> {
+): { kind: "ok"; path: string } | RunError {
 	const abs = resolve(target);
 	if (!existsSync(abs)) {
 		return { kind: "error", message: `Path "${abs}" does not exist.` };
 	}
 	if (statSync(abs).isFile()) return { kind: "ok", path: abs };
 
-	const discovered = await discoverTokenSources(abs);
-	if (discovered.kind === "explicit-not-found") {
-		return {
-			kind: "error",
-			message: `No token source found at "${discovered.path}".`,
-		};
-	}
-	const first = discovered.sources[0];
-	if (first === undefined) {
+	const discovered = findTokenSource(abs);
+	if (discovered === undefined) {
 		return {
 			kind: "error",
 			message:
 				`No design-token source found under "${abs}".\n` +
-				"Pass a token file directly, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).",
+				"Pass a token file or folder directly, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).",
 		};
 	}
-	return { kind: "ok", path: first.path };
+	return { kind: "ok", path: discovered };
 }
 
 /** Filter mode maps by the comma-separated `--modes` list, or an error. */
@@ -338,7 +253,7 @@ async function runA11y(path: string, options: A11yOptions): Promise<void> {
 		return;
 	}
 
-	const tokenPath = await resolveTokenPath(path);
+	const tokenPath = resolveTokenPath(path);
 	if (tokenPath.kind === "error") {
 		fail(tokenPath.message);
 		return;

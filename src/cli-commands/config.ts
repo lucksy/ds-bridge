@@ -651,6 +651,49 @@ function runSetLibrary(value: string, path: string): void {
 		`Set figma_file_key to ${key} in ${join(dir, PROJECT_FILE_NAME)} ` +
 			"(committed — share it with your team).\n",
 	);
+
+	// `.ds-bridge.env` (written by `config connect`) outranks .ds-bridge.json.
+	// A different library key there would silently win, so move it along.
+	const envPath = join(dir, ENV_FILE_NAME);
+	let fromEnvFile: string | undefined;
+	if (existsSync(envPath)) {
+		try {
+			fromEnvFile = parseDotenv(
+				readFileSync(envPath, "utf8"),
+			).FIGMA_DESIGN_SYSTEM_FILE;
+		} catch {
+			fromEnvFile = undefined;
+		}
+		if (
+			fromEnvFile !== undefined &&
+			fromEnvFile !== "" &&
+			extractFigmaFileKey(fromEnvFile) !== key
+		) {
+			try {
+				writeEnvFileMerged(dir, { FIGMA_DESIGN_SYSTEM_FILE: key });
+				process.stdout.write(
+					`Also updated FIGMA_DESIGN_SYSTEM_FILE in ${envPath} (was ${fromEnvFile}), which would have overridden it.\n`,
+				);
+			} catch (error) {
+				const detail = error instanceof Error ? error.message : String(error);
+				process.stdout.write(
+					`warning: ${envPath} still sets FIGMA_DESIGN_SYSTEM_FILE=${fromEnvFile}, which overrides this key, and could not be updated: ${detail}\n`,
+				);
+			}
+		}
+	}
+	// Variables set outside the project (shell, plugin dialog) still win.
+	for (const name of [
+		"CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY",
+		"FIGMA_DESIGN_SYSTEM_FILE",
+	]) {
+		const value = process.env[name];
+		if (value === undefined || value === "" || value === fromEnvFile) continue;
+		if (extractFigmaFileKey(value) === key) continue;
+		process.stdout.write(
+			`warning: ${name}=${value} is set in the environment and overrides this key — unset it, or set the plugin's figma_file_key option to ${key}.\n`,
+		);
+	}
 	process.exitCode = 0;
 }
 

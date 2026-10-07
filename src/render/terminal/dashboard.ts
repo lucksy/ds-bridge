@@ -282,10 +282,10 @@ function importCoverageTerminalSection(
 
 	const lines: string[] = [];
 	lines.push(renderGauge(pct, { label: "Import coverage", width: 24, color }));
-	// Honest-scope caveat (SPEC §1 / A3a): mapUsage scans resolved .tsx imports
+	// Honest-scope caveat (SPEC §1 / A3a): mapCodeUsage scans resolved .ts/.tsx imports
 	// only, so the number is a floor.
 	lines.push(
-		`${imported}/${total} registry components imported · resolved .tsx imports only (a floor)`,
+		`${imported}/${total} registry components imported · resolved .ts/.tsx imports, barrels followed (a floor)`,
 	);
 
 	if (uncovered.length > 0) {
@@ -573,10 +573,10 @@ function migrationChecklistTerminalSection(
 	// truncation note when sites were dropped at the cap (mirrors the HTML overflow).
 	const overflow = checklist.truncated ? "… and more sites beyond the cap" : "";
 
-	// Honest-scope caveat (SPEC §1 / A3a): mapUsage scans resolved .tsx imports
+	// Honest-scope caveat (SPEC §1 / A3a): mapCodeUsage scans resolved .ts/.tsx imports
 	// only, so the site count is a floor. Preserved verbatim.
 	const mapUsageCaveat =
-		"mapUsage scans resolved .tsx imports only, so the number is a floor.";
+		"import coverage counts resolved .ts/.tsx imports (barrels followed), so the number is a floor.";
 
 	const body = [
 		meta,

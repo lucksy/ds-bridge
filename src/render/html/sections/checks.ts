@@ -363,7 +363,7 @@ export function importCoverageSection(data: ReportData): string {
 		"Import coverage",
 		[
 			`<div class="chart center">${donutGauge(pct, { label: "Import coverage" })}</div>`,
-			`<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported · resolved .tsx imports only (a floor)</div>`,
+			`<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported · resolved .ts/.tsx imports, barrels followed (a floor)</div>`,
 			list,
 			overflow,
 		].join(""),

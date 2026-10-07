@@ -32,7 +32,6 @@ import { renderComponentMdx } from "../engines/docs/render-mdx.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import type { CodeComponent } from "../engines/registry/scan-code.js";
 import type { FigmaComponentModel } from "../engines/registry/scan-figma.js";
-import { detectFormat } from "../engines/tokens/detect.js";
 import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
 import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
 import { parseW3c } from "../engines/tokens/parse-w3c.js";
@@ -41,7 +40,8 @@ import type {
 	TokenMap,
 	TokenSourceFormat,
 } from "../engines/tokens/types.js";
-import { discoverTokenSources } from "../io/discover-tokens.js";
+import { loadTokens } from "../io/load-tokens.js";
+import { findTokenSource } from "../io/token-set.js";
 import { renderTable } from "../render/terminal/index.js";
 
 type DocsFormat = "json" | "term";
@@ -53,7 +53,7 @@ interface DocsOptions {
 
 const EMPTY_TOKENS: TokenMap = { format: "w3c", tokens: [] };
 
-const PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
+const _PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
 	w3c: parseW3c,
 	"tokens-studio": parseTokensStudio,
 	"style-dictionary": parseStyleDictionary,
@@ -170,33 +170,15 @@ function loadRegistry(targetDir: string): RegistryFile | undefined {
 }
 
 /**
- * Discover + parse the shallowest token source under `targetDir`. Graceful: any
+ * Discover + parse the token source (file or folder) under `targetDir`. Graceful: any
  * miss (no source, unreadable, parse error) yields an empty TokenMap so docs
  * still generate. The token summary lives only in llms.txt.
  */
 async function discoverTokens(targetDir: string): Promise<TokenMap> {
-	const outcome = await discoverTokenSources(targetDir);
-	if (outcome.kind !== "ok" || outcome.sources.length === 0) {
-		return EMPTY_TOKENS;
-	}
-	const source = outcome.sources[0];
+	const source = findTokenSource(targetDir);
 	if (source === undefined) return EMPTY_TOKENS;
-	let raw: string;
-	try {
-		raw = readFileSync(source.path, "utf8");
-	} catch {
-		return EMPTY_TOKENS;
-	}
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		return EMPTY_TOKENS;
-	}
-	const format = detectFormat(parsed);
-	if (format === "unknown") return EMPTY_TOKENS;
-	const result = PARSERS[format](parsed);
-	return result.kind === "ok" ? result.map : EMPTY_TOKENS;
+	const loaded = loadTokens(source);
+	return loaded.kind === "ok" ? loaded.map : EMPTY_TOKENS;
 }
 
 /** A safe, deterministic MDX filename for a component (no path traversal). */

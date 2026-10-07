@@ -364,8 +364,28 @@ export async function runChangelog(
 
 	// Figma side: optional, skipped gracefully when not configured.
 	const { versions, note } = await fetchVersions(deps);
-	if (note !== undefined && format === "term") {
-		deps.stderr(`${note}\n`);
+	// Say why the Figma side contributed nothing, so a reader never has to guess.
+	const sinceMs = Date.parse(since);
+	const labeled = versions.filter(
+		(v) =>
+			(v.label ?? "").trim() !== "" &&
+			(!Number.isFinite(sinceMs) || Date.parse(v.created_at) >= sinceMs),
+	).length;
+	const figmaSource =
+		note !== undefined
+			? { status: "skipped" as const, note }
+			: {
+					status: "ok" as const,
+					versions: versions.length,
+					labeled,
+					...(labeled === 0
+						? {
+								note: "No named Figma versions in this window — only named versions (File → Save to version history) are listed; autosaves are skipped.",
+							}
+						: {}),
+				};
+	if (figmaSource.note !== undefined && format === "term") {
+		deps.stderr(`${figmaSource.note}\n`);
 	}
 
 	const all = aggregateChangelog({
@@ -387,7 +407,9 @@ export async function runChangelog(
 	}
 
 	if (format === "json") {
-		deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}\n`);
+		deps.stdout(
+			`${JSON.stringify({ since, entries, sources: { figma: figmaSource } }, null, 2)}\n`,
+		);
 	} else if (format === "md") {
 		deps.stdout(renderChangelogMarkdown(entries, { audience: audience.value }));
 	} else {

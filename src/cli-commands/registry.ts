@@ -73,7 +73,15 @@ async function scanCode(
 	);
 	const scope = resolveComponentPaths(targetDir, configuredPaths);
 	if (scope === undefined) {
-		return { code: scanCodeComponents(targetDir), scope };
+		// Screens and routes compose the design system; they are not part of it.
+		const code = scanCodeComponents(targetDir).filter(
+			(component) =>
+				!component.importPath
+					.split("/")
+					.slice(0, -1)
+					.some((segment) => PAGE_DIRS.has(segment)),
+		);
+		return { code, scope };
 	}
 	// Scan each design-system directory; import paths stay project-relative.
 	const code = scope.paths.flatMap((dir) =>
@@ -93,6 +101,9 @@ function byPath(a: CodeComponent, b: CodeComponent): number {
 }
 
 const DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
+
+/** App page folders a whole-project component scan leaves out. */
+const PAGE_DIRS = new Set(["pages", "screens", "views", "routes"]);
 
 /** Print a fatal operational error and set exit code 2. */
 function fail(message: string): void {
@@ -317,7 +328,7 @@ function renderBuildSummary(
 		`Registry written to ${registryPath}`,
 		`  scanned:        ${
 			scope === undefined
-				? "the whole project (set component_paths in .ds-bridge.json to narrow it)"
+				? "the whole project, minus page folders (pages/, screens/, views/, routes/) — set component_paths in .ds-bridge.json to narrow it"
 				: `${scope.paths.join(", ")} (${scope.source})`
 		}`,
 		`  matched:        ${registry.matches.length}`,

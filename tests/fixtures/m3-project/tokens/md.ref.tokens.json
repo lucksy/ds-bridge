@@ -1,0 +1,17 @@
+{
+	"md": {
+		"ref": {
+			"palette": {
+				"$type": "color",
+				"primary40": { "$value": "#65558F" },
+				"primary80": { "$value": "#CFBDFE" },
+				"primary20": { "$value": "#36275D" },
+				"primary100": { "$value": "#FFFFFF" },
+				"neutral98": { "$value": "#FDF7FF" },
+				"neutral6": { "$value": "#141218" },
+				"neutral10": { "$value": "#1D1B20" },
+				"neutral90": { "$value": "#E6E0E9" }
+			}
+		}
+	}
+}

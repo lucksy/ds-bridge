@@ -450,3 +450,65 @@ describe("matchLiteral — empty index", () => {
 		expect(matchLiteral(dimLiteral("16px"), index).kind).toBe("off-system");
 	});
 });
+
+// Real-user finding (Material 3): several semantic roles share a value, and a
+// dimension value is shared by spacing, shape and type tokens — the property
+// must pick the token family the author meant.
+describe("matchLiteral — Material 3 ties", () => {
+	const m3 = [
+		colorToken("md.ref.palette.primary100", "#ffffff"),
+		colorToken("md.ref.palette.error100", "#ffffff"),
+		colorToken("md.sys.color.on-error", "#ffffff", "md.ref.palette.error100"),
+		colorToken(
+			"md.sys.color.on-primary",
+			"#ffffff",
+			"md.ref.palette.primary100",
+		),
+		dimToken("md.sys.shape.corner.medium", "12px"),
+		dimToken("md.sys.spacing.3", "12px"),
+		dimToken("md.sys.spacing.4", "16px"),
+		dimToken("md.sys.typescale.body-large.size", "16px"),
+		dimToken("md.sys.typescale.title-medium.line-height", "24px"),
+		dimToken("md.sys.spacing.6", "24px"),
+	];
+	const index = buildTokenIndex(m3);
+	const exactName = (literal: ExtractedLiteral): string | undefined => {
+		const match = matchLiteral(literal, index);
+		return match.kind === "exact" ? match.token.name : undefined;
+	};
+
+	it("ranks status roles (error, warning…) after neutral roles on a tie", () => {
+		expect(exactName(colorLiteral("#fff", "color"))).toBe(
+			"md.sys.color.on-primary",
+		);
+	});
+
+	it("picks the spacing token for padding / margin / gap", () => {
+		expect(exactName(dimLiteral("16px", "padding"))).toBe("md.sys.spacing.4");
+		expect(exactName(dimLiteral("12px", "gap"))).toBe("md.sys.spacing.3");
+		expect(exactName(dimLiteral("24px", "margin-top"))).toBe(
+			"md.sys.spacing.6",
+		);
+	});
+
+	it("picks the corner token for border-radius", () => {
+		expect(exactName(dimLiteral("12px", "border-radius"))).toBe(
+			"md.sys.shape.corner.medium",
+		);
+	});
+
+	it("picks the type tokens for font-size and line-height", () => {
+		expect(exactName(dimLiteral("16px", "font-size"))).toBe(
+			"md.sys.typescale.body-large.size",
+		);
+		expect(exactName(dimLiteral("24px", "line-height"))).toBe(
+			"md.sys.typescale.title-medium.line-height",
+		);
+	});
+
+	it("keeps a type token out of spacing suggestions", () => {
+		expect(exactName(dimLiteral("16px", "padding-left"))).toBe(
+			"md.sys.spacing.4",
+		);
+	});
+});

@@ -89,10 +89,24 @@ function looksLikeComponent(decl: Node): boolean {
 	return type.getCallSignatures().length > 0;
 }
 
+/** A resolved type text longer than this reads better as written (`ReactNode`). */
+const LONG_TYPE_TEXT = 80;
+
+/** The prop's type as written in its declaration, without `| undefined`. */
+function writtenType(declNode: Node): string | undefined {
+	if (!Node.isPropertySignature(declNode)) return undefined;
+	const text = declNode.getTypeNode()?.getText();
+	if (text === undefined) return undefined;
+	const trimmed = text.replace(/\s*\|\s*undefined\s*$/, "").trim();
+	return trimmed === "" || trimmed === "any" ? undefined : trimmed;
+}
+
 /**
  * Render the rendered type text for a prop. Optional props have their trailing
  * `| undefined` stripped so unions read cleanly; `unknown` is preserved as-is
  * (its non-nullable form degenerates to `{}`, which we never want to surface).
+ * A resolved type that balloons (`ReactNode`'s ~400-char union) or collapses
+ * to `any` (types not installed) falls back to the type as written.
  */
 function renderPropType(
 	propType: Type,
@@ -101,11 +115,20 @@ function renderPropType(
 ): string {
 	if (propType.isUnknown()) return "unknown";
 	const base = optional ? propType.getNonNullableType() : propType;
+	let resolved: string;
 	try {
-		return base.getText(declNode);
+		resolved = base.getText(declNode);
 	} catch {
-		return base.getText();
+		resolved = base.getText();
 	}
+	if (
+		resolved === "any" ||
+		resolved.length > LONG_TYPE_TEXT ||
+		resolved.includes("import(")
+	) {
+		return writtenType(declNode) ?? resolved;
+	}
+	return resolved;
 }
 
 /**

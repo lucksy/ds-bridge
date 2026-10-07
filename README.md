@@ -178,7 +178,7 @@ When you enable the plugin, Claude Code prompts for these options natively (no
 |---|---|---|---|
 | `figma_file_key` | string | — | Key from your Figma **library file** URL (`…/file/<KEY>/…`). Used by `registry build` and any library-wide audit. |
 | `figma_token` | string · **sensitive** | — | Figma personal access token. ⚠️ Claude Code does **not** persist this across restarts ([#62442](https://github.com/anthropics/claude-code/issues/62442)) — set it once, then run `/ds-bridge:connect` to save it durably. See PAT guidance below. |
-| `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file. If unset, DS Bridge discovers it from common paths. |
+| `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file — or a folder of token files read as one set (cross-file aliases resolve; `*.light.*` / `*.dark.*` files or `light/` / `dark/` folders become modes, as in Material 3). If unset, DS Bridge discovers it from common paths, and `tokens check` prints which source it used. |
 | `report_style` | string | `both` | Report output: `html`, `terminal`, or `both`. |
 | `readiness_threshold` | number (0–100) | `80` | The handoff-readiness gate `/ds-bridge:handoff-qa` must clear for a frame to pass. |
 | `insights_palette` | string | `harvest` | Chart colours in the [insights pane](#insights-pane-claude-code-mod): `harvest` (autumn berry, olive, mustard, burnt orange, khaki, sage), `nivo`, `echarts`, `ds-bridge` or `mono`. |

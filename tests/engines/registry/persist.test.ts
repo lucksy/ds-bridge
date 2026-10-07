@@ -51,6 +51,7 @@ function match(
 		score,
 		nameScore: score,
 		shapeScore: score,
+		variantGaps: [],
 	};
 }
 
@@ -101,6 +102,22 @@ describe("toRegistryFile — schema & projection", () => {
 				nodeId: "10:42",
 				score: 0.767,
 			},
+		]);
+	});
+
+	it("keeps a match's variant gaps, and omits an empty list", () => {
+		const gapped = {
+			...match(code("Fab"), figma("FAB", "3:68"), 0.7),
+			variantGaps: ["size: Figma also has Extended"],
+		};
+		const clean = match(code("Badge"), figma("Badge", "4:107"), 1);
+		const file = toRegistryFile(
+			{ matches: [gapped, clean], unmatchedCode: [], unmatchedFigma: [] },
+			"2026-10-07T00:00:00.000Z",
+		);
+		expect(file.matches.map((m) => m.variantGaps)).toEqual([
+			undefined,
+			["size: Figma also has Extended"],
 		]);
 	});
 

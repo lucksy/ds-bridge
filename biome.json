@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!hooks/insights/vendor", "!docs/internal"]
+		"includes": ["**", "!hooks/insights/vendor", "!docs/internal", "!tests/fixtures/m3-project"]
 	},
 	"formatter": {
 		"enabled": true,

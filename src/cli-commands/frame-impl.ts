@@ -17,8 +17,8 @@
 //      API error)
 //
 // SPEC-personas §5 C11: figma-impl.md step 5 invokes this to persist the artifact.
-import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
-import { isAbsolute, join, resolve, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { isAbsolute, join, resolve } from "node:path";
 import { cwd } from "node:process";
 import type { Command } from "commander";
 import { readProjectConfigText, resolveConfig } from "../config.js";
@@ -31,7 +31,6 @@ import {
 	type GapsReport,
 } from "../engines/registry/gaps.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
-import { detectFormat } from "../engines/tokens/detect.js";
 import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
 import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
 import { parseW3c } from "../engines/tokens/parse-w3c.js";
@@ -48,6 +47,8 @@ import {
 } from "../io/figma/client.js";
 import { resolveFileKey } from "../io/figma/file-key.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
+import { loadTokens as loadTokenSource } from "../io/load-tokens.js";
+import { findTokenSource } from "../io/token-set.js";
 import {
 	renderTable,
 	severityColor,
@@ -66,14 +67,14 @@ const DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
 const TOP_GAPS_LIMIT = 5;
 
 /** The token parsers keyed by detected format (mirrors lint.ts / tokens.ts). */
-const PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
+const _PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
 	w3c: parseW3c,
 	"tokens-studio": parseTokensStudio,
 	"style-dictionary": parseStyleDictionary,
 };
 
 /** Conventional token-source directories never descended for discovery. */
-const EXCLUDED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
+const _EXCLUDED_DIRS = new Set(["node_modules", ".git", "dist", "build"]);
 
 interface FrameImplOptions {
 	fileKey: string | undefined;
@@ -186,7 +187,7 @@ function loadRegistry(
 
 // ── Token source resolution (a focused mirror of lint.ts) ──
 
-function isConventionalTokenFile(name: string): boolean {
+function _isConventionalTokenFile(name: string): boolean {
 	if (!name.endsWith(".json")) return false;
 	return (
 		name === "tokens.json" ||
@@ -195,69 +196,8 @@ function isConventionalTokenFile(name: string): boolean {
 	);
 }
 
-function isTokenDir(name: string): boolean {
+function _isTokenDir(name: string): boolean {
 	return name === "tokens" || name === "design-tokens";
-}
-
-function detectFileFormat(absPath: string): TokenSourceFormat | undefined {
-	let raw: string;
-	try {
-		raw = readFileSync(absPath, "utf8");
-	} catch {
-		return undefined;
-	}
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		return undefined;
-	}
-	const format = detectFormat(parsed);
-	return format === "unknown" ? undefined : format;
-}
-
-function depthOf(path: string): number {
-	return path.split(sep).filter((s) => s.length > 0).length;
-}
-
-function collectTokenCandidates(
-	dir: string,
-	insideTokenDir: boolean,
-	acc: string[],
-): void {
-	let entries: Dirent[];
-	try {
-		entries = readdirSync(dir, { withFileTypes: true });
-	} catch {
-		return;
-	}
-	for (const entry of entries) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (EXCLUDED_DIRS.has(entry.name)) continue;
-			collectTokenCandidates(
-				full,
-				insideTokenDir || isTokenDir(entry.name),
-				acc,
-			);
-			continue;
-		}
-		if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-		if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
-	}
-}
-
-/** The shallowest conventional, shape-verified token file under `root`. */
-function discoverFirstTokenSource(root: string): string | undefined {
-	const candidates: string[] = [];
-	collectTokenCandidates(root, false, candidates);
-	const verified = candidates
-		.filter((path) => detectFileFormat(path) !== undefined)
-		.sort((a, b) => {
-			const depth = depthOf(a) - depthOf(b);
-			return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-		});
-	return verified[0];
 }
 
 /**
@@ -285,7 +225,7 @@ function loadTokens(
 		}
 	}
 	if (tokenPath === undefined) {
-		tokenPath = discoverFirstTokenSource(targetDir);
+		tokenPath = findTokenSource(targetDir);
 	}
 	if (tokenPath === undefined || !existsSync(tokenPath)) {
 		return {
@@ -297,31 +237,9 @@ function loadTokens(
 		};
 	}
 
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(readFileSync(tokenPath, "utf8"));
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Token source "${tokenPath}" is not valid JSON: ${detail}`,
-		};
-	}
-	const format = detectFormat(parsed);
-	if (format === "unknown") {
-		return {
-			kind: "error",
-			message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`,
-		};
-	}
-	const outcome = PARSERS[format](parsed);
-	if (outcome.kind === "error") {
-		return {
-			kind: "error",
-			message: `Failed to parse token source "${tokenPath}" as ${format}.`,
-		};
-	}
-	return { kind: "ok", tokens: outcome.map.tokens };
+	const loaded = loadTokenSource(tokenPath);
+	if (loaded.kind === "error") return loaded;
+	return { kind: "ok", tokens: loaded.map.tokens };
 }
 
 // ── Requirement derivation (FigmaNode tree → FrameRequirement[]) ──
@@ -498,6 +416,20 @@ function renderTerm(impl: Implementability, color: boolean): string {
 		`${impl.gapCount} gap(s) by reason:`,
 		renderTable(["reason", "count"], rows, { color }),
 	);
+	if (impl.topGaps.length > 0) {
+		lines.push(
+			"",
+			"Gaps:",
+			renderTable(
+				["requirement", "reason"],
+				impl.topGaps.map((gap) => [gap.requirement, gap.reason]),
+				{ color },
+			),
+		);
+		if (impl.gapCount > impl.topGaps.length) {
+			lines.push(`… ${impl.gapCount - impl.topGaps.length} more (--format=json)`);
+		}
+	}
 	return lines.join("\n");
 }
 

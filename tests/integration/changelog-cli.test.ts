@@ -229,6 +229,35 @@ describe("ds-bridge changelog (built dist/cli.mjs)", () => {
 		expect(figma[0]?.audience).toBe("designer");
 	});
 
+	// Real-user finding: a Figma file with only autosaves contributed nothing and
+	// the JSON said nothing, so the reader guessed "not connected".
+	it("json names the Figma source status: versions seen, how many are named", async () => {
+		const repo = await makeRepo();
+		const withLabel = await runCliIn(
+			repo,
+			["changelog", "--since", "2026-01-01", "--format", "json"],
+			FIGMA_ENV,
+		);
+		expect(JSON.parse(withLabel.stdout).sources).toEqual({
+			figma: { status: "ok", versions: 2, labeled: 1 },
+		});
+		// After the labeled version: only the autosave would be in the window.
+		const autosaveOnly = await runCliIn(
+			repo,
+			["changelog", "--since", "2026-06-05", "--format", "json"],
+			FIGMA_ENV,
+		);
+		const figma = JSON.parse(autosaveOnly.stdout).sources.figma;
+		expect(figma).toMatchObject({ status: "ok", labeled: 0 });
+		expect(figma.note).toContain("named");
+		const offline = await runCliIn(
+			repo,
+			["changelog", "--since", "2026-01-01", "--format", "json"],
+			OFFLINE_ENV,
+		);
+		expect(JSON.parse(offline.stdout).sources.figma.status).toBe("skipped");
+	});
+
 	it("reads figma_file_key from the project's .ds-bridge.json", async () => {
 		const repo = await makeRepo();
 		await writeFile(

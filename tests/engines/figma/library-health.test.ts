@@ -110,6 +110,37 @@ describe("assessLibraryHealth — override hotspots", () => {
 		]);
 	});
 
+	it("ignores text-content overrides (a label typed into a Chip is usage, not drift)", () => {
+		const text = [
+			"characters",
+			"characterStyleOverrides",
+			"styleOverrideTable",
+			"lineTypes",
+			"lineIndentations",
+		];
+		const f = file(
+			doc([
+				instance({
+					id: "1:1",
+					name: "Chip",
+					overrides: [{ id: "I1:1;2:3", overriddenFields: text }],
+				}),
+				instance({
+					id: "1:2",
+					name: "Button",
+					overrides: [
+						{ id: "I1:2;2:3", overriddenFields: text },
+						{ id: "1:2", overriddenFields: ["fills", "width"] },
+					],
+				}),
+			]),
+		);
+		const r = assessLibraryHealth(f);
+		expect(
+			r.overrideHotspots.map((h) => [h.nodeId, h.overrideCount, h.fields]),
+		).toEqual([["1:2", 1, ["fills"]]]);
+	});
+
 	it("resolves componentName via the components map when present", () => {
 		const f = file(
 			doc([
@@ -308,24 +339,21 @@ describe("assessLibraryHealth — recorded fixture", () => {
 
 	it("ranks the three override hotspots with resolved component names", () => {
 		const r = assessLibraryHealth(fixture);
+		// Secondary CTA only had its label typed (`characters`): usage, not drift.
 		expect(r.overrideHotspots).toEqual([
 			{
 				nodeId: "1:10",
 				name: "Primary CTA",
 				componentName: "Button / Primary",
-				overrideCount: 3,
+				overrideCount: 2,
+				fields: ["fills", "visible"],
 			},
 			{
 				nodeId: "1:20",
 				name: "Old Button A",
 				componentName: "[deprecated] OldButton",
-				overrideCount: 2,
-			},
-			{
-				nodeId: "1:11",
-				name: "Secondary CTA",
-				componentName: "Button / Primary",
 				overrideCount: 1,
+				fields: ["fills"],
 			},
 		]);
 	});
@@ -358,7 +386,7 @@ describe("assessLibraryHealth — recorded fixture", () => {
 	it("reports pre-cap totals for the fixture", () => {
 		const r = assessLibraryHealth(fixture);
 		expect(r.totals).toEqual({
-			overrideHotspots: 3,
+			overrideHotspots: 2,
 			deprecatedUsage: 3,
 			detachedCandidates: 3,
 		});

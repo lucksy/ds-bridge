@@ -89,7 +89,8 @@ function byName(a: { name: string }, b: { name: string }): number {
 /**
  * The surface a foreground token names, when its name says so: shadcn's
  * `primary-foreground` / `card.foreground` / `x-fg` → `primary` / `card` / `x`,
- * Material's `on-primary` → `primary`. Undefined for role-only names
+ * Material's `on-primary` → `primary` and `inverse-on-surface` →
+ * `inverse-surface`. Undefined for role-only names
  * (`foreground`, `text.primary`).
  */
 function namedSurface(name: string): string | undefined {
@@ -97,6 +98,8 @@ function namedSurface(name: string): string | undefined {
 	if (suffix !== null) return suffix[1];
 	const onPrefix = name.match(/^(.*?)(^|[./])on-([a-z0-9-]+)$/i);
 	if (onPrefix !== null) return `${onPrefix[1]}${onPrefix[2]}${onPrefix[3]}`;
+	const onInfix = name.match(/^(.*?)([a-z0-9]+)-on-([a-z0-9-]+)$/i);
+	if (onInfix !== null) return `${onInfix[1]}${onInfix[2]}-${onInfix[3]}`;
 	return undefined;
 }
 

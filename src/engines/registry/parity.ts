@@ -132,7 +132,9 @@ export function buildParity(registry: RegistryFile): ParityReport {
 				component: match.codeName,
 				status: "prop-mismatch",
 				detail: withParts(
-					`Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} — low shape agreement; props/variants likely diverge.`,
+					Array.isArray(match.variantGaps) && match.variantGaps.length > 0
+						? `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} — variants differ: ${match.variantGaps.join("; ")}.`
+						: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} — low shape agreement; props/variants likely diverge.`,
 					match.codeName,
 					match.importPath,
 				),

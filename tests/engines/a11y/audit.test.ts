@@ -104,6 +104,20 @@ describe("pairColorTokens — named surfaces (shadcn X / X-foreground, Material 
 			"color.on-surface|color.surface",
 		]);
 	});
+
+	it("pairs Material inverse-on-surface with inverse-surface only", () => {
+		const map = makeMap([
+			color("md.sys.color.surface", "#fdf7ff"),
+			color("md.sys.color.inverse-surface", "#322f35"),
+			color("md.sys.color.inverse-on-surface", "#f5eff7"),
+		]);
+		const keys = pairColorTokens(map).map(
+			(p) => `${p.foreground.name}|${p.background.name}`,
+		);
+		expect(keys).toEqual([
+			"md.sys.color.inverse-on-surface|md.sys.color.inverse-surface",
+		]);
+	});
 });
 
 describe("auditContrast", () => {

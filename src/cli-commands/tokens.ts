@@ -16,7 +16,6 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import type { DriftTrendPoint } from "../engines/report/types.js";
-import { detectFormat } from "../engines/tokens/detect.js";
 import {
 	classifyDrift,
 	classifyDriftByMode,
@@ -24,21 +23,14 @@ import {
 	type DriftResult,
 	type ModeTokens,
 } from "../engines/tokens/drift.js";
-import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
-import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
-import { parseW3c } from "../engines/tokens/parse-w3c.js";
 import {
 	type OutputValue,
 	scanOutputs,
 } from "../engines/tokens/scan-outputs.js";
-import { readThemes, themeSubDocument } from "../engines/tokens/themes.js";
-import type {
-	ParseOutcome,
-	Token,
-	TokenMap,
-	TokenSourceFormat,
-} from "../engines/tokens/types.js";
+import type { Token, TokenMap } from "../engines/tokens/types.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
+import { loadTokens } from "../io/load-tokens.js";
+import { findTokenSource } from "../io/token-set.js";
 import { renderDashboard } from "../render/html/dashboard.js";
 import {
 	type BarChartItem,
@@ -54,12 +46,6 @@ type CheckFormat = "json" | "term";
 
 /** Max tokens listed in the term table — keeps output scannable. */
 const TABLE_LIMIT = 20;
-
-const PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
-	w3c: parseW3c,
-	"tokens-studio": parseTokensStudio,
-	"style-dictionary": parseStyleDictionary,
-};
 
 /** A short, single-line preview of a token value for the term table. */
 function previewValue(value: Token["value"]): string {
@@ -98,53 +84,19 @@ function renderTerm(filePath: string, map: TokenMap, color: boolean): string {
 	return lines.join("\n");
 }
 
-/** Read + parse the source file into a TokenMap, or fail with exit code 1. */
-function loadTokenMap(filePath: string): TokenMap | undefined {
-	let raw: string;
-	try {
-		raw = readFileSync(filePath, "utf8");
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		process.stderr.write(`Could not read file "${filePath}": ${detail}\n`);
+/** Read + parse the token source (file or folder) into a TokenMap, or fail with exit code 1. */
+function loadTokenMap(path: string): TokenMap | undefined {
+	const loaded = loadTokens(path);
+	if (loaded.kind === "error") {
+		process.stderr.write(`${loaded.message}\n`);
 		process.exitCode = 1;
 		return undefined;
 	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		process.stderr.write(`"${filePath}" is not valid JSON: ${detail}\n`);
-		process.exitCode = 1;
-		return undefined;
-	}
-
-	const format = detectFormat(parsed);
-	if (format === "unknown") {
-		process.stderr.write(
-			`Could not detect a supported token format for "${filePath}". Expected W3C, Tokens Studio, or Style Dictionary.\n`,
-		);
-		process.exitCode = 1;
-		return undefined;
-	}
-
-	const outcome = PARSERS[format](parsed);
-	if (outcome.kind === "error") {
-		process.stderr.write(`Failed to parse "${filePath}" as ${format}:\n`);
-		for (const err of outcome.errors) {
-			const where = err.path !== undefined ? ` (${err.path})` : "";
-			process.stderr.write(`  ${err.code}${where}: ${err.message}\n`);
-		}
-		process.exitCode = 1;
-		return undefined;
-	}
-
 	// Warnings are non-fatal: surface them on stderr but keep exit 0.
-	for (const warning of outcome.warnings) {
+	for (const warning of loaded.warnings) {
 		process.stderr.write(`warning: ${warning}\n`);
 	}
-	return outcome.map;
+	return loaded.map;
 }
 
 // ---------- `tokens check` (T3.5) ----------
@@ -186,15 +138,6 @@ interface HistoryRecord {
 	inSync: boolean;
 }
 
-const PARSERS_CHECK: Record<
-	TokenSourceFormat,
-	(source: unknown) => ParseOutcome
-> = {
-	w3c: parseW3c,
-	"tokens-studio": parseTokensStudio,
-	"style-dictionary": parseStyleDictionary,
-};
-
 function hasOutputExtension(name: string): boolean {
 	const lower = name.toLowerCase();
 	return OUTPUT_EXTENSIONS.some((ext) => lower.endsWith(ext));
@@ -217,81 +160,6 @@ function walkOutputFiles(dir: string, acc: string[]): void {
 		}
 		if (entry.isFile() && hasOutputExtension(entry.name)) acc.push(full);
 	}
-}
-
-function depthOf(path: string): number {
-	return path.split(sep).filter((s) => s.length > 0).length;
-}
-
-function isConventionalTokenFile(name: string): boolean {
-	if (!name.endsWith(".json")) return false;
-	return (
-		name === "tokens.json" ||
-		name === "design-tokens.json" ||
-		name.endsWith(".tokens.json")
-	);
-}
-
-function isTokenDir(name: string): boolean {
-	return name === "tokens" || name === "design-tokens";
-}
-
-function collectTokenCandidates(
-	dir: string,
-	insideTokenDir: boolean,
-	acc: string[],
-): void {
-	let entries: Dirent[];
-	try {
-		entries = readdirSync(dir, { withFileTypes: true });
-	} catch {
-		return;
-	}
-	for (const entry of entries) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (EXCLUDED_DIRS.has(entry.name)) continue;
-			collectTokenCandidates(
-				full,
-				insideTokenDir || isTokenDir(entry.name),
-				acc,
-			);
-			continue;
-		}
-		if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-		if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
-	}
-}
-
-/** Detect a file's token format from its shape, or undefined when not a token file. */
-function detectFileFormat(absPath: string): TokenSourceFormat | undefined {
-	let raw: string;
-	try {
-		raw = readFileSync(absPath, "utf8");
-	} catch {
-		return undefined;
-	}
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		return undefined;
-	}
-	const format = detectFormat(parsed);
-	return format === "unknown" ? undefined : format;
-}
-
-/** Shallowest conventional, shape-verified token file under `root`. */
-function discoverFirstTokenSource(root: string): string | undefined {
-	const candidates: string[] = [];
-	collectTokenCandidates(root, false, candidates);
-	const verified = candidates
-		.filter((path) => detectFileFormat(path) !== undefined)
-		.sort((a, b) => {
-			const depth = depthOf(a) - depthOf(b);
-			return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-		});
-	return verified[0];
 }
 
 /**
@@ -337,7 +205,7 @@ function resolveTokenSource(
 		}
 	}
 
-	const discovered = discoverFirstTokenSource(targetDir);
+	const discovered = findTokenSource(targetDir);
 	if (discovered !== undefined) return { kind: "ok", path: discovered };
 
 	return {
@@ -350,73 +218,23 @@ function resolveTokenSource(
 }
 
 /**
- * Parse the token source file into a TokenMap, or an error outcome. A Tokens
- * Studio document with two or more `$themes` also yields one map per theme
- * (default first) so drift is checked mode by mode.
+ * Parse the token source (file or folder) into a TokenMap, or an error
+ * outcome. Tokens Studio `$themes` and a folder's per-mode files also yield
+ * one map per mode (default first) so drift is checked mode by mode.
  */
 function loadTokenMapForCheck(
 	tokenPath: string,
-): { kind: "ok"; map: TokenMap; modes?: ModeTokens[] } | CheckError {
-	let raw: string;
-	try {
-		raw = readFileSync(tokenPath, "utf8");
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Could not read token source "${tokenPath}": ${detail}`,
-		};
-	}
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Token source "${tokenPath}" is not valid JSON: ${detail}`,
-		};
-	}
-	const format = detectFormat(parsed);
-	if (format === "unknown") {
-		return {
-			kind: "error",
-			message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`,
-		};
-	}
-	const outcome = PARSERS_CHECK[format](parsed);
-	if (outcome.kind === "error") {
-		const lines = outcome.errors.map((e) => {
-			const where = e.path !== undefined ? ` (${e.path})` : "";
-			return `  ${e.code}${where}: ${e.message}`;
-		});
-		return {
-			kind: "error",
-			message: `Failed to parse token source "${tokenPath}" as ${format}:\n${lines.join("\n")}`,
-		};
-	}
-	const themes = format === "tokens-studio" ? readThemes(parsed) : undefined;
-	if (themes === undefined || themes.length < 2) {
-		return { kind: "ok", map: outcome.map };
-	}
-	const modes: ModeTokens[] = [];
-	for (const theme of themes) {
-		const themed = parseTokensStudio(
-			themeSubDocument(parsed as Record<string, unknown>, theme),
-		);
-		if (themed.kind === "error") {
-			const lines = themed.errors.map((e) => {
-				const where = e.path !== undefined ? ` (${e.path})` : "";
-				return `  ${e.code}${where}: ${e.message}`;
-			});
-			return {
-				kind: "error",
-				message: `Failed to parse theme "${theme.name}" of "${tokenPath}":\n${lines.join("\n")}`,
-			};
-		}
-		modes.push({ mode: theme.name, map: themed.map });
-	}
-	return { kind: "ok", map: outcome.map, modes };
+):
+	| { kind: "ok"; map: TokenMap; modes?: ModeTokens[]; files: string[] }
+	| CheckError {
+	const loaded = loadTokens(tokenPath);
+	if (loaded.kind === "error") return loaded;
+	return {
+		kind: "ok",
+		map: loaded.map,
+		...(loaded.modes !== undefined ? { modes: loaded.modes } : {}),
+		files: loaded.files,
+	};
 }
 
 /**
@@ -439,7 +257,9 @@ function scanMergedOutputs(
 	const warnings: string[] = [];
 
 	for (const file of files) {
-		if (resolve(file) === resolve(tokenSourcePath)) continue;
+		const source = resolve(tokenSourcePath);
+		const abs = resolve(file);
+		if (abs === source || abs.startsWith(source + sep)) continue;
 		let content: string;
 		try {
 			content = readFileSync(file, "utf8");
@@ -531,7 +351,26 @@ function severityColorless(kind: DriftEntry["kind"]): string {
 }
 
 /** Render the term summary: severity-colored counts + an entry table. */
-function renderCheckTerm(result: DriftResult, color: boolean): string {
+/** Which token source a check read: shown so a wrong pick is never silent. */
+interface SourceInfo {
+	/** Path relative to the checked project ("." when it is the project). */
+	path: string;
+	files: number;
+	modes: string[];
+}
+
+function describeSource(source: SourceInfo): string {
+	const files = source.files === 1 ? "1 file" : `${source.files} files`;
+	const modes =
+		source.modes.length > 0 ? ` · modes ${source.modes.join(", ")}` : "";
+	return `Token source: ${source.path} (${files}${modes})`;
+}
+
+function renderCheckTerm(
+	result: DriftResult,
+	color: boolean,
+	source: SourceInfo,
+): string {
 	const { stale, missing, orphan } = countByKind(result);
 
 	const countRows = [
@@ -547,7 +386,7 @@ function renderCheckTerm(result: DriftResult, color: boolean): string {
 			? `In sync — ${result.inSync} token${result.inSync === 1 ? "" : "s"} match output`
 			: `${total} drift entr${total === 1 ? "y" : "ies"} (${result.inSync} in sync)`;
 
-	const lines = [heading, "", countsTable];
+	const lines = [heading, describeSource(source), "", countsTable];
 
 	if (total > 0) {
 		const rows = result.entries.map((entry) => {
@@ -562,11 +401,16 @@ function renderCheckTerm(result: DriftResult, color: boolean): string {
 }
 
 /** Serialize the drift result for --format=json. */
-function checkJson(result: DriftResult, skippedModes: string[]): string {
+function checkJson(
+	result: DriftResult,
+	skippedModes: string[],
+	source: SourceInfo,
+): string {
 	return JSON.stringify(
 		{
 			entries: result.entries,
 			inSync: result.entries.length === 0,
+			source,
 			...(skippedModes.length > 0 ? { skippedModes } : {}),
 		},
 		null,
@@ -708,11 +552,17 @@ function runCheck(path: string, options: CheckOptions): void {
 		inSync,
 	});
 
+	const rel = relative(targetDir, tokenSource.path);
+	const source: SourceInfo = {
+		path: rel === "" ? "." : rel.startsWith("..") ? tokenSource.path : rel,
+		files: loaded.files.length,
+		modes: (loaded.modes ?? []).map((m) => m.mode),
+	};
 	if (format === "json") {
-		process.stdout.write(`${checkJson(result, skippedModes)}\n`);
+		process.stdout.write(`${checkJson(result, skippedModes, source)}\n`);
 	} else {
 		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-		process.stdout.write(`${renderCheckTerm(result, color)}\n`);
+		process.stdout.write(`${renderCheckTerm(result, color, source)}\n`);
 	}
 
 	if (options.report) {
@@ -733,7 +583,10 @@ export function registerTokensCommand(program: Command): void {
 		.command("check")
 		.description("Detect drift between the token source and built outputs")
 		.argument("[path]", "project directory to check", ".")
-		.option("--tokens <file>", "explicit token source file")
+		.option(
+			"--tokens <path>",
+			"explicit token source: a file, or a folder of token files",
+		)
 		.option("--outputs <dir>", "directory of built CSS/SCSS/TS outputs to scan")
 		.option(
 			"--report",

@@ -240,6 +240,9 @@ describe("ds-bridge frame-impl (built dist/cli.mjs)", () => {
 		// no-registry-match + Accent no-token-match) → 50% implementable.
 		expect(result.stdout).toContain("50%");
 		expect(result.stdout).toContain("Card / Primary");
+		// Each gap is named, not only counted by reason.
+		expect(result.stdout).toContain("Gaps:");
+		expect(result.stdout).toContain("Mystery");
 
 		// The frame-impl history line was appended with the rollup.
 		const records = await readFrameImplHistory(dir);

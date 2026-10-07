@@ -54,10 +54,41 @@ function pickPreferred(
 			: tokens.filter((t) => isForegroundToken(t.name) === (role === "fg"));
 	const pool = candidates.length > 0 ? candidates : tokens;
 	const names = new Set(tokens.map((t) => t.name));
-	const semantic = pool.find(
+	const semantic = pool.filter(
 		(t) => t.aliasOf !== undefined && names.has(t.aliasOf),
 	);
-	return semantic ?? pool[0];
+	// Several roles can share a value (Material: on-primary and on-error are
+	// both white); a status role is the least likely meaning of a plain value.
+	const neutral = semantic.find((t) => !isStatusToken(t.name));
+	return neutral ?? semantic[0] ?? pool[0];
+}
+
+/** A token named for a status: error, danger, warning, success, destructive. */
+function isStatusToken(name: string): boolean {
+	return /(error|danger|warning|warn|success|destructive|critical)/i.test(name);
+}
+
+/**
+ * The token family a dimension property means: spacing for padding / margin /
+ * gap / insets, corners for border-radius, the type scale for font-size,
+ * line-height and letter-spacing. Undefined when the property names none.
+ */
+function dimensionFamily(property: string | undefined): RegExp | undefined {
+	if (property === undefined) return undefined;
+	const p = property.toLowerCase();
+	if (/radius/.test(p)) return /(radius|corner|rounded|shape)/i;
+	if (/^font-?size$|^fontsize$/.test(p))
+		return /(font-?size|typescale.*size|\.size$|text)/i;
+	if (/line-?height/.test(p)) return /(line-?height|leading)/i;
+	if (/letter-?spacing/.test(p)) return /(letter-?spacing|tracking)/i;
+	if (
+		/^(?:padding|margin|gap|row-?gap|column-?gap|inset|top|right|bottom|left)/.test(
+			p.replace(/([a-z])([A-Z])/g, "$1-$2"),
+		)
+	) {
+		return /(spacing|space|gap|gutter)/i;
+	}
+	return undefined;
 }
 
 /**
@@ -163,7 +194,12 @@ function matchDimension(
 	// 1. Exact px hit. Only dimension tokens produce `${px}px` value keys.
 	const bucket = index.byValue.get(`${dim.px}px`);
 	if (bucket !== undefined) {
-		const exact = bucket.find((t) => t.type === "dimension");
+		const dimensions = bucket.filter((t) => t.type === "dimension");
+		const family = dimensionFamily(literal.property);
+		const exact =
+			(family !== undefined
+				? dimensions.find((t) => family.test(t.name))
+				: undefined) ?? dimensions[0];
 		if (exact !== undefined) return { kind: "exact", token: exact };
 	}
 

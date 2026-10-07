@@ -9,7 +9,7 @@
 // reading the supplied project dir, and NEVER throws: a missing dir or unparseable
 // file degrades to empty usages, never a fatal error.
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { Project, type SourceFile } from "ts-morph";
+import { type Node, Project, type SourceFile } from "ts-morph";
 import { readPathAliases } from "../../io/tsconfig-paths.js";
 import type { RegistryFile, RegistryMatch } from "../registry/persist.js";
 
@@ -118,8 +118,11 @@ function buildProject(root: string): Project {
 		},
 	});
 	try {
+		// .ts too: a barrel (`components/index.ts`) must be in the project for
+		// imports through it to resolve.
 		project.addSourceFilesAtPaths([
-			toForwardSlashes(`${root}/**/*.tsx`),
+			toForwardSlashes(`${root}/**/*.{ts,tsx}`),
+			`!${toForwardSlashes(`${root}/**/*.d.ts`)}`,
 			`!${toForwardSlashes(`${root}/**/node_modules/**`)}`,
 		]);
 	} catch {
@@ -139,6 +142,30 @@ function resolveImportTarget(importLine: {
 		return undefined;
 	}
 	return target?.getFilePath();
+}
+
+/**
+ * Whether a named import's symbol, followed through re-exports (`export *`,
+ * `export { X } from`), is declared in `targetImportPath` (root-relative).
+ */
+function declaredIn(
+	named: { getNameNode(): Node },
+	root: string,
+	targetImportPath: string,
+): boolean {
+	try {
+		const symbol = named.getNameNode().getSymbol();
+		const resolved = symbol?.getAliasedSymbol() ?? symbol;
+		for (const decl of resolved?.getDeclarations() ?? []) {
+			const file = decl.getSourceFile().getFilePath();
+			if (toForwardSlashes(relative(root, file)) === targetImportPath) {
+				return true;
+			}
+		}
+	} catch {
+		// Unresolvable symbol: not a usage of the target.
+	}
+	return false;
 }
 
 /**
@@ -170,19 +197,21 @@ function scanUsages(
 			const resolvedTarget = resolveImportTarget(importDecl);
 			if (resolvedTarget === undefined) continue;
 			const resolvedRel = toForwardSlashes(relative(root, resolvedTarget));
-			if (resolvedRel !== targetImportPath) continue;
+			const direct = resolvedRel === targetImportPath;
 
 			// Match the imported identifier: named import or default import equal to
 			// the code component name (covers `import { Button }` and `import Button`).
+			// Through a barrel, the named import must lead back to the target file.
 			let importName: string | undefined;
 			for (const named of importDecl.getNamedImports()) {
 				const alias = named.getAliasNode()?.getText();
 				const local = alias ?? named.getName();
-				if (local === codeName || named.getName() === codeName) {
-					importName = local;
-					break;
-				}
+				if (local !== codeName && named.getName() !== codeName) continue;
+				if (!direct && !declaredIn(named, root, targetImportPath)) continue;
+				importName = local;
+				break;
 			}
+			if (!direct && importName === undefined) continue;
 			if (importName === undefined) {
 				const def = importDecl.getDefaultImport()?.getText();
 				if (def === codeName) importName = def;
@@ -257,4 +286,41 @@ export function mapUsage(input: MapUsageInput): ComponentUsage[] {
 	}
 
 	return results;
+}
+
+/** One code component's import sites, for import coverage. */
+export interface CodeUsage {
+	codeName: string;
+	importPath: string;
+	usages: UsageSite[];
+	count: number;
+}
+
+/**
+ * Import sites of EVERY code component the registry knows — matched to Figma
+ * or not — in registry order (matches, then unmatched code). Import coverage
+ * divides by all of them, so it must count all of them. Never throws.
+ */
+export function mapCodeUsage(input: {
+	registry: RegistryFile;
+	projectDir: string;
+}): CodeUsage[] {
+	const { registry, projectDir } = input;
+	const root = resolve(projectDir);
+	const entries = [
+		...(Array.isArray(registry?.matches) ? registry.matches : []).map((m) => ({
+			codeName: m.codeName,
+			importPath: m.importPath,
+		})),
+		...(Array.isArray(registry?.unmatchedCode)
+			? registry.unmatchedCode
+			: []
+		).map((u) => ({ codeName: u.name, importPath: u.importPath })),
+	];
+	if (entries.length === 0) return [];
+	const project = buildProject(root);
+	return entries.map(({ codeName, importPath }) => {
+		const usages = scanUsages(project, root, codeName, importPath);
+		return { codeName, importPath, usages, count: usages.length };
+	});
 }

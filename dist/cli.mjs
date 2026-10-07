@@ -3535,8 +3535,8 @@ var {
 } = import_index.default;
 
 // src/cli-commands/a11y.ts
-import { existsSync as existsSync2, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
-import { join as join3, resolve as resolve4 } from "path";
+import { existsSync as existsSync2, statSync as statSync3 } from "fs";
+import { join as join3, resolve as resolve3 } from "path";
 
 // node_modules/culori/src/rgb/parseNumber.js
 var parseNumber = (color, len) => {
@@ -7082,6 +7082,8 @@ function namedSurface(name) {
   if (suffix !== null) return suffix[1];
   const onPrefix = name.match(/^(.*?)(^|[./])on-([a-z0-9-]+)$/i);
   if (onPrefix !== null) return `${onPrefix[1]}${onPrefix[2]}${onPrefix[3]}`;
+  const onInfix = name.match(/^(.*?)([a-z0-9]+)-on-([a-z0-9-]+)$/i);
+  if (onInfix !== null) return `${onInfix[1]}${onInfix[2]}-${onInfix[3]}`;
   return void 0;
 }
 function pairColorTokens(map) {
@@ -7191,6 +7193,353 @@ function auditContrast(modes2, options) {
     findings,
     summary: { total: findings.length, passed, failed, unparseable }
   };
+}
+
+// src/io/history-writer.ts
+import { randomUUID } from "crypto";
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync
+} from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
+// src/engines/history/envelope.ts
+var RESERVED_ENVELOPE_KEYS = /* @__PURE__ */ new Set([
+  "v",
+  "at",
+  "kind",
+  "source",
+  "git",
+  "tool",
+  "runId"
+]);
+function buildEnvelope(payload, meta) {
+  const at = typeof payload.at === "string" ? payload.at : meta.now;
+  const record = {
+    v: 2,
+    at,
+    kind: payload.kind,
+    source: meta.source,
+    git: meta.git,
+    tool: meta.tool
+  };
+  if (meta.runId !== void 0) record.runId = meta.runId;
+  Object.assign(record, payloadOf(payload));
+  return record;
+}
+function payloadOf(record) {
+  const payload = {};
+  for (const [key, value2] of Object.entries(record)) {
+    if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
+  }
+  return payload;
+}
+function parseSource(raw) {
+  return raw === "local" || raw === "ci" || raw === "hook" ? raw : void 0;
+}
+function resolveSource(flag, env) {
+  return flag ?? parseSource(env.DS_BRIDGE_SOURCE) ?? "local";
+}
+var MAX_RUN_ID_LENGTH = 128;
+function resolveRunId(env) {
+  const raw = env.DS_BRIDGE_RUN_ID;
+  if (raw === void 0) return void 0;
+  const trimmed = raw.trim();
+  if (trimmed === "" || trimmed.length > MAX_RUN_ID_LENGTH) return void 0;
+  return trimmed;
+}
+function parseGit(value2) {
+  if (typeof value2 !== "object" || value2 === null) return null;
+  const g = value2;
+  if (typeof g.sha !== "string") return null;
+  return {
+    sha: g.sha,
+    branch: typeof g.branch === "string" ? g.branch : null,
+    dirty: g.dirty === true
+  };
+}
+function parseTool(value2) {
+  if (typeof value2 !== "object" || value2 === null) return null;
+  const t = value2;
+  return typeof t.version === "string" ? { version: t.version } : null;
+}
+function envelopeOf(record) {
+  const v = record.v;
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 2) return void 0;
+  const env = { v };
+  const source = parseSource(
+    typeof record.source === "string" ? record.source : void 0
+  );
+  if (source !== void 0) env.source = source;
+  if (typeof record.runId === "string" && record.runId !== "") {
+    env.runId = record.runId;
+  }
+  if ("git" in record) env.git = parseGit(record.git);
+  if ("tool" in record) env.tool = parseTool(record.tool);
+  return env;
+}
+
+// src/io/git-log.ts
+import { spawnSync } from "child_process";
+var GIT_LOG_FIELD_SEP = "";
+var GIT_LOG_RECORD_SEP = "";
+var PRETTY_FORMAT = `--pretty=format:%H${GIT_LOG_FIELD_SEP}%aI${GIT_LOG_FIELD_SEP}%an${GIT_LOG_FIELD_SEP}%B${GIT_LOG_RECORD_SEP}`;
+function parseRecord(record) {
+  const fields = record.split(GIT_LOG_FIELD_SEP);
+  if (fields.length < 4) return void 0;
+  const [hash, dateIso, author, ...subjectParts] = fields;
+  if (hash === void 0 || hash === "" || dateIso === void 0 || author === void 0) {
+    return void 0;
+  }
+  const subject = subjectParts.join(GIT_LOG_FIELD_SEP).replace(/\n+$/, "");
+  return { hash, dateIso, author, subject };
+}
+function readGitLog(input) {
+  const args = ["log", `--since=${input.since}`, PRETTY_FORMAT];
+  const run = input.exec(args, input.cwd);
+  if (run.error !== void 0) {
+    return { kind: "git-unavailable", message: run.error };
+  }
+  if (run.status !== 0) {
+    return { kind: "not-a-repo" };
+  }
+  const commits = [];
+  for (const raw of run.stdout.split(GIT_LOG_RECORD_SEP)) {
+    const record = raw.replace(/^\n+/, "");
+    if (record.trim() === "") continue;
+    const commit = parseRecord(record);
+    if (commit !== void 0) commits.push(commit);
+  }
+  return { kind: "ok", commits };
+}
+function classifyGitFailure(run) {
+  if (run.error !== void 0) {
+    return { kind: "git-error", message: run.error };
+  }
+  const stderr = run.stderr;
+  if (stderr.includes("does not exist in") || stderr.includes("exists on disk, but not in")) {
+    return { kind: "missing", message: stderr };
+  }
+  return { kind: "git-error", message: stderr.trim() };
+}
+function readFileAtRef(input) {
+  const { ref, path, cwd: cwd5, exec } = input;
+  if (!isSafeRef(ref)) {
+    return { kind: "git-error", message: `"${ref}" is not a valid git ref` };
+  }
+  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd5);
+  if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
+    const { kind, message } = classifyGitFailure(prefixRun);
+    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  }
+  const prefix = prefixRun.stdout.trim();
+  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd5);
+  if (showRun.error !== void 0 || showRun.status !== 0) {
+    const { kind, message } = classifyGitFailure(showRun);
+    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  }
+  return { kind: "ok", text: showRun.stdout };
+}
+var UNSAFE_REF_CHAR = /[\s:\u0000-\u001f\u007f]/;
+function isSafeRef(ref) {
+  return ref !== "" && !ref.startsWith("-") && !UNSAFE_REF_CHAR.test(ref);
+}
+var GIT_MAX_BUFFER = 256 * 1024 * 1024;
+function spawnGitExec(args, cwd5) {
+  const run = spawnSync("git", args, {
+    cwd: cwd5,
+    encoding: "utf8",
+    maxBuffer: GIT_MAX_BUFFER
+  });
+  if (run.error !== void 0) {
+    return { status: -1, stdout: "", stderr: "", error: run.error.message };
+  }
+  return {
+    status: run.status ?? -1,
+    stdout: run.stdout ?? "",
+    stderr: run.stderr ?? ""
+  };
+}
+
+// src/io/history-writer.ts
+var HISTORY_FILE = "history.jsonl";
+var LOCK_FILE = "history.jsonl.lock";
+var DEFAULT_LOCK_TIMEOUT_MS = 2e3;
+var DEFAULT_LOCK_STALE_MS = 1e4;
+var LOCK_POLL_MS = 25;
+function historyFilePath(stateDir) {
+  return join(stateDir, HISTORY_FILE);
+}
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+var cachedToolVersion;
+function resolveToolVersion() {
+  if (cachedToolVersion !== void 0) return cachedToolVersion;
+  cachedToolVersion = null;
+  try {
+    let dir = dirname(fileURLToPath(import.meta.url));
+    for (let depth = 0; depth < 6; depth += 1) {
+      const candidate = join(dir, "package.json");
+      if (existsSync(candidate)) {
+        const pkg2 = JSON.parse(readFileSync(candidate, "utf8"));
+        if (pkg2.name === "ds-bridge" && typeof pkg2.version === "string") {
+          cachedToolVersion = pkg2.version;
+          break;
+        }
+      }
+      const parent = dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  } catch {
+    cachedToolVersion = null;
+  }
+  return cachedToolVersion;
+}
+function countsAsDirty(line) {
+  if (line.trim() === "") return false;
+  const path = line.slice(3);
+  return !path.split(" -> ").every((p4) => p4.includes(".ds-bridge/"));
+}
+function readGitContext(projectDir, exec = spawnGitExec, env = process.env) {
+  try {
+    const head = exec(["rev-parse", "HEAD"], projectDir);
+    if (head.error !== void 0 || head.status !== 0) return null;
+    const sha = head.stdout.trim();
+    if (sha === "") return null;
+    const ref = exec(["rev-parse", "--abbrev-ref", "HEAD"], projectDir);
+    let branch = ref.status === 0 && ref.error === void 0 ? ref.stdout.trim() : null;
+    if (branch === "HEAD" || branch === "") {
+      branch = (env.GITHUB_HEAD_REF !== void 0 && env.GITHUB_HEAD_REF !== "" ? env.GITHUB_HEAD_REF : void 0) ?? (env.GITHUB_REF_NAME !== void 0 && env.GITHUB_REF_NAME !== "" ? env.GITHUB_REF_NAME : void 0) ?? null;
+    }
+    const status = exec(
+      ["status", "--porcelain", "--untracked-files=no"],
+      projectDir
+    );
+    const dirty = status.status === 0 && status.error === void 0 ? status.stdout.split("\n").some(countsAsDirty) : false;
+    return { sha, branch, dirty };
+  } catch {
+    return null;
+  }
+}
+function readLockOwner(lockPath) {
+  try {
+    return readFileSync(lockPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+function acquireHistoryLock(stateDir, options = {}) {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
+  const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
+  const lockPath = join(stateDir, LOCK_FILE);
+  const token = `${process.pid}:${randomUUID()}
+`;
+  const deadline = Date.now() + timeoutMs;
+  for (; ; ) {
+    try {
+      const fd = openSync(lockPath, "wx");
+      writeFileSync(fd, token);
+      closeSync(fd);
+      return () => {
+        if (readLockOwner(lockPath) !== token) return;
+        try {
+          unlinkSync(lockPath);
+        } catch {
+        }
+      };
+    } catch (error) {
+      const code = error.code;
+      if (code !== "EEXIST") return void 0;
+    }
+    try {
+      const owner = readLockOwner(lockPath);
+      if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
+        if (readLockOwner(lockPath) === owner) unlinkSync(lockPath);
+        continue;
+      }
+    } catch {
+      continue;
+    }
+    if (Date.now() >= deadline) return void 0;
+    sleepSync(LOCK_POLL_MS);
+  }
+}
+function appendHistoryRecord(stateDir, payload, options = {}) {
+  const env = options.env ?? process.env;
+  const runId = resolveRunId(env);
+  const record = buildEnvelope(payload, {
+    now: options.now !== void 0 ? options.now() : (/* @__PURE__ */ new Date()).toISOString(),
+    source: resolveSource(options.source, env),
+    git: readGitContext(dirname(stateDir), options.exec, env),
+    tool: (() => {
+      const version = options.toolVersion !== void 0 ? options.toolVersion : resolveToolVersion();
+      return version === null ? null : { version };
+    })(),
+    ...runId !== void 0 ? { runId } : {}
+  });
+  mkdirSync(stateDir, { recursive: true });
+  const release = acquireHistoryLock(stateDir, {
+    timeoutMs: options.lockTimeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS
+  });
+  try {
+    appendFileSync(
+      historyFilePath(stateDir),
+      `${JSON.stringify(record)}
+`,
+      "utf8"
+    );
+  } finally {
+    release?.();
+  }
+  return record;
+}
+function rewriteHistoryAtomic(stateDir, text2, readBytes) {
+  const target = historyFilePath(stateDir);
+  const temp = join(stateDir, `.${HISTORY_FILE}.tmp-${process.pid}`);
+  try {
+    writeFileSync(temp, text2, "utf8");
+    if (readBytes !== void 0) carryAppendedTail(target, temp, readBytes);
+    renameSync(temp, target);
+  } catch (error) {
+    try {
+      unlinkSync(temp);
+    } catch {
+    }
+    throw error;
+  }
+}
+function carryAppendedTail(target, temp, from) {
+  let offset = from;
+  for (; ; ) {
+    const size = statSync(target).size;
+    if (size < offset) {
+      throw new Error(
+        "history changed underneath the rewrite (file shrank) \u2014 not replaced"
+      );
+    }
+    if (size === offset) return;
+    const tail = Buffer.alloc(size - offset);
+    const fd = openSync(target, "r");
+    try {
+      readSync(fd, tail, 0, tail.length, offset);
+    } finally {
+      closeSync(fd);
+    }
+    appendFileSync(temp, tail);
+    offset = size;
+  }
 }
 
 // src/engines/tokens/detect.ts
@@ -7551,7 +7900,7 @@ function parseTokensStudio(source) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve18 = (name, seen) => {
+  const resolve17 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -7577,7 +7926,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve18(target, new Set(seen).add(target));
+    const downstream = resolve17(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -7585,7 +7934,7 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve18(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve17(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
     const token = {
       name,
@@ -7787,446 +8136,261 @@ function themeSubDocument(source, theme) {
   return doc;
 }
 
-// src/io/discover-tokens.ts
-import { readdir, readFile, stat } from "fs/promises";
-import { isAbsolute, join, resolve as resolve3, sep } from "path";
+// src/io/token-set.ts
+import { readdirSync, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
+import { dirname as dirname2, join as join2, relative, sep } from "path";
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
+  "build",
   "coverage",
   "out",
-  ".next"
+  ".next",
+  ".ds-bridge"
 ]);
-async function detectFileFormat(absPath) {
-  let raw;
+function modeOfTokenFile(relPath) {
+  const match = relPath.toLowerCase().replace(/\\/g, "/").match(
+    /(?:^|[/._-])((?:light|dark)(?:-(?:medium|high)-contrast)?)(?=$|[/._-])/
+  );
+  return match?.[1];
+}
+function isConventionalTokenFile(name) {
+  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
+}
+function isTokenDir(name) {
+  return name === "tokens" || name === "design-tokens";
+}
+function readJson(path) {
   try {
-    raw = await readFile(absPath, "utf8");
+    return JSON.parse(readFileSync2(path, "utf8"));
   } catch {
     return void 0;
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return void 0;
-  }
+}
+function formatOf(path) {
+  const parsed = readJson(path);
+  if (parsed === void 0) return void 0;
   const format = detectFormat(parsed);
   return format === "unknown" ? void 0 : format;
 }
-function isConventionalTokenFile(fileName) {
-  if (!fileName.endsWith(".json")) return false;
-  return fileName === "tokens.json" || fileName === "design-tokens.json" || fileName.endsWith(".tokens.json");
-}
-function isTokenDir(dirName) {
-  return dirName === "tokens" || dirName === "design-tokens";
-}
-async function collectCandidates(dir, insideTokenDir, acc) {
+function collectCandidates(dir, insideTokenDir, acc) {
   let entries;
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    entries = readdirSync(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join(dir, entry.name);
+    const full = join2(dir, entry.name);
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS.has(entry.name)) continue;
-      await collectCandidates(
-        full,
-        insideTokenDir || isTokenDir(entry.name),
-        acc
-      );
+      collectCandidates(full, insideTokenDir || isTokenDir(entry.name), acc);
       continue;
     }
-    if (!entry.isFile()) continue;
-    if (!entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile(entry.name)) {
-      acc.add(full);
-    }
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
   }
 }
-function depthOf(absPath) {
-  return absPath.split(sep).filter((segment) => segment.length > 0).length;
-}
-function compareSources(a, b) {
-  const depthDelta = depthOf(a.path) - depthOf(b.path);
-  if (depthDelta !== 0) return depthDelta;
-  return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
-}
-async function discoverTokenSources(rootDir, options) {
-  const root = resolve3(rootDir);
-  if (options?.explicit !== void 0) {
-    const explicitPath = isAbsolute(options.explicit) ? options.explicit : resolve3(root, options.explicit);
-    let isFile = false;
+function jsonFilesUnder(dir) {
+  const acc = [];
+  const walk2 = (current) => {
+    let entries;
     try {
-      isFile = (await stat(explicitPath)).isFile();
+      entries = readdirSync(current, { withFileTypes: true });
     } catch {
-      isFile = false;
+      return;
     }
-    if (!isFile) return { kind: "explicit-not-found", path: explicitPath };
-    const format = await detectFileFormat(explicitPath);
-    if (format === void 0) {
-      return { kind: "explicit-not-found", path: explicitPath };
+    for (const entry of entries) {
+      const full = join2(current, entry.name);
+      if (entry.isDirectory()) {
+        if (!EXCLUDED_DIRS.has(entry.name)) walk2(full);
+      } else if (entry.isFile() && entry.name.endsWith(".json") && !entry.name.startsWith("$")) {
+        acc.push(full);
+      }
     }
-    return { kind: "ok", sources: [{ path: explicitPath, format }] };
-  }
-  const candidatePaths = /* @__PURE__ */ new Set();
-  await collectCandidates(root, false, candidatePaths);
-  const sources = [];
-  for (const candidate of candidatePaths) {
-    const format = await detectFileFormat(candidate);
-    if (format !== void 0) sources.push({ path: candidate, format });
-  }
-  sources.sort(compareSources);
-  return { kind: "ok", sources };
-}
-
-// src/io/history-writer.ts
-import { randomUUID } from "crypto";
-import {
-  appendFileSync,
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  readSync,
-  renameSync,
-  statSync,
-  unlinkSync,
-  writeFileSync
-} from "fs";
-import { dirname, join as join2 } from "path";
-import { fileURLToPath } from "url";
-
-// src/engines/history/envelope.ts
-var RESERVED_ENVELOPE_KEYS = /* @__PURE__ */ new Set([
-  "v",
-  "at",
-  "kind",
-  "source",
-  "git",
-  "tool",
-  "runId"
-]);
-function buildEnvelope(payload, meta) {
-  const at = typeof payload.at === "string" ? payload.at : meta.now;
-  const record = {
-    v: 2,
-    at,
-    kind: payload.kind,
-    source: meta.source,
-    git: meta.git,
-    tool: meta.tool
   };
-  if (meta.runId !== void 0) record.runId = meta.runId;
-  Object.assign(record, payloadOf(payload));
-  return record;
+  walk2(dir);
+  return acc.sort();
 }
-function payloadOf(record) {
-  const payload = {};
-  for (const [key, value2] of Object.entries(record)) {
-    if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
-  }
-  return payload;
-}
-function parseSource(raw) {
-  return raw === "local" || raw === "ci" || raw === "hook" ? raw : void 0;
-}
-function resolveSource(flag, env) {
-  return flag ?? parseSource(env.DS_BRIDGE_SOURCE) ?? "local";
-}
-var MAX_RUN_ID_LENGTH = 128;
-function resolveRunId(env) {
-  const raw = env.DS_BRIDGE_RUN_ID;
-  if (raw === void 0) return void 0;
-  const trimmed = raw.trim();
-  if (trimmed === "" || trimmed.length > MAX_RUN_ID_LENGTH) return void 0;
-  return trimmed;
-}
-function parseGit(value2) {
-  if (typeof value2 !== "object" || value2 === null) return null;
-  const g = value2;
-  if (typeof g.sha !== "string") return null;
-  return {
-    sha: g.sha,
-    branch: typeof g.branch === "string" ? g.branch : null,
-    dirty: g.dirty === true
-  };
-}
-function parseTool(value2) {
-  if (typeof value2 !== "object" || value2 === null) return null;
-  const t = value2;
-  return typeof t.version === "string" ? { version: t.version } : null;
-}
-function envelopeOf(record) {
-  const v = record.v;
-  if (typeof v !== "number" || !Number.isFinite(v) || v < 2) return void 0;
-  const env = { v };
-  const source = parseSource(
-    typeof record.source === "string" ? record.source : void 0
+var depthOf = (path) => path.split(sep).length;
+function findTokenSource(root) {
+  const candidates = [];
+  collectCandidates(root, false, candidates);
+  const verified = candidates.map((path) => ({ path, format: formatOf(path) })).filter(
+    (c2) => c2.format !== void 0
+  ).sort((a, b) => {
+    const depth = depthOf(a.path) - depthOf(b.path);
+    return depth !== 0 ? depth : a.path < b.path ? -1 : 1;
+  });
+  const first = verified[0];
+  if (first === void 0) return void 0;
+  if (first.format === "tokens-studio") return first.path;
+  const dir = dirname2(first.path);
+  const siblings = verified.filter(
+    (c2) => c2.format === first.format && c2.path.startsWith(dir + sep)
   );
-  if (source !== void 0) env.source = source;
-  if (typeof record.runId === "string" && record.runId !== "") {
-    env.runId = record.runId;
-  }
-  if ("git" in record) env.git = parseGit(record.git);
-  if ("tool" in record) env.tool = parseTool(record.tool);
-  return env;
+  return siblings.length >= 2 ? dir : first.path;
 }
-
-// src/io/git-log.ts
-import { spawnSync } from "child_process";
-var GIT_LOG_FIELD_SEP = "";
-var GIT_LOG_RECORD_SEP = "";
-var PRETTY_FORMAT = `--pretty=format:%H${GIT_LOG_FIELD_SEP}%aI${GIT_LOG_FIELD_SEP}%an${GIT_LOG_FIELD_SEP}%B${GIT_LOG_RECORD_SEP}`;
-function parseRecord(record) {
-  const fields = record.split(GIT_LOG_FIELD_SEP);
-  if (fields.length < 4) return void 0;
-  const [hash, dateIso, author, ...subjectParts] = fields;
-  if (hash === void 0 || hash === "" || dateIso === void 0 || author === void 0) {
-    return void 0;
-  }
-  const subject = subjectParts.join(GIT_LOG_FIELD_SEP).replace(/\n+$/, "");
-  return { hash, dateIso, author, subject };
+function isPlainObject4(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
-function readGitLog(input) {
-  const args = ["log", `--since=${input.since}`, PRETTY_FORMAT];
-  const run = input.exec(args, input.cwd);
-  if (run.error !== void 0) {
-    return { kind: "git-unavailable", message: run.error };
+function deepMerge(target, source) {
+  const out = { ...target };
+  for (const [key, value2] of Object.entries(source)) {
+    const existing = out[key];
+    out[key] = isPlainObject4(existing) && isPlainObject4(value2) ? deepMerge(existing, value2) : value2;
   }
-  if (run.status !== 0) {
-    return { kind: "not-a-repo" };
-  }
-  const commits = [];
-  for (const raw of run.stdout.split(GIT_LOG_RECORD_SEP)) {
-    const record = raw.replace(/^\n+/, "");
-    if (record.trim() === "") continue;
-    const commit = parseRecord(record);
-    if (commit !== void 0) commits.push(commit);
-  }
-  return { kind: "ok", commits };
+  return out;
 }
-function classifyGitFailure(run) {
-  if (run.error !== void 0) {
-    return { kind: "git-error", message: run.error };
-  }
-  const stderr = run.stderr;
-  if (stderr.includes("does not exist in") || stderr.includes("exists on disk, but not in")) {
-    return { kind: "missing", message: stderr };
-  }
-  return { kind: "git-error", message: stderr.trim() };
+function modeRank(mode) {
+  if (mode === "light") return "0";
+  if (mode === "dark") return "1";
+  return `2${mode}`;
 }
-function readFileAtRef(input) {
-  const { ref, path, cwd: cwd5, exec } = input;
-  if (!isSafeRef(ref)) {
-    return { kind: "git-error", message: `"${ref}" is not a valid git ref` };
+function readTokenDocument(path) {
+  let isDirectory;
+  try {
+    isDirectory = statSync2(path).isDirectory();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      kind: "error",
+      message: `Could not read token source "${path}": ${detail}`
+    };
   }
-  const prefixRun = exec(["rev-parse", "--show-prefix"], cwd5);
-  if (prefixRun.error !== void 0 || prefixRun.status !== 0) {
-    const { kind, message } = classifyGitFailure(prefixRun);
-    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  if (!isDirectory) {
+    let raw;
+    try {
+      raw = readFileSync2(path, "utf8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Could not read token source "${path}": ${detail}`
+      };
+    }
+    try {
+      return { kind: "ok", doc: JSON.parse(raw), files: [path] };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return {
+        kind: "error",
+        message: `Token source "${path}" is not valid JSON: ${detail}`
+      };
+    }
   }
-  const prefix = prefixRun.stdout.trim();
-  const showRun = exec(["show", `${ref}:${prefix}${path}`], cwd5);
-  if (showRun.error !== void 0 || showRun.status !== 0) {
-    const { kind, message } = classifyGitFailure(showRun);
-    return kind === "missing" ? { kind: "missing" } : { kind, message };
+  const docs = [];
+  for (const file of jsonFilesUnder(path)) {
+    const doc = readJson(file);
+    if (!isPlainObject4(doc)) continue;
+    const format = detectFormat(doc);
+    if (format === "unknown") continue;
+    docs.push({ file, doc, format });
   }
-  return { kind: "ok", text: showRun.stdout };
-}
-var UNSAFE_REF_CHAR = /[\s:\u0000-\u001f\u007f]/;
-function isSafeRef(ref) {
-  return ref !== "" && !ref.startsWith("-") && !UNSAFE_REF_CHAR.test(ref);
-}
-var GIT_MAX_BUFFER = 256 * 1024 * 1024;
-function spawnGitExec(args, cwd5) {
-  const run = spawnSync("git", args, {
-    cwd: cwd5,
-    encoding: "utf8",
-    maxBuffer: GIT_MAX_BUFFER
-  });
-  if (run.error !== void 0) {
-    return { status: -1, stdout: "", stderr: "", error: run.error.message };
+  if (docs.length === 0) {
+    return {
+      kind: "error",
+      message: `No token files found in "${path}". Expected W3C (DTCG), Tokens Studio, or Style Dictionary JSON.`
+    };
   }
+  const formats = [...new Set(docs.map((d) => d.format))];
+  if (formats.length > 1) {
+    return {
+      kind: "error",
+      message: `Token files in "${path}" mix formats (${formats.sort().join(", ")}); point token_source at one set.`
+    };
+  }
+  let shared = {};
+  const byMode = /* @__PURE__ */ new Map();
+  for (const { file, doc } of docs) {
+    const mode = modeOfTokenFile(relative(path, file));
+    if (mode === void 0) {
+      shared = deepMerge(shared, doc);
+    } else {
+      byMode.set(mode, [...byMode.get(mode) ?? [], doc]);
+    }
+  }
+  const files = docs.map((d) => d.file);
+  if (byMode.size === 0) return { kind: "ok", doc: shared, files };
+  const modeDocs = [...byMode.keys()].sort((a, b) => modeRank(a) < modeRank(b) ? -1 : 1).map((mode) => ({
+    mode,
+    doc: (byMode.get(mode) ?? []).reduce(deepMerge, shared)
+  }));
   return {
-    status: run.status ?? -1,
-    stdout: run.stdout ?? "",
-    stderr: run.stderr ?? ""
+    kind: "ok",
+    doc: modeDocs[0].doc,
+    ...modeDocs.length > 1 ? { modeDocs } : {},
+    files
   };
 }
 
-// src/io/history-writer.ts
-var HISTORY_FILE = "history.jsonl";
-var LOCK_FILE = "history.jsonl.lock";
-var DEFAULT_LOCK_TIMEOUT_MS = 2e3;
-var DEFAULT_LOCK_STALE_MS = 1e4;
-var LOCK_POLL_MS = 25;
-function historyFilePath(stateDir) {
-  return join2(stateDir, HISTORY_FILE);
-}
-function sleepSync(ms) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-var cachedToolVersion;
-function resolveToolVersion() {
-  if (cachedToolVersion !== void 0) return cachedToolVersion;
-  cachedToolVersion = null;
-  try {
-    let dir = dirname(fileURLToPath(import.meta.url));
-    for (let depth = 0; depth < 6; depth += 1) {
-      const candidate = join2(dir, "package.json");
-      if (existsSync(candidate)) {
-        const pkg2 = JSON.parse(readFileSync(candidate, "utf8"));
-        if (pkg2.name === "ds-bridge" && typeof pkg2.version === "string") {
-          cachedToolVersion = pkg2.version;
-          break;
-        }
-      }
-      const parent = dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-  } catch {
-    cachedToolVersion = null;
-  }
-  return cachedToolVersion;
-}
-function countsAsDirty(line) {
-  if (line.trim() === "") return false;
-  const path = line.slice(3);
-  return !path.split(" -> ").every((p4) => p4.includes(".ds-bridge/"));
-}
-function readGitContext(projectDir, exec = spawnGitExec, env = process.env) {
-  try {
-    const head = exec(["rev-parse", "HEAD"], projectDir);
-    if (head.error !== void 0 || head.status !== 0) return null;
-    const sha = head.stdout.trim();
-    if (sha === "") return null;
-    const ref = exec(["rev-parse", "--abbrev-ref", "HEAD"], projectDir);
-    let branch = ref.status === 0 && ref.error === void 0 ? ref.stdout.trim() : null;
-    if (branch === "HEAD" || branch === "") {
-      branch = (env.GITHUB_HEAD_REF !== void 0 && env.GITHUB_HEAD_REF !== "" ? env.GITHUB_HEAD_REF : void 0) ?? (env.GITHUB_REF_NAME !== void 0 && env.GITHUB_REF_NAME !== "" ? env.GITHUB_REF_NAME : void 0) ?? null;
-    }
-    const status = exec(
-      ["status", "--porcelain", "--untracked-files=no"],
-      projectDir
-    );
-    const dirty = status.status === 0 && status.error === void 0 ? status.stdout.split("\n").some(countsAsDirty) : false;
-    return { sha, branch, dirty };
-  } catch {
-    return null;
-  }
-}
-function readLockOwner(lockPath) {
-  try {
-    return readFileSync(lockPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
-function acquireHistoryLock(stateDir, options = {}) {
-  const timeoutMs = options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
-  const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
-  const lockPath = join2(stateDir, LOCK_FILE);
-  const token = `${process.pid}:${randomUUID()}
-`;
-  const deadline = Date.now() + timeoutMs;
-  for (; ; ) {
-    try {
-      const fd = openSync(lockPath, "wx");
-      writeFileSync(fd, token);
-      closeSync(fd);
-      return () => {
-        if (readLockOwner(lockPath) !== token) return;
-        try {
-          unlinkSync(lockPath);
-        } catch {
-        }
-      };
-    } catch (error) {
-      const code = error.code;
-      if (code !== "EEXIST") return void 0;
-    }
-    try {
-      const owner = readLockOwner(lockPath);
-      if (Date.now() - statSync(lockPath).mtimeMs > staleMs) {
-        if (readLockOwner(lockPath) === owner) unlinkSync(lockPath);
-        continue;
-      }
-    } catch {
-      continue;
-    }
-    if (Date.now() >= deadline) return void 0;
-    sleepSync(LOCK_POLL_MS);
-  }
-}
-function appendHistoryRecord(stateDir, payload, options = {}) {
-  const env = options.env ?? process.env;
-  const runId = resolveRunId(env);
-  const record = buildEnvelope(payload, {
-    now: options.now !== void 0 ? options.now() : (/* @__PURE__ */ new Date()).toISOString(),
-    source: resolveSource(options.source, env),
-    git: readGitContext(dirname(stateDir), options.exec, env),
-    tool: (() => {
-      const version = options.toolVersion !== void 0 ? options.toolVersion : resolveToolVersion();
-      return version === null ? null : { version };
-    })(),
-    ...runId !== void 0 ? { runId } : {}
+// src/io/load-tokens.ts
+var PARSERS = {
+  w3c: parseW3c,
+  "tokens-studio": parseTokensStudio,
+  "style-dictionary": parseStyleDictionary
+};
+function parseFailure(what, format, outcome) {
+  const lines = outcome.errors.map((e4) => {
+    const where = e4.path !== void 0 ? ` (${e4.path})` : "";
+    return `  ${e4.code}${where}: ${e4.message}`;
   });
-  mkdirSync(stateDir, { recursive: true });
-  const release = acquireHistoryLock(stateDir, {
-    timeoutMs: options.lockTimeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS
-  });
-  try {
-    appendFileSync(
-      historyFilePath(stateDir),
-      `${JSON.stringify(record)}
-`,
-      "utf8"
-    );
-  } finally {
-    release?.();
-  }
-  return record;
+  return {
+    kind: "error",
+    message: `Failed to parse ${what} as ${format}:
+${lines.join("\n")}`
+  };
 }
-function rewriteHistoryAtomic(stateDir, text2, readBytes) {
-  const target = historyFilePath(stateDir);
-  const temp = join2(stateDir, `.${HISTORY_FILE}.tmp-${process.pid}`);
-  try {
-    writeFileSync(temp, text2, "utf8");
-    if (readBytes !== void 0) carryAppendedTail(target, temp, readBytes);
-    renameSync(temp, target);
-  } catch (error) {
-    try {
-      unlinkSync(temp);
-    } catch {
-    }
-    throw error;
-  }
+function isPlainObject5(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
-function carryAppendedTail(target, temp, from) {
-  let offset = from;
-  for (; ; ) {
-    const size = statSync(target).size;
-    if (size < offset) {
-      throw new Error(
-        "history changed underneath the rewrite (file shrank) \u2014 not replaced"
-      );
-    }
-    if (size === offset) return;
-    const tail = Buffer.alloc(size - offset);
-    const fd = openSync(target, "r");
-    try {
-      readSync(fd, tail, 0, tail.length, offset);
-    } finally {
-      closeSync(fd);
-    }
-    appendFileSync(temp, tail);
-    offset = size;
+function loadTokens(path) {
+  const read = readTokenDocument(path);
+  if (read.kind === "error") return read;
+  const format = detectFormat(read.doc);
+  if (format === "unknown") {
+    return {
+      kind: "error",
+      message: `Could not detect a supported token format for "${path}". Expected W3C, Tokens Studio, or Style Dictionary.`
+    };
   }
+  const parse2 = PARSERS[format];
+  const outcome = parse2(read.doc);
+  if (outcome.kind === "error") {
+    return parseFailure(`token source "${path}"`, format, outcome);
+  }
+  const base = {
+    kind: "ok",
+    format,
+    map: outcome.map,
+    warnings: outcome.warnings,
+    files: read.files
+  };
+  if (read.modeDocs !== void 0) {
+    const modes3 = [];
+    for (const { mode, doc } of read.modeDocs) {
+      const parsed = parse2(doc);
+      if (parsed.kind === "error") {
+        return parseFailure(`mode "${mode}" of "${path}"`, format, parsed);
+      }
+      modes3.push({ mode, map: parsed.map });
+    }
+    return { ...base, modes: modes3 };
+  }
+  const themes = format === "tokens-studio" && isPlainObject5(read.doc) ? readThemes(read.doc) : void 0;
+  if (themes === void 0 || themes.length < 2 || !isPlainObject5(read.doc)) {
+    return base;
+  }
+  const modes2 = [];
+  for (const theme of themes) {
+    const themed = parseTokensStudio(themeSubDocument(read.doc, theme));
+    if (themed.kind === "error") {
+      return parseFailure(`theme "${theme.name}" of "${path}"`, format, themed);
+    }
+    modes2.push({ mode: theme.name, map: themed.map });
+  }
+  return { ...base, modes: modes2 };
 }
 
 // src/render/terminal/bar-chart.ts
@@ -8433,104 +8597,35 @@ function sparkline(values) {
 }
 
 // src/cli-commands/a11y.ts
-var PARSERS = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
 var DEFAULT_MODE = "default";
 function fail(message) {
   process.stderr.write(`${message}
 `);
   process.exitCode = 2;
 }
-function isPlainObject4(value2) {
-  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
-}
 function loadModeMaps(tokenPath) {
-  let raw;
-  try {
-    raw = readFileSync2(tokenPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not read token source "${tokenPath}": ${detail}`
-    };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
-    };
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    return {
-      kind: "error",
-      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
-    };
-  }
-  const themes = format === "tokens-studio" && isPlainObject4(parsed) ? readThemes(parsed) : void 0;
-  if (themes !== void 0 && isPlainObject4(parsed)) {
-    const modes2 = [];
-    for (const theme of themes) {
-      const outcome2 = parseTokensStudio(themeSubDocument(parsed, theme));
-      if (outcome2.kind === "error") {
-        const lines = outcome2.errors.map((e4) => {
-          const where = e4.path !== void 0 ? ` (${e4.path})` : "";
-          return `  ${e4.code}${where}: ${e4.message}`;
-        });
-        return {
-          kind: "error",
-          message: `Failed to parse mode "${theme.name}" of "${tokenPath}":
-${lines.join("\n")}`
-        };
-      }
-      modes2.push({ mode: theme.name, map: outcome2.map });
-    }
-    return { kind: "ok", modes: modes2 };
-  }
-  const outcome = PARSERS[format](parsed);
-  if (outcome.kind === "error") {
-    const lines = outcome.errors.map((e4) => {
-      const where = e4.path !== void 0 ? ` (${e4.path})` : "";
-      return `  ${e4.code}${where}: ${e4.message}`;
-    });
-    return {
-      kind: "error",
-      message: `Failed to parse token source "${tokenPath}" as ${format}:
-${lines.join("\n")}`
-    };
-  }
-  return { kind: "ok", modes: [{ mode: DEFAULT_MODE, map: outcome.map }] };
+  const loaded = loadTokens(tokenPath);
+  if (loaded.kind === "error") return loaded;
+  return {
+    kind: "ok",
+    modes: loaded.modes ?? [{ mode: DEFAULT_MODE, map: loaded.map }]
+  };
 }
-async function resolveTokenPath(target) {
-  const abs2 = resolve4(target);
+function resolveTokenPath(target) {
+  const abs2 = resolve3(target);
   if (!existsSync2(abs2)) {
     return { kind: "error", message: `Path "${abs2}" does not exist.` };
   }
-  if (statSync2(abs2).isFile()) return { kind: "ok", path: abs2 };
-  const discovered = await discoverTokenSources(abs2);
-  if (discovered.kind === "explicit-not-found") {
-    return {
-      kind: "error",
-      message: `No token source found at "${discovered.path}".`
-    };
-  }
-  const first = discovered.sources[0];
-  if (first === void 0) {
+  if (statSync3(abs2).isFile()) return { kind: "ok", path: abs2 };
+  const discovered = findTokenSource(abs2);
+  if (discovered === void 0) {
     return {
       kind: "error",
       message: `No design-token source found under "${abs2}".
-Pass a token file directly, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
+Pass a token file or folder directly, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
     };
   }
-  return { kind: "ok", path: first.path };
+  return { kind: "ok", path: discovered };
 }
 function filterModes(all, modesFlag) {
   if (modesFlag === void 0 || modesFlag.trim() === "") {
@@ -8635,7 +8730,7 @@ async function runA11y(path, options) {
     fail(`Unknown --level "${options.level}". Expected "AA" or "AAA".`);
     return;
   }
-  const tokenPath = await resolveTokenPath(path);
+  const tokenPath = resolveTokenPath(path);
   if (tokenPath.kind === "error") {
     fail(tokenPath.message);
     return;
@@ -8651,8 +8746,8 @@ async function runA11y(path, options) {
     return;
   }
   const report = auditContrast(filtered.modes, { level });
-  const resolvedTarget = resolve4(path);
-  if (existsSync2(resolvedTarget) && statSync2(resolvedTarget).isDirectory()) {
+  const resolvedTarget = resolve3(path);
+  if (existsSync2(resolvedTarget) && statSync3(resolvedTarget).isDirectory()) {
     appendA11yHistory(resolvedTarget, report);
   }
   if (format === "json") {
@@ -8679,8 +8774,8 @@ function registerA11yCommand(program2) {
 }
 
 // src/cli-commands/adoption.ts
-import { existsSync as existsSync3, readFileSync as readFileSync3, statSync as statSync3 } from "fs";
-import { dirname as dirname2, join as join4, resolve as resolve5 } from "path";
+import { existsSync as existsSync3, readFileSync as readFileSync3, statSync as statSync4 } from "fs";
+import { dirname as dirname3, join as join4, resolve as resolve4 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/engines/registry/parts.ts
@@ -8788,11 +8883,10 @@ async function scanUsage(registry, projectDir) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath2(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname2(filename);
+    globals.__dirname = dirname3(filename);
   }
-  const { mapUsage } = await import("./usage-2RZYAT75.mjs");
-  const changedFigmaNames = registry.matches.map((m) => m.figmaName);
-  return mapUsage({ registry, changedFigmaNames, projectDir });
+  const { mapCodeUsage } = await import("./usage-WXYAN2PV.mjs");
+  return mapCodeUsage({ registry, projectDir });
 }
 function appendAdoptionHistory(targetDir, coverage) {
   const stateDir = join4(targetDir, ".ds-bridge");
@@ -8836,8 +8930,8 @@ function renderTerm2(coverage, color) {
   }
   lines.push(
     "",
-    "Note: coverage counts resolved .tsx imports only \u2014 .ts/.jsx/barrel",
-    "re-exports may undercount, so this is a floor, not an exact census."
+    "Note: coverage counts resolved .ts/.tsx imports (barrels followed) \u2014",
+    ".js/.jsx and dynamic imports are not seen, so this is a floor."
   );
   return lines.join("\n");
 }
@@ -8847,8 +8941,8 @@ async function runAdoption(path, options) {
     fail2(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return;
   }
-  const targetDir = resolve5(path);
-  if (!existsSync3(targetDir) || !statSync3(targetDir).isDirectory()) {
+  const targetDir = resolve4(path);
+  if (!existsSync3(targetDir) || !statSync4(targetDir).isDirectory()) {
     fail2(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -8880,8 +8974,8 @@ function registerAdoptionCommand(program2) {
 }
 
 // src/cli-commands/analytics.ts
-import { existsSync as existsSync7, mkdirSync as mkdirSync3, statSync as statSync4, writeFileSync as writeFileSync3 } from "fs";
-import { join as join9, resolve as resolve7 } from "path";
+import { existsSync as existsSync7, mkdirSync as mkdirSync3, statSync as statSync5, writeFileSync as writeFileSync3 } from "fs";
+import { join as join9, resolve as resolve6 } from "path";
 
 // src/engines/report/debt.ts
 var WEIGHT = {
@@ -9175,7 +9269,7 @@ function renderAnalyticsTerm(doc) {
 
 // src/io/report-data.ts
 import { readFileSync as readFileSync7 } from "fs";
-import { basename, join as join8, resolve as resolve6 } from "path";
+import { basename, join as join8, resolve as resolve5 } from "path";
 
 // src/engines/figma/library-health.ts
 var LAYOUT_ONLY_FIELDS = /* @__PURE__ */ new Set([
@@ -9198,10 +9292,23 @@ var LAYOUT_ONLY_FIELDS = /* @__PURE__ */ new Set([
   "minHeight",
   "maxHeight"
 ]);
+var TEXT_CONTENT_FIELDS = /* @__PURE__ */ new Set([
+  "characters",
+  "characterStyleOverrides",
+  "styleOverrideTable",
+  "lineTypes",
+  "lineIndentations"
+]);
+function designFields(override) {
+  const fields = override.overriddenFields ?? [];
+  return fields.filter(
+    (field) => !LAYOUT_ONLY_FIELDS.has(field) && !TEXT_CONTENT_FIELDS.has(field)
+  );
+}
 function isDesignOverride(override) {
   const fields = override.overriddenFields;
   if (!Array.isArray(fields) || fields.length === 0) return true;
-  return fields.some((field) => !LAYOUT_ONLY_FIELDS.has(field));
+  return designFields(override).length > 0;
 }
 var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
 var CAP = 20;
@@ -9243,14 +9350,17 @@ function assessLibraryHealth(file, opts) {
     const isInstance = node.type === "INSTANCE";
     if (isInstance) {
       const overrides = node.overrides;
-      const overrideCount = Array.isArray(overrides) ? overrides.filter(isDesignOverride).length : 0;
+      const drifted = Array.isArray(overrides) ? overrides.filter(isDesignOverride) : [];
+      const overrideCount = drifted.length;
       if (overrideCount > 0) {
         const componentName = componentNameOf(file, node.componentId);
+        const fields = [...new Set(drifted.flatMap(designFields))].sort();
         hotspots.push({
           nodeId: node.id,
           name: node.name,
           ...componentName !== void 0 ? { componentName } : {},
-          overrideCount
+          overrideCount,
+          ...fields.length > 0 ? { fields } : {}
         });
       }
       if (hasComponents) {
@@ -9351,7 +9461,7 @@ function buildParity(registry) {
         component: match.codeName,
         status: "prop-mismatch",
         detail: withParts(
-          `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`,
+          Array.isArray(match.variantGaps) && match.variantGaps.length > 0 ? `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 variants differ: ${match.variantGaps.join("; ")}.` : `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`,
           match.codeName,
           match.importPath
         )
@@ -10744,7 +10854,7 @@ function suggestFreshnessKinds(input, limit = 3) {
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
   ).slice(0, limit).map((c2) => c2.kind);
 }
-function isPlainObject5(value2) {
+function isPlainObject6(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 var REPORT_STYLES = ["html", "terminal", "both"];
@@ -10923,7 +11033,7 @@ function parseProjectFile(text2) {
     }
   }
   if (obj.product_file_keys !== void 0) {
-    if (!isPlainObject5(obj.product_file_keys)) {
+    if (!isPlainObject6(obj.product_file_keys)) {
       return {
         kind: "invalid",
         message: "product_file_keys must be an object of alias \u2192 Figma file key"
@@ -10948,7 +11058,7 @@ function parseProjectFile(text2) {
     values.productFileKeys = map;
   }
   if (obj.metric_targets !== void 0) {
-    if (!isPlainObject5(obj.metric_targets)) {
+    if (!isPlainObject6(obj.metric_targets)) {
       return {
         kind: "invalid",
         message: "metric_targets must be an object of metric \u2192 { op, value, warn? }"
@@ -10964,7 +11074,7 @@ function parseProjectFile(text2) {
           message: `metric_targets has an unknown metric ${JSON.stringify(metric)}${hint}`
         };
       }
-      if (!isPlainObject5(target)) {
+      if (!isPlainObject6(target)) {
         return {
           kind: "invalid",
           message: `metric_targets.${metric} must be an object { op, value, warn? }`
@@ -11000,7 +11110,7 @@ function parseProjectFile(text2) {
     values.metricTargets = targets;
   }
   if (obj.score_weights_by_view !== void 0) {
-    if (!isPlainObject5(obj.score_weights_by_view)) {
+    if (!isPlainObject6(obj.score_weights_by_view)) {
       return {
         kind: "invalid",
         message: "score_weights_by_view must be an object of view \u2192 weight overrides"
@@ -11008,7 +11118,7 @@ function parseProjectFile(text2) {
     }
     const byView = {};
     for (const [view, override] of Object.entries(obj.score_weights_by_view)) {
-      if (!isPlainObject5(override)) {
+      if (!isPlainObject6(override)) {
         return {
           kind: "invalid",
           message: `score_weights_by_view.${view} must be an object of component \u2192 weight`
@@ -11039,7 +11149,7 @@ function parseProjectFile(text2) {
     values.scoreWeightsByView = byView;
   }
   if (obj.freshness_thresholds !== void 0) {
-    if (!isPlainObject5(obj.freshness_thresholds)) {
+    if (!isPlainObject6(obj.freshness_thresholds)) {
       return {
         kind: "invalid",
         message: "freshness_thresholds must be an object of check-kind \u2192 { aging, stale }"
@@ -11055,7 +11165,7 @@ function parseProjectFile(text2) {
           message: `freshness_thresholds has an unknown check-kind ${JSON.stringify(kind)}${hint}`
         };
       }
-      if (!isPlainObject5(band)) {
+      if (!isPlainObject6(band)) {
         return {
           kind: "invalid",
           message: `freshness_thresholds.${kind} must be an object { aging, stale }`
@@ -11096,7 +11206,7 @@ function parseProjectFile(text2) {
     const rules = [];
     for (let i = 0; i < obj.ownership.length; i += 1) {
       const entry = obj.ownership[i];
-      if (!isPlainObject5(entry)) {
+      if (!isPlainObject6(entry)) {
         return {
           kind: "invalid",
           message: `ownership[${i}] must be an object { owner, paths }`
@@ -11139,7 +11249,7 @@ function parseProjectFile(text2) {
     values.ownershipFile = obj.ownership_file;
   }
   if (obj.component_aliases !== void 0) {
-    if (!isPlainObject5(obj.component_aliases)) {
+    if (!isPlainObject6(obj.component_aliases)) {
       return {
         kind: "invalid",
         message: "component_aliases must be an object of component \u2192 { frameName?, contrastMode? }"
@@ -11147,7 +11257,7 @@ function parseProjectFile(text2) {
     }
     const map = {};
     for (const [alias, keys] of Object.entries(obj.component_aliases)) {
-      if (!isPlainObject5(keys)) {
+      if (!isPlainObject6(keys)) {
         return {
           kind: "invalid",
           message: `component_aliases.${alias} must be an object { frameName?, contrastMode? }`
@@ -11322,7 +11432,7 @@ function parseSelectionFile(text2) {
   } catch {
     return { kind: "invalid", message: "dashboard file is not valid JSON" };
   }
-  if (!isPlainObject5(raw)) {
+  if (!isPlainObject6(raw)) {
     return { kind: "invalid", message: "dashboard file must be a JSON object" };
   }
   const obj = raw;
@@ -12160,7 +12270,7 @@ function resolveView(flags, projectConfig) {
 }
 
 // src/io/dashboards.ts
-import { existsSync as existsSync5, mkdirSync as mkdirSync2, readdirSync, readFileSync as readFileSync5 } from "fs";
+import { existsSync as existsSync5, mkdirSync as mkdirSync2, readdirSync as readdirSync2, readFileSync as readFileSync5 } from "fs";
 import { join as join6 } from "path";
 var DASHBOARDS_DIR = "dashboards";
 var REPORT_TYPES = ["html", "md", "terminal", "site"];
@@ -12241,7 +12351,7 @@ function readDashboardFile(dir, name) {
 function listDashboards(dir) {
   let files;
   try {
-    files = readdirSync(join6(dir, DASHBOARDS_DIR));
+    files = readdirSync2(join6(dir, DASHBOARDS_DIR));
   } catch {
     return [];
   }
@@ -12697,7 +12807,7 @@ function resolveOwnership(targetDir, ownership, ownershipFile) {
   if (ownershipFile === void 0) return void 0;
   let text2;
   try {
-    text2 = readFileSync7(resolve6(targetDir, ownershipFile), "utf8");
+    text2 = readFileSync7(resolve5(targetDir, ownershipFile), "utf8");
   } catch {
     return void 0;
   }
@@ -13006,8 +13116,8 @@ function runAnalytics(path, options) {
     fail3("--out requires --emit <domain> (nothing is written without --emit).");
     return;
   }
-  const targetDir = resolve7(path);
-  if (!existsSync7(targetDir) || !statSync4(targetDir).isDirectory()) {
+  const targetDir = resolve6(path);
+  if (!existsSync7(targetDir) || !statSync5(targetDir).isDirectory()) {
     fail3(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -13025,7 +13135,7 @@ function runAnalytics(path, options) {
     process.exitCode = 0;
     return;
   }
-  const outDir = options.out !== void 0 ? resolve7(options.out) : join9(targetDir, ".ds-bridge", "analytics");
+  const outDir = options.out !== void 0 ? resolve6(options.out) : join9(targetDir, ".ds-bridge", "analytics");
   const files = emit.domains.map((domain) => [
     ARTIFACT_FILE[domain],
     buildDomainArtifact(domain, data)
@@ -13074,10 +13184,10 @@ import {
   existsSync as existsSync8,
   mkdirSync as mkdirSync4,
   readFileSync as readFileSync8,
-  statSync as statSync5,
+  statSync as statSync6,
   writeFileSync as writeFileSync4
 } from "fs";
-import { dirname as dirname3, join as join10, resolve as resolve8 } from "path";
+import { dirname as dirname4, join as join10, resolve as resolve7 } from "path";
 
 // src/render/html/badge.ts
 var DEFAULT_LABEL = "ds-bridge";
@@ -13169,8 +13279,8 @@ function weightProfileForConfig(cfg) {
   );
 }
 function runBadge(path, options) {
-  const targetDir = resolve8(path);
-  if (!existsSync8(targetDir) || !statSync5(targetDir).isDirectory()) {
+  const targetDir = resolve7(path);
+  if (!existsSync8(targetDir) || !statSync6(targetDir).isDirectory()) {
     fail4(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -13199,9 +13309,9 @@ function runBadge(path, options) {
     return;
   }
   const svg = renderBadge({ score: outcome.current });
-  const outPath = options.out !== void 0 ? resolve8(options.out) : join10(stateDir, "badge.svg");
+  const outPath = options.out !== void 0 ? resolve7(options.out) : join10(stateDir, "badge.svg");
   try {
-    mkdirSync4(dirname3(outPath), { recursive: true });
+    mkdirSync4(dirname4(outPath), { recursive: true });
     writeFileSync4(outPath, svg, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -13661,7 +13771,7 @@ var DEFAULT_BASE_URL = "https://api.figma.com";
 var MAX_RETRIES = 3;
 var DEFAULT_RETRY_AFTER_SECONDS = 1;
 function defaultSleep(ms) {
-  return new Promise((resolve18) => setTimeout(resolve18, ms));
+  return new Promise((resolve17) => setTimeout(resolve17, ms));
 }
 function joinIds(ids) {
   return encodeURIComponent(ids.join(","));
@@ -13984,8 +14094,20 @@ async function runChangelog(options, deps) {
     return;
   }
   const { versions, note } = await fetchVersions(deps);
-  if (note !== void 0 && format === "term") {
-    deps.stderr(`${note}
+  const sinceMs = Date.parse(since);
+  const labeled = versions.filter(
+    (v) => (v.label ?? "").trim() !== "" && (!Number.isFinite(sinceMs) || Date.parse(v.created_at) >= sinceMs)
+  ).length;
+  const figmaSource = note !== void 0 ? { status: "skipped", note } : {
+    status: "ok",
+    versions: versions.length,
+    labeled,
+    ...labeled === 0 ? {
+      note: "No named Figma versions in this window \u2014 only named versions (File \u2192 Save to version history) are listed; autosaves are skipped."
+    } : {}
+  };
+  if (figmaSource.note !== void 0 && format === "term") {
+    deps.stderr(`${figmaSource.note}
 `);
   }
   const all = aggregateChangelog({
@@ -14002,8 +14124,10 @@ async function runChangelog(options, deps) {
     );
   }
   if (format === "json") {
-    deps.stdout(`${JSON.stringify({ since, entries }, null, 2)}
-`);
+    deps.stdout(
+      `${JSON.stringify({ since, entries, sources: { figma: figmaSource } }, null, 2)}
+`
+    );
   } else if (format === "md") {
     deps.stdout(renderChangelogMarkdown(entries, { audience: audience.value }));
   } else {
@@ -14277,7 +14401,7 @@ function applyConnect(dir, token, fileKey) {
   };
 }
 function promptHidden(question) {
-  return new Promise((resolve18) => {
+  return new Promise((resolve17) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -14293,19 +14417,19 @@ function promptHidden(question) {
     rl.question(question, (answer) => {
       rl.close();
       process.stdout.write("\n");
-      resolve18(answer.trim());
+      resolve17(answer.trim());
     });
   });
 }
 function promptLine(question) {
-  return new Promise((resolve18) => {
+  return new Promise((resolve17) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
     rl.question(question, (answer) => {
       rl.close();
-      resolve18(answer.trim());
+      resolve17(answer.trim());
     });
   });
 }
@@ -14540,6 +14664,44 @@ function runSetLibrary(value2, path) {
     `Set figma_file_key to ${key} in ${join12(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
 `
   );
+  const envPath = join12(dir, ENV_FILE_NAME);
+  let fromEnvFile;
+  if (existsSync9(envPath)) {
+    try {
+      fromEnvFile = parseDotenv(
+        readFileSync10(envPath, "utf8")
+      ).FIGMA_DESIGN_SYSTEM_FILE;
+    } catch {
+      fromEnvFile = void 0;
+    }
+    if (fromEnvFile !== void 0 && fromEnvFile !== "" && extractFigmaFileKey(fromEnvFile) !== key) {
+      try {
+        writeEnvFileMerged(dir, { FIGMA_DESIGN_SYSTEM_FILE: key });
+        process.stdout.write(
+          `Also updated FIGMA_DESIGN_SYSTEM_FILE in ${envPath} (was ${fromEnvFile}), which would have overridden it.
+`
+        );
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        process.stdout.write(
+          `warning: ${envPath} still sets FIGMA_DESIGN_SYSTEM_FILE=${fromEnvFile}, which overrides this key, and could not be updated: ${detail}
+`
+        );
+      }
+    }
+  }
+  for (const name of [
+    "CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY",
+    "FIGMA_DESIGN_SYSTEM_FILE"
+  ]) {
+    const value3 = process.env[name];
+    if (value3 === void 0 || value3 === "" || value3 === fromEnvFile) continue;
+    if (extractFigmaFileKey(value3) === key) continue;
+    process.stdout.write(
+      `warning: ${name}=${value3} is set in the environment and overrides this key \u2014 unset it, or set the plugin's figma_file_key option to ${key}.
+`
+    );
+  }
   process.exitCode = 0;
 }
 function runAddProduct(alias, value2, path) {
@@ -14724,9 +14886,9 @@ var LineReader = class {
   constructor(rl) {
     rl.on("line", (line) => {
       if (this.waiting !== void 0) {
-        const { resolve: resolve18 } = this.waiting;
+        const { resolve: resolve17 } = this.waiting;
         this.waiting = void 0;
-        resolve18(line);
+        resolve17(line);
       } else {
         this.queue.push(line);
       }
@@ -14745,8 +14907,8 @@ var LineReader = class {
     const buffered = this.queue.shift();
     if (buffered !== void 0) return Promise.resolve(buffered);
     if (this.closed) return Promise.reject(new EofError());
-    return new Promise((resolve18, reject) => {
-      this.waiting = { resolve: resolve18, reject };
+    return new Promise((resolve17, reject) => {
+      this.waiting = { resolve: resolve17, reject };
     });
   }
 };
@@ -15380,10 +15542,10 @@ import {
   existsSync as existsSync11,
   mkdirSync as mkdirSync5,
   readFileSync as readFileSync13,
-  statSync as statSync6,
+  statSync as statSync7,
   writeFileSync as writeFileSync6
 } from "fs";
-import { dirname as dirname4, join as join15, resolve as resolve9 } from "path";
+import { dirname as dirname5, join as join15, resolve as resolve8 } from "path";
 import { cwd as processCwd2 } from "process";
 
 // src/engines/report/digest-md.ts
@@ -15894,8 +16056,8 @@ function runDigest(path, options, deps) {
     process.exitCode = 2;
     return;
   }
-  const targetDir = resolve9(deps.cwd, path);
-  if (!existsSync11(targetDir) || !statSync6(targetDir).isDirectory()) {
+  const targetDir = resolve8(deps.cwd, path);
+  if (!existsSync11(targetDir) || !statSync7(targetDir).isDirectory()) {
     deps.stderr(`Path "${targetDir}" is not a directory.
 `);
     process.exitCode = 2;
@@ -15918,9 +16080,9 @@ function runDigest(path, options, deps) {
   );
   const markdown = format === "html" ? renderDigestHtml(model, audience.view) : renderDigestMarkdown(model, audience.view);
   if (options.out !== void 0) {
-    const outPath = resolve9(deps.cwd, options.out);
+    const outPath = resolve8(deps.cwd, options.out);
     try {
-      mkdirSync5(dirname4(outPath), { recursive: true });
+      mkdirSync5(dirname5(outPath), { recursive: true });
       writeFileSync6(outPath, markdown, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
@@ -15962,10 +16124,10 @@ import {
   existsSync as existsSync12,
   mkdirSync as mkdirSync6,
   readFileSync as readFileSync14,
-  statSync as statSync7,
+  statSync as statSync8,
   writeFileSync as writeFileSync7
 } from "fs";
-import { dirname as dirname5, join as join16, resolve as resolvePath3 } from "path";
+import { dirname as dirname6, join as join16, resolve as resolvePath3 } from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/engines/docs/merge.ts
@@ -16197,11 +16359,6 @@ function renderComponentMdx(doc) {
 
 // src/cli-commands/docs.ts
 var EMPTY_TOKENS = { format: "w3c", tokens: [] };
-var PARSERS2 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
 function fail7(message) {
   process.stderr.write(`${message}
 `);
@@ -16212,7 +16369,7 @@ function normalizeName2(name) {
 }
 async function scanCode(targetDir) {
   shimCjsGlobals();
-  const { scanCodeComponents } = await import("./scan-code-465K2PAS.mjs");
+  const { scanCodeComponents } = await import("./scan-code-FRVT7GOJ.mjs");
   return scanCodeComponents(targetDir);
 }
 function shimCjsGlobals() {
@@ -16220,7 +16377,7 @@ function shimCjsGlobals() {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath3(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname5(filename);
+    globals.__dirname = dirname6(filename);
   }
 }
 async function importSpecifiers(targetDir, importPaths) {
@@ -16281,28 +16438,10 @@ function loadRegistry3(targetDir) {
   }
 }
 async function discoverTokens(targetDir) {
-  const outcome = await discoverTokenSources(targetDir);
-  if (outcome.kind !== "ok" || outcome.sources.length === 0) {
-    return EMPTY_TOKENS;
-  }
-  const source = outcome.sources[0];
+  const source = findTokenSource(targetDir);
   if (source === void 0) return EMPTY_TOKENS;
-  let raw;
-  try {
-    raw = readFileSync14(source.path, "utf8");
-  } catch {
-    return EMPTY_TOKENS;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return EMPTY_TOKENS;
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") return EMPTY_TOKENS;
-  const result = PARSERS2[format](parsed);
-  return result.kind === "ok" ? result.map : EMPTY_TOKENS;
+  const loaded = loadTokens(source);
+  return loaded.kind === "ok" ? loaded.map : EMPTY_TOKENS;
 }
 function mdxFileName(component) {
   const safe = component.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -16339,7 +16478,7 @@ async function runDocs(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate(rawComponent, rawPath);
   const targetDir = resolvePath3(path);
-  if (!existsSync12(targetDir) || !statSync7(targetDir).isDirectory()) {
+  if (!existsSync12(targetDir) || !statSync8(targetDir).isDirectory()) {
     fail7(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -16427,8 +16566,8 @@ function registerDocsCommand(program2) {
 }
 
 // src/cli-commands/frame-impl.ts
-import { existsSync as existsSync13, readdirSync as readdirSync2, readFileSync as readFileSync15 } from "fs";
-import { isAbsolute as isAbsolute2, join as join17, resolve as resolve10, sep as sep2 } from "path";
+import { existsSync as existsSync13, readFileSync as readFileSync15 } from "fs";
+import { isAbsolute, join as join17, resolve as resolve9 } from "path";
 import { cwd } from "process";
 
 // src/engines/tokens/normalize.ts
@@ -16527,7 +16666,8 @@ function toRegistryFile(result, generatedAt) {
     figmaName: m.figma.name,
     nodeId: m.figma.nodeId,
     score: round3(m.score),
-    ...describedBy(m.figma.description)
+    ...describedBy(m.figma.description),
+    ...m.variantGaps !== void 0 && m.variantGaps.length > 0 ? { variantGaps: m.variantGaps } : {}
   })).sort((a, b) => byNameAsc4(a.codeName, b.codeName));
   const unmatchedCode = result.unmatchedCode.map((u) => ({
     name: u.code.name,
@@ -16749,12 +16889,6 @@ function figmaAuthErrorMessage(result) {
 // src/cli-commands/frame-impl.ts
 var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
 var TOP_GAPS_LIMIT = 5;
-var PARSERS3 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
-var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set(["node_modules", ".git", "dist", "build"]);
 function fail8(message) {
   process.stderr.write(`${message}
 `);
@@ -16818,64 +16952,7 @@ function loadRegistry4(registryPath) {
     };
   }
 }
-function isConventionalTokenFile2(name) {
-  if (!name.endsWith(".json")) return false;
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
-}
-function isTokenDir2(name) {
-  return name === "tokens" || name === "design-tokens";
-}
-function detectFileFormat2(absPath) {
-  let raw;
-  try {
-    raw = readFileSync15(absPath, "utf8");
-  } catch {
-    return void 0;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return void 0;
-  }
-  const format = detectFormat(parsed);
-  return format === "unknown" ? void 0 : format;
-}
-function depthOf2(path) {
-  return path.split(sep2).filter((s) => s.length > 0).length;
-}
-function collectTokenCandidates(dir, insideTokenDir, acc) {
-  let entries;
-  try {
-    entries = readdirSync2(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join17(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
-      collectTokenCandidates(
-        full,
-        insideTokenDir || isTokenDir2(entry.name),
-        acc
-      );
-      continue;
-    }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile2(entry.name)) acc.push(full);
-  }
-}
-function discoverFirstTokenSource(root) {
-  const candidates = [];
-  collectTokenCandidates(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat2(path) !== void 0).sort((a, b) => {
-    const depth = depthOf2(a) - depthOf2(b);
-    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-  });
-  return verified[0];
-}
-function loadTokens(targetDir) {
+function loadTokens2(targetDir) {
   let tokenPath;
   const configPath = join17(targetDir, ".ds-bridge.json");
   if (existsSync13(configPath)) {
@@ -16885,14 +16962,14 @@ function loadTokens(targetDir) {
       });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        tokenPath = isAbsolute2(src) ? src : resolve10(targetDir, src);
+        tokenPath = isAbsolute(src) ? src : resolve9(targetDir, src);
       }
     } catch {
       tokenPath = void 0;
     }
   }
   if (tokenPath === void 0) {
-    tokenPath = discoverFirstTokenSource(targetDir);
+    tokenPath = findTokenSource(targetDir);
   }
   if (tokenPath === void 0 || !existsSync13(tokenPath)) {
     return {
@@ -16901,31 +16978,9 @@ function loadTokens(targetDir) {
 Set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
     };
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync15(tokenPath, "utf8"));
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
-    };
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    return {
-      kind: "error",
-      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
-    };
-  }
-  const outcome = PARSERS3[format](parsed);
-  if (outcome.kind === "error") {
-    return {
-      kind: "error",
-      message: `Failed to parse token source "${tokenPath}" as ${format}.`
-    };
-  }
-  return { kind: "ok", tokens: outcome.map.tokens };
+  const loaded = loadTokens(tokenPath);
+  if (loaded.kind === "error") return loaded;
+  return { kind: "ok", tokens: loaded.map.tokens };
 }
 function collectNodes(root) {
   const nodes = [];
@@ -17047,6 +17102,20 @@ function renderTerm6(impl, color) {
     `${impl.gapCount} gap(s) by reason:`,
     renderTable(["reason", "count"], rows, { color })
   );
+  if (impl.topGaps.length > 0) {
+    lines.push(
+      "",
+      "Gaps:",
+      renderTable(
+        ["requirement", "reason"],
+        impl.topGaps.map((gap) => [gap.requirement, gap.reason]),
+        { color }
+      )
+    );
+    if (impl.gapCount > impl.topGaps.length) {
+      lines.push(`\u2026 ${impl.gapCount - impl.topGaps.length} more (--format=json)`);
+    }
+  }
   return lines.join("\n");
 }
 function appendFrameImplHistory(record) {
@@ -17106,7 +17175,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     fail8(registryOutcome.message);
     return;
   }
-  const tokensOutcome = loadTokens(targetDir);
+  const tokensOutcome = loadTokens2(targetDir);
   if (tokensOutcome.kind === "error") {
     fail8(tokensOutcome.message);
     return;
@@ -17661,10 +17730,10 @@ import {
   appendFileSync as appendFileSync4,
   existsSync as existsSync14,
   readFileSync as readFileSync16,
-  statSync as statSync8,
+  statSync as statSync9,
   writeFileSync as writeFileSync8
 } from "fs";
-import { join as join19, resolve as resolve11 } from "path";
+import { join as join19, resolve as resolve10 } from "path";
 
 // src/engines/history/compact.ts
 function canonical(value2) {
@@ -18073,8 +18142,8 @@ function prepare2(path, options) {
     fail10(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return void 0;
   }
-  const targetDir = resolve11(path);
-  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
+  const targetDir = resolve10(path);
+  if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return void 0;
   }
@@ -18116,7 +18185,7 @@ function runStats(path, options) {
   const file = historyFilePath(ctx.stateDir);
   const text2 = readText(file);
   if (text2 === null) return;
-  const bytes = text2 === void 0 ? 0 : statSync8(file).size;
+  const bytes = text2 === void 0 ? 0 : statSync9(file).size;
   const stats = historyStats(text2 ?? "", bytes);
   const frames = readinessByFrame(
     replayHistory(text2 ?? ""),
@@ -18316,8 +18385,8 @@ function runExport(path, options) {
     fail10(`Unknown --format "${format}". Expected "csv" or "jsonl".`);
     return;
   }
-  const targetDir = resolve11(path);
-  if (!existsSync14(targetDir) || !statSync8(targetDir).isDirectory()) {
+  const targetDir = resolve10(path);
+  if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -18349,7 +18418,7 @@ function runExport(path, options) {
   const rows = exportRows(text2, filter);
   const output = format === "csv" ? toCsv(rows) : toJsonl(rows);
   if (options.out !== void 0) {
-    const outPath = resolve11(options.out);
+    const outPath = resolve10(options.out);
     try {
       writeFileSync8(outPath, output, "utf8");
     } catch (error) {
@@ -18410,7 +18479,7 @@ function registerHistoryCommand(program2) {
 
 // src/cli-commands/impact.ts
 import { existsSync as existsSync15, mkdirSync as mkdirSync7, readFileSync as readFileSync17, writeFileSync as writeFileSync9 } from "fs";
-import { dirname as dirname6, join as join20 } from "path";
+import { dirname as dirname7, join as join20 } from "path";
 import { cwd as cwd3, env as processEnv } from "process";
 import { fileURLToPath as fileURLToPath4 } from "url";
 
@@ -18837,7 +18906,7 @@ function readCursor(path) {
 }
 function writeCursor(path, cursor) {
   try {
-    mkdirSync7(dirname6(path), { recursive: true });
+    mkdirSync7(dirname7(path), { recursive: true });
     writeFileSync9(path, `${JSON.stringify(cursor, null, 2)}
 `, "utf8");
     return true;
@@ -18859,9 +18928,9 @@ async function mapChangedUsage(registry, changedFigmaNames) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath4(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname6(filename);
+    globals.__dirname = dirname7(filename);
   }
-  const { mapUsage } = await import("./usage-2RZYAT75.mjs");
+  const { mapUsage } = await import("./usage-WXYAN2PV.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
@@ -19282,7 +19351,7 @@ function parseTopN(raw) {
 }
 
 // src/io/figma/cache.ts
-import { dirname as dirname7, join as join21 } from "path";
+import { dirname as dirname8, join as join21 } from "path";
 function cachePath(args) {
   const fileName = `library-${args.key}.json`;
   const dataDir = args.env.CLAUDE_PLUGIN_DATA;
@@ -19313,7 +19382,7 @@ function writeCache(args) {
   const path = cachePath({ key: args.key, env: args.env, cwd: args.cwd });
   const envelope = { stampedAtMs: args.now, data: args.data };
   try {
-    args.fs.mkdir(dirname7(path));
+    args.fs.mkdir(dirname8(path));
     args.fs.write(path, `${JSON.stringify(envelope, null, 2)}
 `);
   } catch {
@@ -19418,7 +19487,10 @@ function renderTerm9(report, color) {
     lines.push("", "Top override hotspots:");
     for (const h of report.overrideHotspots) {
       const named2 = h.componentName !== void 0 ? ` (${h.componentName})` : "";
-      lines.push(`  ${h.name}${named2}: ${h.overrideCount} override(s)`);
+      const fields = h.fields !== void 0 && h.fields.length > 0 ? ` \u2014 ${h.fields.join(", ")}` : "";
+      lines.push(
+        `  ${h.name}${named2}: ${h.overrideCount} override(s)${fields}`
+      );
     }
   }
   lines.push(
@@ -19560,10 +19632,10 @@ import {
   existsSync as existsSync17,
   readdirSync as readdirSync3,
   readFileSync as readFileSync19,
-  statSync as statSync9,
+  statSync as statSync10,
   writeFileSync as writeFileSync11
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join23, relative, resolve as resolve12, sep as sep3 } from "path";
+import { isAbsolute as isAbsolute2, join as join23, relative as relative2, resolve as resolve11, sep as sep2 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -19999,10 +20071,29 @@ function pickPreferred2(tokens, property) {
   const candidates = role === void 0 ? tokens : tokens.filter((t) => isForegroundToken(t.name) === (role === "fg"));
   const pool = candidates.length > 0 ? candidates : tokens;
   const names = new Set(tokens.map((t) => t.name));
-  const semantic = pool.find(
+  const semantic = pool.filter(
     (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
   );
-  return semantic ?? pool[0];
+  const neutral = semantic.find((t) => !isStatusToken(t.name));
+  return neutral ?? semantic[0] ?? pool[0];
+}
+function isStatusToken(name) {
+  return /(error|danger|warning|warn|success|destructive|critical)/i.test(name);
+}
+function dimensionFamily(property) {
+  if (property === void 0) return void 0;
+  const p4 = property.toLowerCase();
+  if (/radius/.test(p4)) return /(radius|corner|rounded|shape)/i;
+  if (/^font-?size$|^fontsize$/.test(p4))
+    return /(font-?size|typescale.*size|\.size$|text)/i;
+  if (/line-?height/.test(p4)) return /(line-?height|leading)/i;
+  if (/letter-?spacing/.test(p4)) return /(letter-?spacing|tracking)/i;
+  if (/^(?:padding|margin|gap|row-?gap|column-?gap|inset|top|right|bottom|left)/.test(
+    p4.replace(/([a-z])([A-Z])/g, "$1-$2")
+  )) {
+    return /(spacing|space|gap|gutter)/i;
+  }
+  return void 0;
 }
 function propertyRole(property) {
   if (property === void 0) return void 0;
@@ -20059,7 +20150,9 @@ function matchDimension(literal, index) {
   if (dim === void 0) return { kind: "off-system" };
   const bucket = index.byValue.get(`${dim.px}px`);
   if (bucket !== void 0) {
-    const exact = bucket.find((t) => t.type === "dimension");
+    const dimensions = bucket.filter((t) => t.type === "dimension");
+    const family = dimensionFamily(literal.property);
+    const exact = (family !== void 0 ? dimensions.find((t) => family.test(t.name)) : void 0) ?? dimensions[0];
     if (exact !== void 0) return { kind: "exact", token: exact };
   }
   const candidates = [];
@@ -20102,12 +20195,7 @@ function buildCompositeColorLookup(tokens) {
 }
 
 // src/cli-commands/lint.ts
-var PARSERS4 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
-var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
+var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
@@ -20190,7 +20278,7 @@ function walkLintableFiles(dir, acc) {
   for (const entry of entries) {
     const full = join23(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS3.has(entry.name)) continue;
+      if (EXCLUDED_DIRS2.has(entry.name)) continue;
       walkLintableFiles(full, acc);
       continue;
     }
@@ -20199,7 +20287,7 @@ function walkLintableFiles(dir, acc) {
 }
 function resolveTokenSource(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve12(process.cwd(), flagTokens);
+    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve11(process.cwd(), flagTokens);
     if (!existsSync17(abs2)) {
       return {
         kind: "error",
@@ -20220,7 +20308,7 @@ function resolveTokenSource(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute3(src) ? src : resolve12(targetDir, src);
+        const abs2 = isAbsolute2(src) ? src : resolve11(targetDir, src);
         if (existsSync17(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
@@ -20229,7 +20317,7 @@ function resolveTokenSource(targetDir, flagTokens) {
       }
     }
   }
-  const discovered = discoverFirstTokenSource2(targetDir);
+  const discovered = findTokenSource(targetDir);
   if (discovered !== void 0) return { kind: "ok", path: discovered };
   return {
     kind: "error",
@@ -20237,104 +20325,19 @@ function resolveTokenSource(targetDir, flagTokens) {
 Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a conventional token file (tokens.json, design-tokens.json, *.tokens.json).`
   };
 }
-function discoverFirstTokenSource2(root) {
-  const candidates = [];
-  collectTokenCandidates2(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat3(path) !== void 0).sort((a, b) => {
-    const depth = depthOf3(a) - depthOf3(b);
-    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-  });
-  return verified[0];
-}
-function depthOf3(path) {
-  return path.split(sep3).filter((s) => s.length > 0).length;
-}
-function isConventionalTokenFile3(name) {
-  if (!name.endsWith(".json")) return false;
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
-}
-function isTokenDir3(name) {
-  return name === "tokens" || name === "design-tokens";
-}
-function collectTokenCandidates2(dir, insideTokenDir, acc) {
-  let entries;
-  try {
-    entries = readdirSync3(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join23(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS3.has(entry.name)) continue;
-      collectTokenCandidates2(
-        full,
-        insideTokenDir || isTokenDir3(entry.name),
-        acc
-      );
-      continue;
-    }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile3(entry.name)) acc.push(full);
-  }
-}
-function detectFileFormat3(absPath) {
-  let raw;
-  try {
-    raw = readFileSync19(absPath, "utf8");
-  } catch {
-    return void 0;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return void 0;
-  }
-  const format = detectFormat(parsed);
-  return format === "unknown" ? void 0 : format;
-}
 function loadTokenMap(tokenPath) {
-  let raw;
+  const loaded = loadTokens(tokenPath);
+  if (loaded.kind === "error") return loaded;
+  return { kind: "ok", map: loaded.map };
+}
+function isGeneratedFile(absPath) {
+  let head;
   try {
-    raw = readFileSync19(tokenPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not read token source "${tokenPath}": ${detail}`
-    };
+    head = readFileSync19(absPath, "utf8").slice(0, 600);
+  } catch {
+    return false;
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
-    };
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    return {
-      kind: "error",
-      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
-    };
-  }
-  const outcome = PARSERS4[format](parsed);
-  if (outcome.kind === "error") {
-    const lines = outcome.errors.map((e4) => {
-      const where = e4.path !== void 0 ? ` (${e4.path})` : "";
-      return `  ${e4.code}${where}: ${e4.message}`;
-    });
-    return {
-      kind: "error",
-      message: `Failed to parse token source "${tokenPath}" as ${format}:
-${lines.join("\n")}`
-    };
-  }
-  return { kind: "ok", map: outcome.map };
+  return /auto-?generated|do not edit|generated by|@generated/i.test(head);
 }
 function lintFile(absPath, relPath, tokens) {
   let content;
@@ -20436,7 +20439,7 @@ function changedFiles(targetDir) {
     };
   }
   const files = new Set(
-    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve12(targetDir, rel2))
+    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve11(targetDir, rel2))
   );
   return { kind: "ok", files };
 }
@@ -20491,13 +20494,13 @@ function registerLintCommand(program2) {
       );
       return;
     }
-    const targetPath = resolve12(path);
+    const targetPath = resolve11(path);
     if (!existsSync17(targetPath)) {
       fail13(`Path "${targetPath}" does not exist.`);
       return;
     }
-    const stat2 = statSync9(targetPath);
-    const isFile = stat2.isFile();
+    const stat = statSync10(targetPath);
+    const isFile = stat.isFile();
     if (isFile && !hasExtension(targetPath)) {
       fail13(
         `Path "${targetPath}" is not a lintable file (expected ${LINTABLE_EXTENSIONS.join(", ")}).`
@@ -20532,6 +20535,9 @@ function registerLintCommand(program2) {
     const walked = [];
     if (isFile) walked.push(targetPath);
     else walkLintableFiles(targetDir, walked);
+    for (let i = walked.length - 1; i >= 0; i--) {
+      if (isGeneratedFile(walked[i])) walked.splice(i, 1);
+    }
     let inScope = walked;
     if (options.changed) {
       const changed = changedFiles(targetDir);
@@ -20561,12 +20567,12 @@ function registerLintCommand(program2) {
   });
 }
 function isInside(child, parent) {
-  const rel2 = relative(parent, child);
-  return rel2 === "" || !rel2.startsWith("..") && !isAbsolute3(rel2);
+  const rel2 = relative2(parent, child);
+  return rel2 === "" || !rel2.startsWith("..") && !isAbsolute2(rel2);
 }
 function toRelative(targetDir, abs2) {
-  const rel2 = relative(targetDir, abs2);
-  return rel2.split(sep3).join("/");
+  const rel2 = relative2(targetDir, abs2);
+  return rel2.split(sep2).join("/");
 }
 function emitAdoptionSummary(adoption) {
   const total = adoption.refs + adoption.literals;
@@ -20628,7 +20634,7 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync18, readFileSync as readFileSync20, statSync as statSync10 } from "fs";
+import { existsSync as existsSync18, readFileSync as readFileSync20, statSync as statSync11 } from "fs";
 import { join as join24, resolve as resolvePath4 } from "path";
 function fail14(message) {
   process.stderr.write(`${message}
@@ -20798,7 +20804,7 @@ function runParity(rawComponent, rawPath, options) {
   }
   const { component, path } = disambiguate2(rawComponent, rawPath);
   const targetDir = resolvePath4(path);
-  if (!existsSync18(targetDir) || !statSync10(targetDir).isDirectory()) {
+  if (!existsSync18(targetDir) || !statSync11(targetDir).isDirectory()) {
     fail14(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -20848,8 +20854,8 @@ function registerParityCommand(program2) {
 // src/cli-commands/record.ts
 import { spawnSync as spawnSync3 } from "child_process";
 import { randomUUID as randomUUID2 } from "crypto";
-import { existsSync as existsSync19, readFileSync as readFileSync21, statSync as statSync11 } from "fs";
-import { join as join25, resolve as resolve13 } from "path";
+import { existsSync as existsSync19, readFileSync as readFileSync21, statSync as statSync12 } from "fs";
+import { join as join25, resolve as resolve12 } from "path";
 
 // src/engines/history/score-record.ts
 function scoreRecordPayload(text2, profile) {
@@ -21066,8 +21072,8 @@ function runRecord(path, options, deps) {
       return 2;
     }
   }
-  const targetDir = resolve13(path);
-  if (!existsSync19(targetDir) || !statSync11(targetDir).isDirectory()) {
+  const targetDir = resolve12(path);
+  if (!existsSync19(targetDir) || !statSync12(targetDir).isDirectory()) {
     fail15(`Path "${targetDir}" is not a directory.`);
     return 2;
   }
@@ -21185,10 +21191,10 @@ import {
   existsSync as existsSync20,
   mkdirSync as mkdirSync9,
   readFileSync as readFileSync22,
-  statSync as statSync12,
+  statSync as statSync13,
   writeFileSync as writeFileSync12
 } from "fs";
-import { dirname as dirname8, join as join26, posix, resolve as resolvePath5, sep as sep4 } from "path";
+import { dirname as dirname9, join as join26, posix, resolve as resolvePath5, sep as sep3 } from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // src/engines/registry/match.ts
@@ -21225,9 +21231,12 @@ function nameScore(codeName, figmaName) {
   const score = tokenSetScore(codeName, figmaName);
   return score < TOKEN_SCORE_FLOOR ? 0 : score;
 }
+function normValue(value2) {
+  return value2.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 function valueJaccard(a, b) {
-  const setA = new Set(a);
-  const setB = new Set(b);
+  const setA = new Set(a.map(normValue));
+  const setB = new Set(b.map(normValue));
   if (setA.size === 0 && setB.size === 0) return 0;
   let intersection = 0;
   for (const value2 of setA) {
@@ -21243,30 +21252,114 @@ function normalizedKeyIndex(variants) {
     const norm = normalizeName5(key);
     const existing = index.get(norm);
     if (existing === void 0) {
-      index.set(norm, [...values]);
+      index.set(norm, { key, values: [...values] });
     } else {
-      existing.push(...values);
+      existing.values.push(...values);
     }
   }
   return index;
 }
-function shapeScore(codeVariants, figmaVariants) {
+var STATE_AXIS = /* @__PURE__ */ new Set([
+  "state",
+  "states",
+  "interaction",
+  "interactionstate"
+]);
+var AXIS_PAIR_THRESHOLD = 0.5;
+function pairAxes(codeVariants, figmaVariants) {
   const codeIndex = normalizedKeyIndex(codeVariants);
   const figmaIndex = normalizedKeyIndex(figmaVariants);
-  for (const [key, values] of figmaIndex) {
-    const boolean = values.every((v) => /^(?:true|false)$/i.test(v));
-    if (boolean && !codeIndex.has(key)) figmaIndex.delete(key);
+  for (const [key, axis] of figmaIndex) {
+    const boolean = axis.values.every((v) => /^(?:true|false)$/i.test(v));
+    if ((boolean || STATE_AXIS.has(key)) && !codeIndex.has(key)) {
+      figmaIndex.delete(key);
+    }
   }
-  const codeEmpty = codeIndex.size === 0;
-  const figmaEmpty = figmaIndex.size === 0;
+  const pairs = [];
+  const codeLeft = new Map(codeIndex);
+  const figmaLeft = new Map(figmaIndex);
+  for (const [key, codeAxis] of codeIndex) {
+    const figmaAxis = figmaIndex.get(key);
+    if (figmaAxis === void 0) continue;
+    pairs.push({
+      code: codeAxis,
+      figma: figmaAxis,
+      agreement: valueJaccard(codeAxis.values, figmaAxis.values)
+    });
+    codeLeft.delete(key);
+    figmaLeft.delete(key);
+  }
+  const candidates = [];
+  for (const [c2, codeAxis] of codeLeft) {
+    for (const [f3, figmaAxis] of figmaLeft) {
+      const agreement = valueJaccard(codeAxis.values, figmaAxis.values);
+      if (agreement >= AXIS_PAIR_THRESHOLD)
+        candidates.push({ c: c2, f: f3, agreement });
+    }
+  }
+  candidates.sort(
+    (a, b) => a.agreement !== b.agreement ? b.agreement - a.agreement : byNameAsc6(`${a.c}\0${a.f}`, `${b.c}\0${b.f}`)
+  );
+  for (const { c: c2, f: f3, agreement } of candidates) {
+    const codeAxis = codeLeft.get(c2);
+    const figmaAxis = figmaLeft.get(f3);
+    if (codeAxis === void 0 || figmaAxis === void 0) continue;
+    pairs.push({ code: codeAxis, figma: figmaAxis, agreement });
+    codeLeft.delete(c2);
+    figmaLeft.delete(f3);
+  }
+  for (const axis of codeLeft.values())
+    pairs.push({ code: axis, agreement: 0 });
+  for (const axis of figmaLeft.values())
+    pairs.push({ figma: axis, agreement: 0 });
+  return {
+    pairs,
+    codeEmpty: codeIndex.size === 0,
+    figmaEmpty: figmaIndex.size === 0
+  };
+}
+function shapeScore(codeVariants, figmaVariants) {
+  const { pairs, codeEmpty, figmaEmpty } = pairAxes(
+    codeVariants,
+    figmaVariants
+  );
   if (codeEmpty && figmaEmpty) return 0.5;
   if (codeEmpty || figmaEmpty) return 0.25;
-  const keys = /* @__PURE__ */ new Set([...codeIndex.keys(), ...figmaIndex.keys()]);
   let total = 0;
-  for (const key of keys) {
-    total += valueJaccard(codeIndex.get(key) ?? [], figmaIndex.get(key) ?? []);
+  for (const pair of pairs) total += pair.agreement;
+  return total / pairs.length;
+}
+function missingFrom(a, b) {
+  const have = new Set(b.map(normValue));
+  return a.filter((v) => !have.has(normValue(v)));
+}
+function variantGaps(codeVariants, figmaVariants) {
+  const { pairs } = pairAxes(codeVariants, figmaVariants);
+  const codeKeyed = [];
+  const figmaOnly = [];
+  for (const { code, figma } of pairs) {
+    if (code !== void 0 && figma === void 0) {
+      codeKeyed.push({
+        key: code.key,
+        line: `${code.key}: code only (${code.values.join("|")})`
+      });
+    } else if (code === void 0 && figma !== void 0) {
+      figmaOnly.push({
+        key: figma.key,
+        line: `${figma.key}: Figma only (${figma.values.join("|")})`
+      });
+    } else if (code !== void 0 && figma !== void 0) {
+      const extraFigma = missingFrom(figma.values, code.values);
+      const extraCode = missingFrom(code.values, figma.values);
+      if (extraFigma.length === 0 && extraCode.length === 0) continue;
+      const line = extraCode.length === 0 ? `${code.key}: Figma also has ${extraFigma.join("|")}` : extraFigma.length === 0 ? `${code.key}: code also has ${extraCode.join("|")}` : `${code.key}: code ${code.values.join("|")} \u2260 Figma ${figma.key} ${figma.values.join("|")}`;
+      codeKeyed.push({ key: code.key, line });
+    }
   }
-  return total / keys.size;
+  const byKey = (a, b) => byNameAsc6(a.key.toLowerCase(), b.key.toLowerCase());
+  return [...codeKeyed.sort(byKey), ...figmaOnly.sort(byKey)].map(
+    (g) => g.line
+  );
 }
 function scorePair(codeComponent, figmaModel) {
   const name = nameScore(codeComponent.name, figmaModel.name);
@@ -21355,7 +21448,8 @@ function matchComponents(code, figma) {
       figma: figmaModel,
       score: edge.parts.score,
       nameScore: edge.parts.nameScore,
-      shapeScore: edge.parts.shapeScore
+      shapeScore: edge.parts.shapeScore,
+      variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps)
     });
   }
   matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
@@ -21390,22 +21484,25 @@ async function scanCode2(targetDir, configuredPaths) {
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath5(import.meta.url);
     globals.__filename = filename;
-    globals.__dirname = dirname8(filename);
+    globals.__dirname = dirname9(filename);
   }
   const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
     [
-      import("./scan-code-465K2PAS.mjs"),
+      import("./scan-code-FRVT7GOJ.mjs"),
       import("./component-paths-DSRHTXXS.mjs")
     ]
   );
   const scope = resolveComponentPaths(targetDir, configuredPaths);
   if (scope === void 0) {
-    return { code: scanCodeComponents(targetDir), scope };
+    const code2 = scanCodeComponents(targetDir).filter(
+      (component) => !component.importPath.split("/").slice(0, -1).some((segment) => PAGE_DIRS.has(segment))
+    );
+    return { code: code2, scope };
   }
   const code = scope.paths.flatMap(
     (dir) => scanCodeComponents(join26(targetDir, dir)).map((component) => ({
       ...component,
-      importPath: posix.join(dir.split(sep4).join("/"), component.importPath)
+      importPath: posix.join(dir.split(sep3).join("/"), component.importPath)
     }))
   );
   code.sort(
@@ -21417,6 +21514,7 @@ function byPath(a, b) {
   return a.importPath < b.importPath ? -1 : a.importPath > b.importPath ? 1 : 0;
 }
 var DEFAULT_FIGMA_API_BASE6 = "https://api.figma.com";
+var PAGE_DIRS = /* @__PURE__ */ new Set(["pages", "screens", "views", "routes"]);
 function fail16(message) {
   process.stderr.write(`${message}
 `);
@@ -21461,7 +21559,7 @@ async function runBuild(path, options) {
     return;
   }
   const targetDir = resolvePath5(path);
-  if (!existsSync20(targetDir) || !statSync12(targetDir).isDirectory()) {
+  if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
     fail16(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -21567,7 +21665,7 @@ function worstAmbiguities(registry) {
 function renderBuildSummary(registry, registryPath, parity, scope) {
   const lines = [
     `Registry written to ${registryPath}`,
-    `  scanned:        ${scope === void 0 ? "the whole project (set component_paths in .ds-bridge.json to narrow it)" : `${scope.paths.join(", ")} (${scope.source})`}`,
+    `  scanned:        ${scope === void 0 ? "the whole project, minus page folders (pages/, screens/, views/, routes/) \u2014 set component_paths in .ds-bridge.json to narrow it" : `${scope.paths.join(", ")} (${scope.source})`}`,
     `  matched:        ${registry.matches.length}`,
     `  unmatched code: ${registry.unmatchedCode.length}`,
     `  unmatched figma:${registry.unmatchedFigma.length}`,
@@ -21605,7 +21703,7 @@ function loadRegistry7(targetDir) {
 }
 function runResolve(nodeNameOrId, path) {
   const targetDir = resolvePath5(path);
-  if (!existsSync20(targetDir) || !statSync12(targetDir).isDirectory()) {
+  if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
     fail16(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -21659,8 +21757,8 @@ function registerRegistryCommand(program2) {
 }
 
 // src/cli-commands/release-check.ts
-import { existsSync as existsSync21, readFileSync as readFileSync23, statSync as statSync13 } from "fs";
-import { join as join27, resolve as resolve14 } from "path";
+import { existsSync as existsSync21, readFileSync as readFileSync23, statSync as statSync14 } from "fs";
+import { join as join27, resolve as resolve13 } from "path";
 function fail17(message) {
   process.stderr.write(`${message}
 `);
@@ -21692,8 +21790,8 @@ function runReleaseCheck(path, options) {
     fail17(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return;
   }
-  const targetDir = resolve14(path);
-  if (!existsSync21(targetDir) || !statSync13(targetDir).isDirectory()) {
+  const targetDir = resolve13(path);
+  if (!existsSync21(targetDir) || !statSync14(targetDir).isDirectory()) {
     fail17(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -21729,10 +21827,10 @@ import {
   existsSync as existsSync22,
   mkdirSync as mkdirSync10,
   readFileSync as readFileSync24,
-  statSync as statSync14,
+  statSync as statSync15,
   writeFileSync as writeFileSync13
 } from "fs";
-import { dirname as dirname9, join as join28, resolve as resolve15 } from "path";
+import { dirname as dirname10, join as join28, resolve as resolve14 } from "path";
 import { platform } from "process";
 
 // src/engines/report/manager-report.ts
@@ -23353,7 +23451,7 @@ function importCoverageSection(data) {
     "Import coverage",
     [
       `<div class="chart center">${donutGauge(pct5, { label: "Import coverage" })}</div>`,
-      `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .tsx imports only (a floor)</div>`,
+      `<div class="meta">${escapeHtml(String(imported))}/${escapeHtml(String(total))} registry components imported \xB7 resolved .ts/.tsx imports, barrels followed (a floor)</div>`,
       list,
       overflow
     ].join("")
@@ -24905,7 +25003,7 @@ function importCoverageTerminalSection(data, color) {
   const lines = [];
   lines.push(renderGauge(pct5, { label: "Import coverage", width: 24, color }));
   lines.push(
-    `${imported}/${total} registry components imported \xB7 resolved .tsx imports only (a floor)`
+    `${imported}/${total} registry components imported \xB7 resolved .ts/.tsx imports, barrels followed (a floor)`
   );
   if (uncovered.length > 0) {
     for (const name of uncovered) {
@@ -25088,7 +25186,7 @@ function migrationChecklistTerminalSection(data, color) {
   const count = checklist.sites.length;
   const meta = `${count} call site${count === 1 ? "" : "s"} to migrate \xB7 file:line \xB7 subject \xB7 from \u2192 to`;
   const overflow = checklist.truncated ? "\u2026 and more sites beyond the cap" : "";
-  const mapUsageCaveat = "mapUsage scans resolved .tsx imports only, so the number is a floor.";
+  const mapUsageCaveat = "import coverage counts resolved .ts/.tsx imports (barrels followed), so the number is a floor.";
   const body = [
     meta,
     renderTable(headers, rows, { color }),
@@ -25442,7 +25540,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
   if (format === "exec") {
     const markdown = renderManagerMarkdown(report);
     if (options.out !== void 0) {
-      const outPath2 = resolve15(options.out);
+      const outPath2 = resolve14(options.out);
       const written2 = writeDashboard(outPath2, markdown);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -25456,7 +25554,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
     process.exitCode = 0;
     return;
   }
-  const outPath = options.out !== void 0 ? resolve15(options.out) : join28(stateDir, "reports", "exec.html");
+  const outPath = options.out !== void 0 ? resolve14(options.out) : join28(stateDir, "reports", "exec.html");
   const written = writeDashboard(outPath, renderManagerHtml(report));
   if (written.kind === "error") {
     failReport(written.message);
@@ -25469,7 +25567,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
 }
 function writeDashboard(outPath, html) {
   try {
-    mkdirSync10(dirname9(outPath), { recursive: true });
+    mkdirSync10(dirname10(outPath), { recursive: true });
     writeFileSync13(outPath, html, "utf8");
     return { kind: "ok" };
   } catch (error) {
@@ -25623,7 +25721,7 @@ function runMarkdownReport(targetDir, options, selection) {
     ...baseBlocks !== void 0 ? { baseBlocks } : {}
   });
   if (options.out !== void 0) {
-    const outPath = resolve15(options.out);
+    const outPath = resolve14(options.out);
     const written = writeDashboard(outPath, markdown);
     if (written.kind === "error") {
       failReport(written.message);
@@ -25673,7 +25771,7 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode,
   const snapshot = mode === "snapshot";
   const suffix = snapshot ? ".snapshot.html" : ".html";
   const transform = snapshot ? normalizeSnapshot : (html) => html;
-  const outDir = options.out !== void 0 ? resolve15(options.out) : join28(stateDir, snapshot ? "snapshots" : "reports");
+  const outDir = options.out !== void 0 ? resolve14(options.out) : join28(stateDir, snapshot ? "snapshots" : "reports");
   const names = resolvePublishNames(targetDir, options);
   const entries = [];
   const writePage = (name, html) => {
@@ -25751,8 +25849,8 @@ function runReport(path, options) {
     failReport(velocityWindowFlag.message);
     return;
   }
-  const targetDir = resolve15(path);
-  if (!existsSync22(targetDir) || !statSync14(targetDir).isDirectory()) {
+  const targetDir = resolve14(path);
+  if (!existsSync22(targetDir) || !statSync15(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -25803,7 +25901,7 @@ function runReport(path, options) {
     )}
 `;
     if (options.out !== void 0) {
-      const outPath2 = resolve15(options.out);
+      const outPath2 = resolve14(options.out);
       const written2 = writeDashboard(outPath2, text2);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -25860,7 +25958,7 @@ function runReport(path, options) {
       ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
     });
     if (options.out !== void 0) {
-      const outPath2 = resolve15(options.out);
+      const outPath2 = resolve14(options.out);
       const written2 = writeDashboard(outPath2, text2);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -25885,7 +25983,7 @@ function runReport(path, options) {
       ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
     }
   });
-  const outPath = options.out !== void 0 ? resolve15(options.out) : join28(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve14(options.out) : join28(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -25949,7 +26047,7 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/rollup.ts
 import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync26, writeFileSync as writeFileSync14 } from "fs";
-import { basename as basename2, dirname as dirname10, join as join30, resolve as resolve16 } from "path";
+import { basename as basename2, dirname as dirname11, join as join30, resolve as resolve15 } from "path";
 
 // src/engines/rollup/rollup.ts
 var ROLLUP_SCHEMA = "ds-bridge/rollup";
@@ -26291,13 +26389,13 @@ function parseRollupConfig(text2) {
 }
 
 // src/io/rollup-sources.ts
-import { readFileSync as readFileSync25, statSync as statSync15 } from "fs";
+import { readFileSync as readFileSync25, statSync as statSync16 } from "fs";
 import { join as join29 } from "path";
 var HISTORY_REL = join29(".ds-bridge", "history.jsonl");
 var RECORD_HINT = "run ds-bridge record there to start one.";
 function kindOf(path) {
   try {
-    const s = statSync15(path);
+    const s = statSync16(path);
     if (s.isDirectory()) return "dir";
     return s.isFile() ? "file" : "none";
   } catch {
@@ -26693,12 +26791,12 @@ function fail18(message) {
   process.exitCode = 2;
 }
 function configBase(configPath) {
-  const dir = dirname10(configPath);
-  return basename2(dir) === ".ds-bridge" ? dirname10(dir) : dir;
+  const dir = dirname11(configPath);
+  return basename2(dir) === ".ds-bridge" ? dirname11(dir) : dir;
 }
 function specFor(raw, base) {
-  const spec = parseSourceArg(raw, (p4) => existsSync23(resolve16(base, p4)));
-  const out = { path: resolve16(base, spec.path), label: spec.path };
+  const spec = parseSourceArg(raw, (p4) => existsSync23(resolve15(base, p4)));
+  const out = { path: resolve15(base, spec.path), label: spec.path };
   if (spec.ref !== void 0) out.ref = spec.ref;
   return out;
 }
@@ -26735,7 +26833,7 @@ function runRollup(sources, options) {
   const cwd5 = process.cwd();
   const pending = [];
   const defaultConfig = join30(cwd5, ".ds-bridge", "rollup.json");
-  const configPath = options.config !== void 0 ? resolve16(options.config) : sources.length === 0 && existsSync23(defaultConfig) ? defaultConfig : void 0;
+  const configPath = options.config !== void 0 ? resolve15(options.config) : sources.length === 0 && existsSync23(defaultConfig) ? defaultConfig : void 0;
   if (configPath !== void 0) {
     const entries = loadConfig(configPath);
     if (entries === void 0) return;
@@ -26765,9 +26863,9 @@ function runRollup(sources, options) {
     process.exitCode = 0;
     return;
   }
-  const outPath = resolve16(options.out);
+  const outPath = resolve15(options.out);
   try {
-    mkdirSync11(dirname10(outPath), { recursive: true });
+    mkdirSync11(dirname11(outPath), { recursive: true });
     writeFileSync14(outPath, rendered, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
@@ -26802,10 +26900,10 @@ import {
   mkdirSync as mkdirSync12,
   readdirSync as readdirSync4,
   readFileSync as readFileSync27,
-  statSync as statSync16,
+  statSync as statSync17,
   writeFileSync as writeFileSync15
 } from "fs";
-import { isAbsolute as isAbsolute4, join as join31, relative as relative2, resolve as resolve17, sep as sep5 } from "path";
+import { isAbsolute as isAbsolute3, join as join31, relative as relative3, resolve as resolve16, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -27118,11 +27216,6 @@ function scanTsTheme(content) {
 
 // src/cli-commands/tokens.ts
 var TABLE_LIMIT = 20;
-var PARSERS5 = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
-};
 function previewValue(value2) {
   if (typeof value2 === "string") return value2;
   if (typeof value2 === "number") return String(value2);
@@ -27146,55 +27239,21 @@ function renderTerm14(filePath, map, color) {
   }
   return lines.join("\n");
 }
-function loadTokenMap2(filePath) {
-  let raw;
-  try {
-    raw = readFileSync27(filePath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`Could not read file "${filePath}": ${detail}
+function loadTokenMap2(path) {
+  const loaded = loadTokens(path);
+  if (loaded.kind === "error") {
+    process.stderr.write(`${loaded.message}
 `);
     process.exitCode = 1;
     return void 0;
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`"${filePath}" is not valid JSON: ${detail}
-`);
-    process.exitCode = 1;
-    return void 0;
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    process.stderr.write(
-      `Could not detect a supported token format for "${filePath}". Expected W3C, Tokens Studio, or Style Dictionary.
-`
-    );
-    process.exitCode = 1;
-    return void 0;
-  }
-  const outcome = PARSERS5[format](parsed);
-  if (outcome.kind === "error") {
-    process.stderr.write(`Failed to parse "${filePath}" as ${format}:
-`);
-    for (const err of outcome.errors) {
-      const where = err.path !== void 0 ? ` (${err.path})` : "";
-      process.stderr.write(`  ${err.code}${where}: ${err.message}
-`);
-    }
-    process.exitCode = 1;
-    return void 0;
-  }
-  for (const warning of outcome.warnings) {
+  for (const warning of loaded.warnings) {
     process.stderr.write(`warning: ${warning}
 `);
   }
-  return outcome.map;
+  return loaded.map;
 }
-var EXCLUDED_DIRS4 = /* @__PURE__ */ new Set([
+var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   ".ds-bridge",
@@ -27208,11 +27267,6 @@ var DRIFT_SEVERITY = {
   "stale-output": "error",
   "missing-output": "warn",
   "orphan-output": "info"
-};
-var PARSERS_CHECK = {
-  w3c: parseW3c,
-  "tokens-studio": parseTokensStudio,
-  "style-dictionary": parseStyleDictionary
 };
 function hasOutputExtension(name) {
   const lower = name.toLowerCase();
@@ -27228,73 +27282,16 @@ function walkOutputFiles(dir, acc) {
   for (const entry of entries) {
     const full = join31(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS4.has(entry.name)) continue;
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkOutputFiles(full, acc);
       continue;
     }
     if (entry.isFile() && hasOutputExtension(entry.name)) acc.push(full);
   }
 }
-function depthOf4(path) {
-  return path.split(sep5).filter((s) => s.length > 0).length;
-}
-function isConventionalTokenFile4(name) {
-  if (!name.endsWith(".json")) return false;
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
-}
-function isTokenDir4(name) {
-  return name === "tokens" || name === "design-tokens";
-}
-function collectTokenCandidates3(dir, insideTokenDir, acc) {
-  let entries;
-  try {
-    entries = readdirSync4(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = join31(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS4.has(entry.name)) continue;
-      collectTokenCandidates3(
-        full,
-        insideTokenDir || isTokenDir4(entry.name),
-        acc
-      );
-      continue;
-    }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-    if (insideTokenDir || isConventionalTokenFile4(entry.name)) acc.push(full);
-  }
-}
-function detectFileFormat4(absPath) {
-  let raw;
-  try {
-    raw = readFileSync27(absPath, "utf8");
-  } catch {
-    return void 0;
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return void 0;
-  }
-  const format = detectFormat(parsed);
-  return format === "unknown" ? void 0 : format;
-}
-function discoverFirstTokenSource3(root) {
-  const candidates = [];
-  collectTokenCandidates3(root, false, candidates);
-  const verified = candidates.filter((path) => detectFileFormat4(path) !== void 0).sort((a, b) => {
-    const depth = depthOf4(a) - depthOf4(b);
-    return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-  });
-  return verified[0];
-}
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute4(flagTokens) ? flagTokens : resolve17(process.cwd(), flagTokens);
+    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve16(process.cwd(), flagTokens);
     if (!existsSync24(abs2)) {
       return {
         kind: "error",
@@ -27315,7 +27312,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute4(src) ? src : resolve17(targetDir, src);
+        const abs2 = isAbsolute3(src) ? src : resolve16(targetDir, src);
         if (existsSync24(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
@@ -27324,7 +27321,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
       }
     }
   }
-  const discovered = discoverFirstTokenSource3(targetDir);
+  const discovered = findTokenSource(targetDir);
   if (discovered !== void 0) return { kind: "ok", path: discovered };
   return {
     kind: "error",
@@ -27333,68 +27330,14 @@ Pass one with --tokens <file>, set token_source in .ds-bridge.json, or add a con
   };
 }
 function loadTokenMapForCheck(tokenPath) {
-  let raw;
-  try {
-    raw = readFileSync27(tokenPath, "utf8");
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Could not read token source "${tokenPath}": ${detail}`
-    };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    return {
-      kind: "error",
-      message: `Token source "${tokenPath}" is not valid JSON: ${detail}`
-    };
-  }
-  const format = detectFormat(parsed);
-  if (format === "unknown") {
-    return {
-      kind: "error",
-      message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
-    };
-  }
-  const outcome = PARSERS_CHECK[format](parsed);
-  if (outcome.kind === "error") {
-    const lines = outcome.errors.map((e4) => {
-      const where = e4.path !== void 0 ? ` (${e4.path})` : "";
-      return `  ${e4.code}${where}: ${e4.message}`;
-    });
-    return {
-      kind: "error",
-      message: `Failed to parse token source "${tokenPath}" as ${format}:
-${lines.join("\n")}`
-    };
-  }
-  const themes = format === "tokens-studio" ? readThemes(parsed) : void 0;
-  if (themes === void 0 || themes.length < 2) {
-    return { kind: "ok", map: outcome.map };
-  }
-  const modes2 = [];
-  for (const theme of themes) {
-    const themed = parseTokensStudio(
-      themeSubDocument(parsed, theme)
-    );
-    if (themed.kind === "error") {
-      const lines = themed.errors.map((e4) => {
-        const where = e4.path !== void 0 ? ` (${e4.path})` : "";
-        return `  ${e4.code}${where}: ${e4.message}`;
-      });
-      return {
-        kind: "error",
-        message: `Failed to parse theme "${theme.name}" of "${tokenPath}":
-${lines.join("\n")}`
-      };
-    }
-    modes2.push({ mode: theme.name, map: themed.map });
-  }
-  return { kind: "ok", map: outcome.map, modes: modes2 };
+  const loaded = loadTokens(tokenPath);
+  if (loaded.kind === "error") return loaded;
+  return {
+    kind: "ok",
+    map: loaded.map,
+    ...loaded.modes !== void 0 ? { modes: loaded.modes } : {},
+    files: loaded.files
+  };
 }
 function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const files = [];
@@ -27404,7 +27347,9 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    if (resolve17(file) === resolve17(tokenSourcePath)) continue;
+    const source = resolve16(tokenSourcePath);
+    const abs2 = resolve16(file);
+    if (abs2 === source || abs2.startsWith(source + sep4)) continue;
     let content;
     try {
       content = readFileSync27(file, "utf8");
@@ -27414,14 +27359,14 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
     const outcome = scanOutputs({ path: file, content });
     if (outcome.kind !== "ok") continue;
     for (const warning of outcome.warnings) {
-      warnings.push(`${relative2(outputsDir, file)}: ${warning}`);
+      warnings.push(`${relative3(outputsDir, file)}: ${warning}`);
     }
     for (const value2 of outcome.values) {
       const key = `${value2.scope ?? ""}\0${value2.name}`;
       const prior = ownerByName.get(key);
       if (prior !== void 0 && prior !== file) {
         warnings.push(
-          `output "${value2.name}" defined in both ${relative2(outputsDir, prior)} and ${relative2(outputsDir, file)} \u2014 later wins`
+          `output "${value2.name}" defined in both ${relative3(outputsDir, prior)} and ${relative3(outputsDir, file)} \u2014 later wins`
         );
       }
       merged.set(key, value2);
@@ -27477,7 +27422,12 @@ function driftDetail(entry) {
 function severityColorless(kind) {
   return kind;
 }
-function renderCheckTerm(result, color) {
+function describeSource(source) {
+  const files = source.files === 1 ? "1 file" : `${source.files} files`;
+  const modes2 = source.modes.length > 0 ? ` \xB7 modes ${source.modes.join(", ")}` : "";
+  return `Token source: ${source.path} (${files}${modes2})`;
+}
+function renderCheckTerm(result, color, source) {
   const { stale, missing, orphan } = countByKind2(result);
   const countRows = [
     [severityColor("error", "stale-output", { color }), String(stale)],
@@ -27487,7 +27437,7 @@ function renderCheckTerm(result, color) {
   const countsTable = renderTable(["drift", "count"], countRows, { color });
   const total = result.entries.length;
   const heading = total === 0 ? `In sync \u2014 ${result.inSync} token${result.inSync === 1 ? "" : "s"} match output` : `${total} drift entr${total === 1 ? "y" : "ies"} (${result.inSync} in sync)`;
-  const lines = [heading, "", countsTable];
+  const lines = [heading, describeSource(source), "", countsTable];
   if (total > 0) {
     const rows = result.entries.map((entry) => {
       const [name, kind, detail] = driftDetail(entry);
@@ -27498,11 +27448,12 @@ function renderCheckTerm(result, color) {
   }
   return lines.join("\n");
 }
-function checkJson(result, skippedModes) {
+function checkJson(result, skippedModes, source) {
   return JSON.stringify(
     {
       entries: result.entries,
       inSync: result.entries.length === 0,
+      source,
       ...skippedModes.length > 0 ? { skippedModes } : {}
     },
     null,
@@ -27568,8 +27519,8 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve17(path);
-  if (!existsSync24(targetDir) || !statSync16(targetDir).isDirectory()) {
+  const targetDir = resolve16(path);
+  if (!existsSync24(targetDir) || !statSync17(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
   }
@@ -27583,8 +27534,8 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve17(options.outputs) : targetDir;
-  if (!existsSync24(outputsDir) || !statSync16(outputsDir).isDirectory()) {
+  const outputsDir = options.outputs !== void 0 ? resolve16(options.outputs) : targetDir;
+  if (!existsSync24(outputsDir) || !statSync17(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
   }
@@ -27614,12 +27565,18 @@ function runCheck(path, options) {
     orphan,
     inSync
   });
+  const rel2 = relative3(targetDir, tokenSource.path);
+  const source = {
+    path: rel2 === "" ? "." : rel2.startsWith("..") ? tokenSource.path : rel2,
+    files: loaded.files.length,
+    modes: (loaded.modes ?? []).map((m) => m.mode)
+  };
   if (format === "json") {
-    process.stdout.write(`${checkJson(result, skippedModes)}
+    process.stdout.write(`${checkJson(result, skippedModes, source)}
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderCheckTerm(result, color)}
+    process.stdout.write(`${renderCheckTerm(result, color, source)}
 `);
   }
   if (options.report) {
@@ -27631,7 +27588,10 @@ function runCheck(path, options) {
 }
 function registerTokensCommand(program2) {
   const tokens = program2.command("tokens").description("Inspect and analyze design tokens");
-  tokens.command("check").description("Detect drift between the token source and built outputs").argument("[path]", "project directory to check", ".").option("--tokens <file>", "explicit token source file").option("--outputs <dir>", "directory of built CSS/SCSS/TS outputs to scan").option(
+  tokens.command("check").description("Detect drift between the token source and built outputs").argument("[path]", "project directory to check", ".").option(
+    "--tokens <path>",
+    "explicit token source: a file, or a folder of token files"
+  ).option("--outputs <dir>", "directory of built CSS/SCSS/TS outputs to scan").option(
     "--report",
     "also write an HTML dashboard with the drift trend",
     false

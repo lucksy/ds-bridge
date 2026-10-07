@@ -103,6 +103,26 @@ describe("buildParity", () => {
 		expect(report.summary.propMismatch).toBe(1);
 	});
 
+	it("names the differing variant axes when the registry recorded them", () => {
+		const report = buildParity(
+			registry({
+				matches: [
+					{
+						codeName: "ListItem",
+						importPath: "components/list-item.tsx",
+						figmaName: "List item",
+						nodeId: "4:91",
+						score: 0.7,
+						variantGaps: ["lines: code one|two|three ≠ Figma Lines 1|2|3"],
+					},
+				],
+			}),
+		);
+		expect(report.rows[0]?.detail).toBe(
+			"Matched List item (4:91) @ 0.7 — variants differ: lines: code one|two|three ≠ Figma Lines 1|2|3.",
+		);
+	});
+
 	it("classifies an unmatched figma component as missing-in-code, naming its top candidate", () => {
 		const report = buildParity(
 			registry({

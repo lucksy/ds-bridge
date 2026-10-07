@@ -68,7 +68,7 @@ On-system % over 2026-06-03 → 2026-06-03 · css/scss + inline style values (va
 Import coverage
 ───────────────
 Import coverage [███████▉░░░░░░░░░░░░░░░░] 33%
-1/3 registry components imported · resolved .tsx imports only (a floor)
+1/3 registry components imported · resolved .ts/.tsx imports, barrels followed (a floor)
 • Spinner
 • Tooltip
 

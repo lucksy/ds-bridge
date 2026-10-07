@@ -462,3 +462,85 @@ describe("matchComponents — determinism", () => {
 		expect(result.matches.map((m) => m.code.name)).toEqual(["Alpha", "Gamma"]);
 	});
 });
+
+// Real-user finding (Material 3 library): Figma names variant values in Title
+// case (`Style=Filled`) and often names the axis differently from the code
+// prop (`Style` / `variant`, `Type` / `kind`). The same value set on both sides
+// is the same axis; a Figma `State` axis (Enabled / Disabled / Hover) is
+// interaction state that code expresses with booleans or CSS.
+describe("matchComponents — Figma naming conventions", () => {
+	it("compares variant values case-insensitively", () => {
+		const result = matchComponents(
+			[code("Fab", { size: ["small", "medium", "large"] })],
+			[figma("FAB", { Size: ["Small", "Medium", "Large"] })],
+		);
+		expect(result.matches[0]?.shapeScore).toBeCloseTo(1, 10);
+	});
+
+	it("pairs differently named axes whose values agree", () => {
+		const result = matchComponents(
+			[code("Chip", { kind: ["assist", "filter", "input", "suggestion"] })],
+			[
+				figma("Chip", {
+					Type: ["Assist", "Filter", "Input", "Suggestion"],
+					Selected: ["False", "True"],
+				}),
+			],
+		);
+		expect(result.matches[0]?.shapeScore).toBeCloseTo(1, 10);
+		expect(result.matches[0]?.variantGaps).toEqual([]);
+	});
+
+	it("ignores a Figma State axis code does not declare", () => {
+		const result = matchComponents(
+			[code("Button", { variant: ["filled", "tonal", "outlined"] })],
+			[
+				figma("Button", {
+					Style: ["Filled", "Tonal", "Outlined"],
+					State: ["Enabled", "Disabled"],
+				}),
+			],
+		);
+		expect(result.matches[0]?.shapeScore).toBeCloseTo(1, 10);
+	});
+
+	it("does not pair axes whose values barely overlap", () => {
+		const result = matchComponents(
+			[code("Button", { variant: ["primary"] })],
+			[figma("Button", { size: ["sm", "md"] })],
+		);
+		expect(result.matches[0]?.shapeScore).toBeCloseTo(0, 10);
+	});
+
+	it("names each axis that still differs", () => {
+		const result = matchComponents(
+			[code("ListItem", { lines: ["one", "two", "three"] })],
+			[figma("List item", { Lines: ["1", "2", "3"] })],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([
+			"lines: code one|two|three ≠ Figma Lines 1|2|3",
+		]);
+	});
+
+	it("names an axis only one side has, and values one side lacks", () => {
+		const result = matchComponents(
+			[
+				code("Fab", {
+					size: ["small", "medium", "large"],
+					color: ["primary", "surface"],
+				}),
+			],
+			[
+				figma("FAB", {
+					Size: ["Small", "Medium", "Large", "Extended"],
+					Elevation: ["Raised", "Lowered"],
+				}),
+			],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([
+			"color: code only (primary|surface)",
+			"size: Figma also has Extended",
+			"Elevation: Figma only (Raised|Lowered)",
+		]);
+	});
+});

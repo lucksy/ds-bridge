@@ -39,17 +39,11 @@ import {
 	type LiteralMatch,
 	matchLiteral,
 } from "../engines/lint/match.js";
-import { detectFormat } from "../engines/tokens/detect.js";
-import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
-import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
-import { parseW3c } from "../engines/tokens/parse-w3c.js";
 import { buildTokenIndex } from "../engines/tokens/token-index.js";
-import type {
-	ParseOutcome,
-	TokenMap,
-	TokenSourceFormat,
-} from "../engines/tokens/types.js";
+import type { TokenMap } from "../engines/tokens/types.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
+import { loadTokens } from "../io/load-tokens.js";
+import { findTokenSource } from "../io/token-set.js";
 import {
 	renderTable,
 	type Severity,
@@ -58,12 +52,6 @@ import {
 } from "../render/terminal/index.js";
 
 type LintFormat = "json" | "term";
-
-const PARSERS: Record<TokenSourceFormat, (source: unknown) => ParseOutcome> = {
-	w3c: parseW3c,
-	"tokens-studio": parseTokensStudio,
-	"style-dictionary": parseStyleDictionary,
-};
 
 /** Directories never walked for lintable source files. */
 const EXCLUDED_DIRS = new Set([
@@ -302,8 +290,8 @@ function resolveTokenSource(
 		}
 	}
 
-	// 3. Discovery: first conventional token file under the target dir.
-	const discovered = discoverFirstTokenSource(targetDir);
+	// 3. Discovery: the token file (or multi-file token folder) under the target dir.
+	const discovered = findTokenSource(targetDir);
 	if (discovered !== undefined) return { kind: "ok", path: discovered };
 
 	return {
@@ -315,127 +303,28 @@ function resolveTokenSource(
 	};
 }
 
-/**
- * Synchronous discovery: the shallowest conventional, shape-verified token file
- * under `root` (a focused, sync mirror of io/discover-tokens for this command).
- */
-function discoverFirstTokenSource(root: string): string | undefined {
-	const candidates: string[] = [];
-	collectTokenCandidates(root, false, candidates);
-	const verified = candidates
-		.filter((path) => detectFileFormat(path) !== undefined)
-		.sort((a, b) => {
-			const depth = depthOf(a) - depthOf(b);
-			return depth !== 0 ? depth : a < b ? -1 : a > b ? 1 : 0;
-		});
-	return verified[0];
-}
-
-function depthOf(path: string): number {
-	return path.split(sep).filter((s) => s.length > 0).length;
-}
-
-function isConventionalTokenFile(name: string): boolean {
-	if (!name.endsWith(".json")) return false;
-	return (
-		name === "tokens.json" ||
-		name === "design-tokens.json" ||
-		name.endsWith(".tokens.json")
-	);
-}
-
-function isTokenDir(name: string): boolean {
-	return name === "tokens" || name === "design-tokens";
-}
-
-function collectTokenCandidates(
-	dir: string,
-	insideTokenDir: boolean,
-	acc: string[],
-): void {
-	let entries: Dirent[];
-	try {
-		entries = readdirSync(dir, { withFileTypes: true });
-	} catch {
-		return;
-	}
-	for (const entry of entries) {
-		const full = join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (EXCLUDED_DIRS.has(entry.name)) continue;
-			collectTokenCandidates(
-				full,
-				insideTokenDir || isTokenDir(entry.name),
-				acc,
-			);
-			continue;
-		}
-		if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-		if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
-	}
-}
-
-/** Detect a file's token format from its shape, or undefined when not a token file. */
-function detectFileFormat(absPath: string): TokenSourceFormat | undefined {
-	let raw: string;
-	try {
-		raw = readFileSync(absPath, "utf8");
-	} catch {
-		return undefined;
-	}
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		return undefined;
-	}
-	const format = detectFormat(parsed);
-	return format === "unknown" ? undefined : format;
-}
-
-/** Parse the token source file into a TokenMap, or an error outcome. */
+/** Parse the token source (file or folder) into a TokenMap, or an error outcome. */
 function loadTokenMap(
 	tokenPath: string,
 ): { kind: "ok"; map: TokenMap } | LintCommandError {
-	let raw: string;
+	const loaded = loadTokens(tokenPath);
+	if (loaded.kind === "error") return loaded;
+	return { kind: "ok", map: loaded.map };
+}
+
+/**
+ * True for a file a tool generated — a built token output such as Style
+ * Dictionary's "Do not edit directly, this file was auto-generated." Its
+ * values ARE the tokens, so linting it only reports the system against itself.
+ */
+function isGeneratedFile(absPath: string): boolean {
+	let head: string;
 	try {
-		raw = readFileSync(tokenPath, "utf8");
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Could not read token source "${tokenPath}": ${detail}`,
-		};
+		head = readFileSync(absPath, "utf8").slice(0, 600);
+	} catch {
+		return false;
 	}
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			kind: "error",
-			message: `Token source "${tokenPath}" is not valid JSON: ${detail}`,
-		};
-	}
-	const format = detectFormat(parsed);
-	if (format === "unknown") {
-		return {
-			kind: "error",
-			message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`,
-		};
-	}
-	const outcome = PARSERS[format](parsed);
-	if (outcome.kind === "error") {
-		const lines = outcome.errors.map((e) => {
-			const where = e.path !== undefined ? ` (${e.path})` : "";
-			return `  ${e.code}${where}: ${e.message}`;
-		});
-		return {
-			kind: "error",
-			message: `Failed to parse token source "${tokenPath}" as ${format}:\n${lines.join("\n")}`,
-		};
-	}
-	return { kind: "ok", map: outcome.map };
+	return /auto-?generated|do not edit|generated by|@generated/i.test(head);
 }
 
 /** Lint a single file's content into findings. Unreadable files surface as an error. */
@@ -729,6 +618,10 @@ export function registerLintCommand(program: Command): void {
 			const walked: string[] = [];
 			if (isFile) walked.push(targetPath);
 			else walkLintableFiles(targetDir, walked);
+			// Generated outputs (built token CSS) are the system, not usage of it.
+			for (let i = walked.length - 1; i >= 0; i--) {
+				if (isGeneratedFile(walked[i] as string)) walked.splice(i, 1);
+			}
 
 			let inScope = walked;
 			if (options.changed) {
