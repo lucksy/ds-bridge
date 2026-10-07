@@ -184,6 +184,28 @@ function matchColor(
 	return { kind: "near", candidates };
 }
 
+const familyCache = new WeakMap<TokenIndex, Map<string, boolean>>();
+
+/** Whether the token set has any dimension token of `family`. Cached per index. */
+function setHasFamily(index: TokenIndex, family: RegExp): boolean {
+	let byFamily = familyCache.get(index);
+	if (byFamily === undefined) {
+		byFamily = new Map();
+		familyCache.set(index, byFamily);
+	}
+	const cached = byFamily.get(family.source);
+	if (cached !== undefined) return cached;
+	let found = false;
+	for (const token of index.byName.values()) {
+		if (token.type === "dimension" && family.test(token.name)) {
+			found = true;
+			break;
+		}
+	}
+	byFamily.set(family.source, found);
+	return found;
+}
+
 function matchDimension(
 	literal: ExtractedLiteral,
 	index: TokenIndex,
@@ -191,22 +213,26 @@ function matchDimension(
 	const dim = normalizeDimension(stripQuotes(literal.raw));
 	if (dim === undefined) return { kind: "off-system" };
 
+	// The property's token family (spacing for padding, corners for radius…).
+	// When the set has that family, only its tokens are suggested: a spacing
+	// token is never the fix for a radius. Without one, any dimension token is.
+	const family = dimensionFamily(literal.property);
+	const inFamily =
+		family !== undefined && setHasFamily(index, family)
+			? (token: Token) => family.test(token.name)
+			: () => true;
+
 	// 1. Exact px hit. Only dimension tokens produce `${px}px` value keys.
 	const bucket = index.byValue.get(`${dim.px}px`);
 	if (bucket !== undefined) {
-		const dimensions = bucket.filter((t) => t.type === "dimension");
-		const family = dimensionFamily(literal.property);
-		const exact =
-			(family !== undefined
-				? dimensions.find((t) => family.test(t.name))
-				: undefined) ?? dimensions[0];
+		const exact = bucket.find((t) => t.type === "dimension" && inFamily(t));
 		if (exact !== undefined) return { kind: "exact", token: exact };
 	}
 
 	// 2. Nearest dimension tokens within the abs-px threshold.
 	const candidates: MatchCandidate[] = [];
 	for (const token of index.byName.values()) {
-		if (token.type !== "dimension") continue;
+		if (token.type !== "dimension" || !inFamily(token)) continue;
 		const tokenDim = normalizeDimension(
 			typeof token.value === "number" || typeof token.value === "string"
 				? token.value

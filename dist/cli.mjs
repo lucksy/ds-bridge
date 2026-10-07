@@ -20229,19 +20229,38 @@ function matchColor(literal, index, options) {
   ).slice(0, NEAR_LIMIT2);
   return { kind: "near", candidates };
 }
+var familyCache = /* @__PURE__ */ new WeakMap();
+function setHasFamily(index, family) {
+  let byFamily = familyCache.get(index);
+  if (byFamily === void 0) {
+    byFamily = /* @__PURE__ */ new Map();
+    familyCache.set(index, byFamily);
+  }
+  const cached = byFamily.get(family.source);
+  if (cached !== void 0) return cached;
+  let found = false;
+  for (const token of index.byName.values()) {
+    if (token.type === "dimension" && family.test(token.name)) {
+      found = true;
+      break;
+    }
+  }
+  byFamily.set(family.source, found);
+  return found;
+}
 function matchDimension(literal, index) {
   const dim = normalizeDimension(stripQuotes(literal.raw));
   if (dim === void 0) return { kind: "off-system" };
+  const family = dimensionFamily(literal.property);
+  const inFamily = family !== void 0 && setHasFamily(index, family) ? (token) => family.test(token.name) : () => true;
   const bucket = index.byValue.get(`${dim.px}px`);
   if (bucket !== void 0) {
-    const dimensions = bucket.filter((t) => t.type === "dimension");
-    const family = dimensionFamily(literal.property);
-    const exact = (family !== void 0 ? dimensions.find((t) => family.test(t.name)) : void 0) ?? dimensions[0];
+    const exact = bucket.find((t) => t.type === "dimension" && inFamily(t));
     if (exact !== void 0) return { kind: "exact", token: exact };
   }
   const candidates = [];
   for (const token of index.byName.values()) {
-    if (token.type !== "dimension") continue;
+    if (token.type !== "dimension" || !inFamily(token)) continue;
     const tokenDim = normalizeDimension(
       typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
     );

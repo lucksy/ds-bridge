@@ -551,3 +551,37 @@ describe("isLintable — radius gated on a radius scale", () => {
 		);
 	});
 });
+
+// Real-user finding (v1.18.0 on the M3 testbed): `border-radius: 20px` with no
+// 20px corner token was "fixed" to md.sys.spacing.5 — a spacing token for a
+// radius. When the set has the property's family, suggest only that family.
+describe("matchLiteral — never crosses token families", () => {
+	const index = buildTokenIndex([
+		dimToken("md.sys.shape.corner.large", "16px"),
+		dimToken("md.sys.spacing.5", "20px"),
+		dimToken("md.sys.typescale.title-large.size", "22px"),
+	]);
+
+	it("a radius with no corner token at that value is off-system, not spacing", () => {
+		expect(matchLiteral(dimLiteral("20px", "border-radius"), index).kind).toBe(
+			"off-system",
+		);
+	});
+
+	it("a near-miss radius only suggests corner tokens", () => {
+		const match = matchLiteral(dimLiteral("21px", "border-radius"), index);
+		expect(match.kind).toBe("off-system");
+	});
+
+	it("padding never gets a type-scale token", () => {
+		expect(matchLiteral(dimLiteral("22px", "padding"), index).kind).toBe(
+			"off-system",
+		);
+	});
+
+	it("falls back to any dimension token when the set has no such family", () => {
+		const plain = buildTokenIndex([dimToken("size.4", "16px")]);
+		const match = matchLiteral(dimLiteral("16px", "padding"), plain);
+		expect(match.kind === "exact" && match.token.name).toBe("size.4");
+	});
+});
