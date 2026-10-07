@@ -66,6 +66,46 @@ describe("pairColorTokens role heuristics", () => {
 	});
 });
 
+describe("pairColorTokens — named surfaces (shadcn X / X-foreground, Material on-X)", () => {
+	it("pairs X-foreground with X only, never with every background", () => {
+		const map = makeMap([
+			color("background", "#ffffff"),
+			color("foreground", "#0a0a0a"),
+			color("primary", "#171717"),
+			color("primary-foreground", "#fafafa"),
+			color("card", "#ffffff"),
+			color("card-foreground", "#0a0a0a"),
+			color("muted", "#f5f5f5"),
+			color("muted-foreground", "#737373"),
+		]);
+		const keys = pairColorTokens(map).map(
+			(p) => `${p.foreground.name}|${p.background.name}`,
+		);
+		expect(keys).toEqual([
+			"card-foreground|card",
+			"foreground|background",
+			"muted-foreground|muted",
+			"primary-foreground|primary",
+		]);
+	});
+
+	it("pairs Material on-X with X", () => {
+		const map = makeMap([
+			color("color.primary", "#6750a4"),
+			color("color.on-primary", "#ffffff"),
+			color("color.surface", "#fef7ff"),
+			color("color.on-surface", "#1d1b20"),
+		]);
+		const keys = pairColorTokens(map).map(
+			(p) => `${p.foreground.name}|${p.background.name}`,
+		);
+		expect(keys).toEqual([
+			"color.on-primary|color.primary",
+			"color.on-surface|color.surface",
+		]);
+	});
+});
+
 describe("auditContrast", () => {
 	const lightTokens = [
 		color("text.primary", "#1f2937"), // 14.68 on white → pass

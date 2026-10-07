@@ -12,7 +12,10 @@
 // matches CSS "--color-brand-primary" (kebab) and TS "color.brand.primary" (dotted).
 // Value comparison is type-aware canonical (hex case, rgb() spelling, rem/px).
 import { describe, expect, it } from "vitest";
-import { classifyDrift } from "../../../src/engines/tokens/drift.js";
+import {
+	classifyDrift,
+	classifyDriftByMode,
+} from "../../../src/engines/tokens/drift.js";
 import type { OutputValue } from "../../../src/engines/tokens/scan-outputs.js";
 import type { Token, TokenMap } from "../../../src/engines/tokens/types.js";
 
@@ -110,5 +113,156 @@ describe("classifyDrift", () => {
 			e.kind === "orphan-output" ? e.output.name : e.token.name,
 		);
 		expect(names).toEqual(["color.a", "color-m", "color.z"]);
+	});
+});
+
+describe("classifyDrift — derived aliases (Tailwind v4 @theme)", () => {
+	it("does not call an output built from var() references to source tokens an orphan", () => {
+		const outputs: OutputValue[] = [
+			{ name: "color-brand-primary", raw: "#3b82f6" },
+			{ name: "space-md", raw: "16px" },
+			// shadcn's `@theme inline` mapping and derived radii
+			{
+				name: "color-primary",
+				raw: "var(--color-brand-primary)",
+				scope: "@theme inline",
+			},
+			{
+				name: "space-lg",
+				raw: "calc(var(--space-md) * 1.5)",
+				scope: "@theme inline",
+			},
+		];
+		const result = classifyDrift(mapOf(primary, spaceMd), outputs);
+		expect(result.entries).toEqual([]);
+	});
+
+	it("still reports an output referencing only unknown custom properties", () => {
+		const outputs: OutputValue[] = [
+			{ name: "color-brand-primary", raw: "#3b82f6" },
+			{ name: "space-md", raw: "16px" },
+			{ name: "color-x", raw: "var(--not-a-token)" },
+		];
+		const result = classifyDrift(mapOf(primary, spaceMd), outputs);
+		expect(result.entries.map((e) => e.kind)).toEqual(["orphan-output"]);
+	});
+});
+
+// Mode-aware drift (Tokens Studio $themes): each mode is compared with the CSS
+// that applies in that mode — root-level values for the default (first) mode;
+// root overlaid by a selector naming the mode (`.dark`, `[data-theme="dark"]`,
+// `@media (prefers-color-scheme: dark)`) for the others.
+describe("classifyDriftByMode", () => {
+	const light = mapOf(
+		{ name: "background", type: "color", value: "#ffffff" },
+		{ name: "radius", type: "dimension", value: "8px" },
+	);
+	const dark = mapOf(
+		{ name: "background", type: "color", value: "#0a0a0a" },
+		{ name: "radius", type: "dimension", value: "8px" },
+	);
+	const modes = [
+		{ mode: "light", map: light },
+		{ mode: "dark", map: dark },
+	];
+	const css: OutputValue[] = [
+		{ name: "background", raw: "#ffffff" },
+		{ name: "radius", raw: "8px" },
+		{ name: "background", raw: "#0a0a0a", scope: ".dark" },
+	];
+
+	it("is in sync when every mode matches its own scope", () => {
+		const result = classifyDriftByMode(modes, css);
+		expect(result.entries).toEqual([]);
+		expect(result.skippedModes).toEqual([]);
+	});
+
+	it("flags a stale DEFAULT-mode value (it no longer hides behind the last mode)", () => {
+		const changed = [
+			{
+				mode: "light",
+				map: mapOf(
+					{ name: "background", type: "color", value: "#fafafa" },
+					{ name: "radius", type: "dimension", value: "8px" },
+				),
+			},
+			{ mode: "dark", map: dark },
+		];
+		const result = classifyDriftByMode(changed, css);
+		expect(result.entries).toEqual([
+			{
+				kind: "stale-output",
+				mode: "light",
+				token: { name: "background", type: "color", value: "#fafafa" },
+				output: { name: "background", raw: "#ffffff" },
+			},
+		]);
+	});
+
+	it("flags a stale value in a non-default mode against its scoped output", () => {
+		const changed = [
+			{ mode: "light", map: light },
+			{
+				mode: "dark",
+				map: mapOf(
+					{ name: "background", type: "color", value: "#111111" },
+					{ name: "radius", type: "dimension", value: "8px" },
+				),
+			},
+		];
+		const result = classifyDriftByMode(changed, css);
+		expect(
+			result.entries.map((e) => [e.kind, "mode" in e ? e.mode : undefined]),
+		).toEqual([["stale-output", "dark"]]);
+	});
+
+	it("matches data-theme attributes and prefers-color-scheme media scopes", () => {
+		for (const scope of [
+			'[data-theme="dark"]',
+			"@media (prefers-color-scheme: dark) :root",
+			".theme-dark",
+		]) {
+			const result = classifyDriftByMode(modes, [
+				{ name: "background", raw: "#ffffff" },
+				{ name: "radius", raw: "8px" },
+				{ name: "background", raw: "#0a0a0a", scope },
+			]);
+			expect(result.entries, scope).toEqual([]);
+		}
+	});
+
+	it("reports a token missing from the outputs once, not once per mode", () => {
+		const withExtra = modes.map(({ mode, map }) => ({
+			mode,
+			map: mapOf(...map.tokens, {
+				name: "success",
+				type: "color",
+				value: "#00ff00",
+			}),
+		}));
+		const result = classifyDriftByMode(withExtra, css);
+		expect(
+			result.entries.filter((e) => e.kind === "missing-output"),
+		).toHaveLength(1);
+	});
+
+	it("reports an output that no mode defines as one orphan", () => {
+		const result = classifyDriftByMode(modes, [
+			...css,
+			{ name: "legacy", raw: "#123456" },
+			{ name: "legacy", raw: "#654321", scope: ".dark" },
+		]);
+		expect(
+			result.entries.filter((e) => e.kind === "orphan-output"),
+		).toHaveLength(1);
+	});
+
+	it("skips (and names) a non-default mode that has no scoped outputs at all", () => {
+		const result = classifyDriftByMode(
+			modes,
+			css.filter((o) => o.scope === undefined),
+		);
+		expect(result.entries).toEqual([]);
+		expect(result.skippedModes).toEqual(["dark"]);
 	});
 });

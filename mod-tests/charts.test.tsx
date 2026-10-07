@@ -127,6 +127,22 @@ describe("terminal grids", () => {
 		expect(gridText(grid)).toContain("·"); // a zero is a dim dot
 	});
 
+	test("a share legend in % shows each value once, otherwise share · value", async () => {
+		const pct = terminalChart(
+			chart({ kind: "share", unit: "%", items: items(85, 15) }),
+			60,
+		);
+		const counts = terminalChart(
+			chart({ kind: "share", unit: "uses", items: items(3, 1) }),
+			60,
+		);
+		if (pct.kind !== "share" || counts.kind !== "share") {
+			throw new Error("expected share charts");
+		}
+		expect(pct.legend.map((l) => l.detail)).toEqual(["85%", "15%"]);
+		expect(counts.legend[0]?.detail).toBe("75% · 3 uses");
+	});
+
 	test("terminalChart draws each kind for the pane", async () => {
 		expect(terminalChart(chart({ value: 65 }), 60).kind).toBe("gauge");
 		expect(

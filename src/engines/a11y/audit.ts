@@ -87,13 +87,31 @@ function byName(a: { name: string }, b: { name: string }): number {
 }
 
 /**
+ * The surface a foreground token names, when its name says so: shadcn's
+ * `primary-foreground` / `card.foreground` / `x-fg` → `primary` / `card` / `x`,
+ * Material's `on-primary` → `primary`. Undefined for role-only names
+ * (`foreground`, `text.primary`).
+ */
+function namedSurface(name: string): string | undefined {
+	const suffix = name.match(/^(.+)[.-](?:foreground|fg)$/i);
+	if (suffix !== null) return suffix[1];
+	const onPrefix = name.match(/^(.*?)(^|[./])on-([a-z0-9-]+)$/i);
+	if (onPrefix !== null) return `${onPrefix[1]}${onPrefix[2]}${onPrefix[3]}`;
+	return undefined;
+}
+
+/**
  * Discover foreground/background color pairings within a single mode's map.
- * Every foreground-role color token is paired with every background-role color
- * token (full cross product), deterministically ordered by foreground name then
- * background name. Non-color tokens are ignored.
+ * A foreground token that names an existing surface token (`primary-foreground`
+ * ↔ `primary`, `on-primary` ↔ `primary`) is paired with that surface only —
+ * that is the combination the system renders. Every other foreground-role
+ * color is paired with every background-role color (full cross product).
+ * Deterministically ordered by foreground name then background name.
+ * Non-color tokens are ignored.
  */
 export function pairColorTokens(map: TokenMap): ColorPair[] {
 	const colors = map.tokens.filter(isColor);
+	const byTokenName = new Map(colors.map((t) => [t.name, t]));
 	const foregrounds = colors
 		.filter((t) => isForegroundRole(t.name))
 		.sort(byName);
@@ -103,6 +121,13 @@ export function pairColorTokens(map: TokenMap): ColorPair[] {
 
 	const pairs: ColorPair[] = [];
 	for (const foreground of foregrounds) {
+		const surfaceName = namedSurface(foreground.name);
+		const surface =
+			surfaceName !== undefined ? byTokenName.get(surfaceName) : undefined;
+		if (surface !== undefined) {
+			pairs.push({ foreground, background: surface });
+			continue;
+		}
 		for (const background of backgrounds) {
 			if (foreground.name === background.name) continue;
 			pairs.push({ foreground, background });

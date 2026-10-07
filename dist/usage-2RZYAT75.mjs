@@ -2,6 +2,9 @@
 import { createRequire as __createRequire } from "node:module";
 const require = __createRequire(import.meta.url);
 import {
+  readPathAliases
+} from "./chunk-L55B4Z4L.mjs";
+import {
   require_ts_morph
 } from "./chunk-ZZB7XIWQ.mjs";
 import {
@@ -43,7 +46,13 @@ function resolveFigmaName(registry, figmaName) {
 function buildProject(root) {
   const project = new import_ts_morph.Project({
     skipAddingFilesFromTsConfig: true,
-    compilerOptions: { jsx: 4, allowJs: true, strict: true, noEmit: true }
+    compilerOptions: {
+      jsx: 4,
+      allowJs: true,
+      strict: true,
+      noEmit: true,
+      ...readPathAliases(root)
+    }
   });
   try {
     project.addSourceFilesAtPaths([

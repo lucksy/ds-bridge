@@ -20,7 +20,11 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Command } from "commander";
-import { type ResolvedConfig, resolveConfig } from "../config.js";
+import {
+	type ResolvedConfig,
+	readProjectConfigText,
+	resolveConfig,
+} from "../config.js";
 import { resolveView } from "../engines/report/presets.js";
 import {
 	resolveWeightProfile,
@@ -56,17 +60,6 @@ function noDataMessage(historyPath: string): string {
 		"",
 		"Then run `ds-bridge badge` again.",
 	].join("\n");
-}
-
-/** Read <path>/.ds-bridge.json text (for score_weights), or undefined when absent. */
-function readProjectConfigText(targetDir: string): string | undefined {
-	const configPath = join(targetDir, ".ds-bridge.json");
-	if (!existsSync(configPath)) return undefined;
-	try {
-		return readFileSync(configPath, "utf8");
-	} catch {
-		return undefined;
-	}
 }
 
 /**

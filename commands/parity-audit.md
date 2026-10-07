@@ -5,7 +5,7 @@ argument-hint: "[component]"
 
 ## Parity matrix
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs parity $ARGUMENTS --format=json 2>&1 || true`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs parity '$ARGUMENTS' --format=json`
 
 ## Your task
 

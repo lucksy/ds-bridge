@@ -9,13 +9,17 @@
 //   - Auto-layout coverage       (25): frames should use auto layout so the
 //       generated code uses flex/stack instead of absolute positioning.
 //   - Component usage            (20): component-named nodes should be live
-//       instances of the published component, not detached copies.
+//       instances of the published component, not detached copies — and those
+//       instances should not be of deprecated components (when the caller
+//       passes the file's components map).
 //   - Naming convention          (15): default names ("Frame 12") carry no
 //       semantic meaning for generated identifiers.
 //
 // The input is structural: any object shaped like a Figma node (the io client's
 // FigmaNode satisfies it) works. The engine never throws — it walks whatever
 // tree it is handed and divides defensively so an empty tree scores 100.
+
+import { DEFAULT_DEPRECATED_PATTERN } from "../figma/library-health.js";
 
 // ── Structural input type (the io FigmaNode satisfies this) ──
 
@@ -53,6 +57,12 @@ export interface HandoffNode {
 	strokes?: HandoffPaint[];
 }
 
+/** The file's components / componentSets maps (GET /v1/files/:key/nodes). */
+export interface ScoreReadinessOptions {
+	components?: Record<string, { name: string; componentSetId?: string }>;
+	componentSets?: Record<string, { name: string }>;
+}
+
 // ── Output types ──
 
 /** Identifies which rule produced a deduction. */
@@ -76,6 +86,8 @@ export interface ReadinessStats {
 	autoLayoutCoverage: number;
 	instanceCount: number;
 	detachedSuspects: number;
+	/** Instances of a component whose (set) name marks it deprecated. */
+	deprecatedInstances: number;
 	badNames: number;
 }
 
@@ -139,6 +151,8 @@ const COMPONENT_NOUNS = new Set([
 const FIX_BINDING = "Bind fills/strokes to a variable";
 const FIX_AUTO_LAYOUT = "Add auto layout";
 const FIX_COMPONENT = "Reattach to the published component or rename";
+const fixDeprecated = (name: string): string =>
+	`Swap to the current component — "${name}" is deprecated`;
 const FIX_NAMING = "Rename meaningfully";
 
 // ── Predicates ──
@@ -209,7 +223,28 @@ function collect(root: HandoffNode): HandoffNode[] {
 
 // ── Scoring ──
 
-export function scoreReadiness(root: HandoffNode): ReadinessReport {
+/** The deprecated (set) name an instance points at, or undefined. */
+function deprecatedNameOf(
+	node: HandoffNode,
+	options: ScoreReadinessOptions,
+): string | undefined {
+	if (node.type !== "INSTANCE" || node.componentId === undefined) {
+		return undefined;
+	}
+	const component = options.components?.[node.componentId];
+	if (component === undefined) return undefined;
+	const setName =
+		component.componentSetId !== undefined
+			? options.componentSets?.[component.componentSetId]?.name
+			: undefined;
+	const name = setName ?? component.name;
+	return DEFAULT_DEPRECATED_PATTERN.test(name) ? name : undefined;
+}
+
+export function scoreReadiness(
+	root: HandoffNode,
+	options: ScoreReadinessOptions = {},
+): ReadinessReport {
 	const nodes = collect(root);
 	const totalNodes = nodes.length;
 
@@ -230,8 +265,15 @@ export function scoreReadiness(root: HandoffNode): ReadinessReport {
 		(n) => n.type !== "INSTANCE" && isComponentName(n.name),
 	);
 	const detachedSuspects = suspectNodes.length;
+	const deprecated = nodes
+		.map((node) => ({ node, name: deprecatedNameOf(node, options) }))
+		.filter(
+			(d): d is { node: HandoffNode; name: string } => d.name !== undefined,
+		);
+	const deprecatedInstances = deprecated.length;
 	const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
-	const componentRatio = 1 - detachedSuspects / componentDenominator;
+	const componentRatio =
+		1 - (detachedSuspects + deprecatedInstances) / componentDenominator;
 
 	const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
 	const badNames = badNameNodes.length;
@@ -276,10 +318,12 @@ export function scoreReadiness(root: HandoffNode): ReadinessReport {
 		}
 	}
 
-	// Component (20): the lost weight is spread evenly across detached suspects.
-	if (detachedSuspects > 0) {
+	// Component (20): the lost weight is spread evenly across detached suspects
+	// and instances of deprecated components.
+	const componentOffenders = detachedSuspects + deprecatedInstances;
+	if (componentOffenders > 0) {
 		const lost = WEIGHT_COMPONENT * (1 - componentRatio);
-		const perNode = lost / detachedSuspects;
+		const perNode = lost / componentOffenders;
 		for (const node of suspectNodes) {
 			deductions.push({
 				nodeId: node.id,
@@ -287,6 +331,15 @@ export function scoreReadiness(root: HandoffNode): ReadinessReport {
 				rule: "component",
 				points: perNode,
 				fix: FIX_COMPONENT,
+			});
+		}
+		for (const { node, name } of deprecated) {
+			deductions.push({
+				nodeId: node.id,
+				nodeName: node.name,
+				rule: "component",
+				points: perNode,
+				fix: fixDeprecated(name),
 			});
 		}
 	}
@@ -327,6 +380,7 @@ export function scoreReadiness(root: HandoffNode): ReadinessReport {
 			autoLayoutCoverage,
 			instanceCount,
 			detachedSuspects,
+			deprecatedInstances,
 			badNames,
 		},
 	};

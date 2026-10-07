@@ -230,6 +230,12 @@ committed `.ds-bridge.json` and the whole team shares them.
   each under a short alias in `product_file_keys`; target it with `--file-key
   <alias>` on `impact` / `library-health` / `frame-impl`. `ds-bridge config list`
   shows them all.
+- **Where the design-system components live:** `registry build` scans the
+  directories in `component_paths` (e.g. `"component_paths": ["src/components/ui"]`
+  in `.ds-bridge.json`). Unset, a shadcn/ui project is detected from its
+  `components.json` (`aliases.ui`, resolved through the tsconfig paths); otherwise
+  the whole project is scanned. The build summary prints which it used. Compound
+  parts (`CardHeader` beside `Card`) fold into their parent's parity row.
 - **Check what resolved:** `ds-bridge config show` prints the effective config
   (token masked) and **which source won** each value — flag, env, `.ds-bridge.env`,
   or `.ds-bridge.json`.
@@ -418,6 +424,25 @@ npm run check          # typecheck + lint + test + validate + test:mod (pre-comm
 ```
 
 Website and tutorials: <https://ds-bridge.com/tutorials/>.
+
+### Releasing
+
+The marketplace installs the plugin from the **`release`** branch, not `main`:
+Claude Code copies a plugin's whole source and has no ignore file, so `main`
+(sources, tests, `node_modules`) would install ~190 MB where the plugin needs
+~15 MB. The `release` branch holds only what runs.
+
+1. Bump the version in `package.json` and `.claude-plugin/plugin.json`, run
+   `npm run build`, commit `dist/`, and tag `vX.Y.Z` (tags commit `dist/`).
+2. Pushing the tag runs [`release-plugin.yml`](./.github/workflows/release-plugin.yml):
+   it checks that the tag, `plugin.json` and `dist/cli.mjs` agree, builds the
+   trimmed payload with `scripts/build-release.mjs`, validates it strictly and
+   commits it to `release`. Run it by hand (`workflow_dispatch`, input `tag`)
+   to publish an existing tag.
+
+`node scripts/build-release.mjs <out-dir> [--from <checkout>]` builds the same
+payload locally; it fails if any hook import or `${CLAUDE_PLUGIN_ROOT}` path
+would not resolve inside it.
 
 ## Live Figma smoke test
 

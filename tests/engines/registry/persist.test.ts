@@ -104,6 +104,34 @@ describe("toRegistryFile — schema & projection", () => {
 		]);
 	});
 
+	it("keeps a non-empty Figma description on matches and unmatched figma entries (empty is omitted)", () => {
+		const described = (name: string, nodeId: string, description: string) => ({
+			...figma(name, nodeId),
+			description,
+		});
+		const result: ComponentMatchResult = {
+			matches: [
+				match(
+					code("Button"),
+					described("Button", "10:1", "Primary action."),
+					0.9,
+				),
+				match(code("Card"), figma("Card", "10:2"), 0.9),
+			],
+			unmatchedCode: [],
+			unmatchedFigma: [
+				unmatchedFigma(described("Tooltip", "10:9", "Hover hint."), []),
+			],
+		};
+		const file = toRegistryFile(result, "2026-06-05T10:00:00.000Z");
+		expect(file.matches.map((m) => m.description)).toEqual([
+			"Primary action.",
+			undefined,
+		]);
+		expect("description" in (file.matches[1] ?? {})).toBe(false);
+		expect(file.unmatchedFigma[0]?.description).toBe("Hover hint.");
+	});
+
 	it("flattens unmatchedCode with its ranked figma candidates", () => {
 		const target = figma("Button / Primary", "10:42");
 		const result: ComponentMatchResult = {

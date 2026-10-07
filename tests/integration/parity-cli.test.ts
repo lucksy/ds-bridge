@@ -286,4 +286,25 @@ describe("ds-bridge parity (built dist/cli.mjs)", () => {
 			expect(await parityRecords(dir)).toHaveLength(0);
 		});
 	});
+
+	it("`parity .` run inside the project treats . as the path, not a component", async () => {
+		const dir = await projectWith(MIXED_REGISTRY);
+		let code = 0;
+		let stderr = "";
+		try {
+			await execFileAsync(
+				process.execPath,
+				[cliPath, "parity", ".", "--format=json"],
+				{
+					encoding: "utf8",
+					cwd: dir,
+				},
+			);
+		} catch (error) {
+			code = (error as { code: number }).code;
+			stderr = (error as { stderr: string }).stderr;
+		}
+		expect(stderr).not.toContain('named "."');
+		expect(code).not.toBe(2);
+	});
 });

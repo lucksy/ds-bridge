@@ -5,7 +5,7 @@ argument-hint: "[--fix] [path]"
 
 ## Lint output
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs lint $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs lint '$ARGUMENTS' --format=json`
 
 ## Your task
 

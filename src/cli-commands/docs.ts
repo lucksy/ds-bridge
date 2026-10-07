@@ -8,10 +8,9 @@
 // All judgement lives in the pure engines; every bad-input path becomes an exit
 // code + actionable stderr, never a thrown stack trace.
 //
-// The figma side stays offline: the registry already carries figma names/nodeIds
-// but not authored descriptions (those need a REST fetch), so we pass no rich
-// figma shapes. The merge degrades gracefully — matched figma sides with no
-// description surface a `missing-figma-description` gap, which is informational.
+// The figma side stays offline: `registry build` persists each Figma component's
+// description in registry.json, and docs reads it from there. A component with
+// no description surfaces a `missing-figma-description` gap (informational).
 //
 // Exit codes:
 //   0  success (any documentation gaps are informational, not failures)
@@ -32,6 +31,7 @@ import { renderLlmsTxt } from "../engines/docs/render-llms.js";
 import { renderComponentMdx } from "../engines/docs/render-mdx.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import type { CodeComponent } from "../engines/registry/scan-code.js";
+import type { FigmaComponentModel } from "../engines/registry/scan-figma.js";
 import { detectFormat } from "../engines/tokens/detect.js";
 import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
 import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
@@ -78,19 +78,72 @@ function normalizeName(name: string): string {
  * pattern in registry.ts.
  */
 async function scanCode(targetDir: string): Promise<CodeComponent[]> {
-	const globals = globalThis as Record<string, unknown>;
-	if (typeof globals.__filename !== "string") {
-		const filename = fileURLToPath(import.meta.url);
-		globals.__filename = filename;
-		globals.__dirname = dirname(filename);
-	}
+	shimCjsGlobals();
 	const { scanCodeComponents } = await import(
 		"../engines/registry/scan-code.js"
 	);
 	return scanCodeComponents(targetDir);
 }
 
+/** Give the deferred ts-morph chunk the CJS globals its TypeScript expects. */
+function shimCjsGlobals(): void {
+	const globals = globalThis as Record<string, unknown>;
+	if (typeof globals.__filename !== "string") {
+		const filename = fileURLToPath(import.meta.url);
+		globals.__filename = filename;
+		globals.__dirname = dirname(filename);
+	}
+}
+
+/**
+ * The aliased import specifier per import path (`@/components/ui/button`), read
+ * from the project's tsconfig. Deferred like scanCode: it parses via ts-morph's
+ * bundled TypeScript.
+ */
+async function importSpecifiers(
+	targetDir: string,
+	importPaths: string[],
+): Promise<Map<string, string>> {
+	shimCjsGlobals();
+	const { aliasSpecifier } = await import("../io/tsconfig-paths.js");
+	const specifiers = new Map<string, string>();
+	for (const importPath of importPaths) {
+		if (importPath === "") continue;
+		const specifier = aliasSpecifier(targetDir, importPath);
+		if (specifier !== undefined) specifiers.set(importPath, specifier);
+	}
+	return specifiers;
+}
+
 /** Read + parse the saved registry, or undefined with an exit code already set. */
+/**
+ * The figma shapes docs can know offline: the descriptions `registry build`
+ * persisted. Only described entries are returned, so everything else keeps the
+ * merge's registry-only fallback.
+ */
+function figmaFromRegistry(registry: RegistryFile): FigmaComponentModel[] {
+	const entries = [
+		...(Array.isArray(registry.matches) ? registry.matches : []).map((m) => ({
+			name: m.figmaName,
+			nodeId: m.nodeId,
+			description: m.description,
+		})),
+		...(Array.isArray(registry.unmatchedFigma) ? registry.unmatchedFigma : []),
+	];
+	const models: FigmaComponentModel[] = [];
+	for (const { name, nodeId, description } of entries) {
+		if (typeof description !== "string" || description === "") continue;
+		models.push({
+			name,
+			nodeId,
+			description,
+			variantProps: {},
+			source: "published",
+		});
+	}
+	return models;
+}
+
 function loadRegistry(targetDir: string): RegistryFile | undefined {
 	const registryPath = join(targetDir, ".ds-bridge", "registry.json");
 	if (!existsSync(registryPath)) {
@@ -169,11 +222,14 @@ function disambiguate(
 	component: string | undefined,
 	path: string,
 ): { component: string | undefined; path: string } {
+	// A path-shaped argument (".", "..", "a/b") is never a component name.
+	const pathShaped =
+		component !== undefined && /^\.{1,2}$|[\\/]/.test(component);
 	if (
 		component !== undefined &&
 		component !== "" &&
 		path === "." &&
-		!hasRegistry(".") &&
+		(pathShaped || !hasRegistry(".")) &&
 		hasRegistry(component)
 	) {
 		return { component: undefined, path: component };
@@ -234,7 +290,22 @@ async function runDocs(
 	const code = await scanCode(targetDir);
 	const tokens = await discoverTokens(targetDir);
 
-	const allDocs = mergeComponentDocs({ registry, code, figma: [], tokens });
+	const merged = mergeComponentDocs({
+		registry,
+		code,
+		figma: figmaFromRegistry(registry),
+		tokens,
+	});
+	const specifiers = await importSpecifiers(
+		targetDir,
+		merged.map((doc) => doc.code.importPath),
+	);
+	const allDocs = merged.map((doc) => {
+		const importSpecifier = specifiers.get(doc.code.importPath);
+		return importSpecifier === undefined
+			? doc
+			: { ...doc, code: { ...doc.code, importSpecifier } };
+	});
 
 	let docs = allDocs;
 	if (component !== undefined && component !== "") {

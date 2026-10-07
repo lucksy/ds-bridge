@@ -9,11 +9,18 @@
 //   matched, MATCH_THRESHOLD (0.6) <= score <    -> "prop-mismatch"
 //     OK_THRESHOLD                                  (detail: low shape agreement)
 //   unmatchedFigma (no code component)           -> "missing-in-code"
-//                                                    (detail names top candidate)
+//                                                    (detail names top candidate;
+//                                                    deprecated names get no row)
 //   unmatchedCode  (no figma component)          -> "missing-in-figma"
+//
+// Compound parts: an unmatched code component exported from the SAME file as
+// another code component whose name it extends (`CardHeader` beside `Card`,
+// `DialogContent` beside `Dialog`) is a part of that component, not a component
+// of its own — it gets no row; its parent's row lists it under "Parts:".
 //
 // Component name: matches use the code name; unmatchedFigma the figma name;
 // unmatchedCode the code name. Rows sort by status SEVERITY then name asc.
+import { DEFAULT_DEPRECATED_PATTERN } from "../figma/library-health.js";
 import type { ParityStatus } from "../report/types.js";
 import type { RegistryFile } from "./persist.js";
 
@@ -85,6 +92,39 @@ export function buildParity(registry: RegistryFile): ParityReport {
 		? registry.unmatchedFigma
 		: [];
 
+	// Compound parts, keyed by `${importPath}\u0000${parentName}`.
+	const codeSide = [
+		...matches.map((m) => ({ name: m.codeName, importPath: m.importPath })),
+		...unmatchedCode.map((u) => ({ name: u.name, importPath: u.importPath })),
+	];
+	const parentOf = (name: string, importPath: string): string | undefined => {
+		let parent: string | undefined;
+		for (const other of codeSide) {
+			if (other.importPath !== importPath || other.name === name) continue;
+			const next = name.charAt(other.name.length);
+			if (!name.startsWith(other.name) || !/[A-Z]/.test(next)) continue;
+			if (parent === undefined || other.name.length > parent.length) {
+				parent = other.name;
+			}
+		}
+		return parent;
+	};
+	const partsByParent = new Map<string, string[]>();
+	const isPart = new Set<string>();
+	for (const entry of unmatchedCode) {
+		const parent = parentOf(entry.name, entry.importPath);
+		if (parent === undefined) continue;
+		const key = `${entry.importPath}\u0000${parent}`;
+		partsByParent.set(key, [...(partsByParent.get(key) ?? []), entry.name]);
+		isPart.add(`${entry.importPath}\u0000${entry.name}`);
+	}
+	const withParts = (detail: string, name: string, importPath: string) => {
+		const parts = partsByParent.get(`${importPath}\u0000${name}`);
+		return parts === undefined
+			? detail
+			: `${detail} Parts: ${[...parts].sort(byNameAsc).join(", ")}.`;
+	};
+
 	const rows: ParityRow[] = [];
 
 	for (const match of matches) {
@@ -93,18 +133,28 @@ export function buildParity(registry: RegistryFile): ParityReport {
 			rows.push({
 				component: match.codeName,
 				status: "ok",
-				detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`,
+				detail: withParts(
+					`Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`,
+					match.codeName,
+					match.importPath,
+				),
 			});
 		} else {
 			rows.push({
 				component: match.codeName,
 				status: "prop-mismatch",
-				detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} — low shape agreement; props/variants likely diverge.`,
+				detail: withParts(
+					`Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} — low shape agreement; props/variants likely diverge.`,
+					match.codeName,
+					match.importPath,
+				),
 			});
 		}
 	}
 
 	for (const entry of unmatchedFigma) {
+		// A deprecated Figma component is on its way out: no code is owed.
+		if (DEFAULT_DEPRECATED_PATTERN.test(entry.name)) continue;
 		const top = entry.candidates?.[0];
 		const detail =
 			top !== undefined
@@ -118,6 +168,7 @@ export function buildParity(registry: RegistryFile): ParityReport {
 	}
 
 	for (const entry of unmatchedCode) {
+		if (isPart.has(`${entry.importPath}\u0000${entry.name}`)) continue;
 		const top = entry.candidates?.[0];
 		const detail =
 			top !== undefined
@@ -126,7 +177,7 @@ export function buildParity(registry: RegistryFile): ParityReport {
 		rows.push({
 			component: entry.name,
 			status: "missing-in-figma",
-			detail,
+			detail: withParts(detail, entry.name, entry.importPath),
 		});
 	}
 

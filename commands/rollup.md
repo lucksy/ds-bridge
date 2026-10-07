@@ -5,7 +5,7 @@ argument-hint: "[sources...] [--config <file>]"
 
 ## Org rollup
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs rollup $ARGUMENTS --format md 2>&1 || true`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs rollup '$ARGUMENTS' --format md`
 
 ## Your task
 

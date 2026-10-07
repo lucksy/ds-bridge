@@ -22,6 +22,8 @@ export interface RegistryMatch {
 	figmaName: string;
 	nodeId: string;
 	score: number;
+	/** The Figma component's description; omitted when it has none. */
+	description?: string;
 }
 
 /** A persisted code component with no confident match + its figma candidates. */
@@ -35,6 +37,8 @@ export interface RegistryUnmatchedCode {
 export interface RegistryUnmatchedFigma {
 	name: string;
 	nodeId: string;
+	/** The Figma component's description; omitted when it has none. */
+	description?: string;
 	candidates: { codeName: string; score: number }[];
 }
 
@@ -60,6 +64,11 @@ function normalizeName(name: string): string {
 	return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 
+/** `{ description }` when non-empty, else nothing — keeps old registries byte-stable. */
+function describedBy(description: string): { description?: string } {
+	return description.length > 0 ? { description } : {};
+}
+
 function byNameAsc(a: string, b: string): number {
 	return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -83,6 +92,7 @@ export function toRegistryFile(
 			figmaName: m.figma.name,
 			nodeId: m.figma.nodeId,
 			score: round3(m.score),
+			...describedBy(m.figma.description),
 		}))
 		.sort((a, b) => byNameAsc(a.codeName, b.codeName));
 
@@ -102,6 +112,7 @@ export function toRegistryFile(
 		.map((u) => ({
 			name: u.figma.name,
 			nodeId: u.figma.nodeId,
+			...describedBy(u.figma.description),
 			candidates: u.candidates.map((c) => ({
 				codeName: c.code.name,
 				score: round3(c.score),

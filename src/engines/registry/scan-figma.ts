@@ -54,9 +54,21 @@ interface DocumentNode {
 	children?: DocumentNode[];
 }
 
+/** A file-level `components` / `componentSets` map (GET /v1/files/:key). */
+type FileComponentMap = Record<
+	string,
+	{ name?: unknown; description?: unknown }
+>;
+
 export interface BuildFigmaComponentModelInput {
 	published?: PublishedComponentsInput;
 	fileDocument?: DocumentNode;
+	/**
+	 * The file's top-level maps. Document nodes carry no `description`; these
+	 * do, so inline (unpublished) components read their description here.
+	 */
+	fileComponents?: FileComponentMap;
+	fileComponentSets?: FileComponentMap;
 }
 
 // ── Helpers ──
@@ -213,6 +225,7 @@ function variantPropsFromChildren(
 function buildInline(
 	document: DocumentNode | undefined,
 	publishedIds: Set<string>,
+	descriptions: (nodeId: string) => string,
 ): FigmaComponentModel[] {
 	if (document === undefined) return [];
 
@@ -234,7 +247,7 @@ function buildInline(
 				byId.set(nodeId, {
 					name: asString(node.name),
 					nodeId,
-					description: asString(node.description),
+					description: asString(node.description) || descriptions(nodeId),
 					variantProps: normalizeVariantProps(variantProps),
 					source: "inline",
 				});
@@ -262,7 +275,10 @@ export function buildFigmaComponentModel(
 	input: BuildFigmaComponentModelInput,
 ): FigmaComponentModel[] {
 	const { models: publishedModels, ids } = buildPublished(input.published);
-	const inlineModels = buildInline(input.fileDocument, ids);
+	const descriptions = (nodeId: string): string =>
+		asString(input.fileComponentSets?.[nodeId]?.description) ||
+		asString(input.fileComponents?.[nodeId]?.description);
+	const inlineModels = buildInline(input.fileDocument, ids, descriptions);
 
 	// Dedup by nodeId: published already populated `ids`, so inline never
 	// collides with a published id. Within published, set merging already

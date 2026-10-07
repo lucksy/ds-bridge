@@ -241,3 +241,31 @@ describe("mapUsage (T7.8)", () => {
 		expect(result[0]?.count).toBe(0);
 	});
 });
+
+describe("mapUsage — tsconfig path aliases", () => {
+	const aliasProject = join(
+		import.meta.dirname,
+		"..",
+		"..",
+		"fixtures",
+		"alias-project",
+	);
+
+	it("resolves `@/…` imports through paths declared in a referenced tsconfig", () => {
+		const [usage] = mapUsage({
+			registry: registry([
+				match({
+					codeName: "Button",
+					importPath: "src/components/ui/button.tsx",
+					figmaName: "Button",
+				}),
+			]),
+			changedFigmaNames: ["Button"],
+			projectDir: aliasProject,
+		});
+		expect(usage?.resolution).toBe("matched");
+		expect(usage?.usages).toEqual([
+			{ file: "src/pages/Home.tsx", line: 1, importName: "Button" },
+		]);
+	});
+});

@@ -22,10 +22,10 @@ import {
 	statSync,
 	writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve as resolvePath } from "node:path";
+import { dirname, join, posix, resolve as resolvePath, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { readProjectConfigText, resolveConfig } from "../config.js";
 import { matchComponents } from "../engines/registry/match.js";
 import {
 	buildParity,
@@ -39,9 +39,13 @@ import {
 } from "../engines/registry/persist.js";
 import type { CodeComponent } from "../engines/registry/scan-code.js";
 import { buildFigmaComponentModel } from "../engines/registry/scan-figma.js";
+import type { ComponentPaths } from "../io/component-paths.js";
 import { createFigmaClient, type FigmaResult } from "../io/figma/client.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
-import { missingFigmaTokenMessage } from "./figma-auth-help.js";
+import {
+	figmaAuthErrorMessage,
+	missingFigmaTokenMessage,
+} from "./figma-auth-help.js";
 
 /**
  * Scan the code side via ts-morph. The import is deferred so ts-morph (whose
@@ -51,17 +55,41 @@ import { missingFigmaTokenMessage } from "./figma-auth-help.js";
  * resolving the import we backfill those globals from `import.meta.url`, which
  * the bundle's ESM scope otherwise leaves undefined.
  */
-async function scanCode(targetDir: string): Promise<CodeComponent[]> {
+async function scanCode(
+	targetDir: string,
+	configuredPaths: string[] | undefined,
+): Promise<{ code: CodeComponent[]; scope: ComponentPaths | undefined }> {
 	const globals = globalThis as Record<string, unknown>;
 	if (typeof globals.__filename !== "string") {
 		const filename = fileURLToPath(import.meta.url);
 		globals.__filename = filename;
 		globals.__dirname = dirname(filename);
 	}
-	const { scanCodeComponents } = await import(
-		"../engines/registry/scan-code.js"
+	const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
+		[
+			import("../engines/registry/scan-code.js"),
+			import("../io/component-paths.js"),
+		],
 	);
-	return scanCodeComponents(targetDir);
+	const scope = resolveComponentPaths(targetDir, configuredPaths);
+	if (scope === undefined) {
+		return { code: scanCodeComponents(targetDir), scope };
+	}
+	// Scan each design-system directory; import paths stay project-relative.
+	const code = scope.paths.flatMap((dir) =>
+		scanCodeComponents(join(targetDir, dir)).map((component) => ({
+			...component,
+			importPath: posix.join(dir.split(sep).join("/"), component.importPath),
+		})),
+	);
+	code.sort((a, b) =>
+		a.name < b.name ? -1 : a.name > b.name ? 1 : byPath(a, b),
+	);
+	return { code, scope };
+}
+
+function byPath(a: CodeComponent, b: CodeComponent): number {
+	return a.importPath < b.importPath ? -1 : a.importPath > b.importPath ? 1 : 0;
 }
 
 const DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
@@ -100,7 +128,7 @@ function clientErrorMessage(
 ): string {
 	switch (result.kind) {
 		case "auth-error":
-			return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+			return figmaAuthErrorMessage(result);
 		case "scope-error":
 			return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read and library_content:read.`;
 		case "not-found":
@@ -130,7 +158,11 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 		return;
 	}
 
-	const resolved = resolveConfig({ env: process.env });
+	const projectFileText = readProjectConfigText(targetDir);
+	const resolved = resolveConfig({
+		env: process.env,
+		...(projectFileText !== undefined ? { projectFileText } : {}),
+	});
 	if (resolved.kind !== "ok") {
 		fail(resolved.message);
 		return;
@@ -156,7 +188,7 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 	}
 
 	// Code side: ts-morph scan (never throws; weird files are skipped).
-	const code = await scanCode(targetDir);
+	const { code, scope } = await scanCode(targetDir, config.componentPaths);
 
 	// Figma side: published components + file document over REST.
 	const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE;
@@ -180,6 +212,12 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 	const figma = buildFigmaComponentModel({
 		published: componentsResult.data,
 		fileDocument: fileResult.data.document,
+		...(fileResult.data.components !== undefined
+			? { fileComponents: fileResult.data.components }
+			: {}),
+		...(fileResult.data.componentSets !== undefined
+			? { fileComponentSets: fileResult.data.componentSets }
+			: {}),
 	});
 
 	const matchResult = matchComponents(code, figma);
@@ -213,7 +251,7 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 		process.stdout.write(`${JSON.stringify(registry, null, 2)}\n`);
 	} else {
 		process.stdout.write(
-			`${renderBuildSummary(registry, registryPath, parityRecord)}\n`,
+			`${renderBuildSummary(registry, registryPath, parityRecord, scope)}\n`,
 		);
 	}
 
@@ -273,9 +311,15 @@ function renderBuildSummary(
 	registry: RegistryFile,
 	registryPath: string,
 	parity: ParityHistoryRecord,
+	scope: ComponentPaths | undefined,
 ): string {
 	const lines = [
 		`Registry written to ${registryPath}`,
+		`  scanned:        ${
+			scope === undefined
+				? "the whole project (set component_paths in .ds-bridge.json to narrow it)"
+				: `${scope.paths.join(", ")} (${scope.source})`
+		}`,
 		`  matched:        ${registry.matches.length}`,
 		`  unmatched code: ${registry.unmatchedCode.length}`,
 		`  unmatched figma:${registry.unmatchedFigma.length}`,

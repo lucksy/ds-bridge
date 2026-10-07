@@ -1,11 +1,11 @@
 ---
 description: "Audience-segmented changelog from git, Figma versions, and token changes"
-argument-hint: "[--since <date>] [--audience designers|developers|both]"
+argument-hint: "[--since YYYY-MM-DD|<N>d|<N>w] [--audience designers|developers|both]"
 ---
 
 ## Changelog data
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs changelog $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs changelog '$ARGUMENTS' --format=json`
 
 ## Your task
 

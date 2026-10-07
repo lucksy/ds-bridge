@@ -10,6 +10,7 @@
 // file degrades to empty usages, never a fatal error.
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { Project, type SourceFile } from "ts-morph";
+import { readPathAliases } from "../../io/tsconfig-paths.js";
 import type { RegistryFile, RegistryMatch } from "../registry/persist.js";
 
 /** A single import site of a tracked code component. */
@@ -108,7 +109,13 @@ function resolveFigmaName(
 function buildProject(root: string): Project {
 	const project = new Project({
 		skipAddingFilesFromTsConfig: true,
-		compilerOptions: { jsx: 4, allowJs: true, strict: true, noEmit: true },
+		compilerOptions: {
+			jsx: 4,
+			allowJs: true,
+			strict: true,
+			noEmit: true,
+			...readPathAliases(root),
+		},
 	});
 	try {
 		project.addSourceFilesAtPaths([

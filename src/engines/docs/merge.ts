@@ -33,6 +33,11 @@ export type DocGap =
 export interface ComponentDocCode {
 	/** Path relative to the scan root, forward slashes; "" when code is absent. */
 	importPath: string;
+	/**
+	 * What a consumer writes in an import (`@/components/ui/button`), when the
+	 * project's tsconfig aliases cover the file. Set at the io edge.
+	 */
+	importSpecifier?: string;
 	props: CodeComponent["props"];
 	variants: CodeComponent["variants"];
 }

@@ -32,7 +32,37 @@ describe("scanOutputs — css custom properties", () => {
 
 		expect(result.kind).toBe("ok");
 		if (result.kind !== "ok") return;
-		expect(result.values).toEqual([{ name: "color-bg", raw: "#111827" }]);
+		expect(result.values).toEqual([
+			{ name: "color-bg", raw: "#111827", scope: ".theme-dark" },
+		]);
+	});
+
+	it("records the enclosing selector as scope, except at root level", () => {
+		const css = [
+			":root { --bg: #ffffff; }",
+			"html, :host { --fg: #000000; }",
+			".dark { --bg: #0a0a0a; }",
+			"@media (prefers-color-scheme: dark) {",
+			"	:root { --fg: #fafafa; }",
+			"}",
+			"@theme inline { --color-bg: var(--bg); }",
+			"--top-level: 1px;",
+		].join("\n");
+		const result = scanOutputs({ path: "t.css", content: css });
+		expect(result.kind).toBe("ok");
+		if (result.kind !== "ok") return;
+		expect(result.values).toEqual([
+			{ name: "bg", raw: "#ffffff" },
+			{ name: "bg", raw: "#0a0a0a", scope: ".dark" },
+			{ name: "color-bg", raw: "var(--bg)", scope: "@theme inline" },
+			{ name: "fg", raw: "#000000" },
+			{
+				name: "fg",
+				raw: "#fafafa",
+				scope: "@media (prefers-color-scheme: dark) :root",
+			},
+			{ name: "top-level", raw: "1px" },
+		]);
 	});
 
 	it("skips comments and handles !important / extra whitespace", () => {

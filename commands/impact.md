@@ -5,7 +5,7 @@ argument-hint: "[--since <versionId>] [--file-key <key>]"
 
 ## Impact report
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs impact $ARGUMENTS --format=json 2>&1 || true`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs impact '$ARGUMENTS' --format=json`
 
 ## Your task
 

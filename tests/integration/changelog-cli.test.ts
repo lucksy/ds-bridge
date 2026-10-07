@@ -7,7 +7,7 @@
 // file key in env enables the Figma side, their absence exercises offline mode.
 import { execFile, execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -229,6 +229,31 @@ describe("ds-bridge changelog (built dist/cli.mjs)", () => {
 		expect(figma[0]?.audience).toBe("designer");
 	});
 
+	it("reads figma_file_key from the project's .ds-bridge.json", async () => {
+		const repo = await makeRepo();
+		await writeFile(
+			join(repo, ".ds-bridge.json"),
+			JSON.stringify({ figma_file_key: FILE_KEY }),
+		);
+		const result = await runCliIn(
+			repo,
+			[
+				"changelog",
+				"--since",
+				"2026-01-01",
+				"--format",
+				"json",
+				"--no-history",
+			],
+			{ FIGMA_TOKEN: TOKEN, CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "" },
+		);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as {
+			entries: { source: string }[];
+		};
+		expect(parsed.entries.filter((e) => e.source === "figma")).toHaveLength(1);
+	});
+
 	it("--audience developers excludes designer-only Figma entries", async () => {
 		const repo = await makeRepo();
 		const result = await runCliIn(
@@ -277,6 +302,32 @@ describe("ds-bridge changelog (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(0);
 		expect(result.stdout).toContain("change(s)");
 		expect(result.stderr.toLowerCase()).toContain("figma side skipped");
+	});
+
+	it("accepts a relative --since (7d) like digest and history export", async () => {
+		const repo = await makeRepo();
+		const result = await runCliIn(
+			repo,
+			["changelog", "--since", "7d", "--format", "json", "--no-history"],
+			OFFLINE_ENV,
+		);
+		expect(result.code).toBe(0);
+		const parsed = JSON.parse(result.stdout) as { since: string };
+		const expected = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+			.toISOString()
+			.slice(0, 10);
+		expect(parsed.since).toBe(expected);
+	});
+
+	it("exits 2 on an unparseable --since instead of returning an empty changelog", async () => {
+		const repo = await makeRepo();
+		const result = await runCliIn(
+			repo,
+			["changelog", "--since", "banana", "--format", "json", "--no-history"],
+			OFFLINE_ENV,
+		);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toMatch(/--since/);
 	});
 
 	it("exits 2 with --format bogus", async () => {

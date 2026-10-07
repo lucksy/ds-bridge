@@ -66,12 +66,35 @@ function stringLiteralVariants(propType) {
   }
   return values.length > 0 ? values : void 0;
 }
+function destructuredPropNames(decl) {
+  const names = /* @__PURE__ */ new Set();
+  let fn = decl;
+  if (import_ts_morph.Node.isVariableDeclaration(decl)) fn = decl.getInitializer();
+  if (fn === void 0 || !(import_ts_morph.Node.isFunctionDeclaration(fn) || import_ts_morph.Node.isArrowFunction(fn) || import_ts_morph.Node.isFunctionExpression(fn))) {
+    return names;
+  }
+  const pattern = fn.getParameters()[0]?.getNameNode();
+  if (pattern === void 0 || !import_ts_morph.Node.isObjectBindingPattern(pattern)) {
+    return names;
+  }
+  for (const element of pattern.getElements()) {
+    if (element.getDotDotDotToken() !== void 0) continue;
+    const key = element.getPropertyNameNode() ?? element.getNameNode();
+    names.add(key.getText());
+  }
+  return names;
+}
 function readComponent(name, importPath, decl) {
   const props = [];
   const variants = {};
   const propsType = resolvePropsType(decl);
+  const destructured = destructuredPropNames(decl);
   if (propsType !== void 0) {
     for (const symbol of propsType.getProperties()) {
+      const declarations = symbol.getDeclarations();
+      if (declarations.length > 0 && declarations.every((d) => d.getSourceFile().isDeclarationFile()) && !destructured.has(symbol.getName())) {
+        continue;
+      }
       const propDecl = symbol.getValueDeclaration() ?? symbol.getDeclarations()[0] ?? decl;
       let propType;
       try {
@@ -132,6 +155,7 @@ function scanCodeComponents(rootDir, options) {
       continue;
     }
     for (const [name, decls] of exports) {
+      if (!/^[A-Z]/.test(name)) continue;
       const decl = decls[0];
       if (decl === void 0) continue;
       try {

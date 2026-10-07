@@ -94,6 +94,21 @@ describe("verifyConnection", () => {
 		expect(calls.some((u) => u.includes("/v1/files/"))).toBe(false);
 	});
 
+	it("says an expired token expired (Figma's 401 reason)", async () => {
+		const { fetch } = routedFetch({
+			me: jsonResponse({ err: "Token has expired" }, { status: 401 }),
+		});
+		const result = await verifyConnection({
+			token: "figd_old",
+			fileKey: KEY,
+			baseUrl: BASE,
+			fetchImpl: fetch,
+			...fast,
+		});
+		expect(result.ok).toBe(false);
+		expect(result.lines.join("\n")).toMatch(/expired/i);
+	});
+
 	it("flags a View-seat throttle (429 on /v1/me) as a seat problem", async () => {
 		const { fetch } = routedFetch({
 			me: jsonResponse({ err: "rate limited" }, { status: 429 }),

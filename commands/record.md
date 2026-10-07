@@ -5,7 +5,7 @@ argument-hint: "[--figma] [--library-top <n>] [path]"
 
 ## Record output
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs record $ARGUMENTS --format=json 2>&1 || true`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs record '$ARGUMENTS' --format=json`
 
 ## Your task
 

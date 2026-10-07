@@ -173,3 +173,40 @@ describe("scanCodeComponents — determinism & robustness", () => {
 		expect(scanCodeComponents(missing)).toEqual([]);
 	});
 });
+
+describe("scanCodeComponents — inherited attributes and helpers", () => {
+	const inheritedRoot = join(
+		import.meta.dirname,
+		"..",
+		"..",
+		"fixtures",
+		"inherited-props",
+	);
+
+	it("keeps only the props the project declares, not inherited .d.ts attributes", () => {
+		const button = byName(scanCodeComponents(inheritedRoot), "Button");
+		expect(button.props.map((p) => p.name)).toEqual(["variant", "asChild"]);
+		// autoCapitalize/translate are string-literal unions in the inherited type
+		// and used to become variant axes that broke every Figma shape match.
+		expect(button.variants).toEqual({ variant: ["default", "outline"] });
+	});
+
+	it("reports a component whose props are all inherited with no props", () => {
+		const label = byName(scanCodeComponents(inheritedRoot), "Label");
+		expect(label.props).toEqual([]);
+		expect(label.variants).toEqual({});
+	});
+
+	it("skips callable exports that are not PascalCase (cva helpers)", () => {
+		const names = scanCodeComponents(inheritedRoot).map((c) => c.name);
+		expect(names).toEqual(["Button", "Label", "Separator"]);
+	});
+
+	it("keeps an inherited prop the component destructures (radix orientation)", () => {
+		const separator = byName(scanCodeComponents(inheritedRoot), "Separator");
+		expect(separator.props.map((p) => p.name)).toEqual(["orientation"]);
+		expect(separator.variants).toEqual({
+			orientation: ["horizontal", "vertical"],
+		});
+	});
+});

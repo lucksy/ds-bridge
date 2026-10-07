@@ -5,6 +5,13 @@ export interface OutputValue {
 	/** CSS: custom-prop name without leading "--". TS: dotted object path. */
 	name: string;
 	raw: string;
+	/**
+	 * CSS only: the enclosing rule's selector chain (at-rules included, joined
+	 * by a space), e.g. ".dark" or "@media (prefers-color-scheme: dark) :root".
+	 * Absent at root level (`:root`, `html`, `:host`, or no rule) — the values
+	 * every mode inherits.
+	 */
+	scope?: string;
 }
 
 export type ScanOutcome =
@@ -37,18 +44,52 @@ function finish(values: OutputValue[], warnings: string[]): ScanOutcome {
 // ---------- CSS custom properties ----------
 
 const CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
-const CUSTOM_PROP_RE = /--([A-Za-z0-9_-]+)\s*:\s*([^;}]+)/g;
+const CUSTOM_PROP_RE = /^--([A-Za-z0-9_-]+)\s*:\s*([\s\S]+)$/;
+const ROOT_SELECTORS = new Set([":root", "html", ":host", "*"]);
 
+/** True when every comma-separated part of a rule prelude is a root selector. */
+function isRootPrelude(prelude: string): boolean {
+	return prelude
+		.split(",")
+		.every((part) => ROOT_SELECTORS.has(part.trim().toLowerCase()));
+}
+
+/**
+ * Walk the stylesheet tracking the rule nesting so each custom property knows
+ * the selector it was declared under (its `scope`).
+ */
 function scanCss(content: string): OutputValue[] {
 	const stripped = content.replace(CSS_COMMENT_RE, "");
 	const values: OutputValue[] = [];
-	for (const match of stripped.matchAll(CUSTOM_PROP_RE)) {
-		const name = match[1];
-		const rawValue = match[2];
-		if (name === undefined || rawValue === undefined) continue;
-		const raw = rawValue.replace(/!important/g, "").trim();
-		if (raw !== "") values.push({ name, raw });
+	const stack: string[] = [];
+	let buffer = "";
+
+	const declaration = (text: string): void => {
+		const match = text.trim().match(CUSTOM_PROP_RE);
+		if (match === null) return;
+		const name = match[1] as string;
+		const raw = (match[2] as string).replace(/!important/g, "").trim();
+		if (raw === "") return;
+		const scoped = stack.some((prelude) => !isRootPrelude(prelude));
+		values.push(scoped ? { name, raw, scope: stack.join(" ") } : { name, raw });
+	};
+
+	for (const char of stripped) {
+		if (char === "{") {
+			stack.push(buffer.trim().replace(/\s+/g, " "));
+			buffer = "";
+		} else if (char === "}") {
+			declaration(buffer);
+			stack.pop();
+			buffer = "";
+		} else if (char === ";") {
+			declaration(buffer);
+			buffer = "";
+		} else {
+			buffer += char;
+		}
 	}
+	declaration(buffer);
 	return values;
 }
 

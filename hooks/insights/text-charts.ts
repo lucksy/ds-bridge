@@ -162,7 +162,11 @@ export function terminalChart(
 				grid,
 				legend: items.map((item, n) => ({
 					label: item.label,
-					detail: `${counts[n] ?? 0}% · ${formatValue(item.value, chart.unit)}`,
+					// Values already in % ARE the shares: print them once.
+					detail:
+						chart.unit === "%"
+							? formatValue(item.value, chart.unit)
+							: `${counts[n] ?? 0}% · ${formatValue(item.value, chart.unit)}`,
 					color: colors[n] ?? paletteColor(style, n),
 				})),
 			};

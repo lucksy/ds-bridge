@@ -28,7 +28,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cwd, env as processEnv } from "node:process";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { readProjectConfigText, resolveConfig } from "../config.js";
 import {
 	assessLibraryHealth,
 	capLibraryHealth,
@@ -58,7 +58,10 @@ import {
 	severityColor,
 	shouldColor,
 } from "../render/terminal/index.js";
-import { missingFigmaTokenMessage } from "./figma-auth-help.js";
+import {
+	figmaAuthErrorMessage,
+	missingFigmaTokenMessage,
+} from "./figma-auth-help.js";
 
 type LibraryHealthFormat = "json" | "term";
 
@@ -102,17 +105,6 @@ function missingFileKeyMessage(): string {
 	].join("\n");
 }
 
-/** Read <cwd>/.ds-bridge.json text (for product_file_keys), or undefined when absent. */
-function readProjectConfigText(): string | undefined {
-	const configPath = join(cwd(), ".ds-bridge.json");
-	if (!existsSync(configPath)) return undefined;
-	try {
-		return readFileSync(configPath, "utf8");
-	} catch {
-		return undefined;
-	}
-}
-
 /** Guidance shown when --file-key names an unknown product alias (M1.3). */
 function unknownAliasMessage(
 	outcome: { alias: string; suggestions: string[] },
@@ -139,7 +131,7 @@ function clientErrorMessage(
 ): string {
 	switch (result.kind) {
 		case "auth-error":
-			return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+			return figmaAuthErrorMessage(result);
 		case "scope-error":
 			return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
 		case "not-found":
@@ -275,7 +267,7 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 
 	// Read the project file so `product_file_keys` aliases are available to the
 	// generalized --file-key resolver (M1.3); env still merges its own aliases.
-	const projectFileText = readProjectConfigText();
+	const projectFileText = readProjectConfigText(cwd());
 	const resolved = resolveConfig({
 		env: process.env,
 		...(projectFileText !== undefined ? { projectFileText } : {}),

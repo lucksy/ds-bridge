@@ -5,7 +5,7 @@ argument-hint: "<figma-frame-url> [--threshold N]"
 
 ## Readiness report
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs handoff $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs handoff '$ARGUMENTS' --format=json`
 
 ## Your task
 
@@ -19,7 +19,8 @@ arguments (`$ARGUMENTS`). It is a **ReadinessReport** with these fields:
   below it the frame needs work before it ships to engineering.
 - `stats` — rollup counts that explain the score: `totalNodes`,
   `boundCoverage` and `autoLayoutCoverage` (fractions 0–1), `instanceCount`,
-  `detachedSuspects`, `badNames`.
+  `detachedSuspects`, `deprecatedInstances` (instances of components whose name
+  marks them deprecated/legacy), `badNames`.
 - `deductions` — the per-node point losses, worst-first. Each has:
   - `rule` — one of `var-binding`, `auto-layout`, `component`, `naming`.
   - `nodeId`, `nodeName` — which layer lost the points.

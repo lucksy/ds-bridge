@@ -11,7 +11,7 @@
 //   GET  /v1/files/UNAUTHORIZED/... -> 401              (token failure route)
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -239,6 +239,17 @@ describe("ds-bridge handoff (built dist/cli.mjs)", () => {
 		]);
 		expect(result.code).toBe(0);
 		expect(result.stdout).toContain("90");
+	});
+
+	it("uses readiness_threshold from the project's .ds-bridge.json when no --threshold is passed", async () => {
+		const project = await freshTmp("ds-handoff-project-");
+		await writeFile(
+			join(project, ".ds-bridge.json"),
+			JSON.stringify({ readiness_threshold: 95 }),
+		);
+		const result = await runCliIn(project, ["handoff", fileUrl(FILE_KEY)]);
+		// Score 90 < project gate 95 → the gate fails.
+		expect(result.code).toBe(1);
 	});
 
 	it("threshold 95 fails the gate (exit 1) on a score of 90", async () => {

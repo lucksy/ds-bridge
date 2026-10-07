@@ -18,7 +18,7 @@
 import { join } from "node:path";
 import { cwd as processCwd } from "node:process";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { readProjectConfigText, resolveConfig } from "../config.js";
 import {
 	aggregateChangelog,
 	type ChangelogAudience,
@@ -27,6 +27,7 @@ import {
 	type ChangelogSource,
 } from "../engines/changelog/aggregate.js";
 import { renderChangelogMarkdown } from "../engines/changelog/render-md.js";
+import { parseSince } from "../engines/report/digest.js";
 import type { TokenDiffResult } from "../engines/tokens/diff.js";
 import {
 	createFigmaClient,
@@ -198,7 +199,11 @@ function renderTerm(
 async function fetchVersions(
 	deps: ChangelogDeps,
 ): Promise<{ versions: FigmaVersion[]; note?: string }> {
-	const resolved = resolveConfig({ env: deps.env });
+	const projectFileText = readProjectConfigText(deps.cwd);
+	const resolved = resolveConfig({
+		env: deps.env,
+		...(projectFileText !== undefined ? { projectFileText } : {}),
+	});
 	if (resolved.kind !== "ok") {
 		return { versions: [], note: `Figma side skipped: ${resolved.message}` };
 	}
@@ -328,7 +333,19 @@ export async function runChangelog(
 		return;
 	}
 
-	const since = options.since ?? defaultSince(deps.now());
+	// Same grammar as digest / history export: YYYY-MM-DD or <N>d / <N>w. A bad
+	// value is a usage error — git would otherwise ignore it and the changelog
+	// would silently come back empty.
+	let since = defaultSince(deps.now());
+	if (options.since !== undefined) {
+		const parsed = parseSince(options.since, deps.now().toISOString());
+		if (parsed.kind !== "ok") {
+			deps.stderr(`Invalid --since "${options.since}". ${parsed.message}\n`);
+			process.exitCode = 2;
+			return;
+		}
+		since = parsed.sinceIso.slice(0, 10);
+	}
 
 	// Code side: local git log (offline-friendly, the always-available source).
 	const log = readGitLog({ exec: deps.exec, cwd: deps.cwd, since });
@@ -389,8 +406,8 @@ export function registerChangelogCommand(program: Command): void {
 			"Audience-segmented changelog from git log, Figma versions, and token changes",
 		)
 		.option(
-			"--since <date>",
-			"include changes since this date (default: 90 days ago)",
+			"--since <when>",
+			"include changes since YYYY-MM-DD or <N>d / <N>w (default: 90 days ago)",
 		)
 		.option("--audience <who>", "designers | developers | both", "both")
 		.option("--format <format>", "output format: term | json | md", "term")

@@ -213,6 +213,19 @@ describe("planFixes — rule 2: replacement by context", () => {
 		expect(edit?.length).toBe("16".length);
 	});
 
+	it("style-string (a value inside a JSX string) -> bare var(), the string's quotes stay", () => {
+		// style={{ padding: "8px 16px" }} — replacing 16px must not add quotes.
+		const lit = literal({
+			raw: "16px",
+			file: "src/Banner.tsx",
+			property: "padding",
+			valueKind: "dimension",
+			context: "style-string",
+		});
+		const [edit] = planFixes([exactFinding(lit, dimToken("space.md", "16px"))]);
+		expect(edit?.replacement).toBe("var(--space-md)");
+	});
+
 	it("css-declaration dimension -> bare var() (no quotes)", () => {
 		const lit = literal({
 			raw: "16px",

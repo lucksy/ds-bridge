@@ -59,7 +59,9 @@ export async function verifyConnection(
 		}
 		case "auth-error":
 			lines.push(
-				"✗ Token rejected (401) — it is invalid, revoked, or mistyped.",
+				me.message !== undefined && /expired/i.test(me.message)
+					? "✗ Token expired (401) — create a new personal access token and connect it again."
+					: "✗ Token rejected (401) — it is invalid, revoked, expired, or mistyped.",
 			);
 			return { ok: false, lines };
 		case "scope-error":

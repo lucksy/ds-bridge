@@ -106,6 +106,20 @@ describe("ds-bridge config persist-token (built dist/cli.mjs)", () => {
 		expect(mode).toBe(0o600);
 	});
 
+	it("adds .ds-bridge.env to the project's .gitignore (idempotent) so the secret cannot be committed", async () => {
+		await writeFile(join(dir, ".gitignore"), "node_modules\n");
+		for (let i = 0; i < 2; i += 1) {
+			const result = await run(
+				["config", "persist-token", dir],
+				baseEnv({ CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN: "figd_secret_1" }),
+			);
+			expect(result.code).toBe(0);
+		}
+		const lines = (await readFile(join(dir, ".gitignore"), "utf8")).split("\n");
+		expect(lines).toContain("node_modules");
+		expect(lines.filter((line) => line === ".ds-bridge.env")).toHaveLength(1);
+	});
+
 	it("file key present → also writes FIGMA_DESIGN_SYSTEM_FILE", async () => {
 		const result = await run(
 			["config", "persist-token", dir],

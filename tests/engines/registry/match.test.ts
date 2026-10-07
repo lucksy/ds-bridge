@@ -137,6 +137,30 @@ describe("matchComponents — exact normalized name match", () => {
 	});
 });
 
+describe("matchComponents — Figma boolean variant axes", () => {
+	it("ignores a true/false Figma axis (a boolean prop in code, never a string variant)", () => {
+		const result = matchComponents(
+			[code("Checkbox")],
+			[figma("Checkbox", { checked: ["false", "true"] })],
+		);
+		expect(result.matches[0]?.shapeScore).toBeCloseTo(0.5, 10);
+		expect(result.matches[0]?.score).toBeCloseTo(0.85, 10);
+	});
+
+	it("still compares the other axes", () => {
+		const result = matchComponents(
+			[code("Switch", { size: ["default", "sm"] })],
+			[
+				figma("Switch", {
+					checked: ["false", "true"],
+					size: ["default", "sm"],
+				}),
+			],
+		);
+		expect(result.matches[0]?.shapeScore).toBeCloseTo(1, 10);
+	});
+});
+
 describe("matchComponents — token-set name matches", () => {
 	it("matches 'Button / Primary' figma to code 'Button' with shared variant", () => {
 		// tokens [button, primary] vs [button] -> name 2*1/3 = 0.6667;

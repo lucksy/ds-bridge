@@ -159,6 +159,25 @@ function resolveSetOrder(
 	return setNames;
 }
 
+/**
+ * The non-disabled set names of the first `$themes` entry (Tokens Studio's
+ * default theme), or undefined when the document declares no usable theme.
+ */
+function defaultThemeSets(
+	root: Record<string, unknown>,
+): Set<string> | undefined {
+	const themes = root.$themes;
+	if (!Array.isArray(themes)) return undefined;
+	const first = themes[0];
+	if (!isPlainObject(first) || !isPlainObject(first.selectedTokenSets)) {
+		return undefined;
+	}
+	const sets = Object.entries(first.selectedTokenSets)
+		.filter(([, state]) => state !== "disabled")
+		.map(([name]) => name);
+	return sets.length > 0 ? new Set(sets) : undefined;
+}
+
 export function parseTokensStudio(source: unknown): ParseOutcome {
 	if (!isPlainObject(source)) {
 		return {
@@ -176,9 +195,23 @@ export function parseTokensStudio(source: unknown): ParseOutcome {
 	const setNames = Object.keys(source).filter((k) => !RESERVED_KEYS.has(k));
 	const order = resolveSetOrder(source, setNames);
 
-	// Merge sets in order; later sets override earlier ones by name.
+	// Merge sets in order; later sets override earlier ones by name. With
+	// `$themes`, the default (first) theme's sets merge first and win: sets
+	// outside it (other modes, other brands) only ADD names it lacks, so the
+	// canonical value of a themed token is its default-mode value — not whichever
+	// mode happens to come last in tokenSetOrder.
+	const defaultSets = defaultThemeSets(source);
+	const primary =
+		defaultSets === undefined
+			? order
+			: order.filter((name) => defaultSets.has(name));
+	const secondary =
+		defaultSets === undefined
+			? []
+			: order.filter((name) => !defaultSets.has(name));
+
 	const merged = new Map<string, RawToken>();
-	for (const setName of order) {
+	const collect = (setName: string, into: Map<string, RawToken>): void => {
 		const tree = source[setName];
 		if (!isPlainObject(tree)) {
 			errors.push({
@@ -186,9 +219,17 @@ export function parseTokensStudio(source: unknown): ParseOutcome {
 				path: setName,
 				message: `Token set "${setName}" must be an object.`,
 			});
-			continue;
+			return;
 		}
-		collectSet(setName, tree, merged, errors);
+		collectSet(setName, tree, into, errors);
+	};
+	for (const setName of primary) collect(setName, merged);
+	for (const setName of secondary) {
+		const extra = new Map<string, RawToken>();
+		collect(setName, extra);
+		for (const [name, token] of extra) {
+			if (!merged.has(name)) merged.set(name, token);
+		}
 	}
 
 	if (errors.length > 0) {

@@ -47,7 +47,7 @@ describe("commands/rollup.md (S1)", () => {
 		expect(md).toContain("argument-hint:");
 		expect(preExecLine(md)).toBe(
 			// biome-ignore lint/suspicious/noTemplateCurlyInString: literal plugin-root placeholder in the command markdown
-			"node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs rollup $ARGUMENTS --format md 2>&1 || true",
+			"node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs rollup '$ARGUMENTS' --format md",
 		);
 	});
 
@@ -77,11 +77,15 @@ describe("commands/rollup.md (S1)", () => {
 			]),
 		);
 		const env = { ...process.env, ...ENV, CLAUDE_PLUGIN_ROOT: repoRoot };
-		const { stdout } = await execFileAsync("sh", ["-c", preExecLine(md)], {
-			cwd: hub,
-			env,
-			encoding: "utf8",
-		});
+		const { stdout } = await execFileAsync(
+			"sh",
+			["-c", preExecLine(md).replace("$ARGUMENTS", "")],
+			{
+				cwd: hub,
+				env,
+				encoding: "utf8",
+			},
+		);
 		expect(stdout).toContain("## Design-system org rollup");
 		const web = stdout.indexOf("| 1 | web |");
 		const ios = stdout.indexOf("| 2 | ios · Mobile |");

@@ -236,3 +236,65 @@ describe("ds-bridge tokens check (built dist/cli.mjs)", () => {
 		expect(stderr.toLowerCase()).toContain("token");
 	});
 });
+
+// Tokens Studio light/dark: before mode-aware drift, sets merged last-wins (dark)
+// and the scanned CSS merged last-wins (.dark), so a stale LIGHT value reported
+// "In sync". Each mode is now compared with the CSS that applies in it.
+describe("ds-bridge tokens check — Tokens Studio $themes", () => {
+	const themed = (lightBg: string) =>
+		JSON.stringify({
+			core: { radius: { value: "0.5rem", type: "borderRadius" } },
+			light: { background: { value: lightBg, type: "color" } },
+			dark: { background: { value: "#0a0a0a", type: "color" } },
+			$themes: [
+				{
+					id: "l",
+					name: "light",
+					selectedTokenSets: { core: "source", light: "enabled" },
+				},
+				{
+					id: "d",
+					name: "dark",
+					selectedTokenSets: { core: "source", dark: "enabled" },
+				},
+			],
+			$metadata: { tokenSetOrder: ["core", "light", "dark"] },
+		});
+	const css = `:root {\n\t--radius: 0.5rem;\n\t--background: #ffffff;\n}\n.dark {\n\t--background: #0a0a0a;\n}\n`;
+
+	async function themedProject(lightBg: string): Promise<string> {
+		const dir = await mkdtemp(join(tmpdir(), "ds-bridge-themes-"));
+		themedDirs.push(dir);
+		await writeFile(join(dir, "tokens.json"), themed(lightBg));
+		await writeFile(join(dir, "tokens.css"), css);
+		return dir;
+	}
+
+	const themedDirs: string[] = [];
+	afterAll(async () => {
+		await Promise.all(
+			themedDirs.map((d) => rm(d, { recursive: true, force: true })),
+		);
+	});
+
+	it("is in sync when :root mirrors the light theme and .dark the dark theme", async () => {
+		const dir = await themedProject("#ffffff");
+		const result = await runCli(["tokens", "check", dir, "--format=json"]);
+		expect(result.code).toBe(0);
+	});
+
+	it("reports a stale LIGHT value with its mode", async () => {
+		const dir = await themedProject("#fafafa");
+		const result = await runCli(["tokens", "check", dir, "--format=json"]);
+		expect(result.code).toBe(1);
+		const parsed = JSON.parse(result.stdout) as {
+			entries: { kind: string; mode?: string; token?: { name: string } }[];
+		};
+		expect(parsed.entries).toHaveLength(1);
+		expect(parsed.entries[0]).toMatchObject({
+			kind: "stale-output",
+			mode: "light",
+			token: { name: "background" },
+		});
+	});
+});

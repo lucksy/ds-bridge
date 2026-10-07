@@ -19,8 +19,10 @@ import type { DriftTrendPoint } from "../engines/report/types.js";
 import { detectFormat } from "../engines/tokens/detect.js";
 import {
 	classifyDrift,
+	classifyDriftByMode,
 	type DriftEntry,
 	type DriftResult,
+	type ModeTokens,
 } from "../engines/tokens/drift.js";
 import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
 import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
@@ -29,6 +31,7 @@ import {
 	type OutputValue,
 	scanOutputs,
 } from "../engines/tokens/scan-outputs.js";
+import { readThemes, themeSubDocument } from "../engines/tokens/themes.js";
 import type {
 	ParseOutcome,
 	Token,
@@ -346,10 +349,14 @@ function resolveTokenSource(
 	};
 }
 
-/** Parse the token source file into a TokenMap, or an error outcome. */
+/**
+ * Parse the token source file into a TokenMap, or an error outcome. A Tokens
+ * Studio document with two or more `$themes` also yields one map per theme
+ * (default first) so drift is checked mode by mode.
+ */
 function loadTokenMapForCheck(
 	tokenPath: string,
-): { kind: "ok"; map: TokenMap } | CheckError {
+): { kind: "ok"; map: TokenMap; modes?: ModeTokens[] } | CheckError {
 	let raw: string;
 	try {
 		raw = readFileSync(tokenPath, "utf8");
@@ -388,7 +395,28 @@ function loadTokenMapForCheck(
 			message: `Failed to parse token source "${tokenPath}" as ${format}:\n${lines.join("\n")}`,
 		};
 	}
-	return { kind: "ok", map: outcome.map };
+	const themes = format === "tokens-studio" ? readThemes(parsed) : undefined;
+	if (themes === undefined || themes.length < 2) {
+		return { kind: "ok", map: outcome.map };
+	}
+	const modes: ModeTokens[] = [];
+	for (const theme of themes) {
+		const themed = parseTokensStudio(
+			themeSubDocument(parsed as Record<string, unknown>, theme),
+		);
+		if (themed.kind === "error") {
+			const lines = themed.errors.map((e) => {
+				const where = e.path !== undefined ? ` (${e.path})` : "";
+				return `  ${e.code}${where}: ${e.message}`;
+			});
+			return {
+				kind: "error",
+				message: `Failed to parse theme "${theme.name}" of "${tokenPath}":\n${lines.join("\n")}`,
+			};
+		}
+		modes.push({ mode: theme.name, map: themed.map });
+	}
+	return { kind: "ok", map: outcome.map, modes };
 }
 
 /**
@@ -404,6 +432,8 @@ function scanMergedOutputs(
 	walkOutputFiles(outputsDir, files);
 	files.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
+	// Keyed by scope + name: `--background` under :root and under .dark are two
+	// outputs (two modes), not a collision.
 	const merged = new Map<string, OutputValue>();
 	const ownerByName = new Map<string, string>();
 	const warnings: string[] = [];
@@ -422,14 +452,15 @@ function scanMergedOutputs(
 			warnings.push(`${relative(outputsDir, file)}: ${warning}`);
 		}
 		for (const value of outcome.values) {
-			const prior = ownerByName.get(value.name);
+			const key = `${value.scope ?? ""}\u0000${value.name}`;
+			const prior = ownerByName.get(key);
 			if (prior !== undefined && prior !== file) {
 				warnings.push(
 					`output "${value.name}" defined in both ${relative(outputsDir, prior)} and ${relative(outputsDir, file)} — later wins`,
 				);
 			}
-			merged.set(value.name, value);
-			ownerByName.set(value.name, file);
+			merged.set(key, value);
+			ownerByName.set(key, file);
 		}
 	}
 
@@ -437,6 +468,16 @@ function scanMergedOutputs(
 		a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
 	);
 	return { values, warnings };
+}
+
+/**
+ * One output per name, the last scanned winning — the single-mode comparison,
+ * where a scoped redefinition (e.g. `.dark`) has no mode of its own.
+ */
+function latestByName(values: readonly OutputValue[]): OutputValue[] {
+	const byName = new Map<string, OutputValue>();
+	for (const value of values) byName.set(value.name, value);
+	return [...byName.values()];
 }
 
 function countByKind(result: DriftResult): {
@@ -455,18 +496,23 @@ function countByKind(result: DriftResult): {
 	return { stale, missing, orphan };
 }
 
+/** A token name labelled with its theme when the check is mode-aware. */
+function withMode(name: string, mode: string | undefined): string {
+	return mode === undefined ? name : `${name} (${mode})`;
+}
+
 /** One human-readable detail line for a drift entry's table row. */
 function driftDetail(entry: DriftEntry): [string, string, string] {
 	switch (entry.kind) {
 		case "stale-output":
 			return [
-				entry.token.name,
+				withMode(entry.token.name, entry.mode),
 				severityColorless(entry.kind),
 				`source ${String(entry.token.value)} ≠ output ${entry.output.raw}`,
 			];
 		case "missing-output":
 			return [
-				entry.token.name,
+				withMode(entry.token.name, entry.mode),
 				severityColorless(entry.kind),
 				`no output for source ${String(entry.token.value)}`,
 			];
@@ -516,9 +562,13 @@ function renderCheckTerm(result: DriftResult, color: boolean): string {
 }
 
 /** Serialize the drift result for --format=json. */
-function checkJson(result: DriftResult): string {
+function checkJson(result: DriftResult, skippedModes: string[]): string {
 	return JSON.stringify(
-		{ entries: result.entries, inSync: result.entries.length === 0 },
+		{
+			entries: result.entries,
+			inSync: result.entries.length === 0,
+			...(skippedModes.length > 0 ? { skippedModes } : {}),
+		},
 		null,
 		2,
 	);
@@ -632,7 +682,18 @@ function runCheck(path: string, options: CheckOptions): void {
 		process.stderr.write(`warning: ${warning}\n`);
 	}
 
-	const result = classifyDrift(loaded.map, values);
+	const byMode =
+		loaded.modes !== undefined
+			? classifyDriftByMode(loaded.modes, values)
+			: undefined;
+	const result: DriftResult =
+		byMode ?? classifyDrift(loaded.map, latestByName(values));
+	const skippedModes = byMode?.skippedModes ?? [];
+	for (const mode of skippedModes) {
+		process.stderr.write(
+			`warning: theme "${mode}" has no output scoped to it (e.g. .${mode} { … } or [data-theme="${mode}"]) — not compared\n`,
+		);
+	}
 	const { stale, missing, orphan } = countByKind(result);
 	const inSync = result.entries.length === 0;
 
@@ -648,7 +709,7 @@ function runCheck(path: string, options: CheckOptions): void {
 	});
 
 	if (format === "json") {
-		process.stdout.write(`${checkJson(result)}\n`);
+		process.stdout.write(`${checkJson(result, skippedModes)}\n`);
 	} else {
 		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
 		process.stdout.write(`${renderCheckTerm(result, color)}\n`);

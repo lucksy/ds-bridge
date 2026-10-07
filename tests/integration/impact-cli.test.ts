@@ -39,6 +39,7 @@ const versionsFixture = readFileSync(
 
 const FILE_KEY = "ABcdEFghIJklMNopQRstUV";
 const UNAUTHORIZED_KEY = "UNAUTHORIZED";
+const UNPUBLISHED_KEY = "UnPublishedLibraryKey0001";
 const TOKEN = "figd-test-token";
 
 interface ExecError {
@@ -64,6 +65,42 @@ function makeServer(): Server {
 		if (url.includes(`/v1/files/${UNAUTHORIZED_KEY}`)) {
 			res.writeHead(401, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ err: "Invalid token" }));
+			return;
+		}
+
+		// An unpublished library: no published components, components in the tree.
+		if (method === "GET" && url === `/v1/files/${UNPUBLISHED_KEY}/components`) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ meta: { components: [] } }));
+			return;
+		}
+		if (method === "GET" && url === `/v1/files/${UNPUBLISHED_KEY}/versions`) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(versionsFixture);
+			return;
+		}
+		if (method === "GET" && url === `/v1/files/${UNPUBLISHED_KEY}`) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(
+				JSON.stringify({
+					name: "Unpublished",
+					lastModified: "2026-10-06T00:00:00Z",
+					version: "1",
+					document: {
+						id: "0:0",
+						name: "Document",
+						type: "DOCUMENT",
+						children: [
+							{
+								id: "0:1",
+								name: "Page",
+								type: "CANVAS",
+								children: [{ id: "1:94", name: "Label", type: "COMPONENT" }],
+							},
+						],
+					},
+				}),
+			);
 			return;
 		}
 
@@ -232,6 +269,16 @@ describe("ds-bridge impact (built dist/cli.mjs)", () => {
 		expect(cursor?.fileKey).toBe(FILE_KEY);
 		expect(cursor?.snapshot.length).toBeGreaterThan(0);
 		expect(typeof cursor?.capturedAt).toBe("string");
+	});
+
+	it("baselines an UNPUBLISHED library from its file tree instead of capturing 0 components", async () => {
+		const dir = await freshTmp("ds-impact-unpublished-");
+		const result = await runCli(dir, ["impact"], {
+			CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: UNPUBLISHED_KEY,
+		});
+		expect(result.code).toBe(0);
+		const cursor = await readCursor(dir);
+		expect(cursor?.snapshot.map((m) => m.name)).toEqual(["Label"]);
 	});
 
 	it("diffs a seeded baseline against the fresh fetch and finds breaking changes (exit 1)", async () => {

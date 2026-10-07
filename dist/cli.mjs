@@ -7077,12 +7077,26 @@ function isBackgroundRole(name) {
 function byName(a, b) {
   return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
+function namedSurface(name) {
+  const suffix = name.match(/^(.+)[.-](?:foreground|fg)$/i);
+  if (suffix !== null) return suffix[1];
+  const onPrefix = name.match(/^(.*?)(^|[./])on-([a-z0-9-]+)$/i);
+  if (onPrefix !== null) return `${onPrefix[1]}${onPrefix[2]}${onPrefix[3]}`;
+  return void 0;
+}
 function pairColorTokens(map) {
   const colors4 = map.tokens.filter(isColor);
+  const byTokenName = new Map(colors4.map((t) => [t.name, t]));
   const foregrounds = colors4.filter((t) => isForegroundRole(t.name)).sort(byName);
   const backgrounds = colors4.filter((t) => isBackgroundRole(t.name)).sort(byName);
   const pairs = [];
   for (const foreground of foregrounds) {
+    const surfaceName = namedSurface(foreground.name);
+    const surface = surfaceName !== void 0 ? byTokenName.get(surfaceName) : void 0;
+    if (surface !== void 0) {
+      pairs.push({ foreground, background: surface });
+      continue;
+    }
     for (const background of backgrounds) {
       if (foreground.name === background.name) continue;
       pairs.push({ foreground, background });
@@ -7484,6 +7498,16 @@ function resolveSetOrder(root, setNames) {
   }
   return setNames;
 }
+function defaultThemeSets(root) {
+  const themes = root.$themes;
+  if (!Array.isArray(themes)) return void 0;
+  const first = themes[0];
+  if (!isPlainObject(first) || !isPlainObject(first.selectedTokenSets)) {
+    return void 0;
+  }
+  const sets = Object.entries(first.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([name]) => name);
+  return sets.length > 0 ? new Set(sets) : void 0;
+}
 function parseTokensStudio(source) {
   if (!isPlainObject(source)) {
     return {
@@ -7499,8 +7523,11 @@ function parseTokensStudio(source) {
   const errors = [];
   const setNames = Object.keys(source).filter((k4) => !RESERVED_KEYS.has(k4));
   const order = resolveSetOrder(source, setNames);
+  const defaultSets = defaultThemeSets(source);
+  const primary = defaultSets === void 0 ? order : order.filter((name) => defaultSets.has(name));
+  const secondary = defaultSets === void 0 ? [] : order.filter((name) => !defaultSets.has(name));
   const merged = /* @__PURE__ */ new Map();
-  for (const setName of order) {
+  const collect4 = (setName, into) => {
     const tree = source[setName];
     if (!isPlainObject(tree)) {
       errors.push({
@@ -7508,9 +7535,17 @@ function parseTokensStudio(source) {
         path: setName,
         message: `Token set "${setName}" must be an object.`
       });
-      continue;
+      return;
     }
-    collectSet(setName, tree, merged, errors);
+    collectSet(setName, tree, into, errors);
+  };
+  for (const setName of primary) collect4(setName, merged);
+  for (const setName of secondary) {
+    const extra = /* @__PURE__ */ new Map();
+    collect4(setName, extra);
+    for (const [name, token] of extra) {
+      if (!merged.has(name)) merged.set(name, token);
+    }
   }
   if (errors.length > 0) {
     return { kind: "error", errors };
@@ -7720,6 +7755,36 @@ function parseW3c(source) {
     map: { format: "w3c", tokens },
     warnings
   };
+}
+
+// src/engines/tokens/themes.ts
+function isPlainObject3(value2) {
+  return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
+}
+function readThemes(source) {
+  if (!isPlainObject3(source)) return void 0;
+  const raw = source.$themes;
+  if (!Array.isArray(raw)) return void 0;
+  const themes = [];
+  for (const entry of raw) {
+    if (!isPlainObject3(entry)) continue;
+    const name = entry.name;
+    const sets = entry.selectedTokenSets;
+    if (typeof name !== "string" || !isPlainObject3(sets)) continue;
+    const selected = {};
+    for (const [setName, state] of Object.entries(sets)) {
+      if (typeof state === "string") selected[setName] = state;
+    }
+    themes.push({ name, selectedTokenSets: selected });
+  }
+  return themes.length > 0 ? themes : void 0;
+}
+function themeSubDocument(source, theme) {
+  const sets = Object.entries(theme.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([setName]) => setName).filter((setName) => isPlainObject3(source[setName]));
+  const doc = {};
+  for (const setName of sets) doc[setName] = source[setName];
+  doc.$metadata = { tokenSetOrder: sets };
+  return doc;
 }
 
 // src/io/discover-tokens.ts
@@ -8379,32 +8444,8 @@ function fail(message) {
 `);
   process.exitCode = 2;
 }
-function isPlainObject3(value2) {
+function isPlainObject4(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
-}
-function readThemes(source) {
-  const raw = source.$themes;
-  if (!Array.isArray(raw)) return void 0;
-  const themes = [];
-  for (const entry of raw) {
-    if (!isPlainObject3(entry)) continue;
-    const name = entry.name;
-    const sets = entry.selectedTokenSets;
-    if (typeof name !== "string" || !isPlainObject3(sets)) continue;
-    const selected = {};
-    for (const [setName, state] of Object.entries(sets)) {
-      if (typeof state === "string") selected[setName] = state;
-    }
-    themes.push({ name, selectedTokenSets: selected });
-  }
-  return themes.length > 0 ? themes : void 0;
-}
-function themeSubDocument(source, theme) {
-  const sets = Object.entries(theme.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([setName]) => setName).filter((setName) => isPlainObject3(source[setName]));
-  const doc = {};
-  for (const setName of sets) doc[setName] = source[setName];
-  doc.$metadata = { tokenSetOrder: sets };
-  return doc;
 }
 function loadModeMaps(tokenPath) {
   let raw;
@@ -8434,8 +8475,8 @@ function loadModeMaps(tokenPath) {
       message: `Could not detect a supported token format for "${tokenPath}". Expected W3C, Tokens Studio, or Style Dictionary.`
     };
   }
-  const themes = format === "tokens-studio" && isPlainObject3(parsed) ? readThemes(parsed) : void 0;
-  if (themes !== void 0 && isPlainObject3(parsed)) {
+  const themes = format === "tokens-studio" && isPlainObject4(parsed) ? readThemes(parsed) : void 0;
+  if (themes !== void 0 && isPlainObject4(parsed)) {
     const modes2 = [];
     for (const theme of themes) {
       const outcome2 = parseTokensStudio(themeSubDocument(parsed, theme));
@@ -8713,7 +8754,7 @@ async function scanUsage(registry, projectDir) {
     globals.__filename = filename;
     globals.__dirname = dirname2(filename);
   }
-  const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
+  const { mapUsage } = await import("./usage-2RZYAT75.mjs");
   const changedFigmaNames = registry.matches.map((m) => m.figmaName);
   return mapUsage({ registry, changedFigmaNames, projectDir });
 }
@@ -9100,6 +9141,103 @@ function renderAnalyticsTerm(doc) {
 import { readFileSync as readFileSync7 } from "fs";
 import { basename, join as join8, resolve as resolve6 } from "path";
 
+// src/engines/figma/library-health.ts
+var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
+var CAP = 20;
+function componentNameOf(file, componentId) {
+  if (componentId === void 0) return void 0;
+  const components = file.components;
+  if (components === void 0) return void 0;
+  return components[componentId]?.name;
+}
+function walk(root, visit) {
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    visit(node);
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (const child of children) {
+        if (child !== void 0) stack.push(child);
+      }
+    }
+  }
+}
+function compareStrings(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function assessLibraryHealth(file, opts) {
+  const deprecatedPattern = opts?.deprecatedPattern ?? DEFAULT_DEPRECATED_PATTERN;
+  const cap = opts?.cap ?? CAP;
+  const hasComponents = file.components !== void 0;
+  const componentNames = /* @__PURE__ */ new Set();
+  for (const map of [file.components, file.componentSets]) {
+    if (map === void 0) continue;
+    for (const entry of Object.values(map)) componentNames.add(entry.name);
+  }
+  const hotspots = [];
+  const deprecatedCounts = /* @__PURE__ */ new Map();
+  const detached = [];
+  walk(file.document, (node) => {
+    const isInstance = node.type === "INSTANCE";
+    if (isInstance) {
+      const overrides = node.overrides;
+      const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
+      if (overrideCount > 0) {
+        const componentName = componentNameOf(file, node.componentId);
+        hotspots.push({
+          nodeId: node.id,
+          name: node.name,
+          ...componentName !== void 0 ? { componentName } : {},
+          overrideCount
+        });
+      }
+      if (hasComponents) {
+        const componentName = componentNameOf(file, node.componentId);
+        if (componentName !== void 0 && deprecatedPattern.test(componentName)) {
+          deprecatedCounts.set(
+            componentName,
+            (deprecatedCounts.get(componentName) ?? 0) + 1
+          );
+        }
+      }
+    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && componentNames.has(node.name)) {
+      detached.push({ nodeId: node.id, name: node.name, heuristic: true });
+    }
+  });
+  let deprecatedUsageTotal = 0;
+  for (const count of deprecatedCounts.values()) deprecatedUsageTotal += count;
+  const totals = {
+    overrideHotspots: hotspots.length,
+    deprecatedUsage: deprecatedUsageTotal,
+    detachedCandidates: detached.length
+  };
+  hotspots.sort((a, b) => {
+    if (a.overrideCount !== b.overrideCount) {
+      return b.overrideCount - a.overrideCount;
+    }
+    return compareStrings(a.name, b.name);
+  });
+  const deprecatedUsage = [
+    ...deprecatedCounts.entries()
+  ].map(([componentName, count]) => ({ componentName, count })).sort((a, b) => compareStrings(a.componentName, b.componentName)).slice(0, cap);
+  const detachedCandidates = [...detached].sort((a, b) => compareStrings(a.nodeId, b.nodeId)).slice(0, cap);
+  return {
+    overrideHotspots: hotspots.slice(0, cap),
+    deprecatedUsage,
+    detachedCandidates,
+    totals
+  };
+}
+function capLibraryHealth(report, cap = CAP) {
+  return {
+    overrideHotspots: report.overrideHotspots.slice(0, cap),
+    deprecatedUsage: report.deprecatedUsage.slice(0, cap),
+    detachedCandidates: report.detachedCandidates.slice(0, cap),
+    totals: report.totals
+  };
+}
+
 // src/engines/registry/parity.ts
 var OK_THRESHOLD = 0.85;
 var SEVERITY_ORDER = {
@@ -9119,6 +9257,35 @@ function buildParity(registry) {
   const matches = Array.isArray(registry?.matches) ? registry.matches : [];
   const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
   const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
+  const codeSide = [
+    ...matches.map((m) => ({ name: m.codeName, importPath: m.importPath })),
+    ...unmatchedCode.map((u) => ({ name: u.name, importPath: u.importPath }))
+  ];
+  const parentOf = (name, importPath) => {
+    let parent;
+    for (const other of codeSide) {
+      if (other.importPath !== importPath || other.name === name) continue;
+      const next = name.charAt(other.name.length);
+      if (!name.startsWith(other.name) || !/[A-Z]/.test(next)) continue;
+      if (parent === void 0 || other.name.length > parent.length) {
+        parent = other.name;
+      }
+    }
+    return parent;
+  };
+  const partsByParent = /* @__PURE__ */ new Map();
+  const isPart = /* @__PURE__ */ new Set();
+  for (const entry of unmatchedCode) {
+    const parent = parentOf(entry.name, entry.importPath);
+    if (parent === void 0) continue;
+    const key = `${entry.importPath}\0${parent}`;
+    partsByParent.set(key, [...partsByParent.get(key) ?? [], entry.name]);
+    isPart.add(`${entry.importPath}\0${entry.name}`);
+  }
+  const withParts = (detail, name, importPath) => {
+    const parts = partsByParent.get(`${importPath}\0${name}`);
+    return parts === void 0 ? detail : `${detail} Parts: ${[...parts].sort(byNameAsc2).join(", ")}.`;
+  };
   const rows = [];
   for (const match of matches) {
     const score = typeof match.score === "number" ? match.score : 0;
@@ -9126,17 +9293,26 @@ function buildParity(registry) {
       rows.push({
         component: match.codeName,
         status: "ok",
-        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`
+        detail: withParts(
+          `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)}.`,
+          match.codeName,
+          match.importPath
+        )
       });
     } else {
       rows.push({
         component: match.codeName,
         status: "prop-mismatch",
-        detail: `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`
+        detail: withParts(
+          `Matched ${match.figmaName} (${match.nodeId}) @ ${show(score)} \u2014 low shape agreement; props/variants likely diverge.`,
+          match.codeName,
+          match.importPath
+        )
       });
     }
   }
   for (const entry of unmatchedFigma) {
+    if (DEFAULT_DEPRECATED_PATTERN.test(entry.name)) continue;
     const top2 = entry.candidates?.[0];
     const detail = top2 !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top2.codeName} @ ${show(top2.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
     rows.push({
@@ -9146,12 +9322,13 @@ function buildParity(registry) {
     });
   }
   for (const entry of unmatchedCode) {
+    if (isPart.has(`${entry.importPath}\0${entry.name}`)) continue;
     const top2 = entry.candidates?.[0];
     const detail = top2 !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top2.figmaName} (${top2.nodeId}) @ ${show(top2.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
     rows.push({
       component: entry.name,
       status: "missing-in-figma",
-      detail
+      detail: withParts(detail, entry.name, entry.importPath)
     });
   }
   rows.sort((a, b) => {
@@ -10520,7 +10697,7 @@ function suggestFreshnessKinds(input, limit = 3) {
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
   ).slice(0, limit).map((c2) => c2.kind);
 }
-function isPlainObject4(value2) {
+function isPlainObject5(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 var REPORT_STYLES = ["html", "terminal", "both"];
@@ -10659,6 +10836,16 @@ function parseProjectFile(text2) {
     }
     values.trackedFrames = frames;
   }
+  if (obj.component_paths !== void 0) {
+    const paths = obj.component_paths;
+    if (!Array.isArray(paths) || paths.length === 0 || !paths.every((p4) => typeof p4 === "string" && p4.trim() !== "")) {
+      return {
+        kind: "invalid",
+        message: 'component_paths must be a non-empty array of project-relative directories, e.g. ["src/components/ui"]'
+      };
+    }
+    values.componentPaths = paths;
+  }
   if (obj.score_weights !== void 0) {
     if (typeof obj.score_weights !== "object" || obj.score_weights === null || Array.isArray(obj.score_weights)) {
       return {
@@ -10689,7 +10876,7 @@ function parseProjectFile(text2) {
     }
   }
   if (obj.product_file_keys !== void 0) {
-    if (!isPlainObject4(obj.product_file_keys)) {
+    if (!isPlainObject5(obj.product_file_keys)) {
       return {
         kind: "invalid",
         message: "product_file_keys must be an object of alias \u2192 Figma file key"
@@ -10714,7 +10901,7 @@ function parseProjectFile(text2) {
     values.productFileKeys = map;
   }
   if (obj.metric_targets !== void 0) {
-    if (!isPlainObject4(obj.metric_targets)) {
+    if (!isPlainObject5(obj.metric_targets)) {
       return {
         kind: "invalid",
         message: "metric_targets must be an object of metric \u2192 { op, value, warn? }"
@@ -10730,7 +10917,7 @@ function parseProjectFile(text2) {
           message: `metric_targets has an unknown metric ${JSON.stringify(metric)}${hint}`
         };
       }
-      if (!isPlainObject4(target)) {
+      if (!isPlainObject5(target)) {
         return {
           kind: "invalid",
           message: `metric_targets.${metric} must be an object { op, value, warn? }`
@@ -10766,7 +10953,7 @@ function parseProjectFile(text2) {
     values.metricTargets = targets;
   }
   if (obj.score_weights_by_view !== void 0) {
-    if (!isPlainObject4(obj.score_weights_by_view)) {
+    if (!isPlainObject5(obj.score_weights_by_view)) {
       return {
         kind: "invalid",
         message: "score_weights_by_view must be an object of view \u2192 weight overrides"
@@ -10774,7 +10961,7 @@ function parseProjectFile(text2) {
     }
     const byView = {};
     for (const [view, override] of Object.entries(obj.score_weights_by_view)) {
-      if (!isPlainObject4(override)) {
+      if (!isPlainObject5(override)) {
         return {
           kind: "invalid",
           message: `score_weights_by_view.${view} must be an object of component \u2192 weight`
@@ -10805,7 +10992,7 @@ function parseProjectFile(text2) {
     values.scoreWeightsByView = byView;
   }
   if (obj.freshness_thresholds !== void 0) {
-    if (!isPlainObject4(obj.freshness_thresholds)) {
+    if (!isPlainObject5(obj.freshness_thresholds)) {
       return {
         kind: "invalid",
         message: "freshness_thresholds must be an object of check-kind \u2192 { aging, stale }"
@@ -10821,7 +11008,7 @@ function parseProjectFile(text2) {
           message: `freshness_thresholds has an unknown check-kind ${JSON.stringify(kind)}${hint}`
         };
       }
-      if (!isPlainObject4(band)) {
+      if (!isPlainObject5(band)) {
         return {
           kind: "invalid",
           message: `freshness_thresholds.${kind} must be an object { aging, stale }`
@@ -10862,7 +11049,7 @@ function parseProjectFile(text2) {
     const rules = [];
     for (let i = 0; i < obj.ownership.length; i += 1) {
       const entry = obj.ownership[i];
-      if (!isPlainObject4(entry)) {
+      if (!isPlainObject5(entry)) {
         return {
           kind: "invalid",
           message: `ownership[${i}] must be an object { owner, paths }`
@@ -10905,7 +11092,7 @@ function parseProjectFile(text2) {
     values.ownershipFile = obj.ownership_file;
   }
   if (obj.component_aliases !== void 0) {
-    if (!isPlainObject4(obj.component_aliases)) {
+    if (!isPlainObject5(obj.component_aliases)) {
       return {
         kind: "invalid",
         message: "component_aliases must be an object of component \u2192 { frameName?, contrastMode? }"
@@ -10913,7 +11100,7 @@ function parseProjectFile(text2) {
     }
     const map = {};
     for (const [alias, keys] of Object.entries(obj.component_aliases)) {
-      if (!isPlainObject4(keys)) {
+      if (!isPlainObject5(keys)) {
         return {
           kind: "invalid",
           message: `component_aliases.${alias} must be an object { frameName?, contrastMode? }`
@@ -11010,7 +11197,7 @@ function resolveConfig(inputs) {
     if (alias === "") continue;
     productFileKeys[alias] = extractFigmaFileKey(value2);
   }
-  const rawFigmaFileKey = flags.figmaFileKey ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? project.figmaFileKey;
+  const rawFigmaFileKey = nonEmpty(flags.figmaFileKey) ?? nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY) ?? nonEmpty(env.FIGMA_DESIGN_SYSTEM_FILE) ?? project.figmaFileKey;
   const config = {
     figmaFileKey: rawFigmaFileKey !== void 0 ? extractFigmaFileKey(rawFigmaFileKey) : void 0,
     figmaToken: tokenValue !== void 0 && tokenValue !== "" ? { kind: "present", value: tokenValue } : { kind: "missing" },
@@ -11042,11 +11229,24 @@ function resolveConfig(inputs) {
     componentAliases: project.componentAliases,
     migrationSitesCap: project.migrationSitesCap ?? DEFAULT_MIGRATION_SITES_CAP,
     scoreVelocityWindow: project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW,
-    trackedFrames: project.trackedFrames
+    trackedFrames: project.trackedFrames,
+    componentPaths: project.componentPaths
   };
   return { kind: "ok", config, warnings };
 }
 var PROJECT_FILE_NAME = ".ds-bridge.json";
+function nonEmpty(value2) {
+  return value2 === void 0 || value2 === "" ? void 0 : value2;
+}
+function readProjectConfigText(dir) {
+  const configPath = join5(dir, PROJECT_FILE_NAME);
+  if (!existsSync4(configPath)) return void 0;
+  try {
+    return readFileSync4(configPath, "utf8");
+  } catch {
+    return void 0;
+  }
+}
 function validateArtifactIdList(entries, label) {
   const artifacts = [];
   for (const entry of entries) {
@@ -11075,7 +11275,7 @@ function parseSelectionFile(text2) {
   } catch {
     return { kind: "invalid", message: "dashboard file is not valid JSON" };
   }
-  if (!isPlainObject4(raw)) {
+  if (!isPlainObject5(raw)) {
     return { kind: "invalid", message: "dashboard file must be a JSON object" };
   }
   const obj = raw;
@@ -12906,15 +13106,6 @@ function noDataMessage(historyPath) {
     "Then run `ds-bridge badge` again."
   ].join("\n");
 }
-function readProjectConfigText(targetDir) {
-  const configPath = join10(targetDir, ".ds-bridge.json");
-  if (!existsSync8(configPath)) return void 0;
-  try {
-    return readFileSync8(configPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
 function weightProfileForConfig(cfg) {
   const view = resolveView(
     {},
@@ -13210,6 +13401,214 @@ function renderChangelogMarkdown(entries, options) {
 ${sectionBlocks.join("\n")}`;
 }
 
+// src/engines/report/digest.ts
+var ACCEPTED_SINCE_FORMS = 'Expected an ISO date "YYYY-MM-DD" or a relative window "<N>d" / "<N>w".';
+var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+var RELATIVE = /^(\d+)([dw])$/;
+var MS_PER_DAY3 = 24 * 60 * 60 * 1e3;
+function parseSince(raw, nowIso) {
+  const value2 = raw ?? "7d";
+  const isoMatch = ISO_DATE.exec(value2);
+  if (isoMatch !== null) {
+    const ms = Date.parse(`${value2}T00:00:00.000Z`);
+    if (Number.isNaN(ms)) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    const roundTrip = new Date(ms).toISOString().slice(0, 10);
+    if (roundTrip !== value2) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    return { kind: "ok", sinceIso: `${value2}T00:00:00.000Z` };
+  }
+  const relMatch = RELATIVE.exec(value2);
+  if (relMatch !== null) {
+    const count = Number.parseInt(relMatch[1] ?? "", 10);
+    const unit = relMatch[2];
+    if (count <= 0) return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    const days3 = unit === "w" ? count * 7 : count;
+    const nowMs = Date.parse(nowIso);
+    if (Number.isNaN(nowMs)) {
+      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+    }
+    return {
+      kind: "ok",
+      sinceIso: new Date(nowMs - days3 * MS_PER_DAY3).toISOString()
+    };
+  }
+  return { kind: "error", message: ACCEPTED_SINCE_FORMS };
+}
+var KIND_AUDIENCE = {
+  drift: "both",
+  lint: "developer",
+  "on-system": "both",
+  coverage: "both",
+  readiness: "designer",
+  a11y: "designer"
+};
+var MOVEMENT_ORDER = [
+  "drift",
+  "lint",
+  "on-system",
+  "coverage",
+  "readiness",
+  "a11y"
+];
+function asNumber12(value2) {
+  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
+}
+function asRecord2(value2) {
+  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
+}
+function pct2(part, whole) {
+  if (whole <= 0) return void 0;
+  return Math.round(100 * part / whole);
+}
+function inAudience2(tag, wanted) {
+  if (wanted === "both") return true;
+  return tag === wanted || tag === "both";
+}
+function absorb(side, kind, record) {
+  switch (kind) {
+    case "tokens-check":
+      side.tokensCheck = record;
+      break;
+    case "lint":
+      side.lint = record;
+      if (asRecord2(record.adoption) !== void 0) side.adoption = record;
+      break;
+    case "adoption":
+      side.adoptionLine = record;
+      break;
+    case "handoff":
+      side.handoff = record;
+      break;
+    case "a11y":
+      side.a11y = record;
+      break;
+    default:
+      break;
+  }
+}
+function driftMetric(r2) {
+  return r2 === void 0 ? void 0 : asNumber12(r2.stale);
+}
+function lintMetric(r2) {
+  if (r2 === void 0) return void 0;
+  const byKind = asRecord2(r2.byKind) ?? {};
+  return asNumber12(byKind.exact) + asNumber12(byKind.near) + asNumber12(byKind.offSystem);
+}
+function onSystemMetric(r2) {
+  const adoption = r2 === void 0 ? void 0 : asRecord2(r2.adoption);
+  if (adoption === void 0) return void 0;
+  return pct2(
+    asNumber12(adoption.refs),
+    asNumber12(adoption.refs) + asNumber12(adoption.literals)
+  );
+}
+function coverageMetric(r2) {
+  if (r2 === void 0) return void 0;
+  return pct2(asNumber12(r2.imported), asNumber12(r2.total));
+}
+function readinessMetric(r2) {
+  return r2 === void 0 ? void 0 : asNumber12(r2.score);
+}
+function a11yMetric(r2) {
+  if (r2 === void 0) return void 0;
+  const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
+  let passed = 0;
+  let failed = 0;
+  for (const m of modes2) {
+    const mm = asRecord2(m);
+    if (mm === void 0) continue;
+    passed += asNumber12(mm.passed);
+    failed += asNumber12(mm.failed);
+  }
+  return pct2(passed, passed + failed);
+}
+var METRICS = {
+  drift: { slot: "tokensCheck", read: driftMetric },
+  lint: { slot: "lint", read: lintMetric },
+  "on-system": { slot: "adoption", read: onSystemMetric },
+  coverage: { slot: "adoptionLine", read: coverageMetric },
+  readiness: { slot: "handoff", read: readinessMetric },
+  a11y: { slot: "a11y", read: a11yMetric }
+};
+function directionOf(baseline, current) {
+  if (baseline === void 0) return "flat";
+  if (current > baseline) return "up";
+  if (current < baseline) return "down";
+  return "flat";
+}
+function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
+  const records = replayHistory(text2);
+  const before = {};
+  const inWindow = {};
+  let anyInWindow = false;
+  for (const { kind, at, record } of records) {
+    if (at === void 0) continue;
+    if (at >= sinceIso) {
+      absorb(inWindow, kind, record);
+      anyInWindow = true;
+    } else {
+      absorb(before, kind, record);
+    }
+  }
+  if (!anyInWindow) {
+    return { kind: "quiet", sinceIso, audience };
+  }
+  const movements = [];
+  for (const kind of MOVEMENT_ORDER) {
+    const tag = KIND_AUDIENCE[kind];
+    if (!inAudience2(tag, audience)) continue;
+    const { slot, read } = METRICS[kind];
+    const current = read(inWindow[slot]);
+    if (current === void 0) continue;
+    const baseline = read(before[slot]);
+    movements.push({
+      kind,
+      audience: tag,
+      ...baseline !== void 0 ? { baseline } : {},
+      current,
+      isNew: baseline === void 0,
+      direction: directionOf(baseline, current)
+    });
+  }
+  const candidates = [];
+  const driftStale = driftMetric(inWindow.tokensCheck);
+  if (driftStale !== void 0 && driftStale > 0) {
+    candidates.push({ command: "ds-bridge tokens check", audience: "both" });
+  }
+  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber12(asRecord2(inWindow.lint.byKind)?.offSystem);
+  if (offSystem !== void 0 && offSystem > 0) {
+    candidates.push({
+      command: "ds-bridge lint",
+      audience: "developer",
+      count: offSystem
+    });
+  }
+  const readiness = readinessMetric(inWindow.handoff);
+  if (readiness !== void 0 && readiness < readinessThreshold2) {
+    candidates.push({
+      command: "ds-bridge handoff <frame-url>",
+      audience: "designer"
+    });
+  }
+  const a11yFailing = (() => {
+    if (inWindow.a11y === void 0) return false;
+    const modes2 = Array.isArray(inWindow.a11y.modes) ? inWindow.a11y.modes : [];
+    return modes2.some((m) => asNumber12(asRecord2(m)?.failed) > 0);
+  })();
+  if (a11yFailing) {
+    candidates.push({ command: "ds-bridge a11y", audience: "designer" });
+  }
+  const coverage = coverageMetric(inWindow.adoptionLine);
+  if (coverage !== void 0 && coverage < 100) {
+    candidates.push({ command: "ds-bridge adoption", audience: "both" });
+  }
+  const actions = candidates.filter((a) => inAudience2(a.audience, audience)).slice(0, 3);
+  return { kind: "ok", sinceIso, audience, movements, actions };
+}
+
 // src/io/figma/client.ts
 var DEFAULT_BASE_URL = "https://api.figma.com";
 var MAX_RETRIES = 3;
@@ -13225,6 +13624,13 @@ function parseRetryAfter(headers) {
   if (raw === null) return DEFAULT_RETRY_AFTER_SECONDS;
   const seconds = Number.parseInt(raw, 10);
   return Number.isFinite(seconds) && seconds > 0 ? seconds : DEFAULT_RETRY_AFTER_SECONDS;
+}
+function errText(body) {
+  if (typeof body !== "object" || body === null || !("err" in body)) {
+    return void 0;
+  }
+  const err = body.err;
+  return typeof err === "string" && err !== "" ? err : void 0;
 }
 function mentionsScope(body) {
   const text2 = typeof body === "string" ? body : JSON.stringify(body ?? "");
@@ -13259,7 +13665,10 @@ function createFigmaClient(options) {
         }
         return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
       }
-      if (status === 401) return { kind: "auth-error" };
+      if (status === 401) {
+        const reason = errText(await response.json().catch(() => void 0));
+        return reason !== void 0 ? { kind: "auth-error", message: reason } : { kind: "auth-error" };
+      }
       if (status === 403) {
         let body;
         try {
@@ -13412,7 +13821,11 @@ function renderTerm3(entries, audience, color) {
   return lines.join("\n");
 }
 async function fetchVersions(deps) {
-  const resolved = resolveConfig({ env: deps.env });
+  const projectFileText = readProjectConfigText(deps.cwd);
+  const resolved = resolveConfig({
+    env: deps.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
   if (resolved.kind !== "ok") {
     return { versions: [], note: `Figma side skipped: ${resolved.message}` };
   }
@@ -13497,7 +13910,17 @@ async function runChangelog(options, deps) {
     process.exitCode = 2;
     return;
   }
-  const since = options.since ?? defaultSince(deps.now());
+  let since = defaultSince(deps.now());
+  if (options.since !== void 0) {
+    const parsed = parseSince(options.since, deps.now().toISOString());
+    if (parsed.kind !== "ok") {
+      deps.stderr(`Invalid --since "${options.since}". ${parsed.message}
+`);
+      process.exitCode = 2;
+      return;
+    }
+    since = parsed.sinceIso.slice(0, 10);
+  }
   const log = readGitLog({ exec: deps.exec, cwd: deps.cwd, since });
   if (log.kind === "git-unavailable") {
     deps.stderr(`Could not run git: ${log.message}
@@ -13547,8 +13970,8 @@ function registerChangelogCommand(program2) {
   program2.command("changelog").description(
     "Audience-segmented changelog from git log, Figma versions, and token changes"
   ).option(
-    "--since <date>",
-    "include changes since this date (default: 90 days ago)"
+    "--since <when>",
+    "include changes since YYYY-MM-DD or <N>d / <N>w (default: 90 days ago)"
   ).option("--audience <who>", "designers | developers | both", "both").option("--format <format>", "output format: term | json | md", "term").option(
     "--no-history",
     "do not append a changelog record to .ds-bridge/history.jsonl in the current directory"
@@ -13628,7 +14051,7 @@ async function verifyConnection(opts) {
     }
     case "auth-error":
       lines.push(
-        "\u2717 Token rejected (401) \u2014 it is invalid, revoked, or mistyped."
+        me.message !== void 0 && /expired/i.test(me.message) ? "\u2717 Token expired (401) \u2014 create a new personal access token and connect it again." : "\u2717 Token rejected (401) \u2014 it is invalid, revoked, expired, or mistyped."
       );
       return { ok: false, lines };
     case "scope-error":
@@ -13741,8 +14164,10 @@ function runPersistToken(path) {
   if (fileKey !== void 0 && fileKey !== "") {
     updates.FIGMA_DESIGN_SYSTEM_FILE = fileKey;
   }
+  let gitignoreUpdated;
   try {
     writeEnvFileMerged(targetDir, updates);
+    gitignoreUpdated = ensureGitignored(targetDir);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail5(`Could not write ${join12(targetDir, ENV_FILE_NAME)}: ${detail}`);
@@ -13751,7 +14176,8 @@ function runPersistToken(path) {
   const savedKey = updates.FIGMA_DESIGN_SYSTEM_FILE !== void 0 ? " and the design-system file key" : "";
   process.stdout.write(
     `Saved Figma token (${maskToken(token)})${savedKey} to ${join12(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
-`
+` + (gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.
+` : "")
   );
   process.exitCode = 0;
 }
@@ -14913,214 +15339,6 @@ import {
 import { dirname as dirname4, join as join15, resolve as resolve9 } from "path";
 import { cwd as processCwd2 } from "process";
 
-// src/engines/report/digest.ts
-var ACCEPTED_SINCE_FORMS = 'Expected an ISO date "YYYY-MM-DD" or a relative window "<N>d" / "<N>w".';
-var ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-var RELATIVE = /^(\d+)([dw])$/;
-var MS_PER_DAY3 = 24 * 60 * 60 * 1e3;
-function parseSince(raw, nowIso) {
-  const value2 = raw ?? "7d";
-  const isoMatch = ISO_DATE.exec(value2);
-  if (isoMatch !== null) {
-    const ms = Date.parse(`${value2}T00:00:00.000Z`);
-    if (Number.isNaN(ms)) {
-      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    }
-    const roundTrip = new Date(ms).toISOString().slice(0, 10);
-    if (roundTrip !== value2) {
-      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    }
-    return { kind: "ok", sinceIso: `${value2}T00:00:00.000Z` };
-  }
-  const relMatch = RELATIVE.exec(value2);
-  if (relMatch !== null) {
-    const count = Number.parseInt(relMatch[1] ?? "", 10);
-    const unit = relMatch[2];
-    if (count <= 0) return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    const days3 = unit === "w" ? count * 7 : count;
-    const nowMs = Date.parse(nowIso);
-    if (Number.isNaN(nowMs)) {
-      return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-    }
-    return {
-      kind: "ok",
-      sinceIso: new Date(nowMs - days3 * MS_PER_DAY3).toISOString()
-    };
-  }
-  return { kind: "error", message: ACCEPTED_SINCE_FORMS };
-}
-var KIND_AUDIENCE = {
-  drift: "both",
-  lint: "developer",
-  "on-system": "both",
-  coverage: "both",
-  readiness: "designer",
-  a11y: "designer"
-};
-var MOVEMENT_ORDER = [
-  "drift",
-  "lint",
-  "on-system",
-  "coverage",
-  "readiness",
-  "a11y"
-];
-function asNumber12(value2) {
-  return typeof value2 === "number" && Number.isFinite(value2) ? value2 : 0;
-}
-function asRecord2(value2) {
-  return typeof value2 === "object" && value2 !== null ? value2 : void 0;
-}
-function pct2(part, whole) {
-  if (whole <= 0) return void 0;
-  return Math.round(100 * part / whole);
-}
-function inAudience2(tag, wanted) {
-  if (wanted === "both") return true;
-  return tag === wanted || tag === "both";
-}
-function absorb(side, kind, record) {
-  switch (kind) {
-    case "tokens-check":
-      side.tokensCheck = record;
-      break;
-    case "lint":
-      side.lint = record;
-      if (asRecord2(record.adoption) !== void 0) side.adoption = record;
-      break;
-    case "adoption":
-      side.adoptionLine = record;
-      break;
-    case "handoff":
-      side.handoff = record;
-      break;
-    case "a11y":
-      side.a11y = record;
-      break;
-    default:
-      break;
-  }
-}
-function driftMetric(r2) {
-  return r2 === void 0 ? void 0 : asNumber12(r2.stale);
-}
-function lintMetric(r2) {
-  if (r2 === void 0) return void 0;
-  const byKind = asRecord2(r2.byKind) ?? {};
-  return asNumber12(byKind.exact) + asNumber12(byKind.near) + asNumber12(byKind.offSystem);
-}
-function onSystemMetric(r2) {
-  const adoption = r2 === void 0 ? void 0 : asRecord2(r2.adoption);
-  if (adoption === void 0) return void 0;
-  return pct2(
-    asNumber12(adoption.refs),
-    asNumber12(adoption.refs) + asNumber12(adoption.literals)
-  );
-}
-function coverageMetric(r2) {
-  if (r2 === void 0) return void 0;
-  return pct2(asNumber12(r2.imported), asNumber12(r2.total));
-}
-function readinessMetric(r2) {
-  return r2 === void 0 ? void 0 : asNumber12(r2.score);
-}
-function a11yMetric(r2) {
-  if (r2 === void 0) return void 0;
-  const modes2 = Array.isArray(r2.modes) ? r2.modes : [];
-  let passed = 0;
-  let failed = 0;
-  for (const m of modes2) {
-    const mm = asRecord2(m);
-    if (mm === void 0) continue;
-    passed += asNumber12(mm.passed);
-    failed += asNumber12(mm.failed);
-  }
-  return pct2(passed, passed + failed);
-}
-var METRICS = {
-  drift: { slot: "tokensCheck", read: driftMetric },
-  lint: { slot: "lint", read: lintMetric },
-  "on-system": { slot: "adoption", read: onSystemMetric },
-  coverage: { slot: "adoptionLine", read: coverageMetric },
-  readiness: { slot: "handoff", read: readinessMetric },
-  a11y: { slot: "a11y", read: a11yMetric }
-};
-function directionOf(baseline, current) {
-  if (baseline === void 0) return "flat";
-  if (current > baseline) return "up";
-  if (current < baseline) return "down";
-  return "flat";
-}
-function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
-  const records = replayHistory(text2);
-  const before = {};
-  const inWindow = {};
-  let anyInWindow = false;
-  for (const { kind, at, record } of records) {
-    if (at === void 0) continue;
-    if (at >= sinceIso) {
-      absorb(inWindow, kind, record);
-      anyInWindow = true;
-    } else {
-      absorb(before, kind, record);
-    }
-  }
-  if (!anyInWindow) {
-    return { kind: "quiet", sinceIso, audience };
-  }
-  const movements = [];
-  for (const kind of MOVEMENT_ORDER) {
-    const tag = KIND_AUDIENCE[kind];
-    if (!inAudience2(tag, audience)) continue;
-    const { slot, read } = METRICS[kind];
-    const current = read(inWindow[slot]);
-    if (current === void 0) continue;
-    const baseline = read(before[slot]);
-    movements.push({
-      kind,
-      audience: tag,
-      ...baseline !== void 0 ? { baseline } : {},
-      current,
-      isNew: baseline === void 0,
-      direction: directionOf(baseline, current)
-    });
-  }
-  const candidates = [];
-  const driftStale = driftMetric(inWindow.tokensCheck);
-  if (driftStale !== void 0 && driftStale > 0) {
-    candidates.push({ command: "ds-bridge tokens check", audience: "both" });
-  }
-  const offSystem = inWindow.lint === void 0 ? void 0 : asNumber12(asRecord2(inWindow.lint.byKind)?.offSystem);
-  if (offSystem !== void 0 && offSystem > 0) {
-    candidates.push({
-      command: "ds-bridge lint",
-      audience: "developer",
-      count: offSystem
-    });
-  }
-  const readiness = readinessMetric(inWindow.handoff);
-  if (readiness !== void 0 && readiness < readinessThreshold2) {
-    candidates.push({
-      command: "ds-bridge handoff <frame-url>",
-      audience: "designer"
-    });
-  }
-  const a11yFailing = (() => {
-    if (inWindow.a11y === void 0) return false;
-    const modes2 = Array.isArray(inWindow.a11y.modes) ? inWindow.a11y.modes : [];
-    return modes2.some((m) => asNumber12(asRecord2(m)?.failed) > 0);
-  })();
-  if (a11yFailing) {
-    candidates.push({ command: "ds-bridge a11y", audience: "designer" });
-  }
-  const coverage = coverageMetric(inWindow.adoptionLine);
-  if (coverage !== void 0 && coverage < 100) {
-    candidates.push({ command: "ds-bridge adoption", audience: "both" });
-  }
-  const actions = candidates.filter((a) => inAudience2(a.audience, audience)).slice(0, 3);
-  return { kind: "ok", sinceIso, audience, movements, actions };
-}
-
 // src/engines/report/digest-md.ts
 var SECTIONS2 = [
   { heading: "For designers", audience: "designer" },
@@ -15857,7 +16075,7 @@ function renderImport(doc) {
   if (doc.code.importPath.length === 0) return void 0;
   return [
     "```tsx",
-    `import { ${doc.name} } from "${doc.code.importPath}";`,
+    `import { ${doc.name} } from "${doc.code.importSpecifier ?? doc.code.importPath}";`,
     "```"
   ].join("\n");
 }
@@ -15946,14 +16164,50 @@ function normalizeName2(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 async function scanCode(targetDir) {
+  shimCjsGlobals();
+  const { scanCodeComponents } = await import("./scan-code-465K2PAS.mjs");
+  return scanCodeComponents(targetDir);
+}
+function shimCjsGlobals() {
   const globals = globalThis;
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath3(import.meta.url);
     globals.__filename = filename;
     globals.__dirname = dirname5(filename);
   }
-  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
-  return scanCodeComponents(targetDir);
+}
+async function importSpecifiers(targetDir, importPaths) {
+  shimCjsGlobals();
+  const { aliasSpecifier } = await import("./tsconfig-paths-ER2KFXCO.mjs");
+  const specifiers = /* @__PURE__ */ new Map();
+  for (const importPath of importPaths) {
+    if (importPath === "") continue;
+    const specifier = aliasSpecifier(targetDir, importPath);
+    if (specifier !== void 0) specifiers.set(importPath, specifier);
+  }
+  return specifiers;
+}
+function figmaFromRegistry(registry) {
+  const entries = [
+    ...(Array.isArray(registry.matches) ? registry.matches : []).map((m) => ({
+      name: m.figmaName,
+      nodeId: m.nodeId,
+      description: m.description
+    })),
+    ...Array.isArray(registry.unmatchedFigma) ? registry.unmatchedFigma : []
+  ];
+  const models = [];
+  for (const { name, nodeId, description } of entries) {
+    if (typeof description !== "string" || description === "") continue;
+    models.push({
+      name,
+      nodeId,
+      description,
+      variantProps: {},
+      source: "published"
+    });
+  }
+  return models;
 }
 function loadRegistry3(targetDir) {
   const registryPath = join16(targetDir, ".ds-bridge", "registry.json");
@@ -16013,7 +16267,8 @@ function hasRegistry(candidate) {
   );
 }
 function disambiguate(component, path) {
-  if (component !== void 0 && component !== "" && path === "." && !hasRegistry(".") && hasRegistry(component)) {
+  const pathShaped = component !== void 0 && /^\.{1,2}$|[\\/]/.test(component);
+  if (component !== void 0 && component !== "" && path === "." && (pathShaped || !hasRegistry(".")) && hasRegistry(component)) {
     return { component: void 0, path: component };
   }
   return { component, path };
@@ -16045,7 +16300,20 @@ async function runDocs(rawComponent, rawPath, options) {
   if (registry === void 0) return;
   const code = await scanCode(targetDir);
   const tokens = await discoverTokens(targetDir);
-  const allDocs = mergeComponentDocs({ registry, code, figma: [], tokens });
+  const merged = mergeComponentDocs({
+    registry,
+    code,
+    figma: figmaFromRegistry(registry),
+    tokens
+  });
+  const specifiers = await importSpecifiers(
+    targetDir,
+    merged.map((doc) => doc.code.importPath)
+  );
+  const allDocs = merged.map((doc) => {
+    const importSpecifier = specifiers.get(doc.code.importPath);
+    return importSpecifier === void 0 ? doc : { ...doc, code: { ...doc.code, importSpecifier } };
+  });
   let docs = allDocs;
   if (component !== void 0 && component !== "") {
     const needle = normalizeName2(component);
@@ -16199,6 +16467,9 @@ function round3(value2) {
 function normalizeName3(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
+function describedBy(description) {
+  return description.length > 0 ? { description } : {};
+}
 function byNameAsc4(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -16208,7 +16479,8 @@ function toRegistryFile(result, generatedAt) {
     importPath: m.code.importPath,
     figmaName: m.figma.name,
     nodeId: m.figma.nodeId,
-    score: round3(m.score)
+    score: round3(m.score),
+    ...describedBy(m.figma.description)
   })).sort((a, b) => byNameAsc4(a.codeName, b.codeName));
   const unmatchedCode = result.unmatchedCode.map((u) => ({
     name: u.code.name,
@@ -16222,6 +16494,7 @@ function toRegistryFile(result, generatedAt) {
   const unmatchedFigma = result.unmatchedFigma.map((u) => ({
     name: u.figma.name,
     nodeId: u.figma.nodeId,
+    ...describedBy(u.figma.description),
     candidates: u.candidates.map((c2) => ({
       codeName: c2.code.name,
       score: round3(c2.score)
@@ -16414,6 +16687,17 @@ function missingFigmaTokenMessage(scopeNote) {
     ...scopeNote
   ].join("\n");
 }
+function figmaAuthErrorMessage(result) {
+  if (result.message !== void 0 && /expired/i.test(result.message)) {
+    return [
+      "Your Figma personal access token has expired.",
+      "Create a new one (figma.com \u2192 Settings \u2192 Security \u2192 Personal access tokens),",
+      "then save and check it with: ds-bridge config connect --verify"
+    ].join("\n");
+  }
+  const reason = result.message !== void 0 ? ` Figma said: "${result.message}".` : "";
+  return `Figma rejected the token (auth error).${reason} Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.`;
+}
 
 // src/cli-commands/frame-impl.ts
 var DEFAULT_FIGMA_API_BASE2 = "https://api.figma.com";
@@ -16459,7 +16743,7 @@ function missingRegistryMessage(registryPath) {
 function clientErrorMessage(result) {
   switch (result.kind) {
     case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+      return figmaAuthErrorMessage(result);
     case "scope-error":
       return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
     case "not-found":
@@ -16468,15 +16752,6 @@ function clientErrorMessage(result) {
       return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
     case "network-error":
       return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-function readProjectConfigText2() {
-  const configPath = join17(cwd(), ".ds-bridge.json");
-  if (!existsSync13(configPath)) return void 0;
-  try {
-    return readFileSync15(configPath, "utf8");
-  } catch {
-    return void 0;
   }
 }
 function loadRegistry4(registryPath) {
@@ -16745,7 +17020,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     );
     return;
   }
-  const projectFileText = readProjectConfigText2();
+  const projectFileText = readProjectConfigText(cwd());
   const resolved = resolveConfig({
     env: process.env,
     ...projectFileText !== void 0 ? { projectFileText } : {}
@@ -16899,6 +17174,7 @@ var COMPONENT_NOUNS = /* @__PURE__ */ new Set([
 var FIX_BINDING = "Bind fills/strokes to a variable";
 var FIX_AUTO_LAYOUT = "Add auto layout";
 var FIX_COMPONENT = "Reattach to the published component or rename";
+var fixDeprecated = (name) => `Swap to the current component \u2014 "${name}" is deprecated`;
 var FIX_NAMING = "Rename meaningfully";
 function isStyleable(node) {
   const hasFills = Array.isArray(node.fills) && node.fills.length > 0;
@@ -16942,7 +17218,17 @@ function collect3(root) {
   }
   return nodes;
 }
-function scoreReadiness(root) {
+function deprecatedNameOf(node, options) {
+  if (node.type !== "INSTANCE" || node.componentId === void 0) {
+    return void 0;
+  }
+  const component = options.components?.[node.componentId];
+  if (component === void 0) return void 0;
+  const setName = component.componentSetId !== void 0 ? options.componentSets?.[component.componentSetId]?.name : void 0;
+  const name = setName ?? component.name;
+  return DEFAULT_DEPRECATED_PATTERN.test(name) ? name : void 0;
+}
+function scoreReadiness(root, options = {}) {
   const nodes = collect3(root);
   const totalNodes = nodes.length;
   const styleable = nodes.filter(isStyleable);
@@ -16956,8 +17242,12 @@ function scoreReadiness(root) {
     (n) => n.type !== "INSTANCE" && isComponentName(n.name)
   );
   const detachedSuspects = suspectNodes.length;
+  const deprecated = nodes.map((node) => ({ node, name: deprecatedNameOf(node, options) })).filter(
+    (d) => d.name !== void 0
+  );
+  const deprecatedInstances = deprecated.length;
   const componentDenominator = Math.max(1, detachedSuspects + instanceCount);
-  const componentRatio = 1 - detachedSuspects / componentDenominator;
+  const componentRatio = 1 - (detachedSuspects + deprecatedInstances) / componentDenominator;
   const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
   const badNames = badNameNodes.length;
   const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
@@ -16989,9 +17279,10 @@ function scoreReadiness(root) {
       });
     }
   }
-  if (detachedSuspects > 0) {
+  const componentOffenders = detachedSuspects + deprecatedInstances;
+  if (componentOffenders > 0) {
     const lost = WEIGHT_COMPONENT * (1 - componentRatio);
-    const perNode = lost / detachedSuspects;
+    const perNode = lost / componentOffenders;
     for (const node of suspectNodes) {
       deductions.push({
         nodeId: node.id,
@@ -16999,6 +17290,15 @@ function scoreReadiness(root) {
         rule: "component",
         points: perNode,
         fix: FIX_COMPONENT
+      });
+    }
+    for (const { node, name } of deprecated) {
+      deductions.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        rule: "component",
+        points: perNode,
+        fix: fixDeprecated(name)
       });
     }
   }
@@ -17030,6 +17330,7 @@ function scoreReadiness(root) {
       autoLayoutCoverage,
       instanceCount,
       detachedSuspects,
+      deprecatedInstances,
       badNames
     }
   };
@@ -17077,7 +17378,7 @@ function missingTokenMessage2() {
 function clientErrorMessage2(result) {
   switch (result.kind) {
     case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+      return figmaAuthErrorMessage(result);
     case "scope-error":
       return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read (and file_comments:write for --comment).`;
     case "not-found":
@@ -17161,11 +17462,17 @@ function resolveThreshold(flag, configDefault) {
 }
 function nodeFromFileNodes2(nodes, nodeId) {
   const direct = nodes[nodeId];
-  if (direct !== void 0) return direct.document;
+  if (direct !== void 0) return direct;
   const entries = Object.values(nodes).filter(
     (v) => v !== void 0
   );
-  return entries[0]?.document;
+  return entries[0];
+}
+function componentMaps(source) {
+  return {
+    ...source.components !== void 0 ? { components: source.components } : {},
+    ...source.componentSets !== void 0 ? { componentSets: source.componentSets } : {}
+  };
 }
 async function fetchRoot2(client, fileKey, nodeId) {
   if (nodeId !== void 0) {
@@ -17173,20 +17480,24 @@ async function fetchRoot2(client, fileKey, nodeId) {
     if (result2.kind !== "ok") {
       return { kind: "error", message: clientErrorMessage2(result2) };
     }
-    const root = nodeFromFileNodes2(result2.data.nodes, nodeId);
-    if (root === void 0) {
+    const entry = nodeFromFileNodes2(result2.data.nodes, nodeId);
+    if (entry === void 0) {
       return {
         kind: "error",
         message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
       };
     }
-    return { kind: "ok", root };
+    return { kind: "ok", root: entry.document, maps: componentMaps(entry) };
   }
   const result = await client.getFile(fileKey);
   if (result.kind !== "ok") {
     return { kind: "error", message: clientErrorMessage2(result) };
   }
-  return { kind: "ok", root: result.data.document };
+  return {
+    kind: "ok",
+    root: result.data.document,
+    maps: componentMaps(result.data)
+  };
 }
 async function runHandoff(url, options) {
   const format = options.format;
@@ -17202,7 +17513,11 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     );
     return;
   }
-  const resolved = resolveConfig({ env: process.env });
+  const projectFileText = readProjectConfigText(cwd2());
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
   if (resolved.kind !== "ok") {
     fail9(resolved.message);
     return;
@@ -17234,7 +17549,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     fail9(fetched.message);
     return;
   }
-  const report = scoreReadiness(fetched.root);
+  const report = scoreReadiness(fetched.root, fetched.maps);
   if (options.history) {
     appendHandoffHistory(report, fetched.root.name, {
       fileKey: parsed.fileKey,
@@ -18356,7 +18671,7 @@ function variantPropsFromChildren(children) {
   }
   return props;
 }
-function buildInline(document, publishedIds) {
+function buildInline(document, publishedIds, descriptions) {
   if (document === void 0) return [];
   const byId = /* @__PURE__ */ new Map();
   const stack = [document];
@@ -18370,7 +18685,7 @@ function buildInline(document, publishedIds) {
         byId.set(nodeId, {
           name: asString2(node.name),
           nodeId,
-          description: asString2(node.description),
+          description: asString2(node.description) || descriptions(nodeId),
           variantProps: normalizeVariantProps(variantProps),
           source: "inline"
         });
@@ -18389,7 +18704,8 @@ function buildInline(document, publishedIds) {
 }
 function buildFigmaComponentModel(input) {
   const { models: publishedModels, ids } = buildPublished(input.published);
-  const inlineModels = buildInline(input.fileDocument, ids);
+  const descriptions = (nodeId) => asString2(input.fileComponentSets?.[nodeId]?.description) || asString2(input.fileComponents?.[nodeId]?.description);
+  const inlineModels = buildInline(input.fileDocument, ids, descriptions);
   const byId = /* @__PURE__ */ new Map();
   for (const model of publishedModels) {
     if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
@@ -18444,7 +18760,7 @@ function unknownAliasMessage2(outcome, productFileKeys) {
 function clientErrorMessage3(result) {
   switch (result.kind) {
     case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+      return figmaAuthErrorMessage(result);
     case "scope-error":
       return `Figma token is missing a required scope: ${result.message}. The token needs library_content:read and file_versions:read.`;
     case "not-found":
@@ -18453,15 +18769,6 @@ function clientErrorMessage3(result) {
       return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited \u2014 use a Dev/Full-seat PAT.`;
     case "network-error":
       return `Could not reach the Figma API: ${result.message}.`;
-  }
-}
-function readProjectConfigText3() {
-  const configPath = join20(cwd3(), ".ds-bridge.json");
-  if (!existsSync15(configPath)) return void 0;
-  try {
-    return readFileSync17(configPath, "utf8");
-  } catch {
-    return void 0;
   }
 }
 function cursorPath() {
@@ -18507,7 +18814,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
     globals.__filename = filename;
     globals.__dirname = dirname6(filename);
   }
-  const { mapUsage } = await import("./usage-TBQKOAX7.mjs");
+  const { mapUsage } = await import("./usage-2RZYAT75.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
@@ -18700,7 +19007,7 @@ async function runImpact(options) {
     fail11(`Unknown --format "${options.format}". Expected "json" or "term".`);
     return;
   }
-  const projectFileText = readProjectConfigText3();
+  const projectFileText = readProjectConfigText(cwd3());
   const resolved = resolveConfig({
     env: process.env,
     ...projectFileText !== void 0 ? { projectFileText } : {}
@@ -18744,8 +19051,19 @@ async function runImpact(options) {
     fail11(clientErrorMessage3(versionsResult));
     return;
   }
+  const publishedCount = componentsResult.data.meta?.components?.length ?? 0;
+  let fileDocument;
+  if (publishedCount === 0) {
+    const fileResult = await client.getFile(fileKey);
+    if (fileResult.kind !== "ok") {
+      fail11(clientErrorMessage3(fileResult));
+      return;
+    }
+    fileDocument = fileResult.data.document;
+  }
   const freshSnapshot = buildFigmaComponentModel({
-    published: componentsResult.data
+    published: componentsResult.data,
+    ...fileDocument !== void 0 ? { fileDocument } : {}
   });
   const newestVersionId = versionsResult.data.versions[0]?.id ?? "";
   const capturedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -18874,105 +19192,6 @@ import { existsSync as existsSync16, mkdirSync as mkdirSync8, readFileSync as re
 import { join as join22 } from "path";
 import { cwd as cwd4, env as processEnv2 } from "process";
 
-// src/engines/figma/library-health.ts
-var DEFAULT_DEPRECATED_PATTERN = /deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
-var CAP = 20;
-function componentNameOf(file, componentId) {
-  if (componentId === void 0) return void 0;
-  const components = file.components;
-  if (components === void 0) return void 0;
-  return components[componentId]?.name;
-}
-function walk(root, visit) {
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    visit(node);
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-}
-function compareStrings(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-function assessLibraryHealth(file, opts) {
-  const deprecatedPattern = opts?.deprecatedPattern ?? DEFAULT_DEPRECATED_PATTERN;
-  const cap = opts?.cap ?? CAP;
-  const hasComponents = file.components !== void 0;
-  const componentNames = /* @__PURE__ */ new Set();
-  if (file.components !== void 0) {
-    for (const id of Object.keys(file.components)) {
-      const entry = file.components[id];
-      if (entry !== void 0) componentNames.add(entry.name);
-    }
-  }
-  const hotspots = [];
-  const deprecatedCounts = /* @__PURE__ */ new Map();
-  const detached = [];
-  walk(file.document, (node) => {
-    const isInstance = node.type === "INSTANCE";
-    if (isInstance) {
-      const overrides = node.overrides;
-      const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
-      if (overrideCount > 0) {
-        const componentName = componentNameOf(file, node.componentId);
-        hotspots.push({
-          nodeId: node.id,
-          name: node.name,
-          ...componentName !== void 0 ? { componentName } : {},
-          overrideCount
-        });
-      }
-      if (hasComponents) {
-        const componentName = componentNameOf(file, node.componentId);
-        if (componentName !== void 0 && deprecatedPattern.test(componentName)) {
-          deprecatedCounts.set(
-            componentName,
-            (deprecatedCounts.get(componentName) ?? 0) + 1
-          );
-        }
-      }
-    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && componentNames.has(node.name)) {
-      detached.push({ nodeId: node.id, name: node.name, heuristic: true });
-    }
-  });
-  let deprecatedUsageTotal = 0;
-  for (const count of deprecatedCounts.values()) deprecatedUsageTotal += count;
-  const totals = {
-    overrideHotspots: hotspots.length,
-    deprecatedUsage: deprecatedUsageTotal,
-    detachedCandidates: detached.length
-  };
-  hotspots.sort((a, b) => {
-    if (a.overrideCount !== b.overrideCount) {
-      return b.overrideCount - a.overrideCount;
-    }
-    return compareStrings(a.name, b.name);
-  });
-  const deprecatedUsage = [
-    ...deprecatedCounts.entries()
-  ].map(([componentName, count]) => ({ componentName, count })).sort((a, b) => compareStrings(a.componentName, b.componentName)).slice(0, cap);
-  const detachedCandidates = [...detached].sort((a, b) => compareStrings(a.nodeId, b.nodeId)).slice(0, cap);
-  return {
-    overrideHotspots: hotspots.slice(0, cap),
-    deprecatedUsage,
-    detachedCandidates,
-    totals
-  };
-}
-function capLibraryHealth(report, cap = CAP) {
-  return {
-    overrideHotspots: report.overrideHotspots.slice(0, cap),
-    deprecatedUsage: report.deprecatedUsage.slice(0, cap),
-    detachedCandidates: report.detachedCandidates.slice(0, cap),
-    totals: report.totals
-  };
-}
-
 // src/engines/figma/library-health-top.ts
 function rank(counts, n) {
   return [...counts.entries()].map(([name, count]) => ({ name, count })).sort(
@@ -19079,15 +19298,6 @@ function missingFileKeyMessage2() {
     "The key is the segment after /file/ or /design/ in the library file URL."
   ].join("\n");
 }
-function readProjectConfigText4() {
-  const configPath = join22(cwd4(), ".ds-bridge.json");
-  if (!existsSync16(configPath)) return void 0;
-  try {
-    return readFileSync18(configPath, "utf8");
-  } catch {
-    return void 0;
-  }
-}
 function unknownAliasMessage3(outcome, productFileKeys) {
   const aliases = Object.keys(productFileKeys);
   const lines = [`Unknown --file-key alias "${outcome.alias}".`];
@@ -19104,7 +19314,7 @@ function unknownAliasMessage3(outcome, productFileKeys) {
 function clientErrorMessage4(result) {
   switch (result.kind) {
     case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+      return figmaAuthErrorMessage(result);
     case "scope-error":
       return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
     case "not-found":
@@ -19183,7 +19393,7 @@ async function runLibraryHealth(options) {
     );
     return;
   }
-  const projectFileText = readProjectConfigText4();
+  const projectFileText = readProjectConfigText(cwd4());
   const resolved = resolveConfig({
     env: process.env,
     ...projectFileText !== void 0 ? { projectFileText } : {}
@@ -19311,7 +19521,8 @@ import { isAbsolute as isAbsolute3, join as join23, relative, resolve as resolve
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
 var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
-var DIM_RE = /-?\d+(?:\.\d+)?(?:px)?/;
+var DIM_RE = /-?\d+(?:\.\d+)?(?:px|rem)?/;
+var OTHER_UNIT_RE = /^[a-zA-Z%]+/;
 var SPACING_PREFIXES = ["padding", "margin", "inset"];
 var SPACING_EXACT = /* @__PURE__ */ new Set([
   "gap",
@@ -19400,6 +19611,11 @@ function* scanValue(value2, property) {
       if (!/[a-zA-Z0-9.#-]/.test(prev)) {
         const dim = DIM_RE.exec(rest);
         if (dim !== null && dim.index === 0) {
+          const unit = OTHER_UNIT_RE.exec(value2.slice(i + dim[0].length));
+          if (unit !== null) {
+            i += dim[0].length + unit[0].length;
+            continue;
+          }
           const px = Number.parseFloat(dim[0]);
           if (Number.isFinite(px) && px !== 0) {
             yield { offset: i, raw: dim[0], valueKind: "dimension" };
@@ -19450,6 +19666,7 @@ function indexToLineCol(source, index) {
   }
   return { line, col: index - lineStart + 1 };
 }
+var QUOTED_COLOR_RE = /(["'])(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)"']*\))\1/g;
 var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
 function extractTsx(source, file) {
   const out = [];
@@ -19482,6 +19699,19 @@ function extractTsx(source, file) {
             valueKind: "color",
             context: "style-object"
           });
+        } else {
+          for (const hit of scanValue(inner, property)) {
+            const pos = indexToLineCol(source, absValueIndex + 1 + hit.offset);
+            out.push({
+              file,
+              line: pos.line,
+              col: pos.col,
+              raw: hit.raw,
+              property,
+              valueKind: hit.valueKind,
+              context: "style-string"
+            });
+          }
         }
       } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
         if (isSpacingProperty(property)) {
@@ -19498,6 +19728,20 @@ function extractTsx(source, file) {
               context: "style-object"
             });
           }
+        }
+      }
+      if (quoted === null && !/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
+        for (const lit of rawValue.matchAll(QUOTED_COLOR_RE)) {
+          const pos = indexToLineCol(source, absValueIndex + (lit.index ?? 0));
+          out.push({
+            file,
+            line: pos.line,
+            col: pos.col,
+            raw: lit[0],
+            property,
+            valueKind: "color",
+            context: "style-object"
+          });
         }
       }
       pm = STYLE_OBJ_PROP_RE.exec(body);
@@ -20165,7 +20409,16 @@ function registerLintCommand(program2) {
       return;
     }
     const targetDir = isFile ? process.cwd() : targetPath;
-    const tokenSource = resolveTokenSource(targetDir, options.tokens);
+    let projectDir = targetDir;
+    let tokenSource = resolveTokenSource(targetDir, options.tokens);
+    const cwd5 = process.cwd();
+    if (tokenSource.kind === "error" && !isFile && options.tokens === void 0 && targetDir !== cwd5 && isInside(targetDir, cwd5) && !existsSync17(join23(targetDir, ".ds-bridge.json"))) {
+      const fromProject = resolveTokenSource(cwd5, void 0);
+      if (fromProject.kind === "ok") {
+        tokenSource = fromProject;
+        projectDir = cwd5;
+      }
+    }
     if (tokenSource.kind === "error") {
       fail13(tokenSource.message);
       return;
@@ -20192,34 +20445,42 @@ function registerLintCommand(program2) {
       }
       inScope = walked.filter((abs2) => changed.files.has(abs2));
     }
-    const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(targetDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
+    const files = inScope.map((abs2) => ({ abs: abs2, rel: toRelative(projectDir, abs2) })).sort((a, b) => a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0);
     const linted = lintAll(files, tokens);
     if (linted.kind === "error") {
       fail13(linted.message);
       return;
     }
     if (options.fix) {
-      runFix(files, tokens, linted.findings, isFile ? void 0 : targetDir);
+      runFix(files, tokens, linted.findings, isFile ? void 0 : projectDir);
       return;
     }
     emitReport(linted.findings, format);
     if (!isFile) {
       const adoption = computeAdoption(files, linted.findings);
-      appendLintHistory(targetDir, linted.findings, files);
-      if (format === "term") emitAdoptionSummary(adoption);
+      appendLintHistory(projectDir, linted.findings, files);
+      if (format === "term") emitAdoptionSummary(adoption, linted.findings);
     }
     process.exitCode = linted.findings.length > 0 ? 1 : 0;
   });
+}
+function isInside(child, parent) {
+  const rel2 = relative(parent, child);
+  return rel2 === "" || !rel2.startsWith("..") && !isAbsolute3(rel2);
 }
 function toRelative(targetDir, abs2) {
   const rel2 = relative(targetDir, abs2);
   return rel2.split(sep3).join("/");
 }
-function emitAdoptionSummary(adoption) {
+function emitAdoptionSummary(adoption, findings) {
   const total = adoption.refs + adoption.literals;
   const pct5 = total === 0 ? 0 : Math.round(adoption.refs / total * 100);
+  const outside = findings.filter(
+    (f3) => /\.(?:tsx|jsx)$/i.test(f3.literal.file)
+  ).length;
+  const note = outside === 0 ? "" : ` \xB7 ${outside} finding${outside === 1 ? "" : "s"} in .tsx/.jsx not counted`;
   process.stdout.write(
-    `on-system: ${pct5}% (${adoption.refs} token refs / ${total} css/scss values)
+    `on-system: ${pct5}% of css/scss values (${adoption.refs} token refs / ${total})${note}
 `
   );
 }
@@ -20269,7 +20530,7 @@ function runFix(files, tokens, findings, historyDir) {
   if (historyDir !== void 0) {
     const adoption = computeAdoption(files, relinted.findings);
     appendLintHistory(historyDir, relinted.findings, files);
-    emitAdoptionSummary(adoption);
+    emitAdoptionSummary(adoption, relinted.findings);
   }
   process.exitCode = hasRemaining ? 1 : 0;
 }
@@ -20410,7 +20671,8 @@ function hasRegistry2(candidate) {
   );
 }
 function disambiguate2(component, path) {
-  if (component !== void 0 && component !== "" && path === "." && !hasRegistry2(".") && hasRegistry2(component)) {
+  const pathShaped = component !== void 0 && /^\.{1,2}$|[\\/]/.test(component);
+  if (component !== void 0 && component !== "" && path === "." && (pathShaped || !hasRegistry2(".")) && hasRegistry2(component)) {
     return { component: void 0, path: component };
   }
   return { component, path };
@@ -20834,7 +21096,7 @@ import {
   statSync as statSync12,
   writeFileSync as writeFileSync12
 } from "fs";
-import { dirname as dirname8, join as join26, resolve as resolvePath5 } from "path";
+import { dirname as dirname8, join as join26, posix, resolve as resolvePath5, sep as sep4 } from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // src/engines/registry/match.ts
@@ -20899,6 +21161,10 @@ function normalizedKeyIndex(variants) {
 function shapeScore(codeVariants, figmaVariants) {
   const codeIndex = normalizedKeyIndex(codeVariants);
   const figmaIndex = normalizedKeyIndex(figmaVariants);
+  for (const [key, values] of figmaIndex) {
+    const boolean = values.every((v) => /^(?:true|false)$/i.test(v));
+    if (boolean && !codeIndex.has(key)) figmaIndex.delete(key);
+  }
   const codeEmpty = codeIndex.size === 0;
   const figmaEmpty = figmaIndex.size === 0;
   if (codeEmpty && figmaEmpty) return 0.5;
@@ -21027,15 +21293,36 @@ function matchComponents(code, figma) {
 }
 
 // src/cli-commands/registry.ts
-async function scanCode2(targetDir) {
+async function scanCode2(targetDir, configuredPaths) {
   const globals = globalThis;
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath5(import.meta.url);
     globals.__filename = filename;
     globals.__dirname = dirname8(filename);
   }
-  const { scanCodeComponents } = await import("./scan-code-VGXAFUB6.mjs");
-  return scanCodeComponents(targetDir);
+  const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
+    [
+      import("./scan-code-465K2PAS.mjs"),
+      import("./component-paths-DSRHTXXS.mjs")
+    ]
+  );
+  const scope = resolveComponentPaths(targetDir, configuredPaths);
+  if (scope === void 0) {
+    return { code: scanCodeComponents(targetDir), scope };
+  }
+  const code = scope.paths.flatMap(
+    (dir) => scanCodeComponents(join26(targetDir, dir)).map((component) => ({
+      ...component,
+      importPath: posix.join(dir.split(sep4).join("/"), component.importPath)
+    }))
+  );
+  code.sort(
+    (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : byPath(a, b)
+  );
+  return { code, scope };
+}
+function byPath(a, b) {
+  return a.importPath < b.importPath ? -1 : a.importPath > b.importPath ? 1 : 0;
 }
 var DEFAULT_FIGMA_API_BASE6 = "https://api.figma.com";
 function fail16(message) {
@@ -21064,7 +21351,7 @@ function missingFileKeyMessage3() {
 function clientErrorMessage5(result) {
   switch (result.kind) {
     case "auth-error":
-      return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+      return figmaAuthErrorMessage(result);
     case "scope-error":
       return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read and library_content:read.`;
     case "not-found":
@@ -21086,7 +21373,11 @@ async function runBuild(path, options) {
     fail16(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const resolved = resolveConfig({ env: process.env });
+  const projectFileText = readProjectConfigText(targetDir);
+  const resolved = resolveConfig({
+    env: process.env,
+    ...projectFileText !== void 0 ? { projectFileText } : {}
+  });
   if (resolved.kind !== "ok") {
     fail16(resolved.message);
     return;
@@ -21104,7 +21395,7 @@ async function runBuild(path, options) {
     fail16(missingFileKeyMessage3());
     return;
   }
-  const code = await scanCode2(targetDir);
+  const { code, scope } = await scanCode2(targetDir, config.componentPaths);
   const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE6;
   const client = createFigmaClient({
     token: config.figmaToken.value,
@@ -21122,7 +21413,9 @@ async function runBuild(path, options) {
   }
   const figma = buildFigmaComponentModel({
     published: componentsResult.data,
-    fileDocument: fileResult.data.document
+    fileDocument: fileResult.data.document,
+    ...fileResult.data.components !== void 0 ? { fileComponents: fileResult.data.components } : {},
+    ...fileResult.data.componentSets !== void 0 ? { fileComponentSets: fileResult.data.componentSets } : {}
   });
   const matchResult = matchComponents(code, figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -21149,7 +21442,7 @@ async function runBuild(path, options) {
 `);
   } else {
     process.stdout.write(
-      `${renderBuildSummary(registry, registryPath, parityRecord)}
+      `${renderBuildSummary(registry, registryPath, parityRecord, scope)}
 `
     );
   }
@@ -21179,9 +21472,10 @@ function worstAmbiguities(registry) {
   }
   return lines;
 }
-function renderBuildSummary(registry, registryPath, parity) {
+function renderBuildSummary(registry, registryPath, parity, scope) {
   const lines = [
     `Registry written to ${registryPath}`,
+    `  scanned:        ${scope === void 0 ? "the whole project (set component_paths in .ds-bridge.json to narrow it)" : `${scope.paths.join(", ")} (${scope.source})`}`,
     `  matched:        ${registry.matches.length}`,
     `  unmatched code: ${registry.unmatchedCode.length}`,
     `  unmatched figma:${registry.unmatchedFigma.length}`,
@@ -26417,7 +26711,7 @@ import {
   statSync as statSync16,
   writeFileSync as writeFileSync15
 } from "fs";
-import { isAbsolute as isAbsolute4, join as join31, relative as relative2, resolve as resolve17, sep as sep4 } from "path";
+import { isAbsolute as isAbsolute4, join as join31, relative as relative2, resolve as resolve17, sep as sep5 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -26432,6 +26726,28 @@ function canonical2(type, raw) {
     if (dim !== void 0) return `${dim.px}px`;
   }
   return String(raw).trim();
+}
+var VAR_REF_RE = /var\(\s*--([A-Za-z0-9_-]+)/g;
+function derivedAliasKeys(outputs, tokenKeys) {
+  const known = new Set(tokenKeys);
+  const derived = /* @__PURE__ */ new Set();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const output of outputs) {
+      const key = nameKey(output.name);
+      if (known.has(key)) continue;
+      const refs = [...output.raw.matchAll(VAR_REF_RE)].map(
+        (m) => nameKey(m[1])
+      );
+      if (refs.length > 0 && refs.every((ref) => known.has(ref))) {
+        known.add(key);
+        derived.add(key);
+        changed = true;
+      }
+    }
+  }
+  return derived;
 }
 function entryName(entry) {
   return entry.kind === "orphan-output" ? entry.output.name : entry.token.name;
@@ -26459,8 +26775,11 @@ function classifyDrift(source, outputs) {
       entries.push({ kind: "stale-output", token, output });
     }
   }
+  const tokenKeys = new Set(source.tokens.map((t) => nameKey(t.name)));
+  const derived = derivedAliasKeys(outputs, tokenKeys);
   for (const output of outputs) {
-    if (!matchedOutputKeys.has(nameKey(output.name))) {
+    const key = nameKey(output.name);
+    if (!matchedOutputKeys.has(key) && !derived.has(key)) {
       entries.push({ kind: "orphan-output", output });
     }
   }
@@ -26468,6 +26787,63 @@ function classifyDrift(source, outputs) {
     (a, b) => nameKey(entryName(a)) < nameKey(entryName(b)) ? -1 : 1
   );
   return { entries, inSync };
+}
+function scopeSelectsMode(scope, mode) {
+  const escaped = mode.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(
+    scope.toLowerCase()
+  );
+}
+function classifyDriftByMode(modes2, outputs) {
+  const modeNames = modes2.map((m) => m.mode);
+  const scopedMode = (output) => output.scope === void 0 ? void 0 : modeNames.find(
+    (mode) => scopeSelectsMode(output.scope, mode)
+  );
+  const base = outputs.filter((o) => scopedMode(o) === void 0);
+  const entries = [];
+  const skippedModes = [];
+  const missingReported = /* @__PURE__ */ new Set();
+  const tokenKeys = /* @__PURE__ */ new Set();
+  let inSync = 0;
+  modes2.forEach(({ mode, map }, index) => {
+    for (const token of map.tokens) tokenKeys.add(nameKey(token.name));
+    let effective = base;
+    if (index > 0) {
+      const overrides = outputs.filter((o) => scopedMode(o) === mode);
+      if (overrides.length === 0) {
+        skippedModes.push(mode);
+        return;
+      }
+      const overridden = new Set(overrides.map((o) => nameKey(o.name)));
+      effective = [
+        ...base.filter((o) => !overridden.has(nameKey(o.name))),
+        ...overrides
+      ];
+    }
+    const result = classifyDrift(map, effective);
+    inSync += result.inSync;
+    for (const entry of result.entries) {
+      if (entry.kind === "orphan-output") continue;
+      if (entry.kind === "missing-output") {
+        const key = nameKey(entry.token.name);
+        if (missingReported.has(key)) continue;
+        missingReported.add(key);
+      }
+      entries.push({ ...entry, mode });
+    }
+  });
+  const orphanSeen = /* @__PURE__ */ new Set();
+  const derived = derivedAliasKeys(outputs, tokenKeys);
+  for (const output of outputs) {
+    const key = nameKey(output.name);
+    if (tokenKeys.has(key) || derived.has(key) || orphanSeen.has(key)) continue;
+    orphanSeen.add(key);
+    entries.push({ kind: "orphan-output", output });
+  }
+  entries.sort(
+    (a, b) => nameKey(entryName(a)) < nameKey(entryName(b)) ? -1 : 1
+  );
+  return { entries, inSync, skippedModes };
 }
 
 // src/engines/tokens/scan-outputs.ts
@@ -26489,17 +26865,41 @@ function finish(values, warnings) {
   return { kind: "ok", values, warnings };
 }
 var CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
-var CUSTOM_PROP_RE = /--([A-Za-z0-9_-]+)\s*:\s*([^;}]+)/g;
+var CUSTOM_PROP_RE = /^--([A-Za-z0-9_-]+)\s*:\s*([\s\S]+)$/;
+var ROOT_SELECTORS = /* @__PURE__ */ new Set([":root", "html", ":host", "*"]);
+function isRootPrelude(prelude) {
+  return prelude.split(",").every((part) => ROOT_SELECTORS.has(part.trim().toLowerCase()));
+}
 function scanCss(content) {
   const stripped = content.replace(CSS_COMMENT_RE, "");
   const values = [];
-  for (const match of stripped.matchAll(CUSTOM_PROP_RE)) {
+  const stack = [];
+  let buffer = "";
+  const declaration = (text2) => {
+    const match = text2.trim().match(CUSTOM_PROP_RE);
+    if (match === null) return;
     const name = match[1];
-    const rawValue = match[2];
-    if (name === void 0 || rawValue === void 0) continue;
-    const raw = rawValue.replace(/!important/g, "").trim();
-    if (raw !== "") values.push({ name, raw });
+    const raw = match[2].replace(/!important/g, "").trim();
+    if (raw === "") return;
+    const scoped = stack.some((prelude) => !isRootPrelude(prelude));
+    values.push(scoped ? { name, raw, scope: stack.join(" ") } : { name, raw });
+  };
+  for (const char of stripped) {
+    if (char === "{") {
+      stack.push(buffer.trim().replace(/\s+/g, " "));
+      buffer = "";
+    } else if (char === "}") {
+      declaration(buffer);
+      stack.pop();
+      buffer = "";
+    } else if (char === ";") {
+      declaration(buffer);
+      buffer = "";
+    } else {
+      buffer += char;
+    }
   }
+  declaration(buffer);
   return values;
 }
 var THEME_EXPORT_RE = /export\s+const\s+[\w$]+(?:\s*:\s*[^={]+?)?\s*=\s*\{/;
@@ -26742,7 +27142,7 @@ function walkOutputFiles(dir, acc) {
   }
 }
 function depthOf4(path) {
-  return path.split(sep4).filter((s) => s.length > 0).length;
+  return path.split(sep5).filter((s) => s.length > 0).length;
 }
 function isConventionalTokenFile4(name) {
   if (!name.endsWith(".json")) return false;
@@ -26878,7 +27278,29 @@ function loadTokenMapForCheck(tokenPath) {
 ${lines.join("\n")}`
     };
   }
-  return { kind: "ok", map: outcome.map };
+  const themes = format === "tokens-studio" ? readThemes(parsed) : void 0;
+  if (themes === void 0 || themes.length < 2) {
+    return { kind: "ok", map: outcome.map };
+  }
+  const modes2 = [];
+  for (const theme of themes) {
+    const themed = parseTokensStudio(
+      themeSubDocument(parsed, theme)
+    );
+    if (themed.kind === "error") {
+      const lines = themed.errors.map((e4) => {
+        const where = e4.path !== void 0 ? ` (${e4.path})` : "";
+        return `  ${e4.code}${where}: ${e4.message}`;
+      });
+      return {
+        kind: "error",
+        message: `Failed to parse theme "${theme.name}" of "${tokenPath}":
+${lines.join("\n")}`
+      };
+    }
+    modes2.push({ mode: theme.name, map: themed.map });
+  }
+  return { kind: "ok", map: outcome.map, modes: modes2 };
 }
 function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const files = [];
@@ -26901,20 +27323,26 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
       warnings.push(`${relative2(outputsDir, file)}: ${warning}`);
     }
     for (const value2 of outcome.values) {
-      const prior = ownerByName.get(value2.name);
+      const key = `${value2.scope ?? ""}\0${value2.name}`;
+      const prior = ownerByName.get(key);
       if (prior !== void 0 && prior !== file) {
         warnings.push(
           `output "${value2.name}" defined in both ${relative2(outputsDir, prior)} and ${relative2(outputsDir, file)} \u2014 later wins`
         );
       }
-      merged.set(value2.name, value2);
-      ownerByName.set(value2.name, file);
+      merged.set(key, value2);
+      ownerByName.set(key, file);
     }
   }
   const values = [...merged.values()].sort(
     (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
   return { values, warnings };
+}
+function latestByName(values) {
+  const byName2 = /* @__PURE__ */ new Map();
+  for (const value2 of values) byName2.set(value2.name, value2);
+  return [...byName2.values()];
 }
 function countByKind2(result) {
   let stale = 0;
@@ -26927,17 +27355,20 @@ function countByKind2(result) {
   }
   return { stale, missing, orphan };
 }
+function withMode(name, mode) {
+  return mode === void 0 ? name : `${name} (${mode})`;
+}
 function driftDetail(entry) {
   switch (entry.kind) {
     case "stale-output":
       return [
-        entry.token.name,
+        withMode(entry.token.name, entry.mode),
         severityColorless(entry.kind),
         `source ${String(entry.token.value)} \u2260 output ${entry.output.raw}`
       ];
     case "missing-output":
       return [
-        entry.token.name,
+        withMode(entry.token.name, entry.mode),
         severityColorless(entry.kind),
         `no output for source ${String(entry.token.value)}`
       ];
@@ -26973,9 +27404,13 @@ function renderCheckTerm(result, color) {
   }
   return lines.join("\n");
 }
-function checkJson(result) {
+function checkJson(result, skippedModes) {
   return JSON.stringify(
-    { entries: result.entries, inSync: result.entries.length === 0 },
+    {
+      entries: result.entries,
+      inSync: result.entries.length === 0,
+      ...skippedModes.length > 0 ? { skippedModes } : {}
+    },
     null,
     2
   );
@@ -27064,7 +27499,15 @@ function runCheck(path, options) {
     process.stderr.write(`warning: ${warning}
 `);
   }
-  const result = classifyDrift(loaded.map, values);
+  const byMode = loaded.modes !== void 0 ? classifyDriftByMode(loaded.modes, values) : void 0;
+  const result = byMode ?? classifyDrift(loaded.map, latestByName(values));
+  const skippedModes = byMode?.skippedModes ?? [];
+  for (const mode of skippedModes) {
+    process.stderr.write(
+      `warning: theme "${mode}" has no output scoped to it (e.g. .${mode} { \u2026 } or [data-theme="${mode}"]) \u2014 not compared
+`
+    );
+  }
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
   const stateDir = join31(targetDir, ".ds-bridge");
@@ -27078,7 +27521,7 @@ function runCheck(path, options) {
     inSync
   });
   if (format === "json") {
-    process.stdout.write(`${checkJson(result)}
+    process.stdout.write(`${checkJson(result, skippedModes)}
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));

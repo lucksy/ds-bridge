@@ -5,7 +5,7 @@ argument-hint: "[path] [--modes <m1,m2>] [--level AA|AAA]"
 
 ## Contrast audit output
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs a11y $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs a11y '$ARGUMENTS' --format=json`
 
 ## Your task
 

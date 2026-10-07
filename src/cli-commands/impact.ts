@@ -35,7 +35,7 @@ import { dirname, join } from "node:path";
 import { cwd, env as processEnv } from "node:process";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { readProjectConfigText, resolveConfig } from "../config.js";
 import {
 	type ComponentDiff,
 	diffComponents,
@@ -46,7 +46,11 @@ import {
 	buildFigmaComponentModel,
 	type FigmaComponentModel,
 } from "../engines/registry/scan-figma.js";
-import { createFigmaClient, type FigmaResult } from "../io/figma/client.js";
+import {
+	createFigmaClient,
+	type FigmaFile,
+	type FigmaResult,
+} from "../io/figma/client.js";
 import { resolveFileKey } from "../io/figma/file-key.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
 import {
@@ -54,7 +58,10 @@ import {
 	severityColor,
 	shouldColor,
 } from "../render/terminal/index.js";
-import { missingFigmaTokenMessage } from "./figma-auth-help.js";
+import {
+	figmaAuthErrorMessage,
+	missingFigmaTokenMessage,
+} from "./figma-auth-help.js";
 
 type ImpactFormat = "json" | "term";
 
@@ -133,7 +140,7 @@ function clientErrorMessage(
 ): string {
 	switch (result.kind) {
 		case "auth-error":
-			return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+			return figmaAuthErrorMessage(result);
 		case "scope-error":
 			return `Figma token is missing a required scope: ${result.message}. The token needs library_content:read and file_versions:read.`;
 		case "not-found":
@@ -142,17 +149,6 @@ function clientErrorMessage(
 			return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited — use a Dev/Full-seat PAT.`;
 		case "network-error":
 			return `Could not reach the Figma API: ${result.message}.`;
-	}
-}
-
-/** Read <cwd>/.ds-bridge.json text (for product_file_keys), or undefined when absent. */
-function readProjectConfigText(): string | undefined {
-	const configPath = join(cwd(), ".ds-bridge.json");
-	if (!existsSync(configPath)) return undefined;
-	try {
-		return readFileSync(configPath, "utf8");
-	} catch {
-		return undefined;
 	}
 }
 
@@ -537,7 +533,7 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 
 	// Read the project file so `product_file_keys` aliases are available to the
 	// generalized --file-key resolver (M1.3); env still merges its own aliases.
-	const projectFileText = readProjectConfigText();
+	const projectFileText = readProjectConfigText(cwd());
 	const resolved = resolveConfig({
 		env: process.env,
 		...(projectFileText !== undefined ? { projectFileText } : {}),
@@ -589,8 +585,22 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 		return;
 	}
 
+	// An unpublished library lists no components on the published endpoint;
+	// its components live only in the file tree, so read that instead of
+	// baselining nothing. Published libraries keep the single cheap request.
+	const publishedCount = componentsResult.data.meta?.components?.length ?? 0;
+	let fileDocument: FigmaFile["document"] | undefined;
+	if (publishedCount === 0) {
+		const fileResult = await client.getFile(fileKey);
+		if (fileResult.kind !== "ok") {
+			fail(clientErrorMessage(fileResult));
+			return;
+		}
+		fileDocument = fileResult.data.document;
+	}
 	const freshSnapshot = buildFigmaComponentModel({
 		published: componentsResult.data,
+		...(fileDocument !== undefined ? { fileDocument } : {}),
 	});
 	const newestVersionId = versionsResult.data.versions[0]?.id ?? "";
 

@@ -306,6 +306,12 @@ export interface ResolvedConfig {
 	 * SPEC-history-v2 §9.1). Project-file only; `undefined` when absent.
 	 */
 	trackedFrames: string[] | undefined;
+	/**
+	 * Directories (project-relative) holding the design-system components that
+	 * `registry build` scans. Project-file only; `undefined` when absent — the
+	 * registry then auto-detects (shadcn's components.json) or scans the project.
+	 */
+	componentPaths: string[] | undefined;
 }
 
 export interface ConfigFlags {
@@ -354,6 +360,7 @@ interface ProjectFileValues {
 	migrationSitesCap?: number;
 	scoreVelocityWindow?: number;
 	trackedFrames?: string[];
+	componentPaths?: string[];
 	hadFigmaToken: boolean;
 }
 
@@ -515,6 +522,22 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 			frames.push(entry);
 		}
 		values.trackedFrames = frames;
+	}
+
+	if (obj.component_paths !== undefined) {
+		const paths = obj.component_paths;
+		if (
+			!Array.isArray(paths) ||
+			paths.length === 0 ||
+			!paths.every((p) => typeof p === "string" && p.trim() !== "")
+		) {
+			return {
+				kind: "invalid",
+				message:
+					'component_paths must be a non-empty array of project-relative directories, e.g. ["src/components/ui"]',
+			};
+		}
+		values.componentPaths = paths as string[];
 	}
 
 	// System-score weights (SPEC-score §2). Validation is delegated entirely to
@@ -942,10 +965,12 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 	// A pasted Figma URL (the natural thing a user does) collapses to its bare key
 	// here, so every consumer of figmaFileKey — registry build, impact, handoff,
 	// library-health — gets a key the REST API accepts instead of a 404.
+	// An empty value means "not set": Claude Code passes a blank userConfig field
+	// through as "", which must not shadow the committed project file's key.
 	const rawFigmaFileKey =
-		flags.figmaFileKey ??
-		env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ??
-		env.FIGMA_DESIGN_SYSTEM_FILE ??
+		nonEmpty(flags.figmaFileKey) ??
+		nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY) ??
+		nonEmpty(env.FIGMA_DESIGN_SYSTEM_FILE) ??
 		project.figmaFileKey;
 
 	const config: ResolvedConfig = {
@@ -998,6 +1023,7 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 		scoreVelocityWindow:
 			project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW,
 		trackedFrames: project.trackedFrames,
+		componentPaths: project.componentPaths,
 	};
 
 	return { kind: "ok", config, warnings };
@@ -1005,6 +1031,27 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 
 /** Name of the project config file, beside which the temp file is written. */
 const PROJECT_FILE_NAME = ".ds-bridge.json";
+
+/** `value`, or undefined when it is undefined or the empty string. */
+function nonEmpty(value: string | undefined): string | undefined {
+	return value === undefined || value === "" ? undefined : value;
+}
+
+/**
+ * Read `<dir>/.ds-bridge.json` text for `resolveConfig({ projectFileText })`,
+ * or undefined when the file is absent or unreadable. Every command that reads
+ * project settings (file keys, gates, weights) must pass this through — the
+ * committed file is where `config set-library` and teams put shared settings.
+ */
+export function readProjectConfigText(dir: string): string | undefined {
+	const configPath = join(dir, PROJECT_FILE_NAME);
+	if (!existsSync(configPath)) return undefined;
+	try {
+		return readFileSync(configPath, "utf8");
+	} catch {
+		return undefined;
+	}
+}
 
 /** A JSON value a patch may set on the project file. */
 export type JsonPatchValue =

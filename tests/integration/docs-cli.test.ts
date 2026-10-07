@@ -57,6 +57,7 @@ const REGISTRY = {
 			figmaName: "Button",
 			nodeId: "10:1",
 			score: 0.95,
+			description: "Primary action button.",
 		},
 	],
 	unmatchedCode: [
@@ -145,6 +146,22 @@ describe("ds-bridge docs (built dist/cli.mjs)", () => {
 		);
 	});
 
+	it("writes the import line with the project's tsconfig alias when one covers the file", async () => {
+		const dir = await freshProject();
+		await writeFile(
+			join(dir, "tsconfig.json"),
+			JSON.stringify({ compilerOptions: { paths: { "@/*": ["./*"] } } }),
+			"utf8",
+		);
+		const result = await runCli(["docs", dir]);
+		expect(result.code).toBe(0);
+		const button = await readFile(
+			join(dir, ".ds-bridge", "docs", "Button.mdx"),
+			"utf8",
+		);
+		expect(button).toContain('import { Button } from "@/components/button";');
+	}, 60_000);
+
 	it("writes one MDX page per component + llms.txt to the default out dir", async () => {
 		const dir = await freshProject();
 		const result = await runCli(["docs", dir]);
@@ -210,6 +227,10 @@ describe("ds-bridge docs (built dist/cli.mjs)", () => {
 		// Tooltip (figma-only, no description) carries gaps.
 		const tooltip = parsed.pages.find((p) => p.component === "Tooltip");
 		expect(tooltip?.gaps).toContain("unmatched-in-code");
+		expect(tooltip?.gaps).toContain("missing-figma-description");
+		// Button's description is persisted in the registry, so it is no gap.
+		const button = parsed.pages.find((p) => p.component === "Button");
+		expect(button?.gaps).not.toContain("missing-figma-description");
 	}, 60_000);
 
 	it("[component] filters to a single component", async () => {
@@ -251,4 +272,25 @@ describe("ds-bridge docs (built dist/cli.mjs)", () => {
 		expect(result.code).toBe(2);
 		expect(result.stderr.toLowerCase()).toContain("registry build");
 	}, 60_000);
+
+	it("`docs .` run inside the project treats . as the path, not a component", async () => {
+		const dir = await freshProject();
+		let code = 0;
+		let stderr = "";
+		try {
+			await execFileAsync(
+				process.execPath,
+				[cliPath, "docs", ".", "--format=json"],
+				{
+					encoding: "utf8",
+					cwd: dir,
+				},
+			);
+		} catch (error) {
+			code = (error as { code: number }).code;
+			stderr = (error as { stderr: string }).stderr;
+		}
+		expect(stderr).not.toContain('named "."');
+		expect(code).not.toBe(2);
+	});
 });

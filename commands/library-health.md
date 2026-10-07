@@ -5,7 +5,7 @@ argument-hint: "[--file-key <keyOrAlias>] [--refresh]"
 
 ## Library health output
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs library-health $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs library-health '$ARGUMENTS' --format=json`
 
 ## Your task
 

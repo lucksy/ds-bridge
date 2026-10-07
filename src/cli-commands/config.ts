@@ -143,8 +143,10 @@ function runPersistToken(path: string): void {
 		updates.FIGMA_DESIGN_SYSTEM_FILE = fileKey;
 	}
 
+	let gitignoreUpdated: boolean;
 	try {
 		writeEnvFileMerged(targetDir, updates);
+		gitignoreUpdated = ensureGitignored(targetDir);
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
 		fail(`Could not write ${join(targetDir, ENV_FILE_NAME)}: ${detail}`);
@@ -158,7 +160,8 @@ function runPersistToken(path: string): void {
 	process.stdout.write(
 		`Saved Figma token (${maskToken(token)})${savedKey} to ` +
 			`${join(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). ` +
-			"It now survives a restart; the live plugin-dialog value still wins when present.\n",
+			"It now survives a restart; the live plugin-dialog value still wins when present.\n" +
+			(gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.\n` : ""),
 	);
 	process.exitCode = 0;
 }

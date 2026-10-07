@@ -7,7 +7,7 @@
 // still side-effect-free beyond reading the supplied root and NEVER throws:
 // weird/unreadable files are skipped, never fatal.
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { type Node, Project, type Type } from "ts-morph";
+import { Node, Project, type Type } from "ts-morph";
 
 /** A single component prop, as resolved from its props type. */
 export interface CodeProp {
@@ -130,6 +130,37 @@ function stringLiteralVariants(propType: Type): string[] | undefined {
 	return values.length > 0 ? values : undefined;
 }
 
+/**
+ * Names bound by an object-destructuring first parameter
+ * (`function X({ a, b = 1, ...rest })` → a, b), following a const's arrow or
+ * function initializer. Empty when the parameter is not destructured.
+ */
+function destructuredPropNames(decl: Node): Set<string> {
+	const names = new Set<string>();
+	let fn: Node | undefined = decl;
+	if (Node.isVariableDeclaration(decl)) fn = decl.getInitializer();
+	if (
+		fn === undefined ||
+		!(
+			Node.isFunctionDeclaration(fn) ||
+			Node.isArrowFunction(fn) ||
+			Node.isFunctionExpression(fn)
+		)
+	) {
+		return names;
+	}
+	const pattern = fn.getParameters()[0]?.getNameNode();
+	if (pattern === undefined || !Node.isObjectBindingPattern(pattern)) {
+		return names;
+	}
+	for (const element of pattern.getElements()) {
+		if (element.getDotDotDotToken() !== undefined) continue;
+		const key = element.getPropertyNameNode() ?? element.getNameNode();
+		names.add(key.getText());
+	}
+	return names;
+}
+
 /** Resolve props + variants for one component declaration. */
 function readComponent(
 	name: string,
@@ -140,8 +171,25 @@ function readComponent(
 	const variants: Record<string, string[]> = {};
 
 	const propsType = resolvePropsType(decl);
+	const destructured = destructuredPropNames(decl);
 	if (propsType !== undefined) {
 		for (const symbol of propsType.getProperties()) {
+			// Props declared only in compiled declarations (@types/react's HTML
+			// attributes behind React.ComponentProps<"button">) are inherited, not
+			// the component's API — keeping them buried shadcn-style components
+			// under ~280 props and turned `autoCapitalize`-style unions into
+			// variant axes no Figma component has.
+			// An inherited prop the component destructures by name (shadcn's
+			// `{ orientation = "horizontal", ...props }` over a radix type) IS
+			// part of its API, so it stays.
+			const declarations = symbol.getDeclarations();
+			if (
+				declarations.length > 0 &&
+				declarations.every((d) => d.getSourceFile().isDeclarationFile()) &&
+				!destructured.has(symbol.getName())
+			) {
+				continue;
+			}
 			const propDecl =
 				symbol.getValueDeclaration() ?? symbol.getDeclarations()[0] ?? decl;
 			let propType: Type;
@@ -170,7 +218,9 @@ function readComponent(
  * deterministic, name-sorted list. Function declarations, typed const arrows,
  * `React.FC<P>`, `forwardRef<T, P>`, HOC-wrapped exports whose inner signature
  * is resolvable, and `styled` template exports are all recognised through their
- * call signature. Non-callable exports (types, helpers, constants) are skipped.
+ * call signature. Non-callable exports (types, helpers, constants) and
+ * non-PascalCase exports (cva helpers, hooks, `default`) are skipped; props
+ * inherited from compiled `.d.ts` types (React's HTML attributes) are dropped.
  *
  * Never throws: a missing root, unreadable file, or unparseable source yields
  * whatever was resolvable (possibly an empty array).
@@ -228,6 +278,9 @@ export function scanCodeComponents(
 		}
 
 		for (const [name, decls] of exports) {
+			// React components are PascalCase; callable lower-case exports are
+			// helpers (cva's buttonVariants, hooks, utils) and `default`.
+			if (!/^[A-Z]/.test(name)) continue;
 			const decl = decls[0];
 			if (decl === undefined) continue;
 			try {

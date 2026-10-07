@@ -73,7 +73,14 @@ export interface FigmaFile {
 	// published. Verified live 2026-06-09 (T4.7 smoke): the published-only
 	// `/components` endpoint returned 0 on the test file, so this inline map is the
 	// source of component names for instance resolution.
-	components?: Record<string, { name: string }>;
+	components?: Record<
+		string,
+		{ name: string; description?: string; componentSetId?: string }
+	>;
+	// The same, for component sets (keyed by the COMPONENT_SET node id). Holds
+	// the set's name ("Badge") — `components` only names its variants
+	// ("variant=secondary") — and the set's description.
+	componentSets?: Record<string, { name: string; description?: string }>;
 }
 
 /** GET /v1/files/:key/nodes?ids=… */
@@ -81,7 +88,16 @@ export interface FigmaFileNodes {
 	name: string;
 	lastModified: string;
 	version: string;
-	nodes: Record<string, { document: FigmaNode } | undefined>;
+	nodes: Record<
+		string,
+		| {
+				document: FigmaNode;
+				// Same shape as FigmaFile's maps, scoped to the requested subtree.
+				components?: FigmaFile["components"];
+				componentSets?: FigmaFile["componentSets"];
+		  }
+		| undefined
+	>;
 }
 
 export interface FigmaUser {
@@ -169,7 +185,7 @@ export interface FigmaImageOptions {
 
 export type FigmaResult<T> =
 	| { kind: "ok"; data: T }
-	| { kind: "auth-error" }
+	| { kind: "auth-error"; message?: string }
 	| { kind: "scope-error"; message: string }
 	| { kind: "not-found" }
 	| { kind: "rate-limited"; retryAfterSeconds: number }
@@ -245,6 +261,15 @@ function parseRetryAfter(headers: Headers): number {
 		: DEFAULT_RETRY_AFTER_SECONDS;
 }
 
+/** The `err` string of a Figma error body, if there is one. */
+function errText(body: unknown): string | undefined {
+	if (typeof body !== "object" || body === null || !("err" in body)) {
+		return undefined;
+	}
+	const err = (body as { err: unknown }).err;
+	return typeof err === "string" && err !== "" ? err : undefined;
+}
+
 /** True when a 403 body indicates a missing OAuth scope rather than a bad token. */
 function mentionsScope(body: unknown): boolean {
 	const text = typeof body === "string" ? body : JSON.stringify(body ?? "");
@@ -293,7 +318,14 @@ export function createFigmaClient(options: FigmaClientOptions): FigmaClient {
 				return { kind: "rate-limited", retryAfterSeconds: lastRetryAfter };
 			}
 
-			if (status === 401) return { kind: "auth-error" };
+			if (status === 401) {
+				// Keep Figma's reason ("Token has expired", "Invalid token") so the
+				// user learns WHY the token was rejected.
+				const reason = errText(await response.json().catch(() => undefined));
+				return reason !== undefined
+					? { kind: "auth-error", message: reason }
+					: { kind: "auth-error" };
+			}
 
 			if (status === 403) {
 				let body: unknown;

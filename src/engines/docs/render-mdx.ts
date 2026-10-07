@@ -28,7 +28,7 @@ function renderImport(doc: ComponentDoc): string | undefined {
 	if (doc.code.importPath.length === 0) return undefined;
 	return [
 		"```tsx",
-		`import { ${doc.name} } from "${doc.code.importPath}";`,
+		`import { ${doc.name} } from "${doc.code.importSpecifier ?? doc.code.importPath}";`,
 		"```",
 	].join("\n");
 }

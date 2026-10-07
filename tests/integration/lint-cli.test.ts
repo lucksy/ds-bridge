@@ -3,7 +3,16 @@
 // --fix tests COPY the sample project into a fresh tmp dir so the originals are
 // never mutated; idempotency is asserted byte-for-byte across two fix runs.
 import { execFile } from "node:child_process";
-import { access, cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import {
+	access,
+	cp,
+	mkdir,
+	mkdtemp,
+	readFile,
+	rm,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -265,6 +274,35 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		expect(stderr.toLowerCase()).toContain("token");
 	});
 
+	it("`lint src` from the project root uses the root's tokens and records history at the root", async () => {
+		const project = await freshTmp("ds-lint-subdir-");
+		await writeFile(
+			join(project, "tokens.json"),
+			JSON.stringify({
+				color: { $type: "color", brand: { $value: "#3b82f6" } },
+			}),
+			"utf8",
+		);
+		await mkdir(join(project, "src"), { recursive: true });
+		await writeFile(
+			join(project, "src", "a.css"),
+			".x { color: #3b82f6; }\n",
+			"utf8",
+		);
+		let code = 0;
+		try {
+			await execFileAsync(process.execPath, [cliPath, "lint", "src"], {
+				cwd: project,
+				encoding: "utf8",
+			});
+		} catch (error) {
+			code = (error as { code: number }).code;
+		}
+		expect(code).toBe(1); // the exact #3b82f6 finding
+		expect(existsSync(join(project, ".ds-bridge", "history.jsonl"))).toBe(true);
+		expect(existsSync(join(project, "src", ".ds-bridge"))).toBe(false);
+	});
+
 	it("a single FILE path lints only that file (exit 1), with token discovery from cwd", async () => {
 		// Pointing at one file must not walk the whole project: only button.css
 		// findings come back. Token source falls back to discovery from cwd when
@@ -418,6 +456,32 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		// refs=7 of refs+literals=11 → 64% on-system.
 		expect(stdout.toLowerCase()).toContain("on-system");
 		expect(stdout).toMatch(/64%/);
+	});
+
+	it("the on-system line says how many JSX/TSX findings the css/scss ratio leaves out", async () => {
+		const dir = await freshTmp("ds-lint-adopt-scope-");
+		await writeFile(
+			join(dir, "tokens.json"),
+			JSON.stringify({
+				color: { $type: "color", brand: { $value: "#3b82f6" } },
+			}),
+			"utf8",
+		);
+		await writeFile(
+			join(dir, "a.css"),
+			".x { color: var(--color-brand); }\n",
+			"utf8",
+		);
+		await writeFile(
+			join(dir, "B.tsx"),
+			'export const B = () => <b style={{ color: "#ff0000" }} />;\n',
+			"utf8",
+		);
+		const { stdout } = await runCli(["lint", dir]);
+		expect(stdout).toContain(
+			"on-system: 100% of css/scss values (1 token refs / 1)",
+		);
+		expect(stdout).toContain("1 finding in .tsx/.jsx not counted");
 	});
 
 	it("A2: a single-FILE lint carries no adoption (hook branch untouched)", async () => {

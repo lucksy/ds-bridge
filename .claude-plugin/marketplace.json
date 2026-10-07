@@ -7,7 +7,11 @@
 	"plugins": [
 		{
 			"name": "ds-bridge",
-			"source": "."
+			"source": {
+				"source": "github",
+				"repo": "lucksy/ds-bridge",
+				"ref": "release"
+			}
 		}
 	]
 }

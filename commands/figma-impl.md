@@ -29,7 +29,7 @@ instructions verbatim and **STOP** (do not proceed, do not guess):
 
 Score the frame's machine-readability first:
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs handoff $ARGUMENTS --format=json 2>&1 || true`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs handoff '$ARGUMENTS' --format=json`
 
 The block above is the `ReadinessReport` for the frame. If it errored (bad URL,
 missing token), surface the one fix and stop. Otherwise read `score`. If it is

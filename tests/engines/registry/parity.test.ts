@@ -224,6 +224,77 @@ describe("buildParity", () => {
 	});
 });
 
+describe("buildParity — compound component parts", () => {
+	const card = {
+		codeName: "Card",
+		importPath: "src/components/ui/card.tsx",
+		figmaName: "Card",
+		nodeId: "1:110",
+		score: 0.9,
+	};
+	const part = (name: string, importPath = "src/components/ui/card.tsx") => ({
+		name,
+		importPath,
+		candidates: [],
+	});
+
+	it("folds same-file parts (CardHeader, CardTitle) into the parent's row", () => {
+		const report = buildParity(
+			registry({
+				matches: [card],
+				unmatchedCode: [part("CardHeader"), part("CardTitle")],
+			}),
+		);
+		expect(report.rows.map((r) => [r.component, r.status])).toEqual([
+			["Card", "ok"],
+		]);
+		expect(report.rows[0]?.detail).toContain("Parts: CardHeader, CardTitle");
+		expect(report.summary.missingInFigma).toBe(0);
+	});
+
+	it("folds the parts of a parent that is itself missing in Figma into its one row", () => {
+		const report = buildParity(
+			registry({
+				unmatchedCode: [
+					part("Dialog", "src/components/ui/dialog.tsx"),
+					part("DialogContent", "src/components/ui/dialog.tsx"),
+					part("DialogTitle", "src/components/ui/dialog.tsx"),
+				],
+			}),
+		);
+		expect(report.rows.map((r) => r.component)).toEqual(["Dialog"]);
+		expect(report.summary.missingInFigma).toBe(1);
+	});
+
+	it("does not fold a same-prefix component from another file", () => {
+		const report = buildParity(
+			registry({
+				matches: [card],
+				unmatchedCode: [part("CardGrid", "src/components/card-grid.tsx")],
+			}),
+		);
+		expect(report.rows.map((r) => r.component).sort()).toEqual([
+			"Card",
+			"CardGrid",
+		]);
+	});
+});
+
+describe("buildParity — deprecated Figma components", () => {
+	it("does not ask code to implement a Figma component marked deprecated", () => {
+		const report = buildParity(
+			registry({
+				unmatchedFigma: [
+					{ name: "Legacy Button", nodeId: "1:127", candidates: [] },
+					{ name: "Tooltip", nodeId: "1:125", candidates: [] },
+				],
+			}),
+		);
+		expect(report.rows.map((r) => r.component)).toEqual(["Tooltip"]);
+		expect(report.summary.missingInCode).toBe(1);
+	});
+});
+
 describe("toParitySection", () => {
 	function sampleReport(): ParityReport {
 		return buildParity(

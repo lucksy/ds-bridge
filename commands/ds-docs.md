@@ -5,7 +5,7 @@ argument-hint: "[component] [--out <dir>]"
 
 ## Generated docs
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs docs $ARGUMENTS --format=json 2>&1 || true`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs docs '$ARGUMENTS' --format=json`
 
 ## Your task
 

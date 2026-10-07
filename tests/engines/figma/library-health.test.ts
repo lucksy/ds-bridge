@@ -228,6 +228,19 @@ describe("assessLibraryHealth — detached candidates (heuristic)", () => {
 		expect(r.detachedCandidates.every((d) => d.heuristic === true)).toBe(true);
 	});
 
+	it("flags a frame named after a component SET (a detached variant)", () => {
+		// The components map only holds variant names ("variant=secondary");
+		// the set name ("Badge") lives in componentSets.
+		const f: FigmaFile = {
+			...file(doc([{ id: "1:1", name: "Badge", type: "FRAME" }]), {
+				"10:1": { name: "variant=secondary" },
+			}),
+			componentSets: { "10:0": { name: "Badge" } },
+		};
+		const r = assessLibraryHealth(f);
+		expect(r.detachedCandidates.map((d) => d.nodeId)).toEqual(["1:1"]);
+	});
+
 	it("is empty when there is no components map", () => {
 		const f = file(doc([{ id: "1:1", name: "Button", type: "FRAME" }]));
 		const r = assessLibraryHealth(f);

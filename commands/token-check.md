@@ -5,7 +5,7 @@ argument-hint: "[--report] [path]"
 
 ## Drift output
 
-!`node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs tokens check $ARGUMENTS --format=json`
+!`node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs "tokens check" '$ARGUMENTS' --format=json`
 
 ## Your task
 

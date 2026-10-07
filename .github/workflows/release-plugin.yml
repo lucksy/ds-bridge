@@ -1,0 +1,94 @@
+name: Release plugin
+
+# Publishes the trimmed plugin payload to the `release` branch, which the
+# marketplace (.claude-plugin/marketplace.json) installs from. Claude Code has no
+# ignore file for plugin installs, so installing from `main` shipped src/,
+# tests/ and node_modules/ (~190 MB); the release branch holds only what runs
+# (~15 MB). See scripts/build-release.mjs.
+#
+# Runs on every release tag (tags commit dist/ — the release contract), or by
+# hand for an existing tag. The build script always comes from this workflow's
+# own checkout, so tags cut before it existed can be published too.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (e.g. v1.15.0)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-plugin
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Check out the workflow (build script)
+        uses: actions/checkout@v4
+        with:
+          path: tools
+
+      - name: Check out the release tag (payload)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          path: tagged
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: The tag matches the plugin version
+        working-directory: tagged
+        run: |
+          version=$(node -p "require('./.claude-plugin/plugin.json').version")
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::tag $TAG does not match plugin.json version $version"
+            exit 1
+          fi
+          cli=$(node dist/cli.mjs --version)
+          if [ "$cli" != "$version" ]; then
+            echo "::error::dist/cli.mjs reports $cli, plugin.json says $version — rebuild dist/ before tagging"
+            exit 1
+          fi
+
+      - name: Build the trimmed payload
+        run: node tools/scripts/build-release.mjs "$RUNNER_TEMP/plugin" --from tagged
+
+      - name: Validate it (strict)
+        run: npx --yes @anthropic-ai/claude-code plugin validate "$RUNNER_TEMP/plugin" --strict
+
+      - name: Commit it to the release branch
+        working-directory: tools
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin release >/dev/null; then
+            git fetch --quiet origin +refs/heads/release:refs/remotes/origin/release
+            git worktree add --quiet "$RUNNER_TEMP/release" -B release origin/release
+          else
+            git worktree add --quiet --detach "$RUNNER_TEMP/release"
+            git -C "$RUNNER_TEMP/release" checkout --quiet --orphan release
+          fi
+          cd "$RUNNER_TEMP/release"
+          git rm -rqf --ignore-unmatch .
+          git clean -fdxq
+          cp -R "$RUNNER_TEMP/plugin/." .
+          git add -A
+          if git diff --cached --quiet; then
+            echo "release branch already holds $TAG — nothing to publish"
+            exit 0
+          fi
+          source_sha=$(git -C "$GITHUB_WORKSPACE/tagged" rev-parse --short HEAD)
+          git commit --quiet -m "release: $TAG (from $source_sha)"
+          git push --quiet origin release
+          echo "Published $TAG to the release branch"

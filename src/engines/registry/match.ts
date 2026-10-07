@@ -136,6 +136,7 @@ function normalizedKeyIndex(
  * shapeScore: overlap of variant dimensions. Both empty -> 0.5 (neutral, no
  * signal); exactly one empty -> 0.25; otherwise average the per-key value
  * Jaccard across the UNION of normalized keys (a key on only one side scores 0).
+ * Figma true/false axes without a same-named code axis are ignored first.
  */
 function shapeScore(
 	codeVariants: Record<string, string[]>,
@@ -143,6 +144,13 @@ function shapeScore(
 ): number {
 	const codeIndex = normalizedKeyIndex(codeVariants);
 	const figmaIndex = normalizedKeyIndex(figmaVariants);
+	// A Figma axis of only true/false (`checked=true`) is how Figma models a
+	// boolean; in code it is a boolean prop, which is never a string variant —
+	// so it carries no shape signal unless code has a string axis of that name.
+	for (const [key, values] of figmaIndex) {
+		const boolean = values.every((v) => /^(?:true|false)$/i.test(v));
+		if (boolean && !codeIndex.has(key)) figmaIndex.delete(key);
+	}
 	const codeEmpty = codeIndex.size === 0;
 	const figmaEmpty = figmaIndex.size === 0;
 

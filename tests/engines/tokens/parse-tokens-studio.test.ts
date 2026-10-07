@@ -317,3 +317,77 @@ describe("parseTokensStudio — invalid shapes", () => {
 		expect(() => parseTokensStudio(Symbol("x"))).not.toThrow();
 	});
 });
+
+describe("parseTokensStudio — $themes (light/dark)", () => {
+	// A typical Tokens Studio export: shared `core` plus one set per mode. Merging
+	// every set with later-wins would make the LAST mode (dark) the canonical
+	// value, so light-mode drift and lint suggestions silently used dark values.
+	const themed = {
+		core: { radius: { value: "8px", type: "borderRadius" } },
+		light: {
+			background: { value: "#ffffff", type: "color" },
+			fg: { value: "{radius}", type: "color" },
+		},
+		dark: {
+			background: { value: "#0a0a0a", type: "color" },
+			"dark-only": { value: "#123456", type: "color" },
+		},
+		$themes: [
+			{
+				id: "l",
+				name: "light",
+				selectedTokenSets: { core: "source", light: "enabled" },
+			},
+			{
+				id: "d",
+				name: "dark",
+				selectedTokenSets: { core: "source", dark: "enabled" },
+			},
+		],
+		$metadata: { tokenSetOrder: ["core", "light", "dark"] },
+	};
+
+	it("takes a token's value from the first (default) theme, not the last set", () => {
+		const outcome = parseTokensStudio(themed);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		const bg = outcome.map.tokens.find((t) => t.name === "background");
+		expect(bg?.value).toBe("#ffffff");
+		expect(bg?.group).toBe("light");
+	});
+
+	it("still includes tokens that exist only in another theme's sets", () => {
+		const outcome = parseTokensStudio(themed);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		const only = outcome.map.tokens.find((t) => t.name === "dark-only");
+		expect(only?.value).toBe("#123456");
+		expect(only?.group).toBe("dark");
+	});
+
+	it("keeps later-set-wins among the default theme's own sets", () => {
+		const outcome = parseTokensStudio({
+			base: { brand: { value: "#111111", type: "color" } },
+			brandA: { brand: { value: "#222222", type: "color" } },
+			brandB: { brand: { value: "#333333", type: "color" } },
+			$themes: [
+				{
+					id: "a",
+					name: "a",
+					selectedTokenSets: { base: "source", brandA: "enabled" },
+				},
+				{
+					id: "b",
+					name: "b",
+					selectedTokenSets: { base: "source", brandB: "enabled" },
+				},
+			],
+			$metadata: { tokenSetOrder: ["base", "brandA", "brandB"] },
+		});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.map.tokens.find((t) => t.name === "brand")?.value).toBe(
+			"#222222",
+		);
+	});
+});

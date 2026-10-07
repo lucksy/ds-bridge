@@ -21,7 +21,7 @@ import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import { isAbsolute, join, resolve, sep } from "node:path";
 import { cwd } from "node:process";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { readProjectConfigText, resolveConfig } from "../config.js";
 import { parseFigmaUrl } from "../engines/handoff/parse-url.js";
 import {
 	type FrameRequirement,
@@ -53,7 +53,10 @@ import {
 	severityColor,
 	shouldColor,
 } from "../render/terminal/index.js";
-import { missingFigmaTokenMessage } from "./figma-auth-help.js";
+import {
+	figmaAuthErrorMessage,
+	missingFigmaTokenMessage,
+} from "./figma-auth-help.js";
 
 type FrameImplFormat = "json" | "term";
 
@@ -148,7 +151,7 @@ function clientErrorMessage(
 ): string {
 	switch (result.kind) {
 		case "auth-error":
-			return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+			return figmaAuthErrorMessage(result);
 		case "scope-error":
 			return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read.`;
 		case "not-found":
@@ -157,17 +160,6 @@ function clientErrorMessage(
 			return `Figma rate-limited the request (retry after ~${result.retryAfterSeconds}s). View-seat tokens are heavily limited — use a Dev/Full-seat PAT.`;
 		case "network-error":
 			return `Could not reach the Figma API: ${result.message}.`;
-	}
-}
-
-/** Read <cwd>/.ds-bridge.json text (for product_file_keys), or undefined when absent. */
-function readProjectConfigText(): string | undefined {
-	const configPath = join(cwd(), ".ds-bridge.json");
-	if (!existsSync(configPath)) return undefined;
-	try {
-		return readFileSync(configPath, "utf8");
-	} catch {
-		return undefined;
 	}
 }
 
@@ -536,7 +528,7 @@ async function runFrameImpl(
 	}
 
 	// Resolve config (token + product_file_keys aliases + default key).
-	const projectFileText = readProjectConfigText();
+	const projectFileText = readProjectConfigText(cwd());
 	const resolved = resolveConfig({
 		env: process.env,
 		...(projectFileText !== undefined ? { projectFileText } : {}),

@@ -216,11 +216,14 @@ function disambiguate(
 	component: string | undefined,
 	path: string,
 ): { component: string | undefined; path: string } {
+	// A path-shaped argument (".", "..", "a/b") is never a component name.
+	const pathShaped =
+		component !== undefined && /^\.{1,2}$|[\\/]/.test(component);
 	if (
 		component !== undefined &&
 		component !== "" &&
 		path === "." &&
-		!hasRegistry(".") &&
+		(pathShaped || !hasRegistry(".")) &&
 		hasRegistry(component)
 	) {
 		return { component: undefined, path: component };

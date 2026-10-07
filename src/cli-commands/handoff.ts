@@ -19,16 +19,19 @@
 import { join } from "node:path";
 import { cwd } from "node:process";
 import type { Command } from "commander";
-import { resolveConfig } from "../config.js";
+import { readProjectConfigText, resolveConfig } from "../config.js";
 import { parseFigmaUrl } from "../engines/handoff/parse-url.js";
 import {
 	type ReadinessReport,
 	type RuleId,
+	type ScoreReadinessOptions,
 	scoreReadiness,
 } from "../engines/handoff/score.js";
 import {
 	createFigmaClient,
 	type FigmaClient,
+	type FigmaFile,
+	type FigmaFileNodes,
 	type FigmaNode,
 	type FigmaResult,
 } from "../io/figma/client.js";
@@ -39,7 +42,10 @@ import {
 	severityColor,
 	shouldColor,
 } from "../render/terminal/index.js";
-import { missingFigmaTokenMessage } from "./figma-auth-help.js";
+import {
+	figmaAuthErrorMessage,
+	missingFigmaTokenMessage,
+} from "./figma-auth-help.js";
 
 type HandoffFormat = "json" | "term";
 
@@ -137,7 +143,7 @@ function clientErrorMessage(
 ): string {
 	switch (result.kind) {
 		case "auth-error":
-			return "Figma rejected the token (auth error). Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.";
+			return figmaAuthErrorMessage(result);
 		case "scope-error":
 			return `Figma token is missing a required scope: ${result.message}. The token needs file_content:read (and file_comments:write for --comment).`;
 		case "not-found":
@@ -244,19 +250,36 @@ function resolveThreshold(
 	return { kind: "ok", value: n };
 }
 
-/** Extract the scored root node from a getFileNodes result for one node id. */
+type NodeEntry = NonNullable<FigmaFileNodes["nodes"][string]>;
+
+/** Extract the scored node entry from a getFileNodes result for one node id. */
 function nodeFromFileNodes(
-	nodes: Record<string, { document: FigmaNode } | undefined>,
+	nodes: FigmaFileNodes["nodes"],
 	nodeId: string,
-): FigmaNode | undefined {
+): NodeEntry | undefined {
 	const direct = nodes[nodeId];
-	if (direct !== undefined) return direct.document;
+	if (direct !== undefined) return direct;
 	// Defensive: the API echoes the requested id verbatim, but fall back to the
 	// single returned entry if the key differs (e.g. canonicalization mismatch).
 	const entries = Object.values(nodes).filter(
-		(v): v is { document: FigmaNode } => v !== undefined,
+		(v): v is NodeEntry => v !== undefined,
 	);
-	return entries[0]?.document;
+	return entries[0];
+}
+
+/** The components maps scoreReadiness reads to spot deprecated instances. */
+function componentMaps(source: {
+	components?: FigmaFile["components"];
+	componentSets?: FigmaFile["componentSets"];
+}): ScoreReadinessOptions {
+	return {
+		...(source.components !== undefined
+			? { components: source.components }
+			: {}),
+		...(source.componentSets !== undefined
+			? { componentSets: source.componentSets }
+			: {}),
+	};
 }
 
 /** Fetch the node tree to score: a subtree when nodeId is present, else the root. */
@@ -265,28 +288,33 @@ async function fetchRoot(
 	fileKey: string,
 	nodeId: string | undefined,
 ): Promise<
-	{ kind: "ok"; root: FigmaNode } | { kind: "error"; message: string }
+	| { kind: "ok"; root: FigmaNode; maps: ScoreReadinessOptions }
+	| { kind: "error"; message: string }
 > {
 	if (nodeId !== undefined) {
 		const result = await client.getFileNodes(fileKey, [nodeId]);
 		if (result.kind !== "ok") {
 			return { kind: "error", message: clientErrorMessage(result) };
 		}
-		const root = nodeFromFileNodes(result.data.nodes, nodeId);
-		if (root === undefined) {
+		const entry = nodeFromFileNodes(result.data.nodes, nodeId);
+		if (entry === undefined) {
 			return {
 				kind: "error",
 				message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`,
 			};
 		}
-		return { kind: "ok", root };
+		return { kind: "ok", root: entry.document, maps: componentMaps(entry) };
 	}
 
 	const result = await client.getFile(fileKey);
 	if (result.kind !== "ok") {
 		return { kind: "error", message: clientErrorMessage(result) };
 	}
-	return { kind: "ok", root: result.data.document };
+	return {
+		kind: "ok",
+		root: result.data.document,
+		maps: componentMaps(result.data),
+	};
 }
 
 /** Execute the `handoff` command. */
@@ -306,8 +334,13 @@ async function runHandoff(url: string, options: HandoffOptions): Promise<void> {
 		return;
 	}
 
-	// Resolve config from the environment (token + threshold default).
-	const resolved = resolveConfig({ env: process.env });
+	// Resolve config from the environment and the project file in cwd (token,
+	// readiness_threshold gate).
+	const projectFileText = readProjectConfigText(cwd());
+	const resolved = resolveConfig({
+		env: process.env,
+		...(projectFileText !== undefined ? { projectFileText } : {}),
+	});
 	if (resolved.kind !== "ok") {
 		fail(resolved.message);
 		return;
@@ -343,7 +376,7 @@ async function runHandoff(url: string, options: HandoffOptions): Promise<void> {
 		return;
 	}
 
-	const report = scoreReadiness(fetched.root);
+	const report = scoreReadiness(fetched.root, fetched.maps);
 
 	// History: record the score for the dashboard readiness gauge (suppressible
 	// with --no-history). The frame name is the scored root node's name.

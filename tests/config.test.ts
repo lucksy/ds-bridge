@@ -1623,3 +1623,37 @@ describe("tracked_frames config key (H14)", () => {
 		}
 	});
 });
+
+// ─── component_paths — where the design-system components live ──────────────
+describe("component_paths config key", () => {
+	it("accepts an array of project-relative directories, in order", () => {
+		const out = resolveConfig({
+			projectFileText: JSON.stringify({
+				component_paths: ["src/components/ui", "packages/ds/src"],
+			}),
+		});
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok")
+			expect(out.config.componentPaths).toEqual([
+				"src/components/ui",
+				"packages/ds/src",
+			]);
+	});
+
+	it("is undefined when absent", () => {
+		const out = resolveConfig({ projectFileText: JSON.stringify({}) });
+		expect(out.kind).toBe("ok");
+		if (out.kind === "ok") expect(out.config.componentPaths).toBeUndefined();
+	});
+
+	it("rejects a non-array, an empty array and a non-string entry", () => {
+		for (const bad of ["src/components", [], [3], [""]]) {
+			const out = resolveConfig({
+				projectFileText: JSON.stringify({ component_paths: bad }),
+			});
+			expect(out.kind).toBe("invalid-project-file");
+			if (out.kind === "invalid-project-file")
+				expect(out.message).toContain("component_paths");
+		}
+	});
+});

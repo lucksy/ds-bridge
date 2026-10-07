@@ -34,7 +34,7 @@ describe("commands/record.md (S1)", () => {
 		expect(md).toContain("argument-hint:");
 		expect(preExecLine(md)).toBe(
 			// biome-ignore lint/suspicious/noTemplateCurlyInString: literal plugin-root placeholder in the command markdown
-			"node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs record $ARGUMENTS --format=json 2>&1 || true",
+			"node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs record '$ARGUMENTS' --format=json",
 		);
 	});
 
@@ -63,11 +63,15 @@ describe("commands/record.md (S1)", () => {
 		for (const k of ["FIGMA_TOKEN", "CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN"]) {
 			delete env[k];
 		}
-		const { stdout } = await execFileAsync("sh", ["-c", preExecLine(md)], {
-			cwd: dir,
-			env,
-			encoding: "utf8",
-		});
+		const { stdout } = await execFileAsync(
+			"sh",
+			["-c", preExecLine(md).replace("$ARGUMENTS", "")],
+			{
+				cwd: dir,
+				env,
+				encoding: "utf8",
+			},
+		);
 		const out = JSON.parse(stdout) as {
 			runId: string;
 			checks: { id: string; status: string }[];

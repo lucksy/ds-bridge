@@ -27,3 +27,24 @@ export function missingFigmaTokenMessage(scopeNote: readonly string[]): string {
 		...scopeNote,
 	].join("\n");
 }
+
+/**
+ * The message for a token Figma rejected. An expired PAT (Figma: "Token has
+ * expired") gets its own fix — Figma PATs expire, and a generic "auth error"
+ * sent users hunting for scope or seat problems instead.
+ */
+export function figmaAuthErrorMessage(result: {
+	kind: "auth-error";
+	message?: string;
+}): string {
+	if (result.message !== undefined && /expired/i.test(result.message)) {
+		return [
+			"Your Figma personal access token has expired.",
+			"Create a new one (figma.com → Settings → Security → Personal access tokens),",
+			"then save and check it with: ds-bridge config connect --verify",
+		].join("\n");
+	}
+	const reason =
+		result.message !== undefined ? ` Figma said: "${result.message}".` : "";
+	return `Figma rejected the token (auth error).${reason} Check that FIGMA_TOKEN is a valid Dev/Full-seat personal access token.`;
+}

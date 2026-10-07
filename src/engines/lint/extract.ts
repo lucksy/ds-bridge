@@ -8,6 +8,8 @@
 export type LiteralContext =
 	| "css-declaration"
 	| "style-object"
+	/** A CSS value inside a JSX style string: `padding: "8px 16px"`. */
+	| "style-string"
 	| "styled-template";
 
 /** A raw color/dimension literal a linter should consider replacing with a token. */
@@ -37,7 +39,9 @@ interface RawHit {
 
 const HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
 const COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
-const DIM_RE = /-?\d+(?:\.\d+)?(?:px)?/;
+const DIM_RE = /-?\d+(?:\.\d+)?(?:px|rem)?/;
+/** A unit/percent run right after a number — a dimension the scale can't express. */
+const OTHER_UNIT_RE = /^[a-zA-Z%]+/;
 
 // Spacing-ish CSS properties (kebab) and style-object props (camel) — dimensions
 // are only flagged for these. Longhands match by prefix (padding-top, inset-block…).
@@ -172,6 +176,12 @@ function* scanValue(
 			if (!/[a-zA-Z0-9.#-]/.test(prev)) {
 				const dim = DIM_RE.exec(rest);
 				if (dim !== null && dim.index === 0) {
+					// `10%`, `2vh`, `1.5em`: not px/rem — never read the bare number.
+					const unit = OTHER_UNIT_RE.exec(value.slice(i + dim[0].length));
+					if (unit !== null) {
+						i += dim[0].length + unit[0].length;
+						continue;
+					}
 					const px = Number.parseFloat(dim[0]);
 					if (Number.isFinite(px) && px !== 0) {
 						yield { offset: i, raw: dim[0], valueKind: "dimension" };
@@ -237,6 +247,10 @@ function indexToLineCol(
 	return { line, col: index - lineStart + 1 };
 }
 
+/** A quoted color literal inside a JS expression. */
+const QUOTED_COLOR_RE =
+	/(["'])(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)"']*\))\1/g;
+
 const STYLE_OBJ_PROP_RE =
 	/([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
 
@@ -283,6 +297,21 @@ function extractTsx(source: string, file: string): ExtractedLiteral[] {
 						valueKind: "color",
 						context: "style-object",
 					});
+				} else {
+					// A CSS value in a string ("16px", "18px 24px", "1px solid #bfdbfe"):
+					// scan it like a declaration value; columns point inside the string.
+					for (const hit of scanValue(inner, property)) {
+						const pos = indexToLineCol(source, absValueIndex + 1 + hit.offset);
+						out.push({
+							file,
+							line: pos.line,
+							col: pos.col,
+							raw: hit.raw,
+							property,
+							valueKind: hit.valueKind,
+							context: "style-string",
+						});
+					}
 				}
 			} else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
 				if (isSpacingProperty(property)) {
@@ -299,6 +328,21 @@ function extractTsx(source: string, file: string): ExtractedLiteral[] {
 							context: "style-object",
 						});
 					}
+				}
+			}
+			if (quoted === null && !/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
+				// An expression (`on ? "#dc2626" : "#171717"`): each quoted color in it.
+				for (const lit of rawValue.matchAll(QUOTED_COLOR_RE)) {
+					const pos = indexToLineCol(source, absValueIndex + (lit.index ?? 0));
+					out.push({
+						file,
+						line: pos.line,
+						col: pos.col,
+						raw: lit[0],
+						property,
+						valueKind: "color",
+						context: "style-object",
+					});
 				}
 			}
 			pm = STYLE_OBJ_PROP_RE.exec(body);

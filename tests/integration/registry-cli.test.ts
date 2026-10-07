@@ -14,7 +14,7 @@
 //   GET /v1/files/UNAUTHORIZED/... -> 401              (unused here; parity w/ handoff)
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -114,7 +114,9 @@ async function runCli(
 		const { stdout, stderr } = await execFileAsync(
 			process.execPath,
 			[cliPath, ...args],
-			{ encoding: "utf8", env },
+			// A neutral cwd: the CLI auto-loads <cwd>/.ds-bridge.env, and the repo
+			// root may hold a developer's real one.
+			{ encoding: "utf8", env, cwd: tmpdir() },
 		);
 		return { code: 0, stdout, stderr };
 	} catch (error) {
@@ -154,6 +156,46 @@ describe("ds-bridge registry (built dist/cli.mjs)", () => {
 			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),
 		);
 	});
+
+	it("build reads figma_file_key from the project's committed .ds-bridge.json", async () => {
+		// `config set-library` writes the key there; an empty plugin option (the
+		// userConfig field left blank) must not shadow it.
+		const dir = await freshProject();
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			JSON.stringify({ figma_file_key: FILE_KEY }),
+		);
+		const result = await runCli(["registry", "build", dir], {
+			CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY: "",
+		});
+		expect(result.stderr).not.toContain("No Figma library file key");
+		expect(result.code).toBe(0);
+		expect((await readRegistry(dir)).schemaVersion).toBe(1);
+	}, 60_000);
+
+	it("scans only component_paths, keeping import paths project-relative", async () => {
+		const dir = await freshProject();
+		await mkdir(join(dir, "pages"), { recursive: true });
+		await writeFile(
+			join(dir, "pages", "home.tsx"),
+			"export function Home() { return <main />; }\n",
+		);
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			JSON.stringify({ component_paths: ["components"] }),
+		);
+		const result = await runCli(["registry", "build", dir]);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("components (component_paths)");
+		const doc = await readRegistry(dir);
+		const names = doc.unmatchedCode.map((c) => c.name);
+		expect(names).not.toContain("Home");
+		expect(names).toContain("Button");
+		const button = (
+			doc.unmatchedCode as { name: string; importPath: string }[]
+		).find((c) => c.name === "Button");
+		expect(button?.importPath).toBe("components/button.tsx");
+	}, 60_000);
 
 	it("build writes a schema-versioned registry.json under .ds-bridge", async () => {
 		const dir = await freshProject();

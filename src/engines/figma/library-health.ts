@@ -67,7 +67,7 @@ export interface AssessLibraryHealthOptions {
 
 // Default deprecation pattern: deprecated/deprecation, legacy, [old], do not use
 // (any space/hyphen joining), and the ⚠ warning sign. Case-insensitive.
-const DEFAULT_DEPRECATED_PATTERN =
+export const DEFAULT_DEPRECATED_PATTERN =
 	/deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
 
 const CAP = 20;
@@ -118,11 +118,10 @@ export function assessLibraryHealth(
 
 	// The set of component names — for the detached heuristic's exact-name match.
 	const componentNames = new Set<string>();
-	if (file.components !== undefined) {
-		for (const id of Object.keys(file.components)) {
-			const entry = file.components[id];
-			if (entry !== undefined) componentNames.add(entry.name);
-		}
+	// Set names come from componentSets: `components` names only the variants.
+	for (const map of [file.components, file.componentSets]) {
+		if (map === undefined) continue;
+		for (const entry of Object.values(map)) componentNames.add(entry.name);
 	}
 
 	const hotspots: OverrideHotspot[] = [];

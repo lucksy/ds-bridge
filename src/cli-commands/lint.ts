@@ -674,8 +674,27 @@ export function registerLintCommand(program: Command): void {
 			}
 			const targetDir = isFile ? process.cwd() : targetPath;
 
-			// Token source resolution (flag > .ds-bridge.json > discovery).
-			const tokenSource = resolveTokenSource(targetDir, options.tokens);
+			// Token source resolution (flag > .ds-bridge.json > discovery). A
+			// sub-directory of the project (`lint src` from the root) has no token
+			// file of its own: resolve from the cwd project instead, which then also
+			// owns the history line and the reported paths.
+			let projectDir = targetDir;
+			let tokenSource = resolveTokenSource(targetDir, options.tokens);
+			const cwd = process.cwd();
+			if (
+				tokenSource.kind === "error" &&
+				!isFile &&
+				options.tokens === undefined &&
+				targetDir !== cwd &&
+				isInside(targetDir, cwd) &&
+				!existsSync(join(targetDir, ".ds-bridge.json"))
+			) {
+				const fromProject = resolveTokenSource(cwd, undefined);
+				if (fromProject.kind === "ok") {
+					tokenSource = fromProject;
+					projectDir = cwd;
+				}
+			}
 			if (tokenSource.kind === "error") {
 				fail(tokenSource.message);
 				return;
@@ -710,7 +729,7 @@ export function registerLintCommand(program: Command): void {
 			}
 
 			const files = inScope
-				.map((abs) => ({ abs, rel: toRelative(targetDir, abs) }))
+				.map((abs) => ({ abs, rel: toRelative(projectDir, abs) }))
 				.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
 
 			const linted = lintAll(files, tokens);
@@ -722,7 +741,7 @@ export function registerLintCommand(program: Command): void {
 			// --fix: apply fixable exact edits, then re-lint to compute exit code.
 			// A directory --fix run records its POST-fix state inside runFix.
 			if (options.fix) {
-				runFix(files, tokens, linted.findings, isFile ? undefined : targetDir);
+				runFix(files, tokens, linted.findings, isFile ? undefined : projectDir);
 				return;
 			}
 
@@ -732,12 +751,18 @@ export function registerLintCommand(program: Command): void {
 			// list threads in so the line carries the css/scss adoption block (A2).
 			if (!isFile) {
 				const adoption = computeAdoption(files, linted.findings);
-				appendLintHistory(targetDir, linted.findings, files);
+				appendLintHistory(projectDir, linted.findings, files);
 				// On-system summary line — directory runs only, term format only.
-				if (format === "term") emitAdoptionSummary(adoption);
+				if (format === "term") emitAdoptionSummary(adoption, linted.findings);
 			}
 			process.exitCode = linted.findings.length > 0 ? 1 : 0;
 		});
+}
+
+/** True when `child` is `parent` or lies beneath it. */
+function isInside(child: string, parent: string): boolean {
+	const rel = relative(parent, child);
+	return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
 /** Relative path for reporting (forward slashes), abs path falls back to itself. */
@@ -751,11 +776,23 @@ function toRelative(targetDir: string, abs: string): string {
  * css/scss-scoped ratio refs / (refs + literals) — see the §1 scope note on
  * computeAdoption. Zero css/scss values yields 0%.
  */
-function emitAdoptionSummary(adoption: LintAdoption): void {
+function emitAdoptionSummary(
+	adoption: LintAdoption,
+	findings: ReportFinding[],
+): void {
 	const total = adoption.refs + adoption.literals;
 	const pct = total === 0 ? 0 : Math.round((adoption.refs / total) * 100);
+	// The ratio is css/scss-only by design (SPEC §1); say what it leaves out so
+	// "100%" next to JSX findings is not read as "fully on-system".
+	const outside = findings.filter((f) =>
+		/\.(?:tsx|jsx)$/i.test(f.literal.file),
+	).length;
+	const note =
+		outside === 0
+			? ""
+			: ` · ${outside} finding${outside === 1 ? "" : "s"} in .tsx/.jsx not counted`;
 	process.stdout.write(
-		`on-system: ${pct}% (${adoption.refs} token refs / ${total} css/scss values)\n`,
+		`on-system: ${pct}% of css/scss values (${adoption.refs} token refs / ${total})${note}\n`,
 	);
 }
 
@@ -824,7 +861,7 @@ function runFix(
 	if (historyDir !== undefined) {
 		const adoption = computeAdoption(files, relinted.findings);
 		appendLintHistory(historyDir, relinted.findings, files);
-		emitAdoptionSummary(adoption);
+		emitAdoptionSummary(adoption, relinted.findings);
 	}
 	process.exitCode = hasRemaining ? 1 : 0;
 }

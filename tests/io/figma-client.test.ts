@@ -350,6 +350,17 @@ describe("createFigmaClient — auth / scope / not-found errors", () => {
 		expect(result.kind).toBe("auth-error");
 	});
 
+	it("401 keeps Figma's own error text (e.g. an expired token)", async () => {
+		const { fetch } = singleFetch(
+			jsonResponse({ status: 401, err: "Token has expired" }, { status: 401 }),
+		);
+		const result = await makeClient(fetch).getFile(FILE_KEY);
+		expect(result).toEqual({
+			kind: "auth-error",
+			message: "Token has expired",
+		});
+	});
+
 	it("403 without scopes mention -> auth-error", async () => {
 		const { fetch } = singleFetch(
 			jsonResponse({ err: "Forbidden" }, { status: 403 }),

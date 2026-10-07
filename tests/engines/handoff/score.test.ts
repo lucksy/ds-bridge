@@ -48,6 +48,7 @@ describe("scoreReadiness — degenerate trees", () => {
 			autoLayoutCoverage: 1,
 			instanceCount: 0,
 			detachedSuspects: 0,
+			deprecatedInstances: 0,
 			badNames: 0,
 		});
 	});
@@ -367,6 +368,7 @@ describe("scoreReadiness — recorded fixture", () => {
 			autoLayoutCoverage: 1,
 			instanceCount: 1,
 			detachedSuspects: 1,
+			deprecatedInstances: 0,
 			badNames: 0,
 		});
 		expect(report.deductions[0]).toEqual({
@@ -376,5 +378,45 @@ describe("scoreReadiness — recorded fixture", () => {
 			points: 10,
 			fix: "Reattach to the published component or rename",
 		});
+	});
+});
+
+describe("scoreReadiness — deprecated component instances", () => {
+	const tree: HandoffNode = frame({
+		id: "1:1",
+		name: "Settings",
+		layoutMode: "VERTICAL",
+		children: [
+			{ id: "1:2", name: "Save", type: "INSTANCE", componentId: "C:1" },
+			{ id: "1:3", name: "Close store", type: "INSTANCE", componentId: "C:2" },
+		],
+	});
+	const components = {
+		"C:1": { name: "variant=default, size=default" },
+		"C:2": { name: "Legacy Button" },
+	};
+
+	it("counts an instance of a deprecated component against the component rule", () => {
+		const report = scoreReadiness(tree, { components });
+		expect(report.stats.deprecatedInstances).toBe(1);
+		const deduction = report.deductions.find((d) => d.nodeId === "1:3");
+		expect(deduction?.rule).toBe("component");
+		expect(deduction?.fix).toContain("Legacy Button");
+		expect(report.score).toBeLessThan(scoreReadiness(tree).score);
+	});
+
+	it("uses the set name for a variant (componentSetId)", () => {
+		const report = scoreReadiness(tree, {
+			components: {
+				"C:1": { name: "variant=default" },
+				"C:2": { name: "variant=old", componentSetId: "S:1" },
+			},
+			componentSets: { "S:1": { name: "Badge (deprecated)" } },
+		});
+		expect(report.stats.deprecatedInstances).toBe(1);
+	});
+
+	it("without a components map, nothing is deprecated", () => {
+		expect(scoreReadiness(tree).stats.deprecatedInstances).toBe(0);
 	});
 });

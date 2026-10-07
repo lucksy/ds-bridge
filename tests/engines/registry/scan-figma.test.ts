@@ -226,6 +226,45 @@ describe("buildFigmaComponentModel — inline (unpublished) discovery", () => {
 		});
 	});
 
+	it("takes an inline component's description from the file's components / componentSets maps", () => {
+		// GET /v1/files/:key carries descriptions in the top-level maps, never on
+		// the document nodes — so unpublished libraries always read "missing".
+		const result = buildFigmaComponentModel({
+			published: published([]),
+			fileDocument: {
+				id: "0:0",
+				name: "Document",
+				type: "DOCUMENT",
+				children: [
+					{
+						id: "0:1",
+						name: "Page 1",
+						type: "CANVAS",
+						children: [
+							{ id: "30:1", name: "Label", type: "COMPONENT" },
+							{
+								id: "40:1",
+								name: "Badge",
+								type: "COMPONENT_SET",
+								children: [
+									{ id: "40:2", name: "variant=default", type: "COMPONENT" },
+								],
+							},
+						],
+					},
+				],
+			},
+			fileComponents: { "30:1": { name: "Label", description: "Form label." } },
+			fileComponentSets: {
+				"40:1": { name: "Badge", description: "Status pill." },
+			},
+		});
+		expect(result.map((m) => [m.name, m.description])).toEqual([
+			["Badge", "Status pill."],
+			["Label", "Form label."],
+		]);
+	});
+
 	it("reads variantProps from a COMPONENT_SET's variant children", () => {
 		const result = buildFigmaComponentModel({
 			fileDocument: {

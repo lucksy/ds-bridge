@@ -54,7 +54,8 @@ function quoteOf(raw: string): '"' | "'" | undefined {
 /**
  * Build the replacement text for one exact, simple-token finding, chosen by the
  * literal's context:
- *   - css-declaration / styled-template → bare var(...)
+ *   - css-declaration / styled-template / style-string (a value inside a JSX
+ *     style string, whose quotes stay) → bare var(...)
  *   - style-object, quoted value         → var(...) wrapped in the original quotes
  *   - style-object, bare number          → "var(...)" (a quoted string; CSS custom
  *     properties are valid JSX inline-style values)
