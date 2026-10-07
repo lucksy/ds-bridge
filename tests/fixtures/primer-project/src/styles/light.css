@@ -1,0 +1,9 @@
+/* Built by Primer's Style Dictionary pipeline (outputReferences: true). */
+[data-color-mode="light"][data-light-theme="light"],
+[data-color-mode="auto"][data-light-theme="light"] {
+	--bgColor-default: #ffffff;
+	--bgColor-muted: #f6f8fa;
+	--bgColor-inset: #f6f8fa;
+	--borderColor-muted: #f6f8fab3;
+	--borderColor-overlay: #f6f8fa80;
+}

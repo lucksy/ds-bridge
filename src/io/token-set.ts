@@ -11,6 +11,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { detectFormat } from "../engines/tokens/detect.js";
 import type { TokenSourceFormat } from "../engines/tokens/types.js";
+import { isTokenFileName, parseTokenText } from "./token-json.js";
 
 /** Directory names never walked for token sources. */
 const EXCLUDED_DIRS = new Set([
@@ -24,27 +25,36 @@ const EXCLUDED_DIRS = new Set([
 	".ds-bridge",
 ]);
 
+/** Theme-variant suffixes a mode name may carry (Material, Primer). */
+const MODE_VARIANT =
+	"(?:medium|high|low)-contrast|dimmed|colorblind|tritanopia|protanopia-deuteranopia";
+const MODE_RE = new RegExp(
+	`(?:^|[/._-])((?:light|dark)(?:[-.](?:${MODE_VARIANT}))*)(?=$|[/._-])`,
+	"g",
+);
+
 /**
  * The mode a token file belongs to, read from its path relative to the set
- * root: a `light` / `dark` segment (Material's `-medium-contrast` /
- * `-high-contrast` variants kept whole) in a file or folder name. Undefined
- * for files every mode shares.
+ * root: a `light` / `dark` segment in a file or folder name, with any theme
+ * variant kept whole — Material's `light-high-contrast`, Primer's
+ * `light.high-contrast` / `dark.dimmed` (dots read as dashes). The most
+ * specific (last) segment wins, so `light/light.high-contrast.json5` is
+ * `light-high-contrast`. Undefined for files every mode shares.
  */
 export function modeOfTokenFile(relPath: string): string | undefined {
-	const match = relPath
-		.toLowerCase()
-		.replace(/\\/g, "/")
-		.match(
-			/(?:^|[/._-])((?:light|dark)(?:-(?:medium|high)-contrast)?)(?=$|[/._-])/,
-		);
-	return match?.[1];
+	const path = relPath.toLowerCase().replace(/\\/g, "/");
+	const matches = [...path.matchAll(MODE_RE)];
+	const last = matches[matches.length - 1]?.[1];
+	return last?.replace(/\./g, "-");
 }
 
 function isConventionalTokenFile(name: string): boolean {
 	return (
 		name === "tokens.json" ||
 		name === "design-tokens.json" ||
-		name.endsWith(".tokens.json")
+		name.endsWith(".tokens.json") ||
+		name === "tokens.json5" ||
+		name.endsWith(".tokens.json5")
 	);
 }
 
@@ -54,7 +64,7 @@ function isTokenDir(name: string): boolean {
 
 function readJson(path: string): unknown {
 	try {
-		return JSON.parse(readFileSync(path, "utf8"));
+		return parseTokenText(readFileSync(path, "utf8"), path);
 	} catch {
 		return undefined;
 	}
@@ -68,7 +78,7 @@ function formatOf(path: string): TokenSourceFormat | undefined {
 	return format === "unknown" ? undefined : format;
 }
 
-/** Conventional token files under `dir` (any *.json inside a tokens/ folder). */
+/** Conventional token files under `dir` (any *.json / *.json5 inside a tokens/ folder). */
 function collectCandidates(
 	dir: string,
 	insideTokenDir: boolean,
@@ -87,12 +97,12 @@ function collectCandidates(
 			collectCandidates(full, insideTokenDir || isTokenDir(entry.name), acc);
 			continue;
 		}
-		if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+		if (!entry.isFile() || !isTokenFileName(entry.name)) continue;
 		if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
 	}
 }
 
-/** Every *.json file under `dir` (recursively), sorted. */
+/** Every *.json / *.json5 file under `dir` (recursively), sorted. */
 function jsonFilesUnder(dir: string): string[] {
 	const acc: string[] = [];
 	const walk = (current: string): void => {
@@ -108,7 +118,7 @@ function jsonFilesUnder(dir: string): string[] {
 				if (!EXCLUDED_DIRS.has(entry.name)) walk(full);
 			} else if (
 				entry.isFile() &&
-				entry.name.endsWith(".json") &&
+				isTokenFileName(entry.name) &&
 				!entry.name.startsWith("$")
 			) {
 				acc.push(full);
@@ -121,10 +131,21 @@ function jsonFilesUnder(dir: string): string[] {
 
 const depthOf = (path: string): number => path.split(sep).length;
 
+/** The outermost `tokens/` / `design-tokens/` folder holding `path`, if any. */
+function tokenDirOf(root: string, path: string): string | undefined {
+	const parts = relative(root, path).split(sep);
+	const index = parts.findIndex(
+		(part, i) => i < parts.length - 1 && isTokenDir(part),
+	);
+	return index === -1 ? undefined : join(root, ...parts.slice(0, index + 1));
+}
+
 /**
  * The project's token source: the shallowest conventional, shape-verified
  * token file — or, when that file's folder holds two or more W3C / Style
- * Dictionary token files, the folder itself (a multi-file set).
+ * Dictionary token files, the folder itself (a multi-file set). A file nested
+ * inside a `tokens/` folder (Primer's tokens/base/size/…) reads as that whole
+ * folder when it holds several token files.
  */
 export function findTokenSource(root: string): string | undefined {
 	const candidates: string[] = [];
@@ -142,11 +163,16 @@ export function findTokenSource(root: string): string | undefined {
 	const first = verified[0];
 	if (first === undefined) return undefined;
 	if (first.format === "tokens-studio") return first.path;
+	const sameFormatUnder = (dir: string) =>
+		verified.filter(
+			(c) => c.format === first.format && c.path.startsWith(dir + sep),
+		);
+	const tokenDir = tokenDirOf(root, first.path);
+	if (tokenDir !== undefined && sameFormatUnder(tokenDir).length >= 2) {
+		return tokenDir;
+	}
 	const dir = dirname(first.path);
-	const siblings = verified.filter(
-		(c) => c.format === first.format && c.path.startsWith(dir + sep),
-	);
-	return siblings.length >= 2 ? dir : first.path;
+	return sameFormatUnder(dir).length >= 2 ? dir : first.path;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -187,6 +213,44 @@ export type TokenDocumentOutcome =
 	  }
 	| { kind: "error"; message: string };
 
+/**
+ * Per-mode values a token carries in its `$extensions` — Primer's
+ * `"org.primer.overrides": { dark: "{…}", "dark-dimmed": "{…}" }` — replace its
+ * `$value` in that mode (an override written `{ $value, alpha }` sets both).
+ * Any vendor key ending in `overrides` counts.
+ */
+function applyModeOverrides(
+	node: Record<string, unknown>,
+	chain: readonly string[],
+): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(node)) {
+		out[key] =
+			isPlainObject(value) && !key.startsWith("$")
+				? applyModeOverrides(value, chain)
+				: value;
+	}
+	const extensions = node.$extensions;
+	if ("$value" in node && isPlainObject(extensions)) {
+		for (const [key, ext] of Object.entries(extensions)) {
+			if (!key.endsWith("overrides") || !isPlainObject(ext)) continue;
+			// The most specific mode wins outright: dark-dimmed's own override,
+			// else dark's.
+			const mode = [...chain].reverse().find((m) => m in ext);
+			if (mode === undefined) continue;
+			const override = ext[mode];
+			// `{ $value, alpha }` (Primer) sets both; a bare value replaces $value.
+			if (isPlainObject(override) && "$value" in override) {
+				out.$value = override.$value;
+				if ("alpha" in override) out.alpha = override.alpha;
+			} else {
+				out.$value = override;
+			}
+		}
+	}
+	return out;
+}
+
 /** Mode order: light first, then dark, then the rest alphabetically. */
 function modeRank(mode: string): string {
 	if (mode === "light") return "0";
@@ -223,12 +287,12 @@ export function readTokenDocument(path: string): TokenDocumentOutcome {
 			};
 		}
 		try {
-			return { kind: "ok", doc: JSON.parse(raw), files: [path] };
+			return { kind: "ok", doc: parseTokenText(raw, path), files: [path] };
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
 			return {
 				kind: "error",
-				message: `Token source "${path}" is not valid JSON: ${detail}`,
+				message: `Token source "${path}" is not valid ${path.endsWith(".json5") ? "JSON5" : "JSON"}: ${detail}`,
 			};
 		}
 	}
@@ -245,7 +309,7 @@ export function readTokenDocument(path: string): TokenDocumentOutcome {
 	if (docs.length === 0) {
 		return {
 			kind: "error",
-			message: `No token files found in "${path}". Expected W3C (DTCG), Tokens Studio, or Style Dictionary JSON.`,
+			message: `No token files found in "${path}". Expected W3C (DTCG), Tokens Studio, or Style Dictionary JSON / JSON5.`,
 		};
 	}
 	const formats = [...new Set(docs.map((d) => d.format))];
@@ -269,12 +333,28 @@ export function readTokenDocument(path: string): TokenDocumentOutcome {
 	const files = docs.map((d) => d.file);
 	if (byMode.size === 0) return { kind: "ok", doc: shared, files };
 
-	const modeDocs: ModeDocument[] = [...byMode.keys()]
+	const modeNames = [...byMode.keys()];
+	/** A variant mode (`dark-dimmed`) builds on its base mode (`dark`). */
+	const baseOf = (mode: string): string | undefined =>
+		modeNames
+			.filter((m) => m !== mode && mode.startsWith(`${m}-`))
+			.sort((a, b) => b.length - a.length)[0];
+	const layered = (mode: string): Record<string, unknown> => {
+		const base = baseOf(mode);
+		const under = base === undefined ? shared : layered(base);
+		return (byMode.get(mode) ?? []).reduce(deepMerge, under);
+	};
+	const modeDocs: ModeDocument[] = modeNames
 		.sort((a, b) => (modeRank(a) < modeRank(b) ? -1 : 1))
-		.map((mode) => ({
-			mode,
-			doc: (byMode.get(mode) ?? []).reduce(deepMerge, shared),
-		}));
+		.map((mode) => {
+			// A variant falls back to its base mode's overrides: Primer's
+			// dark-dimmed is dark's values unless dark-dimmed says otherwise.
+			const chain: string[] = [];
+			for (let m: string | undefined = mode; m !== undefined; m = baseOf(m)) {
+				chain.unshift(m);
+			}
+			return { mode, doc: applyModeOverrides(layered(mode), chain) };
+		});
 	return {
 		kind: "ok",
 		doc: (modeDocs[0] as ModeDocument).doc,

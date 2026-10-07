@@ -266,3 +266,240 @@ describe("classifyDriftByMode", () => {
 		expect(result.skippedModes).toEqual(["dark"]);
 	});
 });
+
+// GitHub Primer (real-user finding): every theme file is scoped, the default
+// (light) one included, and the selectors carry attribute NAMES that contain
+// mode words — dark.css is `[data-color-mode="auto"][data-light-theme="dark"]`.
+describe("classifyDriftByMode — attribute-scoped themes (Primer)", () => {
+	const light = mapOf({
+		name: "bgColor.default",
+		type: "color",
+		value: "#ffffff",
+	});
+	const dark = mapOf({
+		name: "bgColor.default",
+		type: "color",
+		value: "#0d1117",
+	});
+	const dimmed = mapOf({
+		name: "bgColor.default",
+		type: "color",
+		value: "#212830",
+	});
+	const lightScope =
+		'[data-color-mode="light"][data-light-theme="light"], [data-color-mode="auto"][data-light-theme="light"]';
+	const darkScope =
+		'[data-color-mode="dark"][data-dark-theme="dark"], [data-color-mode="auto"][data-light-theme="dark"]';
+	const dimmedScope = '[data-color-mode="dark"][data-dark-theme="dark-dimmed"]';
+	const css: OutputValue[] = [
+		{ name: "bgColor-default", raw: "#ffffff", scope: lightScope },
+		{ name: "bgColor-default", raw: "#0d1117", scope: darkScope },
+		{ name: "bgColor-default", raw: "#212830", scope: dimmedScope },
+	];
+	const modes = [
+		{ mode: "light", map: light },
+		{ mode: "dark", map: dark },
+		{ mode: "dark-dimmed", map: dimmed },
+	];
+
+	it("compares the default mode against the outputs scoped to it", () => {
+		const result = classifyDriftByMode(modes, css);
+		expect(result.entries).toEqual([]);
+		expect(result.inSync).toBe(3);
+	});
+
+	it("never reads a mode word inside an attribute name, and prefers the longest mode", () => {
+		const result = classifyDriftByMode(
+			[
+				{ mode: "light", map: light },
+				{
+					mode: "dark",
+					map: mapOf({
+						name: "bgColor.default",
+						type: "color",
+						value: "#010409",
+					}),
+				},
+				{ mode: "dark-dimmed", map: dimmed },
+			],
+			css,
+		);
+		expect(
+			result.entries.map((e) => [e.kind, "mode" in e ? e.mode : undefined]),
+		).toEqual([["stale-output", "dark"]]);
+	});
+});
+
+// Style Dictionary `outputReferences: true` (Primer, and most real builds) emits
+// semantic outputs as var() references to other outputs, not as final values.
+describe("classifyDrift — outputs that reference other outputs", () => {
+	it("resolves var(--…) chains (with fallbacks) before comparing", () => {
+		const source = mapOf(
+			{ name: "control.bgColor.rest", type: "color", value: "#f6f8fa" },
+			{ name: "button.default.bgColor.rest", type: "color", value: "#f6f8fa" },
+			{ name: "button.outline.bgColor.rest", type: "color", value: "#f6f8fa" },
+			{ name: "motion.duration.long", type: "duration", value: "500ms" },
+		);
+		const outputs: OutputValue[] = [
+			{ name: "control-bgColor-rest", raw: "#F6F8FA" },
+			{
+				name: "button-default-bgColor-rest",
+				raw: "var(--control-bgColor-rest)",
+			},
+			{
+				name: "button-outline-bgColor-rest",
+				raw: "var(--button-default-bgColor-rest, #000)",
+			},
+			{ name: "motion-duration-long", raw: "var(--nope, 500ms)" },
+		];
+		const result = classifyDrift(source, outputs);
+		expect(result.entries).toEqual([]);
+		expect(result.inSync).toBe(4);
+	});
+
+	it("still flags a reference that resolves to the wrong value", () => {
+		const source = mapOf(
+			{ name: "fg.muted", type: "color", value: "#59636e" },
+			{ name: "fg.default", type: "color", value: "#1f2328" },
+		);
+		const outputs: OutputValue[] = [
+			{ name: "fg-default", raw: "#1f2328" },
+			{ name: "fg-muted", raw: "var(--fg-default)" },
+		];
+		const result = classifyDrift(source, outputs);
+		expect(result.entries.map((e) => e.kind)).toEqual(["stale-output"]);
+	});
+});
+
+// Primer never emits its base palette: base.color.* reaches CSS only through the
+// functional tokens that alias it. A layer with NO output at all whose tokens
+// are alias targets is reported once as unbuilt, not as N missing outputs.
+describe("classifyDrift — reference-only layers", () => {
+	const source = mapOf(
+		{ name: "base.color.blue.5", type: "color", value: "#0969da" },
+		{ name: "base.color.blue.6", type: "color", value: "#0550ae" },
+		{ name: "base.size.4", type: "dimension", value: "4px" },
+		{ name: "base.size.8", type: "dimension", value: "8px" },
+		{
+			name: "fg.accent",
+			type: "color",
+			value: "#0969da",
+			aliasOf: "base.color.blue.5",
+		},
+		{
+			name: "space.xs",
+			type: "dimension",
+			value: "4px",
+			aliasOf: "base.size.4",
+		},
+	);
+	const outputs: OutputValue[] = [
+		{ name: "fg-accent", raw: "#0969da" },
+		{ name: "space-xs", raw: "4px" },
+		{ name: "base-size-4", raw: "4px" },
+	];
+
+	it("collapses a never-emitted primitive layer into one unbuilt note", () => {
+		const result = classifyDrift(source, outputs);
+		expect(result.unbuiltLayers).toEqual([{ prefix: "base.color", tokens: 2 }]);
+		// base.size IS built, so its unbuilt member is a real gap
+		expect(result.entries.map((e) => [e.kind, entryLabel(e)])).toEqual([
+			["missing-output", "base.size.8"],
+		]);
+	});
+
+	it("keeps a semantic layer with no outputs as missing (nothing aliases it)", () => {
+		const result = classifyDrift(
+			mapOf(
+				{ name: "fg.accent", type: "color", value: "#0969da" },
+				{ name: "fg.muted", type: "color", value: "#59636e" },
+			),
+			[],
+		);
+		expect(result.unbuiltLayers ?? []).toEqual([]);
+		expect(result.entries).toHaveLength(2);
+	});
+});
+
+function entryLabel(e: {
+	kind: string;
+	token?: { name: string };
+}): string | undefined {
+	return e.token?.name;
+}
+
+describe("classifyDrift — free-form string values", () => {
+	it("compares rem/px, quote style and spacing loosely", () => {
+		const source = mapOf(
+			{ name: "boxShadow.thin", type: "shadow", value: "inset 0 0 0 1px" },
+			{
+				name: "fontStack.sans",
+				type: "fontFamily",
+				value: "'Mona Sans VF', -apple-system, sans-serif",
+			},
+			{
+				name: "viewport.narrow",
+				type: "other",
+				value: "(max-width: calc(768px - 0.02px))",
+			},
+		);
+		const outputs: OutputValue[] = [
+			{ name: "boxShadow-thin", raw: "inset 0 0 0 0.0625rem" },
+			{
+				name: "fontStack-sans",
+				raw: '"Mona Sans VF", -apple-system,  sans-serif',
+			},
+			{ name: "viewport-narrow", raw: "(max-width: calc(48rem - 0.02px))" },
+		];
+		expect(classifyDrift(source, outputs).entries).toEqual([]);
+	});
+});
+
+describe("classifyDrift — reference-only layers need emitted referrers", () => {
+	it("keeps a layer missing when nothing that aliases it is emitted either", () => {
+		const result = classifyDrift(
+			mapOf(
+				{ name: "borderRadius.small", type: "dimension", value: "3px" },
+				{ name: "borderRadius.medium", type: "dimension", value: "6px" },
+				{
+					name: "overlay.borderRadius",
+					type: "dimension",
+					value: "6px",
+					aliasOf: "borderRadius.medium",
+				},
+			),
+			[{ name: "unrelated", raw: "1px" }],
+		);
+		expect(result.unbuiltLayers ?? []).toEqual([]);
+		expect(
+			result.entries.filter((e) => e.kind === "missing-output"),
+		).toHaveLength(3);
+	});
+});
+
+describe("classifyDriftByMode — underscore theme names (Primer's dark_dimmed)", () => {
+	it("matches a `dark_dimmed` scope to the dark-dimmed mode", () => {
+		const result = classifyDriftByMode(
+			[
+				{
+					mode: "dark",
+					map: mapOf({ name: "bg", type: "color", value: "#0d1117" }),
+				},
+				{
+					mode: "dark-dimmed",
+					map: mapOf({ name: "bg", type: "color", value: "#212830" }),
+				},
+			],
+			[
+				{ name: "bg", raw: "#0d1117", scope: '[data-dark-theme="dark"]' },
+				{
+					name: "bg",
+					raw: "#212830",
+					scope: '[data-dark-theme="dark_dimmed"]',
+				},
+			],
+		);
+		expect(result.skippedModes).toEqual([]);
+		expect(result.entries).toEqual([]);
+	});
+});

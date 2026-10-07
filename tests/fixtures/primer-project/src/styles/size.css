@@ -1,0 +1,4 @@
+:root {
+	--base-size-4: 0.25rem;
+	--space-xs: var(--base-size-4);
+}

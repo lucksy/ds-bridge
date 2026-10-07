@@ -26,10 +26,16 @@ Each finding is one foreground/background color pairing audited within one mode:
 - `mode` — the theme/mode the pair was evaluated in (e.g. `light`, `dark`, or
   `default` for single-mode token files).
 - `foreground` / `background` — the semantic token paths that were paired
-  (foreground roles: `text` / `fg` / `on-*` / `foreground`; background roles:
-  `bg` / `background` / `surface` / `fill`).
+  (foreground roles: `text` / `fg` / `fgColor` / `on-*` / `onX` / `foreground`;
+  background roles: `bg` / `bgColor` / `background` / `surface` / `fill`).
+  Only rendered combinations are paired: a foreground with the surface it names
+  (`primary-foreground` ↔ `primary`), its counterpart (`button.danger.fgColor.rest`
+  ↔ `button.danger.bgColor.rest`), `onEmphasis` with `*.emphasis` surfaces, and a
+  global role with the surfaces of the same role (`fgColor.accent` ↔
+  `bgColor.accent.muted`). Disabled / inactive states are exempt (WCAG 1.4.3).
 - `foregroundValue` / `backgroundValue` — the resolved color values.
-- `ratio` — the computed WCAG 2.1 contrast ratio (omitted when unparseable).
+- `ratio` — the computed WCAG 2.1 contrast ratio (omitted when unparseable). A
+  translucent surface is measured composited over the mode's page background.
 - `required` — the ratio the pair must meet for the chosen `level`
   (AA = 4.5, AAA = 7.0 for normal text).
 - `status` — one of:

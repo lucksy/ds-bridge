@@ -110,6 +110,34 @@ function copy(path, out) {
 }
 
 /** Relative imports in the shipped mod sources that do not resolve in `out`. */
+/**
+ * Code-split chunks dist/*.mjs imports (`import("./scan-code-<hash>.mjs")`)
+ * that the payload lacks. Chunk names change every build, so a tag that
+ * commits a rebuilt cli.mjs without its new chunks ships a CLI whose registry,
+ * parity, adoption, impact and docs commands crash (v1.17.0–v1.18.1).
+ */
+function unresolvedChunks(out) {
+	const dist = join(out, "dist");
+	if (!existsSync(dist)) return [];
+	const missing = [];
+	for (const name of readdirSync(dist)) {
+		if (extname(name) !== ".mjs") continue;
+		const text = readFileSync(join(dist, name), "utf8");
+		const specs = [
+			...text.matchAll(/\bimport\(\s*["'](\.\/[^"']+)["']\s*\)/g),
+			...text.matchAll(/\bfrom\s*["'](\.\/[^"']+)["']/g),
+		].map((m) => m[1]);
+		for (const spec of new Set(specs)) {
+			if (!existsSync(join(dist, spec))) {
+				missing.push(
+					`dist/${name} → ${spec} (rebuild and commit all of dist/)`,
+				);
+			}
+		}
+	}
+	return missing;
+}
+
 function unresolvedImports(out) {
 	const missing = [];
 	const walk = (dir) => {
@@ -224,6 +252,7 @@ const missingFiles = FILES.filter((path) => !existsSync(join(out, path)));
 const missing = [
 	...missingFiles.map((path) => `required file ${path}`),
 	...unresolvedImports(out),
+	...unresolvedChunks(out),
 	...unresolvedPluginRootPaths(out),
 ];
 if (missing.length > 0) {

@@ -46,6 +46,8 @@ interface HandoffBoundVariables {
 /** A paint entry (only its presence/count matters here). */
 interface HandoffPaint {
 	type?: string;
+	/** False for a paint hidden in the layer's paint list. */
+	visible?: boolean;
 }
 
 /**
@@ -208,15 +210,35 @@ function isStyleable(node: HandoffNode): boolean {
 	return hasFills || hasStrokes;
 }
 
-/** True when the node binds at least one of its fills/strokes to a variable. */
+/** Visible solid paints in a fills / strokes array. */
+function solidCount(paints: unknown): number {
+	if (!Array.isArray(paints)) return 0;
+	return paints.filter(
+		(p) =>
+			typeof p === "object" &&
+			p !== null &&
+			(p as { type?: unknown }).type === "SOLID" &&
+			(p as { visible?: unknown }).visible !== false,
+	).length;
+}
+
+function boundCount(value: unknown): number {
+	return Array.isArray(value) ? value.length : 0;
+}
+
+/**
+ * True when every visible solid fill and stroke is bound to a variable — a
+ * raw-hex fill override beside a bound border is still off-system. A node with
+ * no solid paint (images, gradients) is covered when it binds any paint.
+ */
 function isPaintBound(node: HandoffNode): boolean {
-	const bound = node.boundVariables;
-	if (bound === undefined) return false;
-	const fills = bound.fills;
-	const strokes = bound.strokes;
-	const boundFills = Array.isArray(fills) && fills.length > 0;
-	const boundStrokes = Array.isArray(strokes) && strokes.length > 0;
-	return boundFills || boundStrokes;
+	const bound = node.boundVariables ?? {};
+	const fills = solidCount(node.fills);
+	const strokes = solidCount(node.strokes);
+	const boundFills = boundCount(bound.fills);
+	const boundStrokes = boundCount(bound.strokes);
+	if (fills + strokes === 0) return boundFills + boundStrokes > 0;
+	return boundFills >= fills && boundStrokes >= strokes;
 }
 
 function isFrame(node: HandoffNode): boolean {

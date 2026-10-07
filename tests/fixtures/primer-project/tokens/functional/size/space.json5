@@ -1,0 +1,1 @@
+{ space: { xs: { $value: '{base.size.4}', $type: 'dimension' } } }

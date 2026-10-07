@@ -1,0 +1,7 @@
+{
+  borderColor: {
+    muted: { $value: '{base.color.neutral.1}', $type: 'color', alpha: 0.7 },
+    // aliases a translucent token and sets its own alpha (replaces, never compounds)
+    overlay: { $value: '{borderColor.muted}', $type: 'color', alpha: 0.5 },
+  },
+}

@@ -1,0 +1,24 @@
+{
+  bgColor: {
+    default: {
+      $value: '{base.color.neutral.0}',
+      $type: 'color',
+      $extensions: {
+        'org.primer.overrides': {
+          dark: '{base.color.neutral.1}',
+          'dark-dimmed': '{base.color.neutral.1}',
+        },
+      },
+    },
+    muted: {
+      $value: '{base.color.neutral.1}',
+      $type: 'color',
+    },
+    // dark override only: dark-dimmed must inherit it
+    inset: {
+      $value: '{base.color.neutral.1}',
+      $type: 'color',
+      $extensions: { 'org.primer.overrides': { dark: '{base.color.neutral.0}' } },
+    },
+  },
+}

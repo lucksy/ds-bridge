@@ -7,6 +7,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { isAbsolute, join, resolve, sep } from "node:path";
 import { detectFormat } from "../engines/tokens/detect.js";
 import type { TokenSourceFormat } from "../engines/tokens/types.js";
+import { isTokenFileName, parseTokenText } from "./token-json.js";
 
 export interface DiscoveredSource {
 	/** Absolute path to the token file. */
@@ -55,7 +56,7 @@ async function detectFileFormat(
 
 	let parsed: unknown;
 	try {
-		parsed = JSON.parse(raw);
+		parsed = parseTokenText(raw, absPath);
 	} catch {
 		return undefined;
 	}
@@ -66,11 +67,13 @@ async function detectFileFormat(
 
 /** True when a JSON filename matches the well-known token conventions. */
 function isConventionalTokenFile(fileName: string): boolean {
-	if (!fileName.endsWith(".json")) return false;
+	if (!isTokenFileName(fileName)) return false;
 	return (
 		fileName === "tokens.json" ||
 		fileName === "design-tokens.json" ||
-		fileName.endsWith(".tokens.json")
+		fileName.endsWith(".tokens.json") ||
+		fileName === "tokens.json5" ||
+		fileName.endsWith(".tokens.json5")
 	);
 }
 
@@ -108,7 +111,7 @@ async function collectCandidates(
 			continue;
 		}
 		if (!entry.isFile()) continue;
-		if (!entry.name.endsWith(".json")) continue;
+		if (!isTokenFileName(entry.name)) continue;
 		if (insideTokenDir || isConventionalTokenFile(entry.name)) {
 			acc.add(full);
 		}

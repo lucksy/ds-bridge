@@ -122,6 +122,30 @@ describe("scripts/build-release.mjs", () => {
 		);
 	});
 
+	// v1.17.0–v1.18.1 shipped a cli.mjs whose rebuilt scan-code / usage chunks
+	// were never committed: registry build crashed with ERR_MODULE_NOT_FOUND
+	// for every marketplace user. The tagged checkout must carry every chunk.
+	it("fails when dist/ lacks a chunk the CLI imports", async () => {
+		const parent = await mkdtemp(join(tmpdir(), "ds-release-chunk-"));
+		tmpDirs.push(parent);
+		const checkout = join(parent, "checkout");
+		await cp(out, checkout, { recursive: true });
+		const cli = await readFile(join(checkout, "dist", "cli.mjs"), "utf8");
+		const chunk = /import\("\.\/([^"]+\.mjs)"\)/.exec(cli)?.[1];
+		expect(chunk).toBeDefined();
+		await rm(join(checkout, "dist", chunk as string));
+		await expect(
+			execFileAsync(
+				process.execPath,
+				[buildScript, join(parent, "plugin"), "--from", checkout],
+				{ cwd: repoRoot },
+			),
+		).rejects.toMatchObject({
+			code: 1,
+			stderr: expect.stringContaining(`dist/cli.mjs → ./${chunk}`),
+		});
+	});
+
 	it("refuses to clear an existing directory it did not create", async () => {
 		const dir = await mkdtemp(join(tmpdir(), "ds-release-foreign-"));
 		tmpDirs.push(dir);

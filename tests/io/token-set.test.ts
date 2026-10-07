@@ -136,3 +136,94 @@ describe("readTokenDocument — a token directory", () => {
 		expect(read.kind).toBe("error");
 	});
 });
+
+// GitHub Primer (real-user finding, Primer testbed): the source is JSON5, nested
+// by layer (tokens/base/color/{light,dark}/…, tokens/functional/…), with theme
+// variants as `light.high-contrast` / `dark.dimmed` files that overlay their base
+// mode, and dark values of functional tokens in `$extensions["org.primer.overrides"]`.
+describe("readTokenDocument — a Primer-style JSON5 set", () => {
+	const primerTokens = join(
+		import.meta.dirname,
+		"..",
+		"fixtures",
+		"primer-project",
+		"tokens",
+	);
+
+	it("is discovered as the tokens/ folder, not its first nested sub-folder", () => {
+		expect(findTokenSource(join(primerTokens, ".."))).toBe(primerTokens);
+	});
+
+	it("names theme variants as their own modes", () => {
+		expect(modeOfTokenFile("base/color/light/light.high-contrast.json5")).toBe(
+			"light-high-contrast",
+		);
+		expect(modeOfTokenFile("base/color/dark/dark.dimmed.json5")).toBe(
+			"dark-dimmed",
+		);
+		expect(modeOfTokenFile("base/color/light/light.json5")).toBe("light");
+	});
+
+	it("reads JSON5, resolves cross-file aliases and DTCG 2025 values", () => {
+		const outcome = ok(readTokenDocument(primerTokens));
+		expect(tokenValue(outcome.doc, "bgColor.default")).toBe("#ffffff");
+		expect(tokenValue(outcome.doc, "base.size.4")).toBe("4px");
+	});
+
+	it("builds a variant mode on its base mode, then applies its overrides", () => {
+		const outcome = ok(readTokenDocument(primerTokens));
+		const modes = Object.fromEntries(
+			(outcome.modeDocs ?? []).map((m) => [m.mode, m.doc]),
+		);
+		expect(Object.keys(modes)).toEqual([
+			"light",
+			"dark",
+			"dark-dimmed",
+			"light-high-contrast",
+		]);
+		// dark: $extensions override → neutral.1 of the dark palette
+		expect(tokenValue(modes.dark, "bgColor.default")).toBe("#0d1117");
+		expect(tokenValue(modes.dark, "bgColor.muted")).toBe("#0d1117");
+		// dark-dimmed: dark palette + its overlay, dark's overrides, then its own
+		expect(tokenValue(modes["dark-dimmed"], "bgColor.default")).toBe("#212830");
+		expect(tokenValue(modes["dark-dimmed"], "base.color.neutral.0")).toBe(
+			"#010409",
+		);
+		// light-high-contrast: light palette + overlay; no override → $value
+		expect(tokenValue(modes["light-high-contrast"], "bgColor.muted")).toBe(
+			"#eff2f5",
+		);
+		expect(tokenValue(modes["light-high-contrast"], "bgColor.default")).toBe(
+			"#ffffff",
+		);
+	});
+});
+
+describe("readTokenDocument — Primer override objects", () => {
+	it("takes $value (and alpha) from an override written as an object", async () => {
+		const { mkdtempSync, writeFileSync, mkdirSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const dir = mkdtempSync(join(tmpdir(), "primer-ovr-"));
+		mkdirSync(join(dir, "light"));
+		mkdirSync(join(dir, "dark"));
+		writeFileSync(
+			join(dir, "light", "light.json5"),
+			"{ base: { blue: { $type: 'color', $value: '#54aeff' } } }",
+		);
+		writeFileSync(
+			join(dir, "dark", "dark.json5"),
+			"{ base: { blue: { $type: 'color', $value: '#4493f8' } } }",
+		);
+		writeFileSync(
+			join(dir, "border.json5"),
+			`{ border: { accent: { $type: 'color', $value: '{base.blue}', alpha: 0.4,
+			   $extensions: { 'org.primer.overrides': { dark: { $value: '{base.blue}', alpha: 1 } } } } } }`,
+		);
+		const outcome = ok(readTokenDocument(dir));
+		const modes = Object.fromEntries(
+			(outcome.modeDocs ?? []).map((m) => [m.mode, m.doc]),
+		);
+		expect(tokenValue(modes.light, "border.accent")).toBe("#54aeff66");
+		expect(tokenValue(modes.dark, "border.accent")).toBe("#4493f8");
+	});
+});

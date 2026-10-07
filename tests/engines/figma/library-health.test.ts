@@ -110,6 +110,39 @@ describe("assessLibraryHealth — override hotspots", () => {
 		]);
 	});
 
+	// Real-user finding (Primer testbed): 23 "hotspots", nearly all a renamed
+	// layer or a value set through the component's own properties — the API the
+	// component exposes, not drift. One real fill override was buried.
+	it("ignores renames and component-property values (using the component's API)", () => {
+		const f = file(
+			doc([
+				instance({
+					id: "1:1",
+					name: "Search",
+					overrides: [{ id: "1:1", overriddenFields: ["name"] }],
+				}),
+				instance({
+					id: "1:2",
+					name: "Cancel",
+					overrides: [
+						{ id: "1:2", overriddenFields: ["name", "componentProperties"] },
+					],
+				}),
+				instance({
+					id: "1:3",
+					name: "Delete",
+					overrides: [
+						{ id: "1:3", overriddenFields: ["componentProperties", "fills"] },
+					],
+				}),
+			]),
+		);
+		const r = assessLibraryHealth(f);
+		expect(r.overrideHotspots.map((h) => [h.nodeId, h.fields])).toEqual([
+			["1:3", ["fills"]],
+		]);
+	});
+
 	it("ignores text-content overrides (a label typed into a Chip is usage, not drift)", () => {
 		const text = [
 			"characters",

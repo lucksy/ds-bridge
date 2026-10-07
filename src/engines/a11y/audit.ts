@@ -65,16 +65,40 @@ export interface AuditReport {
 
 // Role heuristics over the last path segment(s). A token plays a foreground or
 // background role based on tokens anywhere in its dot path.
-const FG_RE = /(^|[.\-/])(text|fg|foreground|on-[a-z0-9]+|on)([.\-/]|$)/i;
-const BG_RE = /(^|[.\-/])(bg|background|surface|fill)([.\-/]|$)/i;
+const FG_RE =
+	/(^|[.\-/])(text|fg|fgcolor|textcolor|foreground|on-[a-z0-9]+|on)([.\-/]|$)/i;
+/** camelCase `onEmphasis` / `onInverse` (GitHub Primer). */
+const ON_CAMEL_RE = /(^|[.\-/])on([A-Z][A-Za-z0-9]*)([.\-/]|$)/;
+const BG_RE =
+	/(^|[.\-/])(bg|bgcolor|background|backgroundcolor|surface|fill)([.\-/]|$)/i;
+/** Segments that name a role, not what the color is for. */
+const ROLE_SEGMENT =
+	/^(?:text|fg|fgcolor|textcolor|foreground|on|bg|bgcolor|background|backgroundcolor|surface|fill|color|colors|sys|semantic)$/i;
+/** Disabled / inactive states: exempt from contrast minimums (WCAG 1.4.3). */
+function isExempt(name: string): boolean {
+	return segmentsOf(name).some((s) => /^(?:disabled|inactive)$/i.test(s));
+}
+
+/** Foreground role segment → the background role words its counterpart may use. */
+const ROLE_SWAP: Readonly<Record<string, readonly string[]>> = {
+	fgcolor: ["bgcolor"],
+	fg: ["bg"],
+	text: ["bg", "background"],
+	textcolor: ["bgcolor", "backgroundcolor"],
+	foreground: ["background"],
+};
+/** Literal color names: such a token has no semantic surface to pair with. */
+const LITERAL_SEGMENT = /^(?:white|black|transparent)$/i;
+/** Strong surfaces carry on-X text (`fgColor.onEmphasis`), not role text. */
+const STRONG_SURFACE = /^(?:emphasis|strong|solid|inverse)$/i;
 
 function isColor(token: Token): token is Token & { value: string } {
 	return token.type === "color" && typeof token.value === "string";
 }
 
-/** Foreground role? `text`, `fg`, `foreground`, or any `on-*` segment. */
+/** Foreground role? `text`, `fg`, `fgColor`, `foreground`, `on-*`, `onX`. */
 function isForegroundRole(name: string): boolean {
-	return FG_RE.test(name);
+	return FG_RE.test(name) || ON_CAMEL_RE.test(name);
 }
 
 /** Background role? `bg`, `background`, `surface`, or `fill`. */
@@ -103,24 +127,78 @@ function namedSurface(name: string): string | undefined {
 	return undefined;
 }
 
+const segmentsOf = (name: string): string[] => name.split(/[.\-/]/);
+
+/** The non-role words of a token name (`bgColor.accent.muted` → accent, muted). */
+function wordsOf(name: string): string[] {
+	return segmentsOf(name)
+		.filter((s) => !ROLE_SEGMENT.test(s))
+		.map((s) => s.toLowerCase());
+}
+
 /**
- * Discover foreground/background color pairings within a single mode's map.
- * A foreground token that names an existing surface token (`primary-foreground`
- * ↔ `primary`, `on-primary` ↔ `primary`) is paired with that surface only —
- * that is the combination the system renders. Every other foreground-role
- * color is paired with every background-role color (full cross product).
- * Deterministically ordered by foreground name then background name.
- * Non-color tokens are ignored.
+ * Discover foreground/background color pairings within a single mode's map —
+ * the combinations the system renders, not the full cross product:
+ *
+ * 1. A foreground that names its surface pairs with it only: shadcn's
+ *    `primary-foreground` ↔ `primary`, Material's `on-primary` ↔ `primary`.
+ * 2. Counterparts pair with each other only — the same name with the role
+ *    swapped: `button.danger.fgColor.rest` ↔ `button.danger.bgColor.rest`,
+ *    `syntax.x.text` ↔ `syntax.x.bg`. A component's own foreground with no
+ *    counterpart is not paired at all.
+ * 3. camelCase on-X (`fgColor.onEmphasis`) pairs with surfaces naming X.
+ * 4. Any other foreground pairs with the surfaces of its role — the first
+ *    non-role word (`fgColor.accent` ↔ `bgColor.accent.muted`), never a strong surface
+ *    (`*.emphasis`, which carries on-X text); with none, the default surfaces
+ *    (`*.default`), else every surface it can reach.
+ *
+ * Literal colors (`fgColor.white`) are never paired. Ordered by foreground name, then background name. Non-color
+ * tokens are ignored.
  */
 export function pairColorTokens(map: TokenMap): ColorPair[] {
 	const colors = map.tokens.filter(isColor);
 	const byTokenName = new Map(colors.map((t) => [t.name, t]));
+	// WCAG 1.4.3 exempts inactive UI: disabled states are not audited.
 	const foregrounds = colors
-		.filter((t) => isForegroundRole(t.name))
+		.filter((t) => isForegroundRole(t.name) && !isExempt(t.name))
 		.sort(byName);
 	const backgrounds = colors
-		.filter((t) => isBackgroundRole(t.name))
+		.filter((t) => isBackgroundRole(t.name) && !isForegroundRole(t.name))
 		.sort(byName);
+	const isLiteral = (t: Token) =>
+		wordsOf(t.name).some((w) => LITERAL_SEGMENT.test(w));
+	const backgroundByName = new Map(backgrounds.map((t) => [t.name, t]));
+	/** The same name with its role swapped: `x.fgColor.rest` → `x.bgColor.rest`. */
+	const siblingOf = (fg: Token): Token | undefined => {
+		const segments = segmentsOf(fg.name);
+		const separators = fg.name.match(/[.\-/]/g) ?? [];
+		for (let i = segments.length - 1; i >= 0; i--) {
+			const swaps = ROLE_SWAP[(segments[i] as string).toLowerCase()];
+			if (swaps === undefined) continue;
+			for (const swap of swaps) {
+				const cased =
+					segments[i] === (segments[i] as string).toLowerCase()
+						? swap
+						: swap.replace(/color$/, "Color");
+				const parts = [...segments];
+				parts[i] = cased;
+				const name = parts
+					.map((p, k) => (k === 0 ? p : `${separators[k - 1]}${p}`))
+					.join("");
+				const hit = backgroundByName.get(name);
+				if (hit !== undefined) return hit;
+			}
+		}
+		return undefined;
+	};
+	const bgRoleIndex = (name: string): number =>
+		segmentsOf(name).findIndex((s) => BG_RE.test(`.${s}.`));
+	/** Index of the role segment: 0–1 is a global role, deeper a component's. */
+	const roleIndex = (name: string): number =>
+		segmentsOf(name).findIndex(
+			(s) => FG_RE.test(`.${s}.`) || ON_CAMEL_RE.test(`.${s}.`),
+		);
+	const surfaces = backgrounds.filter((bg) => !isLiteral(bg));
 
 	const pairs: ColorPair[] = [];
 	for (const foreground of foregrounds) {
@@ -131,10 +209,64 @@ export function pairColorTokens(map: TokenMap): ColorPair[] {
 			pairs.push({ foreground, background: surface });
 			continue;
 		}
-		for (const background of backgrounds) {
-			if (foreground.name === background.name) continue;
-			pairs.push({ foreground, background });
+		if (isLiteral(foreground)) continue;
+		const sibling = siblingOf(foreground);
+		if (sibling !== undefined) {
+			pairs.push({ foreground, background: sibling });
+			continue;
 		}
+		// A component's own foreground with no counterpart surface: nothing
+		// names what it sits on, so no pairing is guessed.
+		if (roleIndex(foreground.name) > 1) continue;
+		const onWord = foreground.name.match(ON_CAMEL_RE)?.[2]?.toLowerCase();
+		if (onWord !== undefined) {
+			for (const background of surfaces) {
+				if (wordsOf(background.name).includes(onWord)) {
+					pairs.push({ foreground, background });
+				}
+			}
+			continue;
+		}
+		const role = wordsOf(foreground.name)[0];
+		// A global foreground (`fgColor.accent`) sits on global surfaces of any
+		// depth; a namespaced one (`control.fgColor.placeholder`) on its
+		// namespace's surfaces at the same depth (`control.bgColor.rest`).
+		const fgIndex = roleIndex(foreground.name);
+		const depth = segmentsOf(foreground.name).length;
+		const namespace = segmentsOf(foreground.name)[0];
+		const reachable = (bg: Token) => {
+			const bgIndex = bgRoleIndex(bg.name);
+			const bgSegments = segmentsOf(bg.name);
+			if (fgIndex === 0) {
+				// Global surfaces: `bgColor.*`, or under a namespace word (`color.bg.*`).
+				return (
+					bgIndex === 0 ||
+					(bgIndex === 1 && ROLE_SEGMENT.test(bgSegments[0] as string))
+				);
+			}
+			// A namespaced foreground: its own namespace's surfaces at its depth,
+			// or the namespace's root surface (`header.bgColor`).
+			return (
+				bgSegments[0] === namespace &&
+				(bgSegments.length === depth || bgSegments.length === 2)
+			);
+		};
+		const plain = surfaces.filter(
+			(bg) =>
+				bg.name !== foreground.name &&
+				reachable(bg) &&
+				!wordsOf(bg.name).some((w) => STRONG_SURFACE.test(w)),
+		);
+		// The first word is the role (`accent`, `muted`, `danger`); later ones are
+		// tones (`bgColor.accent.muted` is an accent surface, not a muted one).
+		const sharing =
+			role === undefined
+				? []
+				: plain.filter((bg) => wordsOf(bg.name)[0] === role);
+		const defaults = plain.filter((bg) => /(^|[.\-/])default$/i.test(bg.name));
+		const chosen =
+			sharing.length > 0 ? sharing : defaults.length > 0 ? defaults : plain;
+		for (const background of chosen) pairs.push({ foreground, background });
 	}
 	return pairs;
 }
@@ -181,18 +313,52 @@ function suggestForeground(
 }
 
 /** Audit one pair within one mode against the required ratio. */
+/** `top` (possibly translucent) painted over the opaque `under`, as hex. */
+function composite(top: string, under: string): string {
+	const a = rgb(parse(top));
+	const b = rgb(parse(under));
+	if (a === undefined || b === undefined) return top;
+	const alpha = a.alpha ?? 1;
+	if (alpha >= 1) return top;
+	return formatHex({
+		mode: "rgb",
+		r: a.r * alpha + b.r * (1 - alpha),
+		g: a.g * alpha + b.g * (1 - alpha),
+		b: a.b * alpha + b.b * (1 - alpha),
+	});
+}
+
+/** The mode's opaque page surface (`bgColor.default`, `background`), else white. */
+function pageSurface(map: TokenMap): string {
+	const page = map.tokens
+		.filter(isColor)
+		.filter(
+			(t) =>
+				isBackgroundRole(t.name) &&
+				/(^|[.\-/])(default|background)$/i.test(t.name) &&
+				(rgb(parse(t.value))?.alpha ?? 1) >= 1,
+		)
+		.sort((a, b) => segmentsOf(a.name).length - segmentsOf(b.name).length)[0];
+	return page?.value ?? "#ffffff";
+}
+
 function auditPair(
 	mode: string,
 	pair: ColorPair,
 	level: ContrastLevel,
+	page = "#ffffff",
 ): ContrastFinding {
 	const fgValue = pair.foreground.value as string;
 	const bgValue = pair.background.value as string;
+	// Translucent colors render over what is beneath them: the surface over
+	// the page, the text over that surface.
+	const shownBg = composite(bgValue, page);
+	const shownFg = composite(fgValue, shownBg);
 	// Token-level contrast is judged at the normal-text threshold (SPEC §11.2):
 	// tokens carry no size metadata, so the stricter normal requirement applies.
 	const required = requiredRatio(level, "normal");
 
-	const ratio = contrastRatio(fgValue, bgValue);
+	const ratio = contrastRatio(shownFg, shownBg);
 	if (ratio === undefined) {
 		return {
 			mode,
@@ -227,7 +393,7 @@ function auditPair(
 		ratio,
 		required,
 		status: "fail",
-		suggestion: suggestForeground(fgValue, bgValue, required),
+		suggestion: suggestForeground(shownFg, shownBg, required),
 	};
 }
 
@@ -244,8 +410,9 @@ export function auditContrast(
 ): AuditReport {
 	const findings: ContrastFinding[] = [];
 	for (const { mode, map } of modes) {
+		const page = pageSurface(map);
 		for (const pair of pairColorTokens(map)) {
-			findings.push(auditPair(mode, pair, options.level));
+			findings.push(auditPair(mode, pair, options.level, page));
 		}
 	}
 

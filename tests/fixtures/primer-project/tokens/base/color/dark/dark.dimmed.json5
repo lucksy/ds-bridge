@@ -1,0 +1,9 @@
+{
+  base: {
+    color: {
+      neutral: {
+        '1': { $value: { colorSpace: 'srgb', components: [0.129, 0.157, 0.192], hex: '#212830' }, $type: 'color' },
+      },
+    },
+  },
+}

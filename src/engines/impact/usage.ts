@@ -169,6 +169,16 @@ function declaredIn(
 }
 
 /**
+ * A registry importPath naming an installed package (`@primer/react`) rather
+ * than a project file (`src/components/button.tsx`).
+ */
+function isPackageSpecifier(importPath: string): boolean {
+	return (
+		!/\.(?:tsx?|jsx?|mjs|cjs)$/.test(importPath) && !importPath.startsWith(".")
+	);
+}
+
+/**
  * Find every import declaration across the project whose module resolves to
  * `targetImportPath` (relative to root) AND that imports `codeName`, returning a
  * usage site per matching import declaration (deduped per declaration).
@@ -180,6 +190,9 @@ function scanUsages(
 	targetImportPath: string,
 ): UsageSite[] {
 	const sites: UsageSite[] = [];
+	// A package component (`@primer/react`) is imported by specifier, not by
+	// a resolved project file.
+	const fromPackage = isPackageSpecifier(targetImportPath);
 
 	for (const sourceFile of project.getSourceFiles()) {
 		const absPath = sourceFile.getFilePath();
@@ -194,6 +207,20 @@ function scanUsages(
 		}
 
 		for (const importDecl of imports) {
+			if (fromPackage) {
+				const specifier = importDecl.getModuleSpecifierValue();
+				if (specifier !== targetImportPath) continue;
+				const named = importDecl
+					.getNamedImports()
+					.find((n) => n.getName() === codeName);
+				if (named === undefined) continue;
+				sites.push({
+					file,
+					line: importDecl.getStartLineNumber(),
+					importName: named.getAliasNode()?.getText() ?? codeName,
+				});
+				continue;
+			}
 			const resolvedTarget = resolveImportTarget(importDecl);
 			if (resolvedTarget === undefined) continue;
 			const resolvedRel = toForwardSlashes(relative(root, resolvedTarget));

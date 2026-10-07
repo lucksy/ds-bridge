@@ -189,6 +189,8 @@ function readComponent(
 	name: string,
 	importPath: string,
 	decl: Node,
+	/** A package component: keep props declared in this package's own typings. */
+	ownPackage?: string,
 ): CodeComponent {
 	const props: CodeProp[] = [];
 	const variants: Record<string, string[]> = {};
@@ -206,9 +208,16 @@ function readComponent(
 			// `{ orientation = "horizontal", ...props }` over a radix type) IS
 			// part of its API, so it stays.
 			const declarations = symbol.getDeclarations();
+			const ownTypings = (d: Node) =>
+				ownPackage !== undefined &&
+				toForwardSlashes(d.getSourceFile().getFilePath()).includes(
+					`/node_modules/${ownPackage}/`,
+				);
 			if (
 				declarations.length > 0 &&
-				declarations.every((d) => d.getSourceFile().isDeclarationFile()) &&
+				declarations.every(
+					(d) => d.getSourceFile().isDeclarationFile() && !ownTypings(d),
+				) &&
 				!destructured.has(symbol.getName())
 			) {
 				continue;
@@ -318,4 +327,100 @@ export function scanCodeComponents(
 
 	components.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 	return components;
+}
+
+/** Strip non-alphanumerics and lowercase — how names are compared across tools. */
+function normalizeComponentName(name: string): string {
+	return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
+/** The package a bare module specifier names: `@scope/pkg` or `pkg`. */
+function packageOf(specifier: string): string {
+	const parts = specifier.split("/");
+	return specifier.startsWith("@")
+		? parts.slice(0, 2).join("/")
+		: (parts[0] as string);
+}
+
+/**
+ * Components the project imports from installed packages
+ * (`import { Button } from "@primer/react"`) whose normalized name is in
+ * `wanted` — the Figma library's components no local file implements. Each
+ * reads its props from the package's own typings (inherited React HTML
+ * attributes dropped), so parity compares real variant axes. Imports that
+ * resolve inside the project (relative, or a tsconfig alias like `@/ui`) and
+ * React itself are not packages. Name-sorted, one entry per name + package;
+ * never throws.
+ */
+export function scanPackageComponents(
+	rootDir: string,
+	wanted: ReadonlySet<string>,
+	options?: ScanCodeOptions,
+): CodeComponent[] {
+	if (wanted.size === 0) return [];
+	const root = resolve(rootDir);
+	let project: Project;
+	try {
+		project = new Project({
+			...(options?.tsconfigPath !== undefined
+				? { tsConfigFilePath: options.tsconfigPath }
+				: {}),
+			skipAddingFilesFromTsConfig: true,
+			compilerOptions: {
+				jsx: 4,
+				allowJs: true,
+				strict: true,
+				noEmit: true,
+				skipLibCheck: true,
+				esModuleInterop: true,
+				moduleResolution: 100, // Bundler: package `exports` + `types`
+				module: 99, // ESNext
+			},
+		});
+		project.addSourceFilesAtPaths([
+			toForwardSlashes(`${root}/**/*.{ts,tsx}`),
+			`!${toForwardSlashes(`${root}/**/node_modules/**`)}`,
+			`!${toForwardSlashes(`${root}/**/*.d.ts`)}`,
+		]);
+	} catch {
+		return [];
+	}
+
+	const found = new Map<string, CodeComponent>();
+	for (const sourceFile of project.getSourceFiles()) {
+		for (const declaration of sourceFile.getImportDeclarations()) {
+			const specifier = declaration.getModuleSpecifierValue();
+			if (specifier.startsWith(".") || specifier.startsWith("/")) continue;
+			const pkg = packageOf(specifier);
+			if (pkg === "react" || pkg === "react-dom") continue;
+			for (const named of declaration.getNamedImports()) {
+				const name = named.getName();
+				if (!/^[A-Z]/.test(name)) continue;
+				if (!wanted.has(normalizeComponentName(name))) continue;
+				const key = `${specifier}\u0000${name}`;
+				if (found.has(key)) continue;
+				try {
+					const symbol = named.getNameNode().getSymbol();
+					const target = symbol?.getAliasedSymbol() ?? symbol;
+					const decl = target?.getDeclarations()[0];
+					if (decl === undefined) continue;
+					const file = toForwardSlashes(decl.getSourceFile().getFilePath());
+					if (!file.includes("/node_modules/")) continue; // a local alias
+					if (!looksLikeComponent(decl)) continue;
+					found.set(key, readComponent(name, specifier, decl, pkg));
+				} catch {
+					// Unresolvable typings: skip rather than guess the props.
+				}
+			}
+		}
+	}
+	return [...found.values()].sort((a, b) =>
+		a.name < b.name
+			? -1
+			: a.name > b.name
+				? 1
+				: a.importPath < b.importPath
+					? -1
+					: 1,
+	);
 }

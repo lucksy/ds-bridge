@@ -585,3 +585,105 @@ describe("matchLiteral — never crosses token families", () => {
 		expect(match.kind === "exact" && match.token.name).toBe("size.4");
 	});
 });
+
+// GitHub Primer (real-user finding): 2,000+ tokens where component and terminal
+// palettes (`avatar.*`, `ansi.*`, `contribution.*`) share values with the
+// global semantic families, named camelCase: `fgColor.*`, `bgColor.*`,
+// `borderColor.*`, `stack.padding.*`, `space.*`.
+describe("matchLiteral — role-aware picks in a large camelCase system", () => {
+	const t = (
+		name: string,
+		value: string,
+		type: Token["type"],
+		aliasOf?: string,
+	): Token =>
+		aliasOf === undefined
+			? { name, value, type }
+			: { name, value, type, aliasOf };
+	const tokens: Token[] = [
+		t("base.color.blue.5", "#0969da", "color"),
+		t("base.color.red.5", "#cf222e", "color"),
+		t("base.color.neutral.0", "#ffffff", "color"),
+		t("ansi.blue", "#0969da", "color", "base.color.blue.5"),
+		t("fgColor.accent", "#0969da", "color", "base.color.blue.5"),
+		t("ansi.red", "#cf222e", "color", "base.color.red.5"),
+		t("bgColor.danger.emphasis", "#cf222e", "color", "base.color.red.5"),
+		t("fgColor.danger", "#d1242f", "color"),
+		t(
+			"codeMirror.syntax.fgColor.keyword",
+			"#cf222e",
+			"color",
+			"base.color.red.5",
+		),
+		t("base.color.blue.3", "#54aeff", "color"),
+		t("contribution.winter.bgColor.2", "#54aeff", "color", "base.color.blue.3"),
+		t("borderColor.accent.muted", "#54aeff66", "color"),
+		t("avatar.bgColor", "#ffffff", "color", "base.color.neutral.0"),
+		t("fgColor.onEmphasis", "#ffffff", "color", "base.color.neutral.0"),
+		t("bgColor.default", "#ffffff", "color", "base.color.neutral.0"),
+		t("base.size.16", "16px", "dimension"),
+		t("controlStack.small.gap.spacious", "16px", "dimension", "base.size.16"),
+		t("stack.gap.normal", "16px", "dimension", "base.size.16"),
+		t("stack.padding.normal", "16px", "dimension", "base.size.16"),
+		t("space.lg", "16px", "dimension", "base.size.16"),
+	];
+	const index = buildTokenIndex(tokens);
+	const lit = (
+		raw: string,
+		property: string,
+		valueKind: "color" | "dimension",
+	): ExtractedLiteral => ({
+		file: "a.css",
+		line: 1,
+		col: 1,
+		raw,
+		property,
+		valueKind,
+		context: "css-declaration",
+	});
+	const pick = (m: LiteralMatch) =>
+		m.kind === "exact"
+			? m.token.name
+			: m.kind === "near"
+				? m.candidates[0]?.token.name
+				: undefined;
+
+	it("suggests the fgColor token for a text color, not a terminal or component one", () => {
+		expect(pick(matchLiteral(lit("#0969da", "color", "color"), index))).toBe(
+			"fgColor.accent",
+		);
+		expect(pick(matchLiteral(lit("#ffffff", "color", "color"), index))).toBe(
+			"fgColor.onEmphasis",
+		);
+	});
+
+	it("suggests a global bgColor token for a background over a component one", () => {
+		expect(
+			pick(matchLiteral(lit("#ffffff", "background", "color"), index)),
+		).toBe("bgColor.default");
+	});
+
+	it("prefers a near global border color over an exact component surface one", () => {
+		const m = matchLiteral(lit("#54aeff", "border", "color"), index);
+		expect(m.kind).toBe("near");
+		expect(pick(m)).toBe("borderColor.accent.muted");
+	});
+
+	it("prefers a near global text color over an exact surface or component one for `color`", () => {
+		const m = matchLiteral(lit("#cf222e", "color", "color"), index);
+		expect(m.kind).toBe("near");
+		expect(pick(m)).toBe("fgColor.danger");
+	});
+
+	it("prefers the general spacing scale, then the token named for the property", () => {
+		const at = (raw: string, prop: string, idx: TokenIndex) =>
+			pick(matchLiteral(lit(raw, prop, "dimension"), idx));
+		expect(at("16px", "padding", index)).toBe("space.lg");
+		expect(at("16px", "margin-bottom", index)).toBe("space.lg");
+		const noScale = buildTokenIndex(
+			tokens.filter((x) => x.name !== "space.lg"),
+		);
+		expect(at("16px", "padding", noScale)).toBe("stack.padding.normal");
+		expect(at("16px", "gap", noScale)).toBe("stack.gap.normal");
+	});
+});

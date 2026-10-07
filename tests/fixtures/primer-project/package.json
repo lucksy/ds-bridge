@@ -1,0 +1,7 @@
+{
+	"name": "primer-fixture",
+	"private": true,
+	"dependencies": {
+		"@primer/react": "38.0.0"
+	}
+}

@@ -96,6 +96,18 @@ async function scanCode(
 	return { code, scope };
 }
 
+/** Package components the project imports, named like a wanted Figma component. */
+async function scanPackages(
+	targetDir: string,
+	wanted: ReadonlySet<string>,
+): Promise<CodeComponent[]> {
+	if (wanted.size === 0) return [];
+	const { scanPackageComponents } = await import(
+		"../engines/registry/scan-code.js"
+	);
+	return scanPackageComponents(targetDir, wanted);
+}
+
 function byPath(a: CodeComponent, b: CodeComponent): number {
 	return a.importPath < b.importPath ? -1 : a.importPath > b.importPath ? 1 : 0;
 }
@@ -231,7 +243,16 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 			: {}),
 	});
 
-	const matchResult = matchComponents(code, figma);
+	// Components consumed from a design-system package (`@primer/react`) are
+	// the code side of Figma components no local file implements.
+	const normalize = (name: string) =>
+		name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+	const local = new Set(code.map((c) => normalize(c.name)));
+	const wanted = new Set(
+		figma.map((f) => normalize(f.name)).filter((n) => !local.has(n)),
+	);
+	const packaged = await scanPackages(targetDir, wanted);
+	const matchResult = matchComponents([...code, ...packaged], figma);
 
 	// The single io-edge clock read — the persist engine stays pure.
 	const generatedAt = new Date().toISOString();

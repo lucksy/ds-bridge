@@ -190,6 +190,35 @@ describe("ds-bridge SessionStart freshness hook (scripts/hook-freshness.mjs)", (
 		expect(parsed.hookSpecificOutput.additionalContext).toContain("tokens");
 	});
 
+	// Primer testbed: a JSON5 set nested by layer (tokens/base/color/light/…).
+	it("(a3) a nested JSON5 tokens/ set edited after the last check → nudge", async () => {
+		const dir = await freshTmp("ds-fresh-json5-");
+		await mkdir(join(dir, "tokens", "base", "size"), { recursive: true });
+		await mkdir(join(dir, "tokens", "functional", "color"), {
+			recursive: true,
+		});
+		const size = join(dir, "tokens", "base", "size", "size.json5");
+		const bg = join(dir, "tokens", "functional", "color", "bgColor.json5");
+		await writeFile(
+			size,
+			"{ base: { size: { '4': { $value: '4px', $type: 'dimension' } } } }",
+			"utf8",
+		);
+		await writeFile(
+			bg,
+			"{ bgColor: { default: { $value: '#fff', $type: 'color' } } }",
+			"utf8",
+		);
+		const hourAgo = Date.now() - 60 * 60 * 1000;
+		await setMtime(size, hourAgo - 1000);
+		await writeHistory(join(dir, ".ds-bridge"), hourAgo);
+		await setMtime(bg, Date.now());
+
+		const { code, stdout } = await runHook(JSON.stringify({ cwd: dir }));
+		expect(code).toBe(0);
+		expect(stdout).toContain("token-check");
+	});
+
 	it("(c) no token source in cwd → exit 0, empty stdout", async () => {
 		const dir = await freshTmp("ds-fresh-notoken-");
 		// A history line exists, but there is no token source to compare against.

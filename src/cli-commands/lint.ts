@@ -318,6 +318,33 @@ function loadTokenMap(
  * Dictionary's "Do not edit directly, this file was auto-generated." Its
  * values ARE the tokens, so linting it only reports the system against itself.
  */
+/**
+ * True for a stylesheet that is a token build output even without a banner
+ * (GitHub Primer's theme CSS has none): every declaration in it is a custom
+ * property, and nearly all of them name a source token.
+ */
+function isTokenOutputFile(
+	absPath: string,
+	tokenKeys: ReadonlySet<string>,
+): boolean {
+	if (!/\.(css|scss)$/i.test(absPath)) return false;
+	let text: string;
+	try {
+		text = readFileSync(absPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+	} catch {
+		return false;
+	}
+	const declarations = [...text.matchAll(/(?:^|[{;])\s*([\w-]+)\s*:/g)]
+		.map((m) => m[1] as string)
+		.filter((name) => !name.startsWith("--"));
+	const customProps = [...text.matchAll(/(?:^|[{;])\s*--([\w-]+)\s*:/g)].map(
+		(m) => (m[1] as string).toLowerCase(),
+	);
+	if (customProps.length === 0 || declarations.length > 0) return false;
+	const named = customProps.filter((name) => tokenKeys.has(name)).length;
+	return named / customProps.length >= 0.8;
+}
+
 function isGeneratedFile(absPath: string): boolean {
 	let head: string;
 	try {
@@ -621,8 +648,14 @@ export function registerLintCommand(program: Command): void {
 			if (isFile) walked.push(targetPath);
 			else walkLintableFiles(targetDir, walked);
 			// Generated outputs (built token CSS) are the system, not usage of it.
+			const tokenKeys = new Set(
+				loaded.map.tokens.map((t) => t.name.toLowerCase().replace(/\./g, "-")),
+			);
 			for (let i = walked.length - 1; i >= 0; i--) {
-				if (isGeneratedFile(walked[i] as string)) walked.splice(i, 1);
+				const file = walked[i] as string;
+				if (isGeneratedFile(file) || isTokenOutputFile(file, tokenKeys)) {
+					walked.splice(i, 1);
+				}
 			}
 
 			let inScope = walked;

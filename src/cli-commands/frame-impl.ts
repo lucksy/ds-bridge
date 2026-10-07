@@ -42,6 +42,7 @@ import type {
 import {
 	createFigmaClient,
 	type FigmaClient,
+	type FigmaFile,
 	type FigmaNode,
 	type FigmaResult,
 } from "../io/figma/client.js";
@@ -244,24 +245,6 @@ function loadTokens(
 
 // ── Requirement derivation (FigmaNode tree → FrameRequirement[]) ──
 
-/** Flatten a node tree into document order (iterative; never recurses unboundedly). */
-function collectNodes(root: FigmaNode): FigmaNode[] {
-	const nodes: FigmaNode[] = [];
-	const stack: FigmaNode[] = [root];
-	while (stack.length > 0) {
-		const node = stack.pop() as FigmaNode;
-		nodes.push(node);
-		const children = node.children;
-		if (Array.isArray(children)) {
-			for (let i = children.length - 1; i >= 0; i -= 1) {
-				const child = children[i];
-				if (child !== undefined) stack.push(child);
-			}
-		}
-	}
-	return nodes;
-}
-
 /** True when the node's fills include at least one variable-bound fill. */
 function hasBoundFill(node: FigmaNode): boolean {
 	const fills = node.boundVariables?.fills;
@@ -282,20 +265,51 @@ function firstSolidFillColor(node: FigmaNode): string | undefined {
 	return undefined;
 }
 
+/** The component maps a Figma file / nodes response carries. */
+export interface ComponentMaps {
+	components?: FigmaFile["components"];
+	componentSets?: FigmaFile["componentSets"];
+}
+
+/** An instance's main component name: its set's (`Button`), else its own. */
+function mainComponentName(
+	node: FigmaNode,
+	maps: ComponentMaps,
+): string | undefined {
+	if (node.componentId === undefined) return undefined;
+	const component = maps.components?.[node.componentId];
+	if (component === undefined) return undefined;
+	const set =
+		component.componentSetId !== undefined
+			? maps.componentSets?.[component.componentSetId]?.name
+			: undefined;
+	return set ?? component.name;
+}
+
 /**
  * Derive the frame's requirements from its node tree (PURE shape, exported for
- * testing): every INSTANCE node is a component requirement; every node carrying
- * an UNBOUND solid fill is a color token requirement (its raw rgb value). Bound
- * fills are already on-system, so they raise no requirement.
+ * testing): every INSTANCE node is a component requirement, named by its main
+ * component (set) when the maps know it — a renamed "Cancel" instance still
+ * needs Button; every node carrying an UNBOUND solid fill is a color token
+ * requirement (its raw rgb value). Bound fills are already on-system, so they
+ * raise no requirement. An instance's subtree belongs to its component, so the
+ * walk does not descend into it.
  */
-export function deriveRequirements(root: FigmaNode): FrameRequirement[] {
+export function deriveRequirements(
+	root: FigmaNode,
+	maps: ComponentMaps = {},
+): FrameRequirement[] {
 	const requirements: FrameRequirement[] = [];
-	for (const node of collectNodes(root)) {
+	const stack: FigmaNode[] = [root];
+	while (stack.length > 0) {
+		const node = stack.pop() as FigmaNode;
 		if (node.type === "INSTANCE") {
+			const componentName = mainComponentName(node, maps);
 			requirements.push({
 				kind: "component",
 				nodeId: node.id,
 				name: node.name,
+				...(componentName !== undefined ? { componentName } : {}),
 			});
 			continue;
 		}
@@ -308,6 +322,13 @@ export function deriveRequirements(root: FigmaNode): FrameRequirement[] {
 					rawValue,
 					valueKind: "color",
 				});
+			}
+		}
+		const children = node.children;
+		if (Array.isArray(children)) {
+			for (let i = children.length - 1; i >= 0; i -= 1) {
+				const child = children[i];
+				if (child !== undefined) stack.push(child);
 			}
 		}
 	}
@@ -333,7 +354,8 @@ async function fetchRoot(
 	fileKey: string,
 	nodeId: string | undefined,
 ): Promise<
-	{ kind: "ok"; root: FigmaNode } | { kind: "error"; message: string }
+	| { kind: "ok"; root: FigmaNode; maps: ComponentMaps }
+	| { kind: "error"; message: string }
 > {
 	if (nodeId !== undefined) {
 		const result = await client.getFileNodes(fileKey, [nodeId]);
@@ -347,13 +369,37 @@ async function fetchRoot(
 				message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`,
 			};
 		}
-		return { kind: "ok", root };
+		const entry =
+			result.data.nodes[nodeId] ?? Object.values(result.data.nodes)[0];
+		return {
+			kind: "ok",
+			root,
+			maps: {
+				...(entry?.components !== undefined
+					? { components: entry.components }
+					: {}),
+				...(entry?.componentSets !== undefined
+					? { componentSets: entry.componentSets }
+					: {}),
+			},
+		};
 	}
 	const result = await client.getFile(fileKey);
 	if (result.kind !== "ok") {
 		return { kind: "error", message: clientErrorMessage(result) };
 	}
-	return { kind: "ok", root: result.data.document };
+	return {
+		kind: "ok",
+		root: result.data.document,
+		maps: {
+			...(result.data.components !== undefined
+				? { components: result.data.components }
+				: {}),
+			...(result.data.componentSets !== undefined
+				? { componentSets: result.data.componentSets }
+				: {}),
+		},
+	};
 }
 
 // ── Implementability rollup ──
@@ -525,7 +571,7 @@ async function runFrameImpl(
 	}
 
 	// Derive requirements, resolve against the system (pure), roll up.
-	const requirements = deriveRequirements(fetched.root);
+	const requirements = deriveRequirements(fetched.root, fetched.maps);
 	const gapsReport = findGaps({
 		requirements,
 		registry: registryOutcome.registry,

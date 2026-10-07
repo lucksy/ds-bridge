@@ -24,7 +24,14 @@ import { type RegistryFile, resolveEntry } from "./persist.js";
 
 /** One thing a Figma frame needs from the design system. */
 export type FrameRequirement =
-	| { kind: "component"; nodeId: string; name: string }
+	| {
+			kind: "component";
+			nodeId: string;
+			/** The layer name in the frame. */
+			name: string;
+			/** The instance's main component (set) name, when known. */
+			componentName?: string;
+	  }
 	| {
 			kind: "token";
 			property: string;
@@ -98,8 +105,16 @@ function resolveComponent(
 	requirement: Extract<FrameRequirement, { kind: "component" }>,
 	registry: RegistryFile,
 ): ResolvedRequirement | Gap {
-	// Prefer the node id (stable across renames); fall back to the name.
-	const byId = resolveEntry(registry, requirement.nodeId);
+	// Prefer the main component (an instance renamed "Cancel" is still a
+	// Button), then the node id, then the layer name.
+	const byComponent =
+		requirement.componentName !== undefined
+			? resolveEntry(registry, requirement.componentName)
+			: undefined;
+	const byId =
+		byComponent !== undefined && byComponent.kind !== "not-found"
+			? byComponent
+			: resolveEntry(registry, requirement.nodeId);
 	const outcome =
 		byId.kind === "not-found" ? resolveEntry(registry, requirement.name) : byId;
 

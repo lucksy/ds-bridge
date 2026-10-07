@@ -45,6 +45,8 @@ function finish(values: OutputValue[], warnings: string[]): ScanOutcome {
 
 const CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
 const CUSTOM_PROP_RE = /^--([A-Za-z0-9_-]+)\s*:\s*([\s\S]+)$/;
+/** `@custom-media --name <query>` — how Primer ships its viewport-range tokens. */
+const CUSTOM_MEDIA_RE = /^@custom-media\s+--([A-Za-z0-9_-]+)\s+([\s\S]+)$/;
 const ROOT_SELECTORS = new Set([":root", "html", ":host", "*"]);
 
 /** True when every comma-separated part of a rule prelude is a root selector. */
@@ -65,7 +67,8 @@ function scanCss(content: string): OutputValue[] {
 	let buffer = "";
 
 	const declaration = (text: string): void => {
-		const match = text.trim().match(CUSTOM_PROP_RE);
+		const match =
+			text.trim().match(CUSTOM_PROP_RE) ?? text.trim().match(CUSTOM_MEDIA_RE);
 		if (match === null) return;
 		const name = match[1] as string;
 		const raw = (match[2] as string).replace(/!important/g, "").trim();

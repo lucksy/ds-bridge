@@ -1,0 +1,7 @@
+{
+  base: {
+    size: {
+      '4': { $value: { value: 4, unit: 'px' }, $type: 'dimension' },
+    },
+  },
+}

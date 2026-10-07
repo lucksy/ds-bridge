@@ -109,12 +109,25 @@ const TEXT_CONTENT_FIELDS = new Set([
 	"lineIndentations",
 ]);
 
-/** The fields of an override that are drift: not layout, not text content. */
+/**
+ * Fields an instance overrides by being used as designed: a layer renamed in
+ * the screen, and values set through the properties the component exposes
+ * (a Button's label, variant, a boolean toggle) — its API, not drift.
+ */
+const USAGE_FIELDS = new Set([
+	"name",
+	"componentProperties",
+	"componentPropertyReferences",
+]);
+
+/** The fields of an override that are drift: not layout, text or API usage. */
 function designFields(override: { overriddenFields?: string[] }): string[] {
 	const fields = override.overriddenFields ?? [];
 	return fields.filter(
 		(field) =>
-			!LAYOUT_ONLY_FIELDS.has(field) && !TEXT_CONTENT_FIELDS.has(field),
+			!LAYOUT_ONLY_FIELDS.has(field) &&
+			!TEXT_CONTENT_FIELDS.has(field) &&
+			!USAGE_FIELDS.has(field),
 	);
 }
 

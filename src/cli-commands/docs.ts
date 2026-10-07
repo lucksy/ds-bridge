@@ -77,12 +77,25 @@ function normalizeName(name: string): string {
  * which would crash every command in the single-file ESM bundle. Mirrors the
  * pattern in registry.ts.
  */
-async function scanCode(targetDir: string): Promise<CodeComponent[]> {
+async function scanCode(
+	targetDir: string,
+	registry: RegistryFile,
+): Promise<CodeComponent[]> {
 	shimCjsGlobals();
-	const { scanCodeComponents } = await import(
+	const { scanCodeComponents, scanPackageComponents } = await import(
 		"../engines/registry/scan-code.js"
 	);
-	return scanCodeComponents(targetDir);
+	// Components the registry matched to a package (`@primer/react`) read their
+	// props from the package's typings.
+	const packaged = new Set(
+		registry.matches
+			.filter((m) => !/\.(?:tsx?|jsx?)$/.test(m.importPath))
+			.map((m) => normalizeName(m.codeName)),
+	);
+	return [
+		...scanCodeComponents(targetDir),
+		...scanPackageComponents(targetDir, packaged),
+	];
 }
 
 /** Give the deferred ts-morph chunk the CJS globals its TypeScript expects. */
@@ -269,7 +282,7 @@ async function runDocs(
 	const registry = loadRegistry(targetDir);
 	if (registry === undefined) return; // exit code + stderr already set
 
-	const code = await scanCode(targetDir);
+	const code = await scanCode(targetDir, registry);
 	const tokens = await discoverTokens(targetDir);
 
 	const merged = mergeComponentDocs({

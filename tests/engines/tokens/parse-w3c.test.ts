@@ -256,3 +256,153 @@ describe("parseW3c — ordering", () => {
 		expect(names).toEqual(["a.token", "z.a", "z.b"]);
 	});
 });
+
+// DTCG 2025.10 value shapes, as GitHub Primer ships them: colors as
+// {colorSpace, components, hex}, dimensions / durations as {value, unit}, and
+// array values (cubicBezier, fontFamily stacks, layered shadows).
+describe("parseW3c — DTCG 2025 value objects", () => {
+	const tokenValue = (source: unknown, name: string) => {
+		const outcome = parseW3c(source);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return undefined;
+		return outcome.map.tokens.find((t) => t.name === name)?.value;
+	};
+
+	it("reads a color object as its hex (alias chains included)", () => {
+		const source = {
+			base: {
+				black: {
+					$type: "color",
+					$value: {
+						colorSpace: "hsl",
+						components: [213.3, 12.7, 13.9],
+						hex: "#1f2328",
+					},
+				},
+			},
+			fg: { default: { $type: "color", $value: "{base.black}" } },
+		};
+		expect(tokenValue(source, "base.black")).toBe("#1f2328");
+		expect(tokenValue(source, "fg.default")).toBe("#1f2328");
+	});
+
+	it("computes the hex of a color object without one, keeping alpha", () => {
+		const source = {
+			c: {
+				red: {
+					$type: "color",
+					$value: { colorSpace: "srgb", components: [1, 0, 0] },
+				},
+				veil: {
+					$type: "color",
+					$value: { colorSpace: "srgb", components: [0, 0, 0], alpha: 0.5 },
+				},
+			},
+		};
+		expect(tokenValue(source, "c.red")).toBe("#ff0000");
+		expect(tokenValue(source, "c.veil")).toBe("#00000080");
+	});
+
+	it("reads {value, unit} dimensions and durations as CSS strings", () => {
+		const source = {
+			size: { "4": { $type: "dimension", $value: { value: 4, unit: "px" } } },
+			text: {
+				md: { $type: "dimension", $value: { value: 0.875, unit: "rem" } },
+			},
+			motion: {
+				fast: { $type: "duration", $value: { value: 100, unit: "ms" } },
+			},
+			space: { xs: { $type: "dimension", $value: "{size.4}" } },
+		};
+		expect(tokenValue(source, "size.4")).toBe("4px");
+		expect(tokenValue(source, "text.md")).toBe("0.875rem");
+		expect(tokenValue(source, "motion.fast")).toBe("100ms");
+		expect(tokenValue(source, "space.xs")).toBe("4px");
+	});
+
+	it("accepts array values instead of rejecting them as invalid shapes", () => {
+		const source = {
+			easing: { linear: { $type: "cubicBezier", $value: [0, 0, 1, 1] } },
+			font: {
+				mono: {
+					$type: "fontFamily",
+					$value: ["ui-monospace", "Menlo", "monospace"],
+				},
+			},
+			shadow: {
+				floating: {
+					$type: "shadow",
+					$value: [
+						{
+							color: "#00000014",
+							offsetX: "0px",
+							offsetY: "1px",
+							blur: "2px",
+							spread: "0px",
+						},
+						{
+							color: "#0000001f",
+							offsetX: "0px",
+							offsetY: "8px",
+							blur: "16px",
+							spread: "0px",
+						},
+					],
+				},
+			},
+		};
+		const outcome = parseW3c(source);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		const names = outcome.map.tokens.map((t) => t.name);
+		expect(names).toEqual(["easing.linear", "font.mono", "shadow.floating"]);
+		expect(tokenValue(source, "font.mono")).toBe(
+			"ui-monospace, Menlo, monospace",
+		);
+	});
+});
+
+// GitHub Primer: a color token may carry `alpha` beside `$value`, and string
+// values may embed references (`inset 0 0 0 {borderWidth.thin}`).
+describe("parseW3c — Primer conventions", () => {
+	const tokenValueOf = (source: unknown, name: string) => {
+		const outcome = parseW3c(source);
+		if (outcome.kind !== "ok") throw new Error(JSON.stringify(outcome.errors));
+		return outcome.map.tokens.find((t) => t.name === name)?.value;
+	};
+
+	it("applies a token's alpha to its color, and aliases inherit it", () => {
+		const source = {
+			base: { blue: { $type: "color", $value: "#54aeff" } },
+			border: {
+				accent: { $type: "color", $value: "{base.blue}", alpha: 0.4 },
+				selected: { $type: "color", $value: "{border.accent}" },
+			},
+		};
+		expect(tokenValueOf(source, "base.blue")).toBe("#54aeff");
+		expect(tokenValueOf(source, "border.accent")).toBe("#54aeff66");
+		expect(tokenValueOf(source, "border.selected")).toBe("#54aeff66");
+	});
+
+	it("replaces (never compounds) the alpha of a translucent alias target", () => {
+		const source = {
+			border: {
+				muted: { $type: "color", $value: "#d1d9e0", alpha: 0.7 },
+				overlay: { $type: "color", $value: "{border.muted}", alpha: 0.5 },
+			},
+		};
+		expect(tokenValueOf(source, "border.overlay")).toBe("#d1d9e080");
+	});
+
+	it("resolves references embedded in a string value", () => {
+		const source = {
+			borderWidth: {
+				thin: { $type: "dimension", $value: { value: 1, unit: "px" } },
+			},
+			boxShadow: {
+				thin: { $type: "shadow", $value: "inset 0 0 0 {borderWidth.thin}" },
+			},
+		};
+		expect(tokenValueOf(source, "boxShadow.thin")).toBe("inset 0 0 0 1px");
+	});
+});

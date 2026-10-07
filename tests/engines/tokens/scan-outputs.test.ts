@@ -173,3 +173,22 @@ describe("scanOutputs — dispatch & errors", () => {
 		expect(result.values.map((v) => v.name)).toEqual(["a", "z"]);
 	});
 });
+
+describe("scanOutputs — @custom-media (Primer viewport ranges)", () => {
+	it("reads each @custom-media as an output value", () => {
+		const outcome = scanOutputs({
+			path: "viewport.css",
+			content:
+				"@custom-media --viewportRange-narrow (max-width: calc(48rem - 0.02px));\n@custom-media --viewportRange-portrait (orientation: portrait);\n",
+		});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.values).toEqual([
+			{
+				name: "viewportRange-narrow",
+				raw: "(max-width: calc(48rem - 0.02px))",
+			},
+			{ name: "viewportRange-portrait", raw: "(orientation: portrait)" },
+		]);
+	});
+});

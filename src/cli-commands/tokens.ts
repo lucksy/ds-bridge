@@ -328,7 +328,7 @@ function driftDetail(entry: DriftEntry): [string, string, string] {
 			return [
 				withMode(entry.token.name, entry.mode),
 				severityColorless(entry.kind),
-				`source ${String(entry.token.value)} ≠ output ${entry.output.raw}`,
+				`source ${String(entry.token.value)} ≠ output ${entry.output.raw}${entry.resolved !== undefined ? ` → ${entry.resolved}` : ""}`,
 			];
 		case "missing-output":
 			return [
@@ -386,7 +386,13 @@ function renderCheckTerm(
 			? `In sync — ${result.inSync} token${result.inSync === 1 ? "" : "s"} match output`
 			: `${total} drift entr${total === 1 ? "y" : "ies"} (${result.inSync} in sync)`;
 
-	const lines = [heading, describeSource(source), "", countsTable];
+	const lines = [heading, describeSource(source)];
+	for (const layer of result.unbuiltLayers ?? []) {
+		lines.push(
+			`Not built by design: ${layer.prefix}.* (${layer.tokens} token${layer.tokens === 1 ? "" : "s"}) — a reference-only layer the outputs reach through aliases`,
+		);
+	}
+	lines.push("", countsTable);
 
 	if (total > 0) {
 		const rows = result.entries.map((entry) => {
@@ -411,6 +417,9 @@ function checkJson(
 			entries: result.entries,
 			inSync: result.entries.length === 0,
 			source,
+			...(result.unbuiltLayers !== undefined
+				? { unbuiltLayers: result.unbuiltLayers }
+				: {}),
 			...(skippedModes.length > 0 ? { skippedModes } : {}),
 		},
 		null,

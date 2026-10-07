@@ -263,3 +263,69 @@ describe("auditContrast", () => {
 		expect(f?.suggestion).toBeUndefined();
 	});
 });
+
+// GitHub Primer (real-user finding): camelCase roles (`fgColor.*`, `bgColor.*`,
+// `onEmphasis`), component tokens as fg/bg siblings, and translucent muted
+// surfaces. The full cross product audited 980 pairs (508 "failing"), almost
+// all combinations the system never renders, and missed fgColor/bgColor.
+describe("pairColorTokens — Primer-style semantics", () => {
+	const map = makeMap([
+		color("fgColor.default", "#1f2328"),
+		color("fgColor.muted", "#59636e"),
+		color("fgColor.accent", "#0969da"),
+		color("fgColor.white", "#ffffff"),
+		color("fgColor.onEmphasis", "#ffffff"),
+		color("bgColor.default", "#ffffff"),
+		color("bgColor.muted", "#f6f8fa"),
+		color("bgColor.white", "#ffffff"),
+		color("bgColor.accent.muted", "#ddf4ff"),
+		color("bgColor.accent.emphasis", "#0969da"),
+		color("bgColor.danger.emphasis", "#cf222e"),
+		color("label.green.fgColor", "#116329"),
+		color("label.green.bgColor", "#dafbe1"),
+		color("syntax.carriage.text", "#f0f6fc"),
+		color("syntax.carriage.bg", "#b62324"),
+		color("syntax.illegal.text", "#f85149"),
+		color("syntax.illegal.bg", "#f851491a"),
+	]);
+	const keys = pairColorTokens(map)
+		.map((p) => `${p.foreground.name} on ${p.background.name}`)
+		.sort();
+
+	it("pairs siblings, on-X with X surfaces, and roles that share a word (literal white/black skipped)", () => {
+		expect(keys).toEqual([
+			"fgColor.accent on bgColor.accent.muted",
+			"fgColor.default on bgColor.default",
+			"fgColor.muted on bgColor.muted",
+			"fgColor.onEmphasis on bgColor.accent.emphasis",
+			"fgColor.onEmphasis on bgColor.danger.emphasis",
+			"label.green.fgColor on label.green.bgColor",
+			"syntax.carriage.text on syntax.carriage.bg",
+			"syntax.illegal.text on syntax.illegal.bg",
+		]);
+	});
+});
+
+describe("auditContrast — translucent colors", () => {
+	it("measures a translucent surface composited over the mode's page background", () => {
+		const report = auditContrast(
+			[
+				{
+					mode: "dark",
+					map: makeMap([
+						color("bgColor.default", "#0d1117"),
+						color("syntax.illegal.text", "#f85149"),
+						color("syntax.illegal.bg", "#f851491a"),
+					]),
+				},
+			],
+			{ level: "AA" },
+		);
+		const finding = report.findings.find(
+			(f) => f.foreground === "syntax.illegal.text",
+		);
+		// #f85149 on 10% red over #0d1117 ≈ 5.0:1, not 1.00:1 against the raw alpha color.
+		expect(finding?.ratio).toBeGreaterThan(4.5);
+		expect(finding?.status).toBe("pass");
+	});
+});

@@ -37,10 +37,13 @@ const DIMENSION_NEAR_PX = 1;
 const NEAR_LIMIT = 3;
 
 /**
- * Among tokens that share an exact value, prefer the semantic alias (a token
- * whose `aliasOf` points at another token in the same group) over the primitive
- * it dereferences — that is the token a linter should suggest. Falls back to the
- * first token when no alias is present.
+ * Among tokens that share an exact value, the one a linter should suggest:
+ * first the token whose role fits the property (a text color for `color`, a
+ * surface for `background`, a border for `border`), then a semantic alias
+ * over the primitive it dereferences, a non-status role over a status one
+ * (Material: on-primary and on-error are both white), and the more general
+ * (shorter) name over a component-scoped one (`bgColor.default` over
+ * `avatar.bgColor`). Ties keep the index order.
  */
 function pickPreferred(
 	tokens: readonly Token[],
@@ -48,19 +51,46 @@ function pickPreferred(
 ): Token | undefined {
 	if (tokens.length === 0) return undefined;
 	const role = propertyRole(property);
-	const candidates =
-		role === undefined
-			? tokens
-			: tokens.filter((t) => isForegroundToken(t.name) === (role === "fg"));
-	const pool = candidates.length > 0 ? candidates : tokens;
 	const names = new Set(tokens.map((t) => t.name));
-	const semantic = pool.filter(
-		(t) => t.aliasOf !== undefined && names.has(t.aliasOf),
-	);
-	// Several roles can share a value (Material: on-primary and on-error are
-	// both white); a status role is the least likely meaning of a plain value.
-	const neutral = semantic.find((t) => !isStatusToken(t.name));
-	return neutral ?? semantic[0] ?? pool[0];
+	const score = (t: Token): number[] => [
+		roleScore(t.name, role),
+		roleDepth(t.name, role),
+		t.aliasOf !== undefined && names.has(t.aliasOf) ? 0 : 1,
+		isStatusToken(t.name) ? 1 : 0,
+		t.name.split(/[.\-/]/).length,
+	];
+	return tokens
+		.map((token, order) => ({ token, key: [...score(token), order] }))
+		.sort((a, b) => {
+			for (let i = 0; i < a.key.length; i++) {
+				const d = (a.key[i] as number) - (b.key[i] as number);
+				if (d !== 0) return d;
+			}
+			return 0;
+		})[0]?.token;
+}
+
+/**
+ * How deep the role word sits: `bgColor.default` (0, a global family) ranks
+ * ahead of `avatar.bgColor` (1, a component's own token).
+ */
+function roleDepth(name: string, role: Role | undefined): number {
+	if (role === undefined) return 0;
+	const re =
+		role === "fg" ? FG_SEGMENT : role === "bg" ? BG_TOKEN : BORDER_TOKEN;
+	const segments = name.split(/[.\-/]/);
+	const at = segments.findIndex((s) => re.test(s));
+	return at === -1 ? segments.length : at;
+}
+
+/** 0: the token's role fits the property · 1: neutral · 2: the opposite role. */
+function roleScore(name: string, role: Role | undefined): number {
+	if (role === undefined) return 1;
+	const fg = isForegroundToken(name);
+	if (role === "fg") return fg ? 0 : 2;
+	if (fg) return 2;
+	const fits = role === "bg" ? BG_TOKEN.test(name) : BORDER_TOKEN.test(name);
+	return fits ? 0 : 1;
 }
 
 /** A token named for a status: error, danger, warning, success, destructive. */
@@ -86,18 +116,20 @@ function dimensionFamily(property: string | undefined): RegExp | undefined {
 			p.replace(/([a-z])([A-Z])/g, "$1-$2"),
 		)
 	) {
-		return /(spacing|space|gap|gutter)/i;
+		return /(spacing|space|gap|gutter|padding|margin)/i;
 	}
 	return undefined;
 }
 
+type Role = "fg" | "bg" | "border";
+
 /**
- * Whether a property paints text (fg) or a surface (bg); undefined when it is
- * neither or ambiguous (`fill`, `stroke` paint icons as often as shapes). When
- * several tokens share a value (shadcn: `chart-2` and `muted-foreground` are
- * both #737373), the role picks the one the author meant.
+ * What a property paints: text (fg), a surface (bg) or an edge (border);
+ * undefined when it is ambiguous (`fill`, `stroke` paint icons as often as
+ * shapes). When several tokens share a value (shadcn: `chart-2` and
+ * `muted-foreground` are both #737373), the role picks the one the author meant.
  */
-function propertyRole(property: string | undefined): "fg" | "bg" | undefined {
+function propertyRole(property: string | undefined): Role | undefined {
 	if (property === undefined) return undefined;
 	const p = property.replace(/-/g, "").toLowerCase();
 	if (
@@ -105,18 +137,33 @@ function propertyRole(property: string | undefined): "fg" | "bg" | undefined {
 	) {
 		return "fg";
 	}
-	if (/^(?:background|border|outline|boxshadow|columnrule)/.test(p)) {
-		return "bg";
-	}
+	if (/^(?:border|outline|columnrule)/.test(p)) return "border";
+	if (/^(?:background|boxshadow)/.test(p)) return "bg";
 	return undefined;
 }
 
-/** A token named for text: `*-foreground`, `*.fg`, `text.*`, `on-*`. */
+/**
+ * A token named for text: `*-foreground`, `*.fg`, `text.*`, `on-*`, and the
+ * camelCase forms large systems use (Primer's `fgColor.*`, `onEmphasis`).
+ */
 function isForegroundToken(name: string): boolean {
-	return /(^|[.\-/])(?:foreground|fg|text|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
-		name,
+	return (
+		/(^|[.\-/])(?:foreground|fg|fgcolor|text|textcolor|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
+			name,
+		) || /(^|[.\-/])on[A-Z][A-Za-z]*([.\-/]|$)/.test(name)
 	);
 }
+
+/** One name segment naming text (used for depth). */
+const FG_SEGMENT =
+	/^(?:foreground|fg|fgcolor|text|textcolor|on|on-[a-z0-9]+|on[A-Z][A-Za-z]*)$/i;
+
+/** A token named for a surface: `bg`, `bgColor`, `background`, `surface`, `canvas`. */
+const BG_TOKEN =
+	/(^|[.\-/])(?:bg|bgcolor|background|backgroundcolor|surface|canvas)([.\-/]|$)/i;
+/** A token named for an edge: `border`, `borderColor`, `outline`, `stroke`. */
+const BORDER_TOKEN =
+	/(^|[.\-/])(?:border|bordercolor|outline|stroke)([.\-/]|$)/i;
 
 /** Stable secondary ordering: alias-bearing (semantic) tokens rank ahead of primitives. */
 function aliasRank(token: Token): number {
@@ -149,9 +196,24 @@ function matchColor(
 	const canonical = normalizeColor(stripQuotes(literal.raw));
 	if (canonical === undefined) return { kind: "off-system" };
 
-	// 1. Direct value hit on a simple color token.
+	// 1. Direct value hit on a simple color token — unless none of the hits is
+	// a global token of the property's role and one is within reach: `color:
+	// #cf222e` means the danger text color (fgColor.danger, #d1242f), not the
+	// danger surface or a code-editor's keyword color with that exact value.
 	const exact = index.byValue.get(canonical);
 	if (exact !== undefined && exact.length > 0) {
+		const role = propertyRole(literal.property);
+		const fits = (t: Token) =>
+			roleScore(t.name, role) === 0 && roleDepth(t.name, role) === 0;
+		if (role !== undefined && !exact.some(fits)) {
+			const inExact = new Set(exact.map((t) => t.name));
+			const nearFit = index
+				.nearest(canonical, { maxDeltaE: COLOR_NEAR_DELTA_E, limit: 50 })
+				.filter((m) => !inExact.has(m.token.name) && fits(m.token))
+				.map((m) => ({ token: m.token, distance: m.deltaE }))
+				.slice(0, NEAR_LIMIT);
+			if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
+		}
 		const token = pickPreferred(exact, literal.property);
 		if (token !== undefined) return { kind: "exact", token };
 	}
@@ -206,6 +268,40 @@ function setHasFamily(index: TokenIndex, family: RegExp): boolean {
 	return found;
 }
 
+/**
+ * Among dimension tokens sharing a value: the general spacing scale
+ * (`space.lg`) first — a property-named token is often a component's own
+ * (`overlay.padding.normal`) — then the one named for the property
+ * (`stack.padding.*`, `*.gap.*`), then the shortest name; ties keep order.
+ */
+function pickDimension(
+	tokens: readonly Token[],
+	property: string | undefined,
+): Token | undefined {
+	const word = (property ?? "")
+		.replace(/([a-z])([A-Z])/g, "$1-$2")
+		.toLowerCase()
+		.match(/^(padding|margin|gap|row-gap|column-gap)/)?.[1]
+		?.replace(/^(row|column)-/, "");
+	const has = (name: string, re: RegExp) => (re.test(name) ? 0 : 1);
+	const named =
+		word === undefined ? undefined : new RegExp(`(^|[.\\-/])${word}`, "i");
+	const key = (t: Token): number[] => [
+		has(t.name, /(^|[.\-/])(?:space|spacing)([.\-/]|$)/i),
+		named === undefined ? 0 : has(t.name, named),
+		t.name.split(/[.\-/]/).length,
+	];
+	return tokens
+		.map((token, order) => ({ token, k: [...key(token), order] }))
+		.sort((a, b) => {
+			for (let i = 0; i < a.k.length; i++) {
+				const d = (a.k[i] as number) - (b.k[i] as number);
+				if (d !== 0) return d;
+			}
+			return 0;
+		})[0]?.token;
+}
+
 function matchDimension(
 	literal: ExtractedLiteral,
 	index: TokenIndex,
@@ -225,7 +321,10 @@ function matchDimension(
 	// 1. Exact px hit. Only dimension tokens produce `${px}px` value keys.
 	const bucket = index.byValue.get(`${dim.px}px`);
 	if (bucket !== undefined) {
-		const exact = bucket.find((t) => t.type === "dimension" && inFamily(t));
+		const exact = pickDimension(
+			bucket.filter((t) => t.type === "dimension" && inFamily(t)),
+			literal.property,
+		);
 		if (exact !== undefined) return { kind: "exact", token: exact };
 	}
 

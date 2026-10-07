@@ -114,3 +114,56 @@ describe("deriveRequirements", () => {
 		expect(deriveRequirements(root)).toEqual([]);
 	});
 });
+
+// Real-user finding (Primer testbed): instances renamed in the screen ("Cancel",
+// "Repository name") were resolved by their layer name and read as gaps, and
+// the instances nested inside a component (PageHeader's "actions" button) were
+// counted as the frame's own requirements. A clean frame scored 67%.
+describe("deriveRequirements — main components and nesting", () => {
+	const root: FigmaNode = {
+		id: "2:148",
+		name: "Settings",
+		type: "FRAME",
+		children: [
+			{
+				id: "2:150",
+				name: "Page header",
+				type: "INSTANCE",
+				componentId: "2:71",
+				children: [
+					{
+						id: "I2:150;2:75",
+						name: "actions",
+						type: "INSTANCE",
+						componentId: "1:61",
+					},
+				],
+			},
+			{ id: "2:166", name: "Cancel", type: "INSTANCE", componentId: "1:61" },
+		],
+	};
+	const maps = {
+		components: {
+			"2:71": { name: "PageHeader" },
+			"1:61": { name: "variant=default, size=medium", componentSetId: "1:109" },
+		},
+		componentSets: { "1:109": { name: "Button" } },
+	};
+
+	it("names each requirement by its main component (set) and skips nested instances", () => {
+		expect(deriveRequirements(root, maps)).toEqual([
+			{
+				kind: "component",
+				nodeId: "2:150",
+				name: "Page header",
+				componentName: "PageHeader",
+			},
+			{
+				kind: "component",
+				nodeId: "2:166",
+				name: "Cancel",
+				componentName: "Button",
+			},
+		]);
+	});
+});

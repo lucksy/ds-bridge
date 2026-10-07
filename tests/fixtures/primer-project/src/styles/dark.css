@@ -1,0 +1,8 @@
+[data-color-mode="dark"][data-dark-theme="dark"],
+[data-color-mode="auto"][data-light-theme="dark"] {
+	--bgColor-default: #0d1117;
+	--bgColor-muted: var(--bgColor-default);
+	--bgColor-inset: #010409;
+	--borderColor-muted: #0d1117b3;
+	--borderColor-overlay: #0d111780;
+}

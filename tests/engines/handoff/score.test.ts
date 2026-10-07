@@ -15,7 +15,9 @@
 //
 // Definitions used by the rules:
 //   - STYLEABLE node: has a non-empty `fills` OR non-empty `strokes` array.
-//       binding "covered" = boundVariables binds at least one of fills/strokes.
+//       binding "covered" = every visible SOLID fill and stroke is bound
+//       (boundVariables.fills / .strokes cover them); a node with no solid
+//       paint is covered when it binds any paint.
 //   - FRAME node: type === "FRAME". auto-layout ok = layoutMode is defined and
 //       not "NONE".
 //   - component-named node: name is PascalCase OR contains "/". Such a node that
@@ -149,6 +151,44 @@ describe("scoreReadiness — variable binding rule (35 pts) in isolation", () =>
 		});
 		const report = scoreReadiness(root);
 		expect(report.stats.boundCoverage).toBe(1);
+	});
+
+	// Real-user finding (Primer testbed): a Button instance whose fill was
+	// overridden with a raw hex kept its bound border, and passed as bound.
+	it("is unbound when one paint is raw though another is bound", () => {
+		const root: HandoffNode = frame({
+			id: "0:1",
+			name: "Wrapper",
+			layoutMode: "VERTICAL",
+			children: [
+				{
+					id: "1:1",
+					name: "Delete",
+					type: "RECTANGLE",
+					fills: [{ type: "SOLID" }],
+					strokes: [{ type: "SOLID" }],
+					boundVariables: { strokes: [{ type: "VARIABLE_ALIAS", id: "V:7" }] },
+				},
+				{
+					id: "1:2",
+					name: "Cancel",
+					type: "RECTANGLE",
+					fills: [{ type: "SOLID" }, { type: "SOLID", visible: false }],
+					strokes: [{ type: "SOLID" }],
+					boundVariables: {
+						fills: [{ type: "VARIABLE_ALIAS", id: "V:1" }],
+						strokes: [{ type: "VARIABLE_ALIAS", id: "V:7" }],
+					},
+				},
+			],
+		});
+		const report = scoreReadiness(root);
+		expect(report.stats.boundCoverage).toBe(0.5);
+		expect(
+			report.deductions
+				.filter((d) => d.rule === "var-binding")
+				.map((d) => d.nodeId),
+		).toEqual(["1:1"]);
 	});
 
 	it("caps the listed binding deductions at the 10 worst", () => {
