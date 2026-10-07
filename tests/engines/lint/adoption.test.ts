@@ -5,6 +5,7 @@
 // per-file {refs, literals} into totals + a worst-pct-first byDirectory list.
 import { describe, expect, it } from "vitest";
 import {
+	countInlineStyleTokenRefs,
 	countTokenRefs,
 	tallyAdoption,
 } from "../../../src/engines/lint/adoption.js";
@@ -128,5 +129,25 @@ describe("tallyAdoption", () => {
 			{ path: "b/y.css", refs: 1, literals: 9 },
 		];
 		expect(tallyAdoption(files)).toEqual(tallyAdoption(files));
+	});
+});
+
+describe("countInlineStyleTokenRefs (.tsx/.jsx)", () => {
+	it("counts var() refs inside style objects and styled templates only", () => {
+		const tsx = [
+			'const A = () => <div style={{ color: "var(--fg)", padding: "var(--space-2) var(--space-4)" }} />;',
+			"const B = styled.div`",
+			"\tbackground: var(--bg);",
+			"`;",
+			'const note = "var(--not-a-style)";',
+			'const C = () => <div className="bg-[var(--x)]" />;',
+		].join("\n");
+		expect(countInlineStyleTokenRefs(tsx)).toBe(4);
+	});
+
+	it("is 0 without inline styles", () => {
+		expect(countInlineStyleTokenRefs("export const X = () => <b />;\n")).toBe(
+			0,
+		);
 	});
 });

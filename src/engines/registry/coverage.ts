@@ -8,13 +8,17 @@
 // so the coverage number is a floor, not an exact census. This caveat must be
 // surfaced wherever the number renders.
 import type { ComponentUsage } from "../impact/usage.js";
+import { codeExports, componentOf } from "./parts.js";
 import type { RegistryFile } from "./persist.js";
 
 /** The import-coverage verdict for a project against its registry. */
 export interface CoverageResult {
 	/** CODE components with >=1 resolved import site. */
 	imported: number;
-	/** Every CODE component in the registry (matched + unmatched-code). */
+	/**
+	 * Every CODE component in the registry (matched + unmatched-code), with
+	 * compound parts folded into their component.
+	 */
 	total: number;
 	/** Not-yet-imported code-component names, alphabetical, capped at 20. */
 	uncovered: string[];
@@ -49,22 +53,27 @@ export function computeCoverage(
 		}
 	}
 
-	// Every CODE component the registry knows, de-duplicated by name.
-	const codeNames = new Set<string>();
-	for (const m of registry.matches) codeNames.add(m.codeName);
-	for (const u of registry.unmatchedCode) codeNames.add(u.name);
+	// Every CODE component the registry knows, de-duplicated by name. Compound
+	// parts fold into their component (Card + CardHeader + CardTitle is one),
+	// which counts as imported when any member is.
+	const exports = codeExports(registry);
+	const members = new Map<string, string[]>();
+	for (const entry of exports) {
+		const component = componentOf(entry, exports);
+		members.set(component, [...(members.get(component) ?? []), entry.name]);
+	}
 
 	let imported = 0;
 	const uncovered: string[] = [];
-	for (const name of codeNames) {
-		if (importedNames.has(name)) imported += 1;
-		else uncovered.push(name);
+	for (const [component, names] of members) {
+		if (names.some((name) => importedNames.has(name))) imported += 1;
+		else uncovered.push(component);
 	}
 	uncovered.sort(byNameAsc);
 
 	return {
 		imported,
-		total: codeNames.size,
+		total: members.size,
 		uncovered: uncovered.slice(0, UNCOVERED_CAP),
 		uncoveredTotal: uncovered.length,
 	};

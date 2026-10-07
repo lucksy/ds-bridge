@@ -86,6 +86,30 @@ describe("assessLibraryHealth — override hotspots", () => {
 		]);
 	});
 
+	it("ignores size/position-only overrides (auto-layout resizing every placed instance)", () => {
+		const f = file(
+			doc([
+				instance({
+					id: "1:1",
+					name: "Card",
+					overrides: [{ id: "1:1", overriddenFields: ["width", "height"] }],
+				}),
+				instance({
+					id: "1:2",
+					name: "Legacy Button",
+					overrides: [
+						{ id: "1:2", overriddenFields: ["width", "height"] },
+						{ id: "1:2", overriddenFields: ["fills"] },
+					],
+				}),
+			]),
+		);
+		const r = assessLibraryHealth(f);
+		expect(r.overrideHotspots.map((h) => [h.nodeId, h.overrideCount])).toEqual([
+			["1:2", 1],
+		]);
+	});
+
 	it("resolves componentName via the components map when present", () => {
 		const f = file(
 			doc([

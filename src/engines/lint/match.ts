@@ -42,13 +42,49 @@ const NEAR_LIMIT = 3;
  * it dereferences — that is the token a linter should suggest. Falls back to the
  * first token when no alias is present.
  */
-function pickPreferred(tokens: readonly Token[]): Token | undefined {
+function pickPreferred(
+	tokens: readonly Token[],
+	property?: string,
+): Token | undefined {
 	if (tokens.length === 0) return undefined;
+	const role = propertyRole(property);
+	const candidates =
+		role === undefined
+			? tokens
+			: tokens.filter((t) => isForegroundToken(t.name) === (role === "fg"));
+	const pool = candidates.length > 0 ? candidates : tokens;
 	const names = new Set(tokens.map((t) => t.name));
-	const semantic = tokens.find(
+	const semantic = pool.find(
 		(t) => t.aliasOf !== undefined && names.has(t.aliasOf),
 	);
-	return semantic ?? tokens[0];
+	return semantic ?? pool[0];
+}
+
+/**
+ * Whether a property paints text (fg) or a surface (bg); undefined when it is
+ * neither or ambiguous (`fill`, `stroke` paint icons as often as shapes). When
+ * several tokens share a value (shadcn: `chart-2` and `muted-foreground` are
+ * both #737373), the role picks the one the author meant.
+ */
+function propertyRole(property: string | undefined): "fg" | "bg" | undefined {
+	if (property === undefined) return undefined;
+	const p = property.replace(/-/g, "").toLowerCase();
+	if (
+		/^(?:color|caretcolor|textdecorationcolor|webkittextfillcolor)$/.test(p)
+	) {
+		return "fg";
+	}
+	if (/^(?:background|border|outline|boxshadow|columnrule)/.test(p)) {
+		return "bg";
+	}
+	return undefined;
+}
+
+/** A token named for text: `*-foreground`, `*.fg`, `text.*`, `on-*`. */
+function isForegroundToken(name: string): boolean {
+	return /(^|[.\-/])(?:foreground|fg|text|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
+		name,
+	);
 }
 
 /** Stable secondary ordering: alias-bearing (semantic) tokens rank ahead of primitives. */
@@ -85,7 +121,7 @@ function matchColor(
 	// 1. Direct value hit on a simple color token.
 	const exact = index.byValue.get(canonical);
 	if (exact !== undefined && exact.length > 0) {
-		const token = pickPreferred(exact);
+		const token = pickPreferred(exact, literal.property);
 		if (token !== undefined) return { kind: "exact", token };
 	}
 

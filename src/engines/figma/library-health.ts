@@ -2,7 +2,8 @@
 // recorded `getFile` response (the `/v1/files/:key` shape), surface three
 // design-system hygiene signals by walking the document tree once:
 //
-//   - override-hotspots: INSTANCE nodes carrying overrides — instances that have
+//   - override-hotspots: INSTANCE nodes carrying design overrides (size/position-
+//     only overrides from auto layout do not count) — instances that have
 //     drifted from their main component. Ranked so the worst offenders surface first.
 //   - deprecated-usage: instances of components whose name is marked deprecated
 //     (default pattern, overridable) — usage of components that should be retired.
@@ -67,6 +68,40 @@ export interface AssessLibraryHealthOptions {
 
 // Default deprecation pattern: deprecated/deprecation, legacy, [old], do not use
 // (any space/hyphen joining), and the ⚠ warning sign. Case-insensitive.
+/**
+ * Fields an instance overrides just by being placed: auto layout resizes it
+ * (FILL/HUG) and moves it. They are not drift from the main component, so an
+ * override touching only these is not a hotspot.
+ */
+const LAYOUT_ONLY_FIELDS = new Set([
+	"width",
+	"height",
+	"x",
+	"y",
+	"size",
+	"relativeTransform",
+	"constraints",
+	"layoutAlign",
+	"layoutGrow",
+	"layoutPositioning",
+	"layoutSizingHorizontal",
+	"layoutSizingVertical",
+	"primaryAxisSizingMode",
+	"counterAxisSizingMode",
+	"minWidth",
+	"maxWidth",
+	"minHeight",
+	"maxHeight",
+]);
+
+/** An override that changes how the instance looks or reads (not just its size). */
+function isDesignOverride(override: { overriddenFields?: string[] }): boolean {
+	const fields = override.overriddenFields;
+	// No field list: count it, as before (older payloads omit the fields).
+	if (!Array.isArray(fields) || fields.length === 0) return true;
+	return fields.some((field) => !LAYOUT_ONLY_FIELDS.has(field));
+}
+
 export const DEFAULT_DEPRECATED_PATTERN =
 	/deprecat|legacy|\[old\]|do[\s-]?not[\s-]?use|⚠/i;
 
@@ -134,7 +169,9 @@ export function assessLibraryHealth(
 
 		if (isInstance) {
 			const overrides = node.overrides;
-			const overrideCount = Array.isArray(overrides) ? overrides.length : 0;
+			const overrideCount = Array.isArray(overrides)
+				? overrides.filter(isDesignOverride).length
+				: 0;
 			if (overrideCount > 0) {
 				const componentName = componentNameOf(file, node.componentId);
 				hotspots.push({

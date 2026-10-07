@@ -262,7 +262,7 @@ function adoptionTrendTerminalSection(
 
 	const body = [
 		`on-system %  ${spark}`,
-		`On-system % over ${dateRange} · css/scss values only (var(--…) vs literals)`,
+		`On-system % over ${dateRange} · css/scss + inline style values (var(--…) vs literals)`,
 	].join("\n");
 
 	return panel("Adoption trend", body);
@@ -321,8 +321,10 @@ function leaderboardTerminalSection(data: ReportData, color: boolean): string {
 	}));
 
 	const lines: string[] = [];
-	// Honest-scope caveat (SPEC §1): css/scss values only.
-	lines.push("On-system % by directory, worst-first · css/scss values only");
+	// Honest-scope caveat (SPEC §1): css/scss + inline style values.
+	lines.push(
+		"On-system % by directory, worst-first · css/scss + inline style values",
+	);
 	lines.push(renderBarChart(bars, { width: 24, color }));
 
 	return panel("Adoption leaderboard", lines.join("\n"));
@@ -639,7 +641,7 @@ function ownershipLeaderboardTerminalSection(
 	const bars = rows.map((row) => ({ label: row.owner, value: row.pct }));
 
 	// Per-owner labels pair the pct with its refs/literals split so the
-	// accountability number never stands alone (worst-first, css/scss values only).
+	// accountability number never stands alone (worst-first, css/scss + inline style values).
 	const labels = rows
 		.map(
 			(row) =>
@@ -648,7 +650,7 @@ function ownershipLeaderboardTerminalSection(
 		.join("\n");
 
 	const body = [
-		"On-system % by owner, worst-first · css/scss values only",
+		"On-system % by owner, worst-first · css/scss + inline style values",
 		renderBarChart(bars, { width: 24, color }),
 		labels,
 	].join("\n");

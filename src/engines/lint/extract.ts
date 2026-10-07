@@ -254,6 +254,46 @@ const QUOTED_COLOR_RE =
 const STYLE_OBJ_PROP_RE =
 	/([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
 
+/** A span of JSX/TSX source holding inline styling. */
+export interface StyleRegion {
+	kind: "style-object" | "styled-template";
+	/** Index of the first body character. */
+	start: number;
+	/** Index just past the body (exclusive). */
+	end: number;
+}
+
+/**
+ * The inline-styling bodies in JSX/TSX source: `style={{ … }}` objects (up to the
+ * closing `}}`) and `styled.tag\`…\`` / `styled(Comp)\`…\`` templates. The one
+ * definition of "inline style" shared by literal extraction and the on-system
+ * ratio's token-ref count. Best-effort string scanning, no AST.
+ */
+export function styleRegions(source: string): StyleRegion[] {
+	const regions: StyleRegion[] = [];
+	const styleOpen = /style\s*=\s*\{\{/g;
+	for (const open of source.matchAll(styleOpen)) {
+		const start = (open.index ?? 0) + open[0].length;
+		const close = source.indexOf("}}", start);
+		regions.push({
+			kind: "style-object",
+			start,
+			end: close === -1 ? source.length : close,
+		});
+	}
+	const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
+	for (const open of source.matchAll(styledOpen)) {
+		const start = (open.index ?? 0) + open[0].length;
+		const close = source.indexOf("`", start);
+		regions.push({
+			kind: "styled-template",
+			start,
+			end: close === -1 ? source.length : close,
+		});
+	}
+	return regions;
+}
+
 /**
  * Extract literals from JSX/TSX: inline `style={{ ... }}` objects and
  * `styled.tag` template literals. Best-effort string scanning, no AST.
@@ -262,13 +302,10 @@ function extractTsx(source: string, file: string): ExtractedLiteral[] {
 	const out: ExtractedLiteral[] = [];
 
 	// 1. Inline style objects: style={{ ... }}.
-	const styleOpen = /style\s*=\s*\{\{/g;
-	let so: RegExpExecArray | null = styleOpen.exec(source);
-	while (so !== null) {
-		const bodyStart = so.index + so[0].length;
-		// Find the matching }} that closes the object literal.
-		const close = source.indexOf("}}", bodyStart);
-		const body = source.slice(bodyStart, close === -1 ? source.length : close);
+	for (const region of styleRegions(source)) {
+		if (region.kind !== "style-object") continue;
+		const bodyStart = region.start;
+		const body = source.slice(region.start, region.end);
 		STYLE_OBJ_PROP_RE.lastIndex = 0;
 		let pm: RegExpExecArray | null = STYLE_OBJ_PROP_RE.exec(body);
 		while (pm !== null) {
@@ -347,17 +384,13 @@ function extractTsx(source: string, file: string): ExtractedLiteral[] {
 			}
 			pm = STYLE_OBJ_PROP_RE.exec(body);
 		}
-		so = styleOpen.exec(source);
 	}
 
 	// 2. styled.tag`...` / styled(Comp)`...` template literals.
-	const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
-	let st: RegExpExecArray | null = styledOpen.exec(source);
-	while (st !== null) {
-		const backtickIndex = st.index + st[0].length - 1;
-		const bodyStart = backtickIndex + 1;
-		const close = source.indexOf("`", bodyStart);
-		const body = source.slice(bodyStart, close === -1 ? source.length : close);
+	for (const region of styleRegions(source)) {
+		if (region.kind !== "styled-template") continue;
+		const bodyStart = region.start;
+		const body = source.slice(region.start, region.end);
 		const pos = indexToLineCol(source, bodyStart);
 		// colBase is the column of the char after the backtick on its line.
 		const cssHits = extractCss(body, pos.line, pos.col - 1);
@@ -372,7 +405,6 @@ function extractTsx(source: string, file: string): ExtractedLiteral[] {
 				context: "styled-template",
 			});
 		}
-		st = styledOpen.exec(source);
 	}
 
 	return out;

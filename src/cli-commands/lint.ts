@@ -20,6 +20,7 @@ import type { Command } from "commander";
 import { resolveConfig } from "../config.js";
 import {
 	type AdoptionTally,
+	countInlineStyleTokenRefs,
 	countTokenRefs,
 	tallyAdoption,
 } from "../engines/lint/adoption.js";
@@ -123,33 +124,38 @@ function countByKind(findings: ReportFinding[]): LintHistoryRecord["byKind"] {
 /**
  * Compute the css/scss-scoped adoption block for a directory run.
  *
- * SCOPE DECISION (SPEC-adoption §1, quoted): the on-system ratio counts CSS/SCSS
- * occurrences ONLY — `var(--…)` references are on-system, extracted color/dimension
- * literals are off-system. TSX/JSX literals are deliberately EXCLUDED here because
- * TSX token-reference syntax varies per codebase; counting its literals without its
- * references would bias the ratio downward dishonestly.
+ * SCOPE: `var(--…)` references are on-system, extracted color/dimension literals
+ * are off-system, over css/scss files AND the inline styles of .tsx/.jsx files
+ * (style objects, styled templates — the same regions the extractor reads, so
+ * references and literals are counted over one scope). SPEC-adoption §1 first
+ * excluded TSX because counting its literals without its references would bias
+ * the ratio; counting both removes that bias, and a JSX app no longer reads
+ * "100% on-system" beside its inline literals. Tailwind class utilities are
+ * still out of scope.
  *
- * refs per file = countTokenRefs over a RE-READ of the css/scss file (the --fix
- * path has already rewritten files on disk, so the re-read reflects post-fix state).
- * literals per file = the count of findings the run produced for that css/scss file.
+ * refs per file = token refs over a RE-READ of the file (the --fix path has
+ * already rewritten files on disk, so the re-read reflects post-fix state).
+ * literals per file = the count of findings the run produced for that file.
  */
 function computeAdoption(
 	files: { abs: string; rel: string }[],
 	findings: ReportFinding[],
 ): LintAdoption {
-	const cssFiles = files.filter((f) => isCssLike(f.rel));
-	// literals per css/scss file = number of findings on that file.
+	const scoped = files.filter((f) => isCssLike(f.rel) || isJsxLike(f.rel));
+	// literals per in-scope file = number of findings on that file.
 	const literalsByFile = new Map<string, number>();
 	for (const finding of findings) {
 		const rel = finding.literal.file;
-		if (!isCssLike(rel)) continue;
 		literalsByFile.set(rel, (literalsByFile.get(rel) ?? 0) + 1);
 	}
 
-	const perFile = cssFiles.map((file) => {
+	const perFile = scoped.map((file) => {
 		let refs = 0;
 		try {
-			refs = countTokenRefs(readFileSync(file.abs, "utf8"));
+			const text = readFileSync(file.abs, "utf8");
+			refs = isCssLike(file.rel)
+				? countTokenRefs(text)
+				: countInlineStyleTokenRefs(text);
 		} catch {
 			refs = 0; // best-effort: an unreadable file contributes nothing
 		}
@@ -168,7 +174,13 @@ function computeAdoption(
 	};
 }
 
-/** True for css/scss paths (the §1 adoption scope). */
+/** True for .tsx/.jsx paths (their inline styles are in the ratio). */
+function isJsxLike(path: string): boolean {
+	const lower = path.toLowerCase();
+	return lower.endsWith(".tsx") || lower.endsWith(".jsx");
+}
+
+/** True for css/scss paths. */
 function isCssLike(path: string): boolean {
 	const lower = path.toLowerCase();
 	return lower.endsWith(".css") || lower.endsWith(".scss");
@@ -753,7 +765,7 @@ export function registerLintCommand(program: Command): void {
 				const adoption = computeAdoption(files, linted.findings);
 				appendLintHistory(projectDir, linted.findings, files);
 				// On-system summary line — directory runs only, term format only.
-				if (format === "term") emitAdoptionSummary(adoption, linted.findings);
+				if (format === "term") emitAdoptionSummary(adoption);
 			}
 			process.exitCode = linted.findings.length > 0 ? 1 : 0;
 		});
@@ -772,27 +784,15 @@ function toRelative(targetDir: string, abs: string): string {
 }
 
 /**
- * Print the on-system summary line (directory term runs only). The pct is the
- * css/scss-scoped ratio refs / (refs + literals) — see the §1 scope note on
- * computeAdoption. Zero css/scss values yields 0%.
+ * Print the on-system summary line (directory term runs only). The pct is
+ * refs / (refs + literals) over css/scss and inline styles — see the scope note
+ * on computeAdoption. Zero values yields 0%.
  */
-function emitAdoptionSummary(
-	adoption: LintAdoption,
-	findings: ReportFinding[],
-): void {
+function emitAdoptionSummary(adoption: LintAdoption): void {
 	const total = adoption.refs + adoption.literals;
 	const pct = total === 0 ? 0 : Math.round((adoption.refs / total) * 100);
-	// The ratio is css/scss-only by design (SPEC §1); say what it leaves out so
-	// "100%" next to JSX findings is not read as "fully on-system".
-	const outside = findings.filter((f) =>
-		/\.(?:tsx|jsx)$/i.test(f.literal.file),
-	).length;
-	const note =
-		outside === 0
-			? ""
-			: ` · ${outside} finding${outside === 1 ? "" : "s"} in .tsx/.jsx not counted`;
 	process.stdout.write(
-		`on-system: ${pct}% of css/scss values (${adoption.refs} token refs / ${total})${note}\n`,
+		`on-system: ${pct}% of css/scss + inline style values (${adoption.refs} token refs / ${total})\n`,
 	);
 }
 
@@ -861,7 +861,7 @@ function runFix(
 	if (historyDir !== undefined) {
 		const adoption = computeAdoption(files, relinted.findings);
 		appendLintHistory(historyDir, relinted.findings, files);
-		emitAdoptionSummary(adoption, relinted.findings);
+		emitAdoptionSummary(adoption);
 	}
 	process.exitCode = hasRemaining ? 1 : 0;
 }

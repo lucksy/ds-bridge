@@ -245,6 +245,34 @@ describe("matchLiteral — exact colors", () => {
 	});
 });
 
+describe("matchLiteral — exact ties by property role", () => {
+	// shadcn light: chart-2 and muted-foreground share #737373; primary and
+	// accent-foreground share #171717.
+	const index = buildTokenIndex([
+		colorToken("accent-foreground", "#171717"),
+		colorToken("chart-2", "#737373"),
+		colorToken("muted-foreground", "#737373"),
+		colorToken("primary", "#171717"),
+	]);
+	const name = (raw: string, property: string) => {
+		const match = matchLiteral(colorLiteral(raw, property), index);
+		return match.kind === "exact" ? match.token.name : match.kind;
+	};
+
+	it("suggests a foreground token for a text color", () => {
+		expect(name("#737373", "color")).toBe("muted-foreground");
+	});
+
+	it("suggests a surface token for a background or border", () => {
+		expect(name("#171717", "backgroundColor")).toBe("primary");
+		expect(name("#171717", "border-color")).toBe("primary");
+	});
+
+	it("keeps the first token when the property has no role", () => {
+		expect(name("#737373", "fill")).toBe("chart-2");
+	});
+});
+
 describe("matchLiteral — near colors", () => {
 	it("returns candidates ranked by ascending deltaE", () => {
 		const tokens = [

@@ -63,7 +63,7 @@ Touches 14 call sites
 Adoption trend
 ──────────────
 on-system %  ▁
-On-system % over 2026-06-03 → 2026-06-03 · css/scss values only (var(--…) vs literals)
+On-system % over 2026-06-03 → 2026-06-03 · css/scss + inline style values (var(--…) vs literals)
 
 Import coverage
 ───────────────
@@ -74,7 +74,7 @@ Import coverage [███████▉░░░░░░░░░░░░░
 
 Adoption leaderboard
 ────────────────────
-On-system % by directory, worst-first · css/scss values only
+On-system % by directory, worst-first · css/scss + inline style values
 src/legacy     │   0
 src/components │████████████████████████ 100
 

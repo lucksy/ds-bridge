@@ -1,7 +1,10 @@
 // A1 — adoption tally engine (PURE: no fs/network/process).
-// Two pure pieces feed the "on-system %" ratio (SPEC-adoption §1: css/scss only —
-// var(--…) references = on-system, extracted color/dimension literals = off-system,
-// pct = refs / (refs + literals)). countTokenRefs supplies the numerator;
+// Two pure pieces feed the "on-system %" ratio: var(--…) references = on-system,
+// extracted color/dimension literals = off-system, pct = refs / (refs + literals),
+// over css/scss files and the inline styles of .tsx/.jsx files (style objects,
+// styled templates). Originally css/scss only (SPEC-adoption §1); widened in
+// v1.16 because a JSX app read "100% on-system" beside its inline literals.
+// Tailwind class utilities remain out of scope. countTokenRefs supplies the numerator;
 // tallyAdoption folds per-file {refs, literals} into totals + a worst-first
 // byDirectory leaderboard. Never throws; best-effort on malformed input.
 //
@@ -12,7 +15,7 @@
 // literal extractor masks it — one canonical truth for "what counts as code",
 // no risk of the numerator and denominator disagreeing about a comment.
 
-import { blankComments } from "./extract.js";
+import { blankComments, styleRegions } from "./extract.js";
 
 /** Count `var(--name)` token references in CSS/SCSS, ignoring comments + strings. */
 export function countTokenRefs(css: string): number {
@@ -25,7 +28,23 @@ export function countTokenRefs(css: string): number {
 	return count;
 }
 
-/** Per-file adoption counts (css/scss-scoped — see SPEC-adoption §1). */
+/**
+ * Count `var(--name)` token references inside a JSX/TSX file's inline styles
+ * (style objects and styled templates) — the on-system side of the inline
+ * values the linter extracts. References elsewhere (plain strings, Tailwind
+ * class names) are not inline styles and do not count.
+ */
+export function countInlineStyleTokenRefs(source: string): number {
+	const refRe = /\bvar\s*\(\s*--[\w-]+/gi;
+	let count = 0;
+	for (const region of styleRegions(source)) {
+		const body = source.slice(region.start, region.end);
+		count += [...body.matchAll(refRe)].length;
+	}
+	return count;
+}
+
+/** Per-file adoption counts (css/scss and inline JSX styles). */
 export interface FileAdoption {
 	path: string;
 	refs: number;

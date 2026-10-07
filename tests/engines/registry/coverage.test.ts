@@ -177,3 +177,23 @@ describe("computeCoverage (A3a)", () => {
 		expect(result.uncovered).toEqual([]);
 	});
 });
+
+describe("computeCoverage — compound components", () => {
+	const cardFile = "src/components/ui/card.tsx";
+	const part = (name: string): RegistryUnmatchedCode => ({
+		name,
+		importPath: cardFile,
+		candidates: [],
+	});
+
+	it("counts Card and its parts as ONE component, imported when any member is", () => {
+		const reg = registry(
+			[match({ codeName: "Card", importPath: cardFile })],
+			[part("CardHeader"), part("CardTitle"), unmatchedCode("Dialog")],
+		);
+		const result = computeCoverage(reg, [siteFor("CardTitle", 2)]);
+		expect(result.total).toBe(2); // Card (+parts), Dialog
+		expect(result.imported).toBe(1);
+		expect(result.uncovered).toEqual(["Dialog"]);
+	});
+});

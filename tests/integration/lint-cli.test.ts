@@ -394,7 +394,7 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		expect(await historyExists(dir)).toBe(false);
 	});
 
-	it("A2: a directory lint line carries adoption with css/scss refs+literals", async () => {
+	it("A2: a directory lint line carries adoption with css/scss + inline-style refs+literals", async () => {
 		const dir = await freshTmp("ds-lint-adopt-dir-");
 		await cp(sampleProject, dir, { recursive: true });
 		const tokensInTmp = join(dir, "tokens.json");
@@ -407,13 +407,14 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		const adoption = records[0]?.adoption;
 		expect(adoption).toBeDefined();
 		if (adoption === undefined) return;
-		// css/scss only: button.css refs=2 literals=3; card.module.css refs=5
-		// literals=1 → totals refs=7 literals=4. TSX literals are EXCLUDED (§1).
-		expect(adoption.refs).toBe(7);
-		expect(adoption.literals).toBe(4);
-		// Both css files live under src/ → one directory bucket.
+		// css/scss: button.css refs=2 literals=3; card.module.css refs=5 literals=1.
+		// Inline styles: Hero.tsx refs=1 (styled template) literals=1; Banner.tsx
+		// refs=0 literals=2 → totals refs=8 literals=7.
+		expect(adoption.refs).toBe(8);
+		expect(adoption.literals).toBe(7);
+		// Every scanned file lives under src/ → one directory bucket.
 		expect(adoption.byDirectory).toEqual([
-			{ dir: "src", refs: 7, literals: 4 },
+			{ dir: "src", refs: 8, literals: 7 },
 		]);
 	});
 
@@ -453,12 +454,12 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 			join(dir, "tokens.json"),
 		]);
 		expect(code).toBe(1);
-		// refs=7 of refs+literals=11 → 64% on-system.
+		// refs=8 of refs+literals=15 → 53% on-system.
 		expect(stdout.toLowerCase()).toContain("on-system");
-		expect(stdout).toMatch(/64%/);
+		expect(stdout).toMatch(/53%/);
 	});
 
-	it("the on-system line says how many JSX/TSX findings the css/scss ratio leaves out", async () => {
+	it("the on-system ratio counts inline JSX style literals alongside css/scss", async () => {
 		const dir = await freshTmp("ds-lint-adopt-scope-");
 		await writeFile(
 			join(dir, "tokens.json"),
@@ -478,10 +479,10 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 			"utf8",
 		);
 		const { stdout } = await runCli(["lint", dir]);
+		// a.css: 1 ref; B.tsx: 1 inline literal → 1 / 2 = 50%, not "100%".
 		expect(stdout).toContain(
-			"on-system: 100% of css/scss values (1 token refs / 1)",
+			"on-system: 50% of css/scss + inline style values (1 token refs / 2)",
 		);
-		expect(stdout).toContain("1 finding in .tsx/.jsx not counted");
 	});
 
 	it("A2: a single-FILE lint carries no adoption (hook branch untouched)", async () => {
@@ -513,11 +514,11 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		const adoption = records[0]?.adoption;
 		expect(adoption).toBeDefined();
 		if (adoption === undefined) return;
-		// --fix rewrites button.css #3b82f6 → var(--color-brand-primary): one more
-		// ref, one fewer literal. button.css now refs=3 literals=2; card.module.css
-		// refs=5 literals=1 → totals refs=8 literals=3.
-		expect(adoption.refs).toBe(8);
-		expect(adoption.literals).toBe(3);
+		// --fix rewrites the two exact literals — button.css #3b82f6 and one inline
+		// style value — to var(): two more refs, two fewer literals → refs=10
+		// literals=5 (from 8/7).
+		expect(adoption.refs).toBe(10);
+		expect(adoption.literals).toBe(5);
 	});
 
 	it("T5.5b: a --fix directory run appends ONE post-fix lint history line", async () => {

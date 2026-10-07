@@ -355,7 +355,7 @@ export function ownershipLeaderboardSection(data: ReportData): string {
 	}));
 
 	// Per-owner pct labels with the refs/literals split (the bar widths are the
-	// same percentages); css/scss values only, worst-first.
+	// same percentages); css/scss + inline style values, worst-first.
 	const labels = [
 		'<ul class="offenders">',
 		...rows.map(
@@ -372,7 +372,7 @@ export function ownershipLeaderboardSection(data: ReportData): string {
 	return panel(
 		"Ownership leaderboard",
 		[
-			`<div class="meta">On-system % by owner, worst-first · css/scss values only</div>`,
+			`<div class="meta">On-system % by owner, worst-first · css/scss + inline style values</div>`,
 			`<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
 			labels,
 		].join(""),

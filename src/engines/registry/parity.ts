@@ -22,6 +22,7 @@
 // unmatchedCode the code name. Rows sort by status SEVERITY then name asc.
 import { DEFAULT_DEPRECATED_PATTERN } from "../figma/library-health.js";
 import type { ParityStatus } from "../report/types.js";
+import { codeExports, compoundParent } from "./parts.js";
 import type { RegistryFile } from "./persist.js";
 
 /** One component's parity verdict against its Figma source. */
@@ -93,22 +94,9 @@ export function buildParity(registry: RegistryFile): ParityReport {
 		: [];
 
 	// Compound parts, keyed by `${importPath}\u0000${parentName}`.
-	const codeSide = [
-		...matches.map((m) => ({ name: m.codeName, importPath: m.importPath })),
-		...unmatchedCode.map((u) => ({ name: u.name, importPath: u.importPath })),
-	];
-	const parentOf = (name: string, importPath: string): string | undefined => {
-		let parent: string | undefined;
-		for (const other of codeSide) {
-			if (other.importPath !== importPath || other.name === name) continue;
-			const next = name.charAt(other.name.length);
-			if (!name.startsWith(other.name) || !/[A-Z]/.test(next)) continue;
-			if (parent === undefined || other.name.length > parent.length) {
-				parent = other.name;
-			}
-		}
-		return parent;
-	};
+	const codeSide = codeExports(registry);
+	const parentOf = (name: string, importPath: string): string | undefined =>
+		compoundParent({ name, importPath }, codeSide);
 	const partsByParent = new Map<string, string[]>();
 	const isPart = new Set<string>();
 	for (const entry of unmatchedCode) {

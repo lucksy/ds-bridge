@@ -299,7 +299,7 @@ export function onSystemPct(refs: number, literals: number): number {
 
 /**
  * Adoption trend → line chart of the on-system pct over dated points (B2).
- * Honest-scope one-liner: the ratio counts css/scss values only (SPEC §1).
+ * Honest-scope one-liner: the ratio counts css/scss + inline style values (SPEC §1).
  */
 export function adoptionTrendSection(data: ReportData): string {
 	const trend = data.adoptionTrend;
@@ -322,7 +322,7 @@ export function adoptionTrendSection(data: ReportData): string {
 		"Adoption trend",
 		[
 			`<div class="chart">${lineChart(series, { width: CARD_W, height: 190, unit: "%", xLabels: dateEnds(trend), colors: [PALETTE[1]] })}</div>`,
-			`<div class="meta">On-system % over ${dateRange} · css/scss values only (var(--…) vs literals)</div>`,
+			`<div class="meta">On-system % over ${dateRange} · css/scss + inline style values (var(--…) vs literals)</div>`,
 		].join(""),
 	);
 }
@@ -401,7 +401,7 @@ export function leaderboardSection(data: ReportData): string {
 	return panel(
 		"Adoption leaderboard",
 		[
-			`<div class="meta">On-system % by directory, worst-first · css/scss values only</div>`,
+			`<div class="meta">On-system % by directory, worst-first · css/scss + inline style values</div>`,
 			`<div class="chart">${barChart(bars, { width: CARD_W, max: 100, unit: "%" })}</div>`,
 			labels,
 		].join(""),
