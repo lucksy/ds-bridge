@@ -22,6 +22,8 @@ export interface FigmaNode {
 	layoutMode?: string;
 	componentId?: string;
 	fills?: FigmaPaint[];
+	/** Applied styles by kind (`text`, `fill`, `effect`…) → style id. */
+	styles?: Record<string, string>;
 	// INSTANCE nodes carry an `overrides` array — each entry names the instance
 	// node id and the fields it overrides from its main component. Verified live
 	// 2026-06-09 (T4.7 smoke): present on the real tree, absent on non-instances.

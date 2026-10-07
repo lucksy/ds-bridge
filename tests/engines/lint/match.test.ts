@@ -15,6 +15,7 @@ import {
 } from "../../../src/engines/lint/extract.js";
 import {
 	buildCompositeColorLookup,
+	isLintable,
 	type LiteralMatch,
 	matchLiteral,
 } from "../../../src/engines/lint/match.js";
@@ -94,16 +95,18 @@ describe("matchLiteral — master fixture contract", () => {
 		kind: LiteralMatch["kind"];
 		suggested: string | undefined;
 	}[] {
-		return literals.map((lit) => {
-			const match = matchLiteral(lit, index, { compositeColors });
-			return {
-				file: lit.file,
-				line: lit.line,
-				col: lit.col,
-				kind: match.kind,
-				suggested: suggestion(match),
-			};
-		});
+		return literals
+			.filter((lit) => isLintable(lit, index))
+			.map((lit) => {
+				const match = matchLiteral(lit, index, { compositeColors });
+				return {
+					file: lit.file,
+					line: lit.line,
+					col: lit.col,
+					kind: match.kind,
+					suggested: suggestion(match),
+				};
+			});
 	}
 
 	it("produces exactly 3 exact, 3 near, 1 off-system — nothing extra", () => {
@@ -509,6 +512,42 @@ describe("matchLiteral — Material 3 ties", () => {
 	it("keeps a type token out of spacing suggestions", () => {
 		expect(exactName(dimLiteral("16px", "padding-left"))).toBe(
 			"md.sys.spacing.4",
+		);
+	});
+});
+
+// Radius literals are linted only when the system has a radius / corner scale
+// to point them at (Material's shape.corner, shadcn's --radius); otherwise they
+// would be off-system findings no token could ever fix.
+describe("isLintable — radius gated on a radius scale", () => {
+	const radius = dimLiteral("12px", "border-radius");
+	const padding = dimLiteral("16px", "padding");
+
+	it("keeps radius literals when the tokens have a corner scale", () => {
+		const index = buildTokenIndex([
+			dimToken("md.sys.shape.corner.medium", "12px"),
+		]);
+		expect(isLintable(radius, index)).toBe(true);
+		expect(isLintable(dimLiteral("4px", "borderTopLeftRadius"), index)).toBe(
+			true,
+		);
+	});
+
+	it("drops radius literals when the tokens have none", () => {
+		const index = buildTokenIndex([dimToken("space.md", "16px")]);
+		expect(isLintable(radius, index)).toBe(false);
+		expect(isLintable(padding, index)).toBe(true);
+		expect(isLintable(colorLiteral("#fff"), index)).toBe(true);
+	});
+
+	it("matches a radius literal to the corner token", () => {
+		const index = buildTokenIndex([
+			dimToken("md.sys.shape.corner.medium", "12px"),
+			dimToken("md.sys.spacing.3", "12px"),
+		]);
+		const match = matchLiteral(radius, index);
+		expect(match.kind === "exact" && match.token.name).toBe(
+			"md.sys.shape.corner.medium",
 		);
 	});
 });

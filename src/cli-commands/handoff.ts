@@ -9,8 +9,8 @@
 // a typed outcome we translate here.
 //
 // Exit codes:
-//   0  score >= threshold (gate passed)
-//   1  score <  threshold (gate failed) — CI-friendly
+//   0  score >= threshold and no blockers (gate passed)
+//   1  score <  threshold, or a blocker (deprecated component) — CI-friendly
 //   2  operational error (invalid URL, missing token, API error)
 //
 // --comment posts the top deductions as ONE Figma comment, but only with the
@@ -59,6 +59,7 @@ const RULE_LABEL: Record<string, string> = {
 	"var-binding": "Variable binding",
 	"auto-layout": "Auto layout",
 	component: "Component usage",
+	typography: "Typography",
 	naming: "Naming",
 };
 
@@ -88,6 +89,8 @@ interface HandoffHistoryRecord {
 	fileKey: string;
 	nodeId?: string;
 	deductions: { rule: RuleId; points: number }[];
+	/** Gate blockers (deprecated components in use); a blocked frame never passes. */
+	blockers?: number;
 }
 
 /**
@@ -114,6 +117,7 @@ function appendHandoffHistory(
 		deductions: report.deductions
 			.slice(0, HISTORY_DEDUCTION_LIMIT)
 			.map((d) => ({ rule: d.rule, points: d.points })),
+		...(report.blockers.length > 0 ? { blockers: report.blockers.length } : {}),
 	};
 	appendHistoryRecord(stateDir, record);
 }
@@ -171,9 +175,13 @@ function renderTerm(
 	threshold: number,
 	color: boolean,
 ): string {
-	const passed = report.score >= threshold;
+	const passed = gatePasses(report, threshold);
 	const scoreSeverity: Severity = passed ? "ok" : "error";
-	const verdict = passed ? "PASS" : "BELOW THRESHOLD";
+	const verdict = passed
+		? "PASS"
+		: report.blockers.length > 0
+			? `BLOCKED (${report.blockers.length} blocker${report.blockers.length === 1 ? "" : "s"})`
+			: "BELOW THRESHOLD";
 	const scoreLine = severityColor(
 		scoreSeverity,
 		`Readiness ${report.score}/100 (threshold ${threshold}) — ${verdict}`,
@@ -187,11 +195,24 @@ function renderTerm(
 		["auto-layout coverage", `${Math.round(stats.autoLayoutCoverage * 100)}%`],
 		["instances", String(stats.instanceCount)],
 		["detached suspects", String(stats.detachedSuspects)],
+		["styled text", `${Math.round(stats.typedTextCoverage * 100)}%`],
 		["default names", String(stats.badNames)],
 	];
 	const statsTable = renderTable(["stat", "value"], statsRows, { color });
 
 	const lines = [scoreLine, "", statsTable];
+
+	if (report.blockers.length > 0) {
+		const rows = report.blockers.map((b) => [
+			severityColor("error", `${b.nodeName} (${b.nodeId})`, { color }),
+			b.fix,
+		]);
+		lines.push(
+			"",
+			"Blockers — fail the gate whatever the score:",
+			renderTable(["node", "fix"], rows, { color }),
+		);
+	}
 
 	if (report.deductions.length > 0) {
 		const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
@@ -215,12 +236,34 @@ function renderTerm(
 	return lines.join("\n");
 }
 
+/**
+ * The handoff gate: the score clears the threshold AND nothing blocks it (a
+ * deprecated component in the frame fails the gate whatever the score).
+ */
+function gatePasses(report: ReadinessReport, threshold: number): boolean {
+	return report.score >= threshold && report.blockers.length === 0;
+}
+
 /** Build the single Figma comment body summarizing the score + top deductions. */
 function commentBody(report: ReadinessReport, threshold: number): string {
-	const verdict = report.score >= threshold ? "passes" : "is below";
+	const verdict =
+		report.blockers.length > 0
+			? `is blocked (${report.blockers.length} deprecated component${report.blockers.length === 1 ? "" : "s"} in use) at`
+			: report.score >= threshold
+				? "passes"
+				: "is below";
 	const header = `Handoff readiness: ${report.score}/100 — ${verdict} the ${threshold} threshold.`;
+	const blockerLines = report.blockers.map(
+		(b) => `• Blocker: ${b.nodeName} — ${b.fix}`,
+	);
 	if (report.deductions.length === 0) {
-		return `${header}\nNo deductions — this frame is handoff-ready.`;
+		return [
+			header,
+			...blockerLines,
+			...(blockerLines.length === 0
+				? ["No deductions — this frame is handoff-ready."]
+				: []),
+		].join("\n");
 	}
 	const listed = report.deductions.slice(0, DEDUCTION_LIMIT);
 	const lines = listed.map(
@@ -231,7 +274,9 @@ function commentBody(report: ReadinessReport, threshold: number): string {
 		report.deductions.length > DEDUCTION_LIMIT
 			? [`… and ${report.deductions.length - DEDUCTION_LIMIT} more`]
 			: [];
-	return [header, "Top deductions:", ...lines, ...more].join("\n");
+	return [header, ...blockerLines, "Top deductions:", ...lines, ...more].join(
+		"\n",
+	);
 }
 
 /** Validate + clamp the --threshold flag against the config default. */
@@ -420,8 +465,8 @@ async function runHandoff(url: string, options: HandoffOptions): Promise<void> {
 		}
 	}
 
-	// CI gate semantics: exit 0 when at/above the threshold, else 1.
-	process.exitCode = report.score >= threshold.value ? 0 : 1;
+	// CI gate semantics: exit 0 when at/above the threshold with no blockers, else 1.
+	process.exitCode = gatePasses(report, threshold.value) ? 0 : 1;
 }
 
 /** Register the `handoff` command on the program. Wiring entry for cli.ts. */

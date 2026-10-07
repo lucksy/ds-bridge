@@ -2,18 +2,25 @@
 //
 // Given a Figma node tree, produce a deterministic 0–100 "machine-readability"
 // score with per-node deductions and rollup stats. The score answers: is this
-// frame ready for clean design-to-code handoff? Four weighted rules, total 100:
+// frame ready for clean design-to-code handoff? Five weighted rules, total 100:
 //
-//   - Variable binding coverage  (40): styleable nodes (with fills/strokes)
+//   - Variable binding coverage  (35): styleable nodes (with fills/strokes)
 //       should bind those paints to variables, not hardcode them.
-//   - Auto-layout coverage       (25): frames should use auto layout so the
+//   - Auto-layout coverage       (20): frames should use auto layout so the
 //       generated code uses flex/stack instead of absolute positioning.
 //   - Component usage            (20): component-named nodes should be live
 //       instances of the published component, not detached copies — and those
 //       instances should not be of deprecated components (when the caller
 //       passes the file's components map).
-//   - Naming convention          (15): default names ("Frame 12") carry no
+//   - Typography                 (15): text layers should use a text style (or
+//       bind their type variables), so code gets the type scale, not raw sizes.
+//   - Naming convention          (10): default names ("Frame 12") carry no
 //       semantic meaning for generated identifiers.
+//
+// BLOCKERS sit outside the score: an instance of a deprecated component fails
+// the handoff gate whatever the score (code would be built on a component that
+// is going away). Detached copies stay deductions — their detection is a name
+// heuristic, and a heuristic never blocks.
 //
 // The input is structural: any object shaped like a Figma node (the io client's
 // FigmaNode satisfies it) works. The engine never throws — it walks whatever
@@ -55,6 +62,8 @@ export interface HandoffNode {
 	componentId?: string;
 	fills?: HandoffPaint[];
 	strokes?: HandoffPaint[];
+	/** Applied styles by kind; a TEXT node with a text style has `text`. */
+	styles?: Record<string, string>;
 }
 
 /** The file's components / componentSets maps (GET /v1/files/:key/nodes). */
@@ -66,7 +75,20 @@ export interface ScoreReadinessOptions {
 // ── Output types ──
 
 /** Identifies which rule produced a deduction. */
-export type RuleId = "var-binding" | "auto-layout" | "component" | "naming";
+export type RuleId =
+	| "var-binding"
+	| "auto-layout"
+	| "component"
+	| "typography"
+	| "naming";
+
+/** A finding that fails the handoff gate regardless of the score. */
+export interface ReadinessBlocker {
+	nodeId: string;
+	nodeName: string;
+	reason: "deprecated-component";
+	fix: string;
+}
 
 /** A single per-node deduction with a human-readable fix. */
 export interface ReadinessDeduction {
@@ -88,6 +110,10 @@ export interface ReadinessStats {
 	detachedSuspects: number;
 	/** Instances of a component whose (set) name marks it deprecated. */
 	deprecatedInstances: number;
+	/** TEXT nodes in the frame. */
+	textNodes: number;
+	/** Fraction [0,1] of TEXT nodes with a text style or bound type variables. */
+	typedTextCoverage: number;
 	badNames: number;
 }
 
@@ -95,15 +121,18 @@ export interface ReadinessStats {
 export interface ReadinessReport {
 	score: number;
 	deductions: ReadinessDeduction[];
+	/** Gate failures independent of the score (deprecated components in use). */
+	blockers: ReadinessBlocker[];
 	stats: ReadinessStats;
 }
 
 // ── Rule weights (total 100) ──
 
-const WEIGHT_BINDING = 40;
-const WEIGHT_AUTO_LAYOUT = 25;
+const WEIGHT_BINDING = 35;
+const WEIGHT_AUTO_LAYOUT = 20;
 const WEIGHT_COMPONENT = 20;
-const WEIGHT_NAMING = 15;
+const WEIGHT_TYPOGRAPHY = 15;
+const WEIGHT_NAMING = 10;
 
 /** Cap on how many binding deductions are listed (worst-first). */
 const BINDING_DEDUCTION_LIMIT = 10;
@@ -154,6 +183,22 @@ const FIX_COMPONENT = "Reattach to the published component or rename";
 const fixDeprecated = (name: string): string =>
 	`Swap to the current component — "${name}" is deprecated`;
 const FIX_NAMING = "Rename meaningfully";
+const FIX_TYPOGRAPHY = "Apply a text style (or bind its type variables)";
+
+/** Type properties whose variable binding counts as on-system typography. */
+const TYPE_VARIABLES = ["fontSize", "fontFamily"];
+
+/** True when a TEXT node uses a text style or binds its type variables. */
+function isTypedText(node: HandoffNode): boolean {
+	const style = node.styles?.text;
+	if (typeof style === "string" && style !== "") return true;
+	const bound = node.boundVariables;
+	if (bound === undefined) return false;
+	return TYPE_VARIABLES.some((key) => {
+		const value = bound[key];
+		return Array.isArray(value) ? value.length > 0 : value !== undefined;
+	});
+}
 
 // ── Predicates ──
 
@@ -275,13 +320,18 @@ export function scoreReadiness(
 	const componentRatio =
 		1 - (detachedSuspects + deprecatedInstances) / componentDenominator;
 
+	const textNodes = nodes.filter((n) => n.type === "TEXT");
+	const untypedText = textNodes.filter((n) => !isTypedText(n));
+	const typedTextCoverage =
+		textNodes.length === 0 ? 1 : 1 - untypedText.length / textNodes.length;
+
 	const badNameNodes = nodes.filter((n) => isDefaultName(n.name));
 	const badNames = badNameNodes.length;
 	const namingRatio = totalNodes === 0 ? 1 : 1 - badNames / totalNodes;
 
 	const deductions: ReadinessDeduction[] = [];
 
-	// Binding (40): the lost weight is spread evenly across the unbound nodes;
+	// Binding (35): the lost weight is spread evenly across the unbound nodes;
 	// only the 10 worst are listed (all carry equal points so "worst" reduces to
 	// a stable nodeId-ascending selection).
 	if (unbound.length > 0) {
@@ -301,7 +351,7 @@ export function scoreReadiness(
 		}
 	}
 
-	// Auto-layout (25): the lost weight is spread evenly across frames missing
+	// Auto-layout (20): the lost weight is spread evenly across frames missing
 	// auto layout.
 	if (framesWithoutAutoLayout.length > 0) {
 		const lost =
@@ -344,7 +394,22 @@ export function scoreReadiness(
 		}
 	}
 
-	// Naming (15): the lost weight is spread evenly across default-named nodes.
+	// Typography (15): the lost weight is spread evenly across untyped text.
+	if (untypedText.length > 0) {
+		const lost = WEIGHT_TYPOGRAPHY * (untypedText.length / textNodes.length);
+		const perNode = lost / untypedText.length;
+		for (const node of untypedText) {
+			deductions.push({
+				nodeId: node.id,
+				nodeName: node.name,
+				rule: "typography",
+				points: perNode,
+				fix: FIX_TYPOGRAPHY,
+			});
+		}
+	}
+
+	// Naming (10): the lost weight is spread evenly across default-named nodes.
 	if (badNames > 0) {
 		const lost = WEIGHT_NAMING * (badNames / totalNodes);
 		const perNode = lost / badNames;
@@ -368,12 +433,23 @@ export function scoreReadiness(
 		WEIGHT_BINDING * boundCoverage +
 		WEIGHT_AUTO_LAYOUT * autoLayoutCoverage +
 		WEIGHT_COMPONENT * componentRatio +
+		WEIGHT_TYPOGRAPHY * typedTextCoverage +
 		WEIGHT_NAMING * namingRatio;
 	const score = Math.min(100, Math.max(0, Math.round(rawScore)));
+
+	const blockers: ReadinessBlocker[] = deprecated
+		.map(({ node, name }) => ({
+			nodeId: node.id,
+			nodeName: node.name,
+			reason: "deprecated-component" as const,
+			fix: fixDeprecated(name),
+		}))
+		.sort((a, b) => (a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0));
 
 	return {
 		score,
 		deductions,
+		blockers,
 		stats: {
 			totalNodes,
 			boundCoverage,
@@ -381,6 +457,8 @@ export function scoreReadiness(
 			instanceCount,
 			detachedSuspects,
 			deprecatedInstances,
+			textNodes: textNodes.length,
+			typedTextCoverage,
 			badNames,
 		},
 	};

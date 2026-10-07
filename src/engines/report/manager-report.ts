@@ -266,7 +266,9 @@ function buildHeadline(input: ManagerReportInput): ManagerHeadline {
 	const frames = input.frames ?? [];
 	if (frames.length > 0) {
 		headline.handoff = {
-			ready: frames.filter((f) => f.latest >= input.readinessThreshold).length,
+			ready: frames.filter(
+				(f) => f.latest >= input.readinessThreshold && f.blocked !== true,
+			).length,
 			frames: frames.length,
 		};
 	}
@@ -331,12 +333,14 @@ function buildRisks(
 	}
 
 	// R5 — frames below the readiness bar.
-	const below = frames.filter((f) => f.latest < input.readinessThreshold);
+	const below = frames.filter(
+		(f) => f.latest < input.readinessThreshold || f.blocked === true,
+	);
 	const lowest = below[0];
 	if (lowest !== undefined) {
 		out.push({
 			rank: 2,
-			text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`,
+			text: `${below.length} of ${frames.length} tracked ${plural(frames.length, "frame", "frames")} ${plural(below.length, "is", "are")} below the ${input.readinessThreshold} readiness bar${below.some((f) => f.blocked === true) ? " or blocked by a deprecated component" : ""} (lowest: "${frameLabel(lowest)}" at ${lowest.latest})`,
 		});
 	}
 
@@ -462,9 +466,15 @@ function buildActions(
 		});
 	}
 
-	// A4 — the lowest frame below the bar.
+	// A4 — a frame blocked by a deprecated component, else the lowest below the bar.
+	const blocked = frames.find((f) => f.blocked === true);
 	const lowest = frames.find((f) => f.latest < input.readinessThreshold);
-	if (lowest !== undefined) {
+	if (blocked !== undefined) {
+		out.push({
+			rank: 2,
+			text: `Swap the deprecated component in "${frameLabel(blocked)}" — it blocks handoff (run ds-bridge handoff)`,
+		});
+	} else if (lowest !== undefined) {
 		out.push({
 			rank: 2,
 			text: `Raise handoff readiness of "${frameLabel(lowest)}" from ${lowest.latest} to ${input.readinessThreshold}+ (run ds-bridge handoff)`,

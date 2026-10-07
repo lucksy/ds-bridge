@@ -36,6 +36,7 @@ import {
 } from "../engines/lint/fix.js";
 import {
 	buildCompositeColorLookup,
+	isLintable,
 	type LiteralMatch,
 	matchLiteral,
 } from "../engines/lint/match.js";
@@ -346,6 +347,7 @@ function lintFile(
 	const literals = extractLiterals({ path: relPath, content });
 	const findings: ReportFinding[] = [];
 	for (const literal of literals) {
+		if (!isLintable(literal, tokens.index)) continue;
 		const match = matchLiteral(literal, tokens.index, {
 			compositeColors: tokens.compositeColors,
 		});

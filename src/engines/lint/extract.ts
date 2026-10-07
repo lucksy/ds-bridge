@@ -58,6 +58,22 @@ const SPACING_EXACT = new Set([
 	"left",
 ]);
 
+/**
+ * Corner radius (`border-radius`, its longhands, `borderTopLeftRadius`…). Its
+ * literals are extracted like spacing; the lint command keeps them only when the
+ * token set has a radius / corner scale to point them at.
+ */
+export function isRadiusProperty(property: string): boolean {
+	return /^border(?:-?(?:top|bottom|start|end)-?(?:left|right|start|end))?-?radius$/i.test(
+		property,
+	);
+}
+
+/** Properties whose dimension literals are extracted: spacing and radius. */
+function isDimensionProperty(property: string): boolean {
+	return isSpacingProperty(property) || isRadiusProperty(property);
+}
+
 function isSpacingProperty(property: string): boolean {
 	const lower = property.toLowerCase();
 	if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
@@ -127,8 +143,8 @@ export function blankComments(text: string): string {
 /**
  * Walk a property value string, emitting color/dimension hits with columns
  * relative to the value's start. `var(...)` spans are skipped wholesale so token
- * references never surface. Dimensions emit only for spacing-ish properties and
- * only when nonzero.
+ * references never surface. Dimensions emit only for spacing-ish and radius
+ * properties and only when nonzero.
  */
 function* scanValue(
 	value: string,
@@ -138,7 +154,7 @@ function* scanValue(
 	raw: string;
 	valueKind: "color" | "dimension";
 }> {
-	const spacing = isSpacingProperty(property);
+	const spacing = isDimensionProperty(property);
 	let i = 0;
 	while (i < value.length) {
 		const rest = value.slice(i);
@@ -351,7 +367,7 @@ function extractTsx(source: string, file: string): ExtractedLiteral[] {
 					}
 				}
 			} else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
-				if (isSpacingProperty(property)) {
+				if (isDimensionProperty(property)) {
 					const num = Number.parseFloat(rawValue);
 					if (Number.isFinite(num) && num !== 0) {
 						const pos = indexToLineCol(source, absValueIndex);

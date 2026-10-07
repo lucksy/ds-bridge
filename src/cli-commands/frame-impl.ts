@@ -427,7 +427,9 @@ function renderTerm(impl: Implementability, color: boolean): string {
 			),
 		);
 		if (impl.gapCount > impl.topGaps.length) {
-			lines.push(`… ${impl.gapCount - impl.topGaps.length} more (--format=json)`);
+			lines.push(
+				`… ${impl.gapCount - impl.topGaps.length} more (--format=json)`,
+			);
 		}
 	}
 	return lines.join("\n");

@@ -147,6 +147,12 @@ describe("lint — Material 3 project", () => {
 			kind: "exact",
 			expectedToken: "md.sys.spacing.4",
 		});
+		// A radius literal is linted because the set has a corner scale.
+		expect(byRaw["12px"]).toMatchObject({
+			kind: "exact",
+			property: "border-radius",
+			expectedToken: "md.sys.shape.corner.medium",
+		});
 	});
 });
 

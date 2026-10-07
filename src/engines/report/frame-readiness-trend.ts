@@ -7,7 +7,10 @@
 // Points are last-of-day per frame (ascending); undated records still count in
 // `runs` and can be the `latest` (file order wins, as in readinessByFrame).
 // Failing frames lead (worst first) — the frames a designer should open next.
-import { frameKeyResolver } from "../history/readiness-frames.js";
+import {
+	frameKeyResolver,
+	isBlockedHandoff,
+} from "../history/readiness-frames.js";
 import type { HistoryRecord } from "./history-lines.js";
 
 /** One frame's readiness series. */
@@ -21,7 +24,7 @@ export interface FrameTrendRow {
 	first: number;
 	delta: number;
 	runs: number;
-	/** latest ≥ the gate. */
+	/** latest ≥ the gate and the latest run was not blocked. */
 	passing: boolean;
 }
 
@@ -50,6 +53,7 @@ export function buildFrameReadinessTrend(
 		string,
 		Omit<FrameTrendRow, "points" | "delta" | "passing"> & {
 			byDate: Map<string, number>;
+			blocked: boolean;
 		}
 	>();
 	const keyOf = frameKeyResolver(records);
@@ -68,11 +72,13 @@ export function buildFrameReadinessTrend(
 			first: score,
 			runs: 0,
 			byDate: new Map<string, number>(),
+			blocked: false,
 		};
 		row.frameName = str(record.frameName) ?? row.frameName;
 		if (fileKey !== undefined) row.fileKey = fileKey;
 		if (nodeId !== undefined) row.nodeId = nodeId;
 		row.latest = score;
+		row.blocked = isBlockedHandoff(record);
 		row.runs += 1;
 		if (at !== undefined) row.byDate.set(at.slice(0, 10), score);
 		frames.set(key, row);
@@ -80,7 +86,7 @@ export function buildFrameReadinessTrend(
 	if (frames.size === 0) return undefined;
 
 	const rows: FrameTrendRow[] = [...frames.values()].map(
-		({ byDate, ...row }) => ({
+		({ byDate, blocked, ...row }) => ({
 			key: row.key,
 			frameName: row.frameName,
 			...(row.fileKey !== undefined ? { fileKey: row.fileKey } : {}),
@@ -92,7 +98,7 @@ export function buildFrameReadinessTrend(
 			first: row.first,
 			delta: row.latest - row.first,
 			runs: row.runs,
-			passing: row.latest >= threshold,
+			passing: row.latest >= threshold && !blocked,
 		}),
 	);
 	rows.sort(

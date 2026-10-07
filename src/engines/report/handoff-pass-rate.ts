@@ -5,7 +5,10 @@
 // without a finite numeric `score` is skipped (never counted as a 0). The trend
 // replays the same rule cumulatively at the end of each dated day (undated
 // records: headline only).
-import { frameKeyResolver } from "../history/readiness-frames.js";
+import {
+	frameKeyResolver,
+	isBlockedHandoff,
+} from "../history/readiness-frames.js";
 import type { HistoryRecord } from "./history-lines.js";
 
 /** One day of the pass-rate trend. */
@@ -51,8 +54,13 @@ export function buildHandoffPassRate(
 	const keyOf = frameKeyResolver(records);
 	for (const { kind, at, record } of records) {
 		if (kind !== "handoff") continue;
-		const score = record.score;
-		if (typeof score !== "number" || !Number.isFinite(score)) continue;
+		const recorded = record.score;
+		if (typeof recorded !== "number" || !Number.isFinite(recorded)) continue;
+		// A blocked run (deprecated component in the frame) never passes: it
+		// gates as -Infinity. This engine only ever compares scores to the gate.
+		const score = isBlockedHandoff(record)
+			? Number.NEGATIVE_INFINITY
+			: recorded;
 		const key = keyOf(record);
 		latest.set(key, score);
 		if (at !== undefined) dated.push({ date: at.slice(0, 10), key, score });

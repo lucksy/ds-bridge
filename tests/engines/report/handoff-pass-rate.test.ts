@@ -2,6 +2,8 @@
 // exactly what re-folding every earlier record per day gave — including for a
 // merged (merge=union) history whose lines are out of date order.
 import { describe, expect, it } from "vitest";
+import { readinessByFrame } from "../../../src/engines/history/readiness-frames.js";
+import { buildFrameReadinessTrend } from "../../../src/engines/report/frame-readiness-trend.js";
 import { buildHandoffPassRate } from "../../../src/engines/report/handoff-pass-rate.js";
 import { replayHistory } from "../../../src/engines/report/history-lines.js";
 
@@ -54,5 +56,54 @@ describe("buildHandoffPassRate — trend", () => {
 			const result = buildHandoffPassRate(replayHistory(text), 60);
 			expect(result?.trend).toEqual(reference(text, 60));
 		}
+	});
+});
+
+// A frame with a deprecated component in it fails the handoff gate whatever its
+// score (v1.17 blockers); the pass rate, the per-frame trend and the manager
+// report must agree with the CLI's exit code.
+describe("handoff gate — blocked frames never pass", () => {
+	const lines = [
+		{
+			at: "2026-10-07T10:00:00Z",
+			kind: "handoff",
+			fileKey: "F",
+			nodeId: "1:1",
+			frameName: "Tasks",
+			score: 100,
+		},
+		{
+			at: "2026-10-07T10:00:00Z",
+			kind: "handoff",
+			fileKey: "F",
+			nodeId: "1:2",
+			frameName: "Settings",
+			score: 90,
+			blockers: 1,
+		},
+	]
+		.map((l) => JSON.stringify(l))
+		.join("\n");
+
+	it("the pass rate counts the blocked frame as failing", () => {
+		const result = buildHandoffPassRate(replayHistory(lines), 80);
+		expect(result).toMatchObject({ frames: 2, passing: 1, pct: 50 });
+		expect(result?.trend).toEqual([
+			{ date: "2026-10-07", frames: 2, passing: 1, pct: 50 },
+		]);
+	});
+
+	it("the per-frame trend and per-frame pass rate agree", () => {
+		const trend = buildFrameReadinessTrend(replayHistory(lines), 80);
+		expect(trend?.failing).toBe(1);
+		expect(trend?.frames.find((f) => f.frameName === "Settings")?.passing).toBe(
+			false,
+		);
+		const frames = readinessByFrame(replayHistory(lines), 80);
+		const settings = frames.find((f) => f.frameName === "Settings");
+		expect(settings).toMatchObject({ latest: 90, passRate: 0, blocked: true });
+		expect(
+			frames.find((f) => f.frameName === "Tasks")?.blocked,
+		).toBeUndefined();
 	});
 });

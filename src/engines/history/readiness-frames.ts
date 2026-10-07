@@ -6,7 +6,7 @@
 // `fileKey:nodeId` (v2 handoff lines) > `fileKey` > `name:<frameName>` (v1
 // lines carry only the frame name); a v1 name aliases to the one v2 key seen for
 // that name (`frameKeyResolver`). Latest record (file order) wins the score
-// and name; the pass rate counts runs with score ≥ threshold.
+// and name; the pass rate counts runs with score ≥ threshold and no blocker.
 import type { HistoryRecord } from "../report/history-lines.js";
 
 export interface FrameReadiness {
@@ -21,6 +21,26 @@ export interface FrameReadiness {
 	runs: number;
 	/** Percentage of runs at/above the threshold, half-up rounded. */
 	passRate: number;
+	/** The latest run was blocked (a deprecated component in the frame). */
+	blocked?: boolean;
+}
+
+/**
+ * Whether a handoff history line was blocked: a deprecated component in the
+ * frame fails the gate whatever the score (`blockers` count, v1.17+).
+ */
+export function isBlockedHandoff(record: Record<string, unknown>): boolean {
+	const blockers = record.blockers;
+	return typeof blockers === "number" && blockers > 0;
+}
+
+/** The handoff gate for one history line: score at/above it and not blocked. */
+export function handoffPasses(
+	record: Record<string, unknown>,
+	score: number,
+	threshold: number,
+): boolean {
+	return score >= threshold && !isBlockedHandoff(record);
 }
 
 function str(value: unknown): string | undefined {
@@ -105,8 +125,10 @@ export function readinessByFrame(
 			latest: score,
 			...(at !== undefined ? { at } : {}),
 			runs: (prev?.runs ?? 0) + 1,
-			passes: (prev?.passes ?? 0) + (score >= threshold ? 1 : 0),
+			passes:
+				(prev?.passes ?? 0) + (handoffPasses(record, score, threshold) ? 1 : 0),
 			passRate: 0,
+			...(isBlockedHandoff(record) ? { blocked: true } : {}),
 		};
 		rows.set(key, row);
 	}

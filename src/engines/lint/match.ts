@@ -10,7 +10,7 @@
 import { normalizeColor, normalizeDimension } from "../tokens/normalize.js";
 import type { TokenIndex } from "../tokens/token-index.js";
 import type { Token } from "../tokens/types.js";
-import type { ExtractedLiteral } from "./extract.js";
+import { type ExtractedLiteral, isRadiusProperty } from "./extract.js";
 
 /** A scored candidate token for a near match (deltaE for colors, abs px for dimensions). */
 export interface MatchCandidate {
@@ -237,6 +237,40 @@ function matchDimension(
  * canonical hex (with a composite-color backstop); dimensions on canonical px.
  * Exact always wins over near; nothing close enough is off-system.
  */
+/** A dimension token naming a corner radius (`radius.md`, `shape.corner.small`). */
+const RADIUS_TOKEN = /(radius|corner|rounded)/i;
+
+const radiusScaleCache = new WeakMap<TokenIndex, boolean>();
+
+/** Whether the token set defines a radius / corner scale. Cached per index. */
+function hasRadiusScale(index: TokenIndex): boolean {
+	const cached = radiusScaleCache.get(index);
+	if (cached !== undefined) return cached;
+	let found = false;
+	for (const token of index.byName.values()) {
+		if (token.type === "dimension" && RADIUS_TOKEN.test(token.name)) {
+			found = true;
+			break;
+		}
+	}
+	radiusScaleCache.set(index, found);
+	return found;
+}
+
+/**
+ * Whether a literal belongs in the lint report for this token set. Radius
+ * literals are reported only when the system has a radius scale to point them
+ * at — otherwise every corner would be an off-system finding no token can fix.
+ */
+export function isLintable(
+	literal: ExtractedLiteral,
+	index: TokenIndex,
+): boolean {
+	if (literal.valueKind !== "dimension") return true;
+	if (!isRadiusProperty(literal.property)) return true;
+	return hasRadiusScale(index);
+}
+
 export function matchLiteral(
 	literal: ExtractedLiteral,
 	index: TokenIndex,

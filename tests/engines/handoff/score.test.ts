@@ -5,10 +5,13 @@
 // file.json) is scored and its exact number + top deduction snapshotted.
 //
 // WEIGHTS (total 100):
-//   - Variable binding coverage      40 pts
-//   - Auto-layout coverage           25 pts
+//   - Variable binding coverage      35 pts
+//   - Auto-layout coverage           20 pts
 //   - Component usage (attachment)   20 pts
-//   - Naming convention              15 pts
+//   - Typography (text styles)       15 pts
+//   - Naming convention              10 pts
+//
+// BLOCKERS (outside the score): instances of deprecated components.
 //
 // Definitions used by the rules:
 //   - STYLEABLE node: has a non-empty `fills` OR non-empty `strokes` array.
@@ -49,8 +52,11 @@ describe("scoreReadiness — degenerate trees", () => {
 			instanceCount: 0,
 			detachedSuspects: 0,
 			deprecatedInstances: 0,
+			textNodes: 0,
+			typedTextCoverage: 1,
 			badNames: 0,
 		});
+		expect(report.blockers).toEqual([]);
 	});
 
 	it("never throws on a deeply nested childless chain", () => {
@@ -98,8 +104,8 @@ describe("scoreReadiness — perfect tree", () => {
 	});
 });
 
-describe("scoreReadiness — variable binding rule (40 pts) in isolation", () => {
-	it("deducts the full 40 when no styleable node is bound", () => {
+describe("scoreReadiness — variable binding rule (35 pts) in isolation", () => {
+	it("deducts the full 35 when no styleable node is bound", () => {
 		// One frame (auto-laid-out, attached-or-neutral name) plus a styleable
 		// unbound rectangle. Keep everything else perfect so only binding moves.
 		const root: HandoffNode = frame({
@@ -116,13 +122,13 @@ describe("scoreReadiness — variable binding rule (40 pts) in isolation", () =>
 			],
 		});
 		const report = scoreReadiness(root);
-		// 1 styleable node, 0 bound -> coverage 0 -> binding contributes 0 of 40.
+		// 1 styleable node, 0 bound -> coverage 0 -> binding contributes 0 of 35.
 		expect(report.stats.boundCoverage).toBe(0);
-		expect(report.score).toBe(60);
+		expect(report.score).toBe(65);
 		const binding = report.deductions.find((d) => d.rule === "var-binding");
 		expect(binding).toBeDefined();
 		expect(binding?.nodeId).toBe("1:1");
-		expect(binding?.points).toBe(40);
+		expect(binding?.points).toBe(35);
 		expect(binding?.fix.length).toBeGreaterThan(0);
 	});
 
@@ -167,8 +173,8 @@ describe("scoreReadiness — variable binding rule (40 pts) in isolation", () =>
 	});
 });
 
-describe("scoreReadiness — auto-layout rule (25 pts) in isolation", () => {
-	it("deducts the full 25 when no frame uses auto layout", () => {
+describe("scoreReadiness — auto-layout rule (20 pts) in isolation", () => {
+	it("deducts the full 20 when no frame uses auto layout", () => {
 		const root: HandoffNode = {
 			id: "0:1",
 			name: "Wrapper",
@@ -179,9 +185,9 @@ describe("scoreReadiness — auto-layout rule (25 pts) in isolation", () => {
 			],
 		};
 		const report = scoreReadiness(root);
-		// 2 frames, 0 with auto layout -> coverage 0 -> 0 of 25.
+		// 2 frames, 0 with auto layout -> coverage 0 -> 0 of 20.
 		expect(report.stats.autoLayoutCoverage).toBe(0);
-		expect(report.score).toBe(75);
+		expect(report.score).toBe(80);
 		const al = report.deductions.filter((d) => d.rule === "auto-layout");
 		expect(al.length).toBeGreaterThan(0);
 		expect(al[0]?.fix).toBe("Add auto layout");
@@ -261,7 +267,7 @@ describe("scoreReadiness — component usage rule (20 pts) in isolation", () => 
 	});
 });
 
-describe("scoreReadiness — naming rule (15 pts) in isolation", () => {
+describe("scoreReadiness — naming rule (10 pts) in isolation", () => {
 	it("flags default-named nodes and deducts proportionally", () => {
 		const root: HandoffNode = frame({
 			id: "0:1",
@@ -275,8 +281,8 @@ describe("scoreReadiness — naming rule (15 pts) in isolation", () => {
 		const report = scoreReadiness(root);
 		expect(report.stats.badNames).toBe(2);
 		// totalNodes = 3 (Wrapper + 2 children); badNames = 2.
-		// naming contributes 15 * (1 - 2/3) = 5 -> lost 10.
-		expect(report.score).toBe(90);
+		// naming contributes 10 * (1 - 2/3) = 3.33 -> lost 6.67 -> 93.33.
+		expect(report.score).toBe(93);
 		const naming = report.deductions.filter((d) => d.rule === "naming");
 		expect(naming.length).toBe(2);
 		expect(naming[0]?.fix).toBe("Rename meaningfully");
@@ -353,14 +359,15 @@ describe("scoreReadiness — recorded fixture", () => {
 		// Fixture tree (DOCUMENT > CANVAS > Card/Primary FRAME > {Background RECT,
 		//   Title TEXT, Button/Primary INSTANCE}). 6 nodes total.
 		// binding: styleable = Card, Background, Title (3); all 3 bound -> cov 1.
-		//   (Button INSTANCE has fills:[] -> not styleable.) => full 40.
-		// auto-layout: frames = Card (VERTICAL). 1/1 -> full 25.
+		//   (Button INSTANCE has fills:[] -> not styleable.) => full 35.
+		// auto-layout: frames = Card (VERTICAL). 1/1 -> full 20.
 		// component: suspects = 0 (Card/Primary & Button/Primary are slash-named
 		//   but Card is a FRAME -> suspect!). Card / Primary is a FRAME, not an
 		//   INSTANCE -> detached suspect. Button/Primary is an INSTANCE.
 		//   suspects=1, instances=1 -> 20 * (1 - 1/2) = 10.
-		// naming: no default names -> full 15.
-		// total = 40 + 25 + 10 + 15 = 90.
+		// typography: Title TEXT uses a text style -> full 15.
+		// naming: no default names -> full 10.
+		// total = 35 + 20 + 10 + 15 + 10 = 90.
 		expect(report.score).toBe(90);
 		expect(report.stats).toEqual({
 			totalNodes: 6,
@@ -369,6 +376,8 @@ describe("scoreReadiness — recorded fixture", () => {
 			instanceCount: 1,
 			detachedSuspects: 1,
 			deprecatedInstances: 0,
+			textNodes: 1,
+			typedTextCoverage: 1,
 			badNames: 0,
 		});
 		expect(report.deductions[0]).toEqual({
@@ -378,6 +387,7 @@ describe("scoreReadiness — recorded fixture", () => {
 			points: 10,
 			fix: "Reattach to the published component or rename",
 		});
+		expect(report.blockers).toEqual([]);
 	});
 });
 
@@ -418,5 +428,91 @@ describe("scoreReadiness — deprecated component instances", () => {
 
 	it("without a components map, nothing is deprecated", () => {
 		expect(scoreReadiness(tree).stats.deprecatedInstances).toBe(0);
+	});
+});
+
+// Real-user finding (Material 3 testbed): a screen with raw-typed text and a
+// deprecated component still passed handoff at 90/100.
+describe("scoreReadiness — typography rule (15 pts) in isolation", () => {
+	const page = (children: HandoffNode[]): HandoffNode =>
+		frame({ id: "0:1", name: "Wrapper", layoutMode: "VERTICAL", children });
+
+	it("credits a text style and bound type variables, deducts raw text", () => {
+		const report = scoreReadiness(
+			page([
+				{ id: "1:1", name: "Title", type: "TEXT", styles: { text: "S:1" } },
+				{
+					id: "1:2",
+					name: "Body",
+					type: "TEXT",
+					boundVariables: { fontSize: [{ type: "VARIABLE_ALIAS", id: "V:3" }] },
+				},
+				{ id: "1:3", name: "Dark theme", type: "TEXT" },
+			]),
+		);
+		expect(report.stats.textNodes).toBe(3);
+		expect(report.stats.typedTextCoverage).toBeCloseTo(2 / 3, 10);
+		// typography contributes 15 * 2/3 = 10 -> lost 5.
+		expect(report.score).toBe(95);
+		const typography = report.deductions.filter((d) => d.rule === "typography");
+		expect(typography.map((d) => d.nodeId)).toEqual(["1:3"]);
+		expect(typography[0]?.points).toBeCloseTo(5, 10);
+	});
+
+	it("a frame without text keeps the full typography weight", () => {
+		expect(scoreReadiness(page([])).score).toBe(100);
+	});
+});
+
+describe("scoreReadiness — blockers", () => {
+	it("lists every deprecated instance as a blocker, independent of the score", () => {
+		const tree = frame({
+			id: "0:1",
+			name: "Settings",
+			layoutMode: "VERTICAL",
+			children: [
+				{
+					id: "2:1",
+					name: "Legacy Button",
+					type: "INSTANCE",
+					componentId: "9:1",
+				},
+				{ id: "2:2", name: "Save", type: "INSTANCE", componentId: "9:2" },
+			],
+		});
+		const report = scoreReadiness(tree, {
+			components: {
+				"9:1": { name: "Legacy Button — DEPRECATED" },
+				"9:2": { name: "Button" },
+			},
+		});
+		expect(report.blockers).toEqual([
+			{
+				nodeId: "2:1",
+				nodeName: "Legacy Button",
+				reason: "deprecated-component",
+				fix: 'Swap to the current component — "Legacy Button — DEPRECATED" is deprecated',
+			},
+		]);
+	});
+
+	it("a detached copy (a name heuristic) is a deduction, never a blocker", () => {
+		const report = scoreReadiness(
+			frame({
+				id: "0:1",
+				name: "Settings",
+				layoutMode: "VERTICAL",
+				children: [
+					{
+						id: "2:1",
+						name: "Button",
+						type: "FRAME",
+						layoutMode: "HORIZONTAL",
+					},
+				],
+			}),
+		);
+		expect(report.stats.detachedSuspects).toBe(1);
+		expect(report.blockers).toEqual([]);
 	});
 });
