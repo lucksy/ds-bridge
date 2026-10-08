@@ -1094,7 +1094,7 @@ var require_suggestSimilar = __commonJS({
   "node_modules/commander/lib/suggestSimilar.js"(exports) {
     "use strict";
     var maxDistance = 3;
-    function editDistance5(a, b) {
+    function editDistance6(a, b) {
       if (Math.abs(a.length - b.length) > maxDistance)
         return Math.max(a.length, b.length);
       const d = [];
@@ -1140,7 +1140,7 @@ var require_suggestSimilar = __commonJS({
       const minSimilarity = 0.4;
       candidates.forEach((candidate) => {
         if (candidate.length <= 1) return;
-        const distance = editDistance5(word, candidate);
+        const distance = editDistance6(word, candidate);
         const length = Math.max(word.length, candidate.length);
         const similarity = (length - distance) / length;
         if (similarity > minSimilarity) {
@@ -7213,18 +7213,18 @@ function suggestForeground(fg, bg, required) {
   if (base === void 0) return { kind: "none" };
   const bgLuminance = relativeLuminance(bg);
   if (bgLuminance === void 0) return { kind: "none" };
-  const direction = bgLuminance > 0.5 ? -1 : 1;
   const baseL = base.l;
+  const preferred = bgLuminance > 0.5 ? -1 : 1;
   for (let step = 0; step <= SUGGESTION_STEPS; step += 1) {
-    const lightness = Math.min(
-      1,
-      Math.max(0, baseL + direction * (step / SUGGESTION_STEPS))
-    );
-    const candidate = formatHex(rgb2({ ...base, l: lightness }));
-    if (candidate === void 0) continue;
-    const ratio = contrastRatio(candidate, bg);
-    if (ratio !== void 0 && ratio >= required) {
-      return { kind: "adjusted", value: candidate };
+    for (const direction of [preferred, -preferred]) {
+      const lightness = baseL + direction * (step / SUGGESTION_STEPS);
+      if (lightness < 0 || lightness > 1) continue;
+      const candidate = formatHex(rgb2({ ...base, l: lightness }));
+      if (candidate === void 0) continue;
+      const ratio = contrastRatio(candidate, bg);
+      if (ratio !== void 0 && ratio >= required) {
+        return { kind: "adjusted", value: candidate };
+      }
     }
   }
   return { kind: "none" };
@@ -8170,12 +8170,26 @@ function flattenValue(type, value2) {
   }
   return value2;
 }
-var QUIET_OTHER_TYPES = /* @__PURE__ */ new Set(["string", "boolean", "unknown"]);
+var QUIET_OTHER_TYPES = /* @__PURE__ */ new Set([
+  "string",
+  "boolean",
+  "unknown",
+  // DTCG types ds-bridge does not compare: valid, so never a warning.
+  "cubicBezier",
+  "transition",
+  "border",
+  "strokeStyle",
+  "gradient",
+  "fontStyle",
+  "letterSpacing",
+  "lineHeight",
+  "opacity"
+]);
 function mapType2(raw, path, warnings) {
   if (typeof raw !== "string") return "other";
   if (KNOWN_TYPES.has(raw)) return raw;
   if (QUIET_OTHER_TYPES.has(raw)) return "other";
-  warnings.push(`${path}: unrecognized $type "${raw}" \u2014 treated as "other"`);
+  warnings.push(`\0${raw}\0${path}`);
   return "other";
 }
 function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
@@ -8318,6 +8332,25 @@ function isFigmaLength(name, value2) {
   const segments3 = name.split(/[.\-_\s]+/);
   return segments3.some((s) => LENGTH_SEGMENT.test(s)) && !segments3.some((s) => NOT_LENGTH_SEGMENT.test(s));
 }
+var TYPE_MARK = "\0";
+function groupTypeWarnings(warnings) {
+  const byType = /* @__PURE__ */ new Map();
+  const rest = [];
+  for (const warning of warnings) {
+    const [lead, type, path] = warning.split(TYPE_MARK);
+    if (lead !== "" || type === void 0 || path === void 0) {
+      rest.push(warning);
+      continue;
+    }
+    byType.set(type, [...byType.get(type) ?? [], path]);
+  }
+  const grouped = [...byType].map(([type, paths]) => {
+    const shown = paths.slice(0, 3).join(", ");
+    const more = paths.length > 3 ? `, \u2026 ${paths.length - 3} more` : "";
+    return paths.length === 1 ? `${paths[0]}: unrecognized $type "${type}" \u2014 treated as "other"` : `unrecognized $type "${type}" on ${paths.length} tokens (${shown}${more}) \u2014 treated as "other"`;
+  });
+  return [...rest, ...grouped];
+}
 function parseW3c(source2) {
   if (!isPlainObject2(source2)) {
     return {
@@ -8364,7 +8397,7 @@ function parseW3c(source2) {
   return {
     kind: "ok",
     map: { format: "w3c", tokens },
-    warnings
+    warnings: groupTypeWarnings(warnings)
   };
 }
 
@@ -9839,6 +9872,36 @@ ${lines.join("\n")}`
 function isPlainObject5(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
+function repairMode(doc, defaultDoc, errors) {
+  if (!isPlainObject5(doc) || !isPlainObject5(defaultDoc)) return void 0;
+  const reverted = [];
+  const copy = structuredClone(doc);
+  for (const error of errors) {
+    if (error.code !== "unknown-alias") return void 0;
+    const match = /^(.+?): (alias references unknown token .*)$/.exec(
+      error.message
+    );
+    if (match === null) return void 0;
+    const [, token2, message] = match;
+    const path = token2.split(".");
+    const fallback = path.reduce(
+      (node, key2) => isPlainObject5(node) ? node[key2] : void 0,
+      defaultDoc
+    );
+    const parentPath = path.slice(0, -1);
+    const parent = parentPath.reduce(
+      (node, key2) => isPlainObject5(node) ? node[key2] : void 0,
+      copy
+    );
+    const last = path[path.length - 1];
+    if (!isPlainObject5(parent) || last === void 0 || fallback === void 0)
+      return void 0;
+    parent[last] = structuredClone(fallback);
+    if (!reverted.some((r2) => r2.token === token2))
+      reverted.push({ token: token2, message });
+  }
+  return reverted.length > 0 ? { doc: copy, reverted } : void 0;
+}
 function loadTokens(path) {
   const read2 = readTokenDocument(path);
   if (read2.kind === "error") return read2;
@@ -9864,8 +9927,23 @@ function loadTokens(path) {
   if (read2.modeDocs !== void 0) {
     const modes3 = [];
     const warnings = [...base.warnings];
+    const defaultDoc = read2.modeDocs[0]?.doc;
     for (const [index, { mode, doc }] of read2.modeDocs.entries()) {
-      const parsed = parse4(doc);
+      let parsed = parse4(doc);
+      if (parsed.kind === "error" && index > 0) {
+        const repaired = repairMode(doc, defaultDoc, parsed.errors);
+        if (repaired !== void 0) {
+          const retry = parse4(repaired.doc);
+          if (retry.kind === "ok") {
+            for (const { token: token2, message } of repaired.reverted) {
+              warnings.push(
+                `mode "${mode}": ${token2} keeps its default value \u2014 ${message}`
+              );
+            }
+            parsed = retry;
+          }
+        }
+      }
       if (parsed.kind === "error") {
         if (index === 0) {
           return parseFailure(`mode "${mode}" of "${path}"`, format, parsed);
@@ -9946,7 +10024,7 @@ function renderGauge(value2, opts) {
   const empty = EMPTY_CELL.repeat(Math.max(0, opts.width - filledCells));
   const filled = opts.color && bar.length > 0 ? colors2.cyan(bar) : bar;
   const meter = `[${filled}${empty}]`;
-  const pct5 = `${Math.round(v)}%`;
+  const pct5 = opts.unit === "score" ? `${Math.round(v)}/100` : `${Math.round(v)}%`;
   return opts.label !== void 0 && opts.label !== "" ? `${opts.label} ${meter} ${pct5}` : `${meter} ${pct5}`;
 }
 
@@ -10110,6 +10188,11 @@ function fail(message) {
 function loadModeMaps(tokenPath) {
   const loaded = loadTokens(tokenPath);
   if (loaded.kind === "error") return loaded;
+  for (const warning of loaded.warnings) {
+    if (warning.startsWith("mode "))
+      process.stderr.write(`warning: ${warning}
+`);
+  }
   return {
     kind: "ok",
     modes: loaded.modes ?? [{ mode: DEFAULT_MODE, map: loaded.map }]
@@ -10150,7 +10233,8 @@ function filterModes(all, modesFlag) {
   }
   const requested = modesFlag.split(",").map((m) => m.trim()).filter((m) => m.length > 0);
   const available = new Set(all.map((m) => m.mode));
-  const unknown = requested.filter((m) => !available.has(m));
+  const resolveName = (name) => available.has(name) ? name : [...available].find((m) => m.split("/").includes(name));
+  const unknown = requested.filter((m) => resolveName(m) === void 0);
   if (unknown.length > 0) {
     const list = [...available].sort().join(", ");
     return {
@@ -10158,7 +10242,7 @@ function filterModes(all, modesFlag) {
       message: `Unknown mode(s): ${unknown.join(", ")}. Available modes: ${list || "(none)"}.`
     };
   }
-  const keep = new Set(requested);
+  const keep = new Set(requested.map((m) => resolveName(m) ?? m));
   return { kind: "ok", modes: all.filter((m) => keep.has(m.mode)) };
 }
 function statusSeverity(status) {
@@ -10422,7 +10506,7 @@ async function scanUsage(registry, projectDir) {
     globals.__filename = filename;
     globals.__dirname = dirname3(filename);
   }
-  const { mapCodeUsage } = await import("./usage-SRR4G2ML.mjs");
+  const { mapCodeUsage } = await import("./usage-UBMT6CO7.mjs");
   return mapCodeUsage({ registry, projectDir });
 }
 function appendAdoptionHistory(targetDir, coverage) {
@@ -11663,7 +11747,7 @@ function executiveInputs(records, registry) {
       matched: registry.matches.filter(
         (m) => m.kind !== "icon"
       ).length,
-      custom: registry.unmatchedCode.length
+      custom: buildParity(registry).summary.missingInFigma
     };
   }
   if (health !== void 0) {
@@ -14354,6 +14438,7 @@ var RULE_REASON = {
   "var-binding": "Variable binding",
   "auto-layout": "Auto layout",
   component: "Component usage",
+  typography: "Typography",
   naming: "Naming"
 };
 function renderInstant(env = process.env) {
@@ -14491,7 +14576,11 @@ function aggregateHistory(text2, historyPath, onWarning) {
       const r2 = record;
       libraryHealth = {
         overrideHotspots: [],
-        deprecatedUsage: [],
+        // The line's ranked deprecated list has this exact shape.
+        deprecatedUsage: (topList(record.topDeprecated) ?? []).map((d) => ({
+          componentName: d.name,
+          count: d.count
+        })),
         detachedCandidates: [],
         totals: {
           overrideHotspots: asNumber11(r2.overrideHotspots),
@@ -18222,7 +18311,7 @@ function normalizeName2(name) {
 }
 async function scanCode(targetDir, registry) {
   shimCjsGlobals();
-  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-NGHFEHEE.mjs");
+  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-GQKTHHT7.mjs");
   const packaged = new Set(
     registry.matches.filter((m) => !/\.(?:tsx?|jsx?)$/.test(m.importPath)).map((m) => normalizeName2(m.codeName))
   );
@@ -18318,6 +18407,27 @@ function disambiguate(component, path) {
   }
   return { component, path };
 }
+function editDistance5(a, b) {
+  const row2 = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row2[0];
+    row2[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const next = row2[j];
+      row2[j] = Math.min(
+        row2[j] + 1,
+        row2[j - 1] + 1,
+        prev + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      prev = next;
+    }
+  }
+  return row2[b.length];
+}
+function nearestNames(query, names) {
+  const q = normalizeName2(query);
+  return [...names].map((name) => ({ name, d: editDistance5(q, normalizeName2(name)) })).sort((a, b) => a.d - b.d || (a.name < b.name ? -1 : 1)).slice(0, 5).map((c3) => c3.name);
+}
 function renderTerm5(result) {
   const rows = result.pages.map((page) => [
     page.component,
@@ -18326,7 +18436,7 @@ function renderTerm5(result) {
   const table3 = renderTable(["component", "gaps"], rows, { color: false });
   const gapTotal = result.pages.reduce((sum, p4) => sum + p4.gaps.length, 0);
   const heading = `${result.pages.length} pages written to ${result.outDir}`;
-  const footer = `llms.txt: ${result.llmsPath} \xB7 ${gapTotal} gaps total`;
+  const footer = `llms.txt: ${result.llmsPath} \xB7 ${gapTotal} ${gapTotal === 1 ? "gap" : "gaps"} total`;
   return [heading, "", table3, "", footer].join("\n");
 }
 async function runDocs(rawComponent, rawPath, options) {
@@ -18364,7 +18474,10 @@ async function runDocs(rawComponent, rawPath, options) {
     const needle = normalizeName2(component);
     docs = allDocs.filter((doc) => normalizeName2(doc.name) === needle);
     if (docs.length === 0) {
-      const candidates = allDocs.map((doc) => doc.name).join(", ");
+      const candidates = nearestNames(
+        component,
+        allDocs.map((doc) => doc.name)
+      ).join(", ");
       fail7(
         `No component named "${component}" in the registry. Candidates: ${candidates.length > 0 ? candidates : "(none)"}.`
       );
@@ -18394,7 +18507,7 @@ async function runDocs(rawComponent, rawPath, options) {
   }
   const llmsPath = join16(outDir, "llms.txt");
   try {
-    writeFileSync7(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+    writeFileSync7(llmsPath, renderLlmsTxt(allDocs, tokens), "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail7(`Could not write "${llmsPath}": ${detail}`);
@@ -18478,7 +18591,10 @@ function isRadiusProperty(property) {
   );
 }
 function isDimensionProperty(property) {
-  return isSpacingProperty(property) || isRadiusProperty(property);
+  return isSpacingProperty(property) || isRadiusProperty(property) || isFontSizeProperty(property);
+}
+function isFontSizeProperty(property) {
+  return /^font-?size$/i.test(property);
 }
 function isSpacingProperty(property) {
   const lower = property.toLowerCase();
@@ -18833,7 +18949,7 @@ function dimensionFamily(property) {
   const p4 = property.toLowerCase();
   if (/radius/.test(p4)) return /(radius|corner|rounded|shape)/i;
   if (/^font-?size$|^fontsize$/.test(p4))
-    return /(font-?size|typescale.*size|\.size$|text)/i;
+    return /(font-?size|typescale.*size|(typography|type|font|text)[\w.@-]*size|\.size$)/i;
   if (/line-?height/.test(p4)) return /(line-?height|leading)/i;
   if (/letter-?spacing/.test(p4)) return /(letter-?spacing|tracking)/i;
   if (/^(?:padding|margin|gap|row-?gap|column-?gap|inset|top|right|bottom|left)/.test(
@@ -18883,6 +18999,15 @@ function matchColor(literal2, index, options) {
       const inExact = new Set(exact.map((t) => t.name));
       const nearFit = index.nearest(canonical3, { maxDeltaE: COLOR_NEAR_DELTA_E, limit: 50 }).filter((m) => !inExact.has(m.token.name) && fits(m.token)).map((m) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT);
       if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
+    }
+    if (exact.every((t) => isStateToken(t.name))) {
+      const preferred = pickPreferred(exact, literal2.property);
+      if (preferred !== void 0) {
+        return {
+          kind: "near",
+          candidates: [{ token: preferred, distance: 0 }]
+        };
+      }
     }
     const token2 = pickPreferred(exact, literal2.property);
     if (token2 !== void 0) return { kind: "exact", token: token2 };
@@ -18998,6 +19123,10 @@ function hasRadiusScale(index) {
 }
 function isLintable(literal2, index) {
   if (literal2.valueKind !== "dimension") return true;
+  if (isFontSizeProperty(literal2.property)) {
+    const family = dimensionFamily(literal2.property);
+    return family !== void 0 && setHasFamily(index, family);
+  }
   if (!isRadiusProperty(literal2.property)) return true;
   return hasRadiusScale(index);
 }
@@ -19165,7 +19294,7 @@ function namedReplacement(registry, entry) {
   };
 }
 function resolveEntry(registry, nodeNameOrId) {
-  const query = nodeNameOrId;
+  const query = /^\d+-\d+$/.test(nodeNameOrId.trim()) ? nodeNameOrId.trim().replace("-", ":") : nodeNameOrId;
   const normalizedQuery = normalizeName3(query);
   for (const entry of registry.matches) {
     if (entry.nodeId === query || entry.aliasNodeIds?.includes(query)) {
@@ -19807,9 +19936,10 @@ function deriveRequirements(root2, maps = {}, signatures = []) {
 }
 function nodeFromFileNodes(nodes, nodeId) {
   const direct = nodes[nodeId];
+  if (direct === null) return void 0;
   if (direct !== void 0) return direct.document;
   const entries = Object.values(nodes).filter(
-    (v) => v !== void 0
+    (v) => v !== void 0 && v !== null
   );
   return entries[0]?.document;
 }
@@ -19823,10 +19953,10 @@ async function fetchRoot(client, fileKey, nodeId) {
     if (root2 === void 0) {
       return {
         kind: "error",
-        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
+        message: `Node ${nodeId} was not found in file ${fileKey} \u2014 it may have been deleted; check the URL (or tracked_frames in .ds-bridge.json).`
       };
     }
-    const entry = result2.data.nodes[nodeId] ?? Object.values(result2.data.nodes)[0];
+    const entry = result2.data.nodes[nodeId] ?? Object.values(result2.data.nodes).find((v) => v != null);
     return {
       kind: "ok",
       root: root2,
@@ -20579,9 +20709,10 @@ function resolveThreshold(flag, configDefault) {
 }
 function nodeFromFileNodes2(nodes, nodeId) {
   const direct = nodes[nodeId];
+  if (direct === null) return void 0;
   if (direct !== void 0) return direct;
   const entries = Object.values(nodes).filter(
-    (v) => v !== void 0
+    (v) => v !== void 0 && v !== null
   );
   return entries[0];
 }
@@ -20601,7 +20732,7 @@ async function fetchRoot2(client, fileKey, nodeId) {
     if (entry === void 0) {
       return {
         kind: "error",
-        message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
+        message: `Node ${nodeId} was not found in file ${fileKey} \u2014 it may have been deleted; check the URL (or tracked_frames in .ds-bridge.json).`
       };
     }
     return { kind: "ok", root: entry.document, maps: componentMaps(entry) };
@@ -21692,6 +21823,81 @@ function diffComponents(before, after) {
   return { added, removed, renamed, changed };
 }
 
+// src/engines/impact/variant-sites.ts
+var norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+function openingTags(source2, codeName) {
+  const out = [];
+  const re = new RegExp(`<${codeName}(?=[\\s/>])`, "g");
+  for (const match of source2.matchAll(re)) {
+    const start = (match.index ?? 0) + match[0].length;
+    let depth = 0;
+    let quote;
+    let i = start;
+    for (; i < source2.length; i++) {
+      const ch = source2[i];
+      if (quote !== void 0) {
+        if (ch === quote) quote = void 0;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+      else if (ch === "{") depth += 1;
+      else if (ch === "}") depth -= 1;
+      else if (ch === ">" && depth === 0) break;
+    }
+    out.push({ index: match.index ?? 0, attrs: source2.slice(start, i) });
+  }
+  return out;
+}
+function literalProps(attrs) {
+  const props = /* @__PURE__ */ new Map();
+  const re = /([A-Za-z_$][\w$-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*["'`]([^"'`]*)["'`]\s*\})/g;
+  for (const m of attrs.matchAll(re)) {
+    const name = m[1];
+    props.set(norm(name), { name, value: m[2] ?? m[3] ?? m[4] ?? "" });
+  }
+  return props;
+}
+function propNames(attrs) {
+  const names = /* @__PURE__ */ new Map();
+  for (const m of attrs.matchAll(/([A-Za-z_$][\w$-]*)\s*=/g)) {
+    names.set(norm(m[1]), m[1]);
+  }
+  return names;
+}
+function variantUsageLines(source2, codeName, changes) {
+  const breaking = changes.filter(
+    (c3) => c3.kind === "value-removed" || c3.kind === "axis-removed"
+  );
+  if (breaking.length === 0) return [];
+  const lines = [];
+  for (const tag of openingTags(source2, codeName)) {
+    const line2 = source2.slice(0, tag.index).split("\n").length;
+    const literals = literalProps(tag.attrs);
+    const names = propNames(tag.attrs);
+    for (const change of breaking) {
+      const key2 = norm(change.axis);
+      if (change.kind === "value-removed") {
+        const prop = literals.get(key2);
+        if (prop !== void 0 && norm(prop.value) === norm(change.value)) {
+          lines.push({
+            line: line2,
+            reason: `passes ${prop.name}="${prop.value}" (${change.axis}=${change.value} removed)`
+          });
+        }
+      } else {
+        const name = names.get(key2);
+        if (name !== void 0) {
+          lines.push({
+            line: line2,
+            reason: `sets ${name} (axis ${change.axis} removed)`
+          });
+        }
+      }
+    }
+  }
+  return lines;
+}
+
 // src/cli-commands/impact.ts
 var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
 function fail11(message) {
@@ -21780,15 +21986,20 @@ function loadRegistry5() {
     return void 0;
   }
 }
-async function mapChangedUsage(registry, changedFigmaNames) {
+async function mapChangedUsage(registry, changedFigmaNames, nodeIdsByName = {}) {
   const globals = globalThis;
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath4(import.meta.url);
     globals.__filename = filename;
     globals.__dirname = dirname7(filename);
   }
-  const { mapUsage } = await import("./usage-SRR4G2ML.mjs");
-  return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
+  const { mapUsage } = await import("./usage-UBMT6CO7.mjs");
+  return mapUsage({
+    registry,
+    changedFigmaNames,
+    nodeIdsByName,
+    projectDir: cwd3()
+  });
 }
 function changedNames(diff) {
   const names = [];
@@ -21797,6 +22008,50 @@ function changedNames(diff) {
   for (const changed of diff.changed) names.push(changed.name);
   for (const added of diff.added) names.push(added.name);
   return names;
+}
+function changedNodeIds(diff) {
+  const ids = {};
+  for (const removed of diff.removed) ids[removed.name] = removed.nodeId;
+  for (const renamed of diff.renamed) {
+    ids[renamed.fromName] = renamed.fromNodeId;
+  }
+  for (const changed of diff.changed) ids[changed.name] = changed.nodeId;
+  for (const added of diff.added) ids[added.name] = added.nodeId;
+  return ids;
+}
+function refineToVariantSites(diff, usageByName, importedFiles, projectDir) {
+  for (const change of diff.changed) {
+    const usage = usageByName.get(change.name);
+    if (usage === void 0 || usage.codeName === void 0) continue;
+    const files = [...new Set(usage.usages.map((u) => u.file))];
+    importedFiles.set(change.name, files.length);
+    const sites = [];
+    for (const file of files) {
+      let source2;
+      try {
+        source2 = readFileSync18(join20(projectDir, file), "utf8");
+      } catch {
+        continue;
+      }
+      for (const hit of variantUsageLines(
+        source2,
+        usage.codeName,
+        change.variantChanges
+      )) {
+        sites.push({
+          file,
+          line: hit.line,
+          importName: usage.codeName,
+          reason: hit.reason
+        });
+      }
+    }
+    usageByName.set(change.name, {
+      ...usage,
+      usages: sites,
+      count: sites.length
+    });
+  }
 }
 function hasBreaking(diff) {
   if (diff.removed.length > 0) return true;
@@ -21829,7 +22084,8 @@ function buildMigrationSites(diff, usageByName, cap) {
         line: site.line,
         subject: row2.component,
         from: row2.fromName,
-        to: row2.toName
+        to: row2.toName,
+        ...site.reason !== void 0 ? { reason: site.reason } : {}
       });
     }
   }
@@ -21861,7 +22117,7 @@ function renderChecklist(sites, truncated) {
   const header = `Migration checklist \u2014 ${sites.length} call site${sites.length === 1 ? "" : "s"}${truncated ? " (truncated to the cap)" : ""}:`;
   const lines = sites.map((s) => {
     const move = s.from !== "" && s.to !== "" ? `${s.from} \u2192 ${s.to}` : s.to === "" ? `${s.from} \u2192 (removed)` : `(new) \u2192 ${s.to}`;
-    return `  ${s.file}:${s.line} \xB7 ${s.subject} \xB7 ${move}`;
+    return s.reason !== void 0 ? `  ${s.file}:${s.line} \xB7 ${s.subject} \xB7 ${s.reason}` : `  ${s.file}:${s.line} \xB7 ${s.subject} \xB7 ${move}`;
   });
   return [header, ...lines].join("\n");
 }
@@ -21930,7 +22186,7 @@ function diffRows(diff) {
   });
   return rows;
 }
-function renderTerm8(diff, usageByName, registryPresent, color) {
+function renderTerm8(diff, usageByName, registryPresent, color, importedFiles = /* @__PURE__ */ new Map()) {
   const rows = diffRows(diff);
   if (rows.length === 0) {
     return severityColor(
@@ -21950,7 +22206,8 @@ function renderTerm8(diff, usageByName, registryPresent, color) {
   const tableRows = rows.map((row2) => {
     const usage = usageByName.get(row2.lookupName);
     const sites = usage?.count ?? 0;
-    const touches = registryPresent ? sites > 0 ? `touches ${sites} call site${sites === 1 ? "" : "s"}` : "no call sites" : "\u2014";
+    const imported = importedFiles.get(row2.lookupName) ?? 0;
+    const touches = registryPresent ? sites > 0 ? `touches ${sites} call site${sites === 1 ? "" : "s"}` : imported > 0 ? `imported in ${imported} file${imported === 1 ? "" : "s"} \xB7 nothing to migrate` : "no call sites" : "\u2014";
     const sev = row2.impact === "breaking" ? "error" : row2.impact === "additive" ? "warn" : "info";
     return [
       severityColor(sev, row2.impact, { color }),
@@ -22084,9 +22341,15 @@ Run "ds-bridge impact" again after library changes to see the diff.
   const breaking = hasBreaking(diff);
   const registry = loadRegistry5();
   const usageByName = /* @__PURE__ */ new Map();
+  const importedFiles = /* @__PURE__ */ new Map();
   if (registry !== void 0) {
-    const usages = await mapChangedUsage(registry, changedNames(diff));
+    const usages = await mapChangedUsage(
+      registry,
+      changedNames(diff),
+      changedNodeIds(diff)
+    );
     for (const usage of usages) usageByName.set(usage.figmaName, usage);
+    refineToVariantSites(diff, usageByName, importedFiles, cwd3());
   }
   const { sites, truncated } = buildMigrationSites(
     diff,
@@ -22117,7 +22380,7 @@ Run "ds-bridge impact" again after library changes to see the diff.
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
     process.stdout.write(
-      `${renderTerm8(diff, usageByName, registry !== void 0, color)}
+      `${renderTerm8(diff, usageByName, registry !== void 0, color, importedFiles)}
 `
     );
   }
@@ -22323,7 +22586,7 @@ function appendLibraryHealthHistory(totals, lists, fileKey) {
   };
   appendHistoryRecord(stateDir, record);
 }
-function renderTerm9(report, color) {
+function renderTerm9(report, color, full) {
   const { totals } = report;
   const clean = totals.overrideHotspots === 0 && totals.deprecatedUsage === 0 && totals.detachedCandidates === 0;
   const header = severityColor(
@@ -22342,16 +22605,30 @@ function renderTerm9(report, color) {
   );
   const lines = [header, "", summary];
   if (report.overrideHotspots.length > 0) {
-    lines.push("", "Top override hotspots:");
-    const grouped = /* @__PURE__ */ new Map();
-    for (const h of report.overrideHotspots) {
-      const named2 = h.componentName !== void 0 ? ` (${h.componentName})` : "";
-      const fields = h.fields !== void 0 && h.fields.length > 0 ? ` \u2014 ${h.fields.join(", ")}` : "";
-      const line2 = `  ${h.name}${named2}: ${h.overrideCount} override(s)${fields}`;
-      grouped.set(line2, (grouped.get(line2) ?? 0) + 1);
+    const all = (full ?? report).overrideHotspots;
+    const byComponent = /* @__PURE__ */ new Map();
+    for (const h of all) {
+      const name = h.componentName ?? h.name;
+      const entry = byComponent.get(name) ?? {
+        instances: 0,
+        fields: /* @__PURE__ */ new Set()
+      };
+      entry.instances += 1;
+      for (const f3 of h.fields ?? []) entry.fields.add(f3);
+      byComponent.set(name, entry);
     }
-    for (const [line2, count] of grouped) {
-      lines.push(count > 1 ? `${line2}  \xD7${count}` : line2);
+    const ranked2 = [...byComponent].sort(
+      (a, b) => a[1].instances !== b[1].instances ? b[1].instances - a[1].instances : a[0] < b[0] ? -1 : 1
+    ).slice(0, 10);
+    lines.push("", "Top override hotspots (by component):");
+    for (const [name, { instances, fields }] of ranked2) {
+      const list = [...fields].sort().join(", ");
+      lines.push(
+        `  ${name}: ${instances} instance${instances === 1 ? "" : "s"} overridden${list !== "" ? ` \u2014 ${list}` : ""}`
+      );
+    }
+    if (byComponent.size > ranked2.length) {
+      lines.push(`  \u2026 ${byComponent.size - ranked2.length} more components`);
     }
   }
   if (report.deprecatedUsage.length > 0) {
@@ -22366,13 +22643,6 @@ function renderTerm9(report, color) {
   );
   for (const d of report.detachedCandidates) {
     lines.push(`  ${d.name} (${d.nodeId})`);
-  }
-  const shown = report.overrideHotspots.length;
-  if (shown < totals.overrideHotspots) {
-    lines.push(
-      "",
-      `Showing the top ${shown} of ${totals.overrideHotspots} override hotspots.`
-    );
   }
   return lines.join("\n");
 }
@@ -22487,7 +22757,7 @@ async function runLibraryHealth(options) {
     );
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderTerm9(report, color)}
+    process.stdout.write(`${renderTerm9(report, color, full)}
 `);
   }
   process.exitCode = 0;
@@ -22602,6 +22872,8 @@ function planFixes(findings, emittedName) {
   for (const { literal: literal2, match } of findings) {
     if (match.kind !== "exact") continue;
     if (isCompositeToken(match.token)) continue;
+    if (emittedName !== void 0 && emittedName(match.token) === void 0)
+      continue;
     edits.push({
       file: literal2.file,
       line: literal2.line,
@@ -22921,7 +23193,7 @@ function emittedVarNames(projectDir, tokens) {
     const scanned = scanOutputs({ path: file, content });
     if (scanned.kind === "ok") names.push(...scanned.values.map((v) => v.name));
   }
-  if (names.length === 0) return () => void 0;
+  if (names.length === 0) return void 0;
   const actual = new Map(names.map((n) => [nameKey(n), n]));
   const alignment = alignTokenKeys(
     tokens.map((t) => t.name),
@@ -23146,14 +23418,17 @@ function toJsonFinding(finding) {
     base.expectedToken = finding.match.token.name;
     if (finding.cssVar !== void 0)
       base.expectedVar = `var(--${finding.cssVar})`;
+    if (finding.notEmitted === true) base.notEmitted = true;
   } else if (finding.match.kind === "near") {
     base.expectedCandidates = candidateNames(finding.match);
   }
   return base;
 }
-function suggestionFor(match, cssVar) {
+function suggestionFor(match, cssVar, notEmitted) {
   switch (match.kind) {
     case "exact":
+      if (notEmitted === true)
+        return `matches token ${match.token.name}, but the build emits no CSS variable for it (not auto-fixed)`;
       return cssVar === void 0 ? `use token ${match.token.name}` : `use token ${match.token.name} \u2014 var(--${cssVar})`;
     case "near": {
       const names = candidateNames(match).join(", ");
@@ -23174,12 +23449,12 @@ function renderTerm10(findings, color) {
   for (const [file, fileFindings] of byFile) {
     const lines = [severityColor("ok", file, { color })];
     for (const finding of fileFindings) {
-      const { literal: literal2, match, cssVar } = finding;
+      const { literal: literal2, match, cssVar, notEmitted } = finding;
       const severity = KIND_SEVERITY[match.kind];
       const position = `${literal2.file}:${literal2.line}:${literal2.col}`;
       const label = severityColor(severity, match.kind, { color });
       lines.push(
-        `  ${position}  ${label}  ${literal2.property}: ${literal2.raw} \u2014 ${suggestionFor(match, cssVar)}`
+        `  ${position}  ${label}  ${literal2.property}: ${literal2.raw} \u2014 ${suggestionFor(match, cssVar, notEmitted)}`
       );
     }
     blocks.push(lines.join("\n"));
@@ -23200,18 +23475,18 @@ function renderTerm10(findings, color) {
   return [heading, "", ...blocks, "", table3].join("\n");
 }
 function changedFiles(targetDir) {
-  const result = spawnSync2("git", ["diff", "--name-only", "HEAD"], {
-    cwd: targetDir,
-    encoding: "utf8"
-  });
-  if (result.error !== void 0 || result.status !== 0) {
+  const run = (args) => spawnSync2("git", args, { cwd: targetDir, encoding: "utf8" });
+  const diff = run(["diff", "--name-only", "--relative", "HEAD"]);
+  const untracked = run(["ls-files", "--others", "--exclude-standard"]);
+  if (diff.error !== void 0 || diff.status !== 0 || untracked.error !== void 0 || untracked.status !== 0) {
     return {
       kind: "error",
       message: `Could not list changed files in "${targetDir}" \u2014 not a git repository (or git is unavailable). Run without --changed, or lint inside a repo.`
     };
   }
   const files = new Set(
-    result.stdout.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0).map((rel2) => resolve10(targetDir, rel2))
+    `${diff.stdout}
+${untracked.stdout}`.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0).map((rel2) => resolve10(targetDir, rel2))
   );
   return { kind: "ok", files };
 }
@@ -23255,6 +23530,7 @@ function lintAll(files, tokens) {
       if (finding.match.kind !== "exact") continue;
       const name = tokens.emittedName(finding.match.token);
       if (name !== void 0) finding.cssVar = name;
+      else finding.notEmitted = true;
     }
   }
   return { kind: "ok", findings: all };
@@ -24018,8 +24294,22 @@ function nameScore(codeName, figmaName) {
   return score < TOKEN_SCORE_FLOOR ? 0 : score;
 }
 function normValue(value2) {
-  return value2.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const key2 = value2.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return NUMBER_WORDS[key2] ?? key2;
 }
+var NUMBER_WORDS = {
+  zero: "0",
+  one: "1",
+  two: "2",
+  three: "3",
+  four: "4",
+  five: "5",
+  six: "6",
+  seven: "7",
+  eight: "8",
+  nine: "9",
+  ten: "10"
+};
 function unprefixed(values) {
   if (values.length < 2) return [...values];
   const first = /^([a-z0-9]+)[-_ ]/i.exec(values[0])?.[1];
@@ -24047,10 +24337,10 @@ function normalizedKeyIndex(variants) {
   const index = /* @__PURE__ */ new Map();
   for (const key2 of Object.keys(variants)) {
     const values = variants[key2] ?? [];
-    const norm = normalizeName5(key2);
-    const existing = index.get(norm);
+    const norm2 = normalizeName5(key2);
+    const existing = index.get(norm2);
     if (existing === void 0) {
-      index.set(norm, { key: key2, values: [...values] });
+      index.set(norm2, { key: key2, values: [...values] });
     } else {
       existing.values.push(...values);
     }
@@ -24093,8 +24383,11 @@ var HTML_ATTRIBUTE_AXIS = /* @__PURE__ */ new Set([
   "decoding",
   "wrap"
 ]);
-function isConventionAxis(key2, values, codeBooleans) {
+function isConventionAxis(key2, values, codeBooleans, inherited = /* @__PURE__ */ new Map()) {
   if (STATE_AXIS.has(key2)) return true;
+  const inheritedValues = inherited.get(key2);
+  if (inheritedValues !== void 0 && valueJaccard(values, inheritedValues) > 0)
+    return true;
   if (values.length > 0 && values.every((v) => BOOLEAN_VALUE.test(v.trim())))
     return true;
   if (values.some((v) => codeBooleans.has(normalizeName5(v)))) return true;
@@ -24104,7 +24397,7 @@ function isConventionAxis(key2, values, codeBooleans) {
   return values.some((v) => /^placeholder$/i.test(v.trim())) || values.length > 0 && values.every((v) => CONTENT_VALUE.test(v.trim())) && !values.every((v) => /^default$/i.test(v.trim()));
 }
 var AXIS_PAIR_THRESHOLD = 0.5;
-function pairAxes(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set()) {
+function pairAxes(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set(), inherited = /* @__PURE__ */ new Map()) {
   const codeIndex = normalizedKeyIndex(codeVariants);
   const figmaIndex = normalizedKeyIndex(figmaVariants);
   for (const [key2, axis] of [...codeIndex]) {
@@ -24113,7 +24406,7 @@ function pairAxes(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ ne
     if (HTML_ATTRIBUTE_AXIS.has(key2) || scaleSteps) codeIndex.delete(key2);
   }
   for (const [key2, axis] of figmaIndex) {
-    if (!codeIndex.has(key2) && isConventionAxis(key2, axis.values, codeBooleans)) {
+    if (!codeIndex.has(key2) && isConventionAxis(key2, axis.values, codeBooleans, inherited)) {
       figmaIndex.delete(key2);
     }
   }
@@ -24160,11 +24453,12 @@ function pairAxes(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ ne
     figmaEmpty: figmaIndex.size === 0
   };
 }
-function shapeScore(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set()) {
+function shapeScore(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set(), inherited = /* @__PURE__ */ new Map()) {
   const { pairs, codeEmpty, figmaEmpty } = pairAxes(
     codeVariants,
     figmaVariants,
-    codeBooleans
+    codeBooleans,
+    inherited
   );
   if (codeEmpty && figmaEmpty) return 0.5;
   if (codeEmpty || figmaEmpty) return 0.25;
@@ -24176,8 +24470,13 @@ function missingFrom(a, b) {
   const have = new Set(b.map(normValue));
   return a.filter((v) => !have.has(normValue(v)));
 }
-function variantGaps(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set()) {
-  const { pairs } = pairAxes(codeVariants, figmaVariants, codeBooleans);
+function variantGaps(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set(), inherited = /* @__PURE__ */ new Map()) {
+  const { pairs } = pairAxes(
+    codeVariants,
+    figmaVariants,
+    codeBooleans,
+    inherited
+  );
   const codeKeyed = [];
   const figmaOnly = [];
   for (const { code, figma } of pairs) {
@@ -24207,9 +24506,16 @@ function variantGaps(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */
     (g) => g.line
   );
 }
+function inheritedAxes(component) {
+  return new Map(
+    Object.entries(component.inherited ?? {}).map(([name, values]) => [
+      normalizeName5(name),
+      values
+    ])
+  );
+}
 function booleanProps(component) {
   const out = /* @__PURE__ */ new Set();
-  for (const name of component.inherited ?? []) out.add(normalizeName5(name));
   for (const prop of component.props ?? []) {
     if (prop.type !== "boolean") continue;
     const key2 = normalizeName5(prop.name);
@@ -24234,7 +24540,8 @@ function scorePair(codeComponent, figmaModel) {
   const shape = shapeScore(
     codeComponent.variants,
     figmaModel.variantProps,
-    booleanProps(codeComponent)
+    booleanProps(codeComponent),
+    inheritedAxes(codeComponent)
   );
   return {
     nameScore: name,
@@ -24314,7 +24621,8 @@ function matchComponents(code, figma, options = {}) {
     const shape = shapeScore(
       codeComponent.variants,
       figmaModel.variantProps,
-      booleans
+      booleans,
+      inheritedAxes(codeComponent)
     );
     matchedCode.add(c3);
     matchedFigma.add(primary);
@@ -24328,7 +24636,8 @@ function matchComponents(code, figma, options = {}) {
       variantGaps: variantGaps(
         codeComponent.variants,
         figmaModel.variantProps,
-        booleans
+        booleans,
+        inheritedAxes(codeComponent)
       )
     });
   }
@@ -24395,7 +24704,8 @@ function matchComponents(code, figma, options = {}) {
       variantGaps: variantGaps(
         codeComponent.variants,
         figmaModel.variantProps,
-        booleanProps(codeComponent)
+        booleanProps(codeComponent),
+        inheritedAxes(codeComponent)
       )
     });
   }
@@ -24559,7 +24869,7 @@ async function scanCode2(targetDir, configuredPaths) {
   backfillCjsGlobals();
   const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
     [
-      import("./scan-code-NGHFEHEE.mjs"),
+      import("./scan-code-GQKTHHT7.mjs"),
       import("./component-paths-YQ7K5KU3.mjs")
     ]
   );
@@ -24583,7 +24893,7 @@ async function scanCode2(targetDir, configuredPaths) {
 }
 async function scanPackages(targetDir, wanted) {
   if (wanted.size === 0) return [];
-  const { scanPackageComponents } = await import("./scan-code-NGHFEHEE.mjs");
+  const { scanPackageComponents } = await import("./scan-code-GQKTHHT7.mjs");
   return scanPackageComponents(targetDir, wanted);
 }
 function byPath(a, b) {
@@ -24776,7 +25086,7 @@ function renderBuildSummary(registry, registryPath, parity, scope) {
     `  scanned:        ${scope === void 0 ? "the whole project, minus page folders (pages/, screens/, views/, routes/) \u2014 set component_paths in .ds-bridge.json to narrow it" : `${scope.paths.join(", ")} (${scope.source === "code-connect" ? "the folders your Code Connect files map" : scope.source})`}`,
     `  matched:        ${registry.matches.length}`,
     `  unmatched code: ${registry.unmatchedCode.length}`,
-    `  unmatched figma:${registry.unmatchedFigma.length}${deprecatedNote(registry)}`,
+    `  unmatched figma: ${registry.unmatchedFigma.length}${deprecatedNote(registry)}`,
     `  parity score: ${parity.score} (${parity.ok}/${parity.total})`
   ];
   const ambiguities = worstAmbiguities(registry);
@@ -26252,7 +26562,7 @@ function donutGauge(value2, opts = {}) {
   const gap = round2(circumference - drawn);
   const color = opts.color ?? bandColor(clamped);
   const labelText = opts.label !== void 0 ? `${opts.label}: ` : "";
-  const title = `${labelText}${display}%`;
+  const title = `${labelText}${display}${opts.unit === "score" ? "/100" : "%"}`;
   return [
     svgOpen(size, size),
     `<title>${escapeXml2(title)}</title>`,
@@ -26429,7 +26739,7 @@ function systemScoreSection(data, weightProfile) {
     "System score",
     [
       '<div class="split">',
-      `<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
+      `<div class="chart center">${donutGauge(score.current, { label: "System score", unit: "score" })}</div>`,
       `<div class="chart">${lineChart(trendSeries2, { width: WIDE_W - 170, height: 180, colors: [PALETTE2[0]] })}</div>`,
       "</div>",
       legend,
@@ -26722,7 +27032,7 @@ function executiveSection(data) {
       "Consistency",
       exec.consistency === void 0 ? void 0 : String(exec.consistency),
       exec.consistency === void 0 ? void 0 : toneFor(exec.consistency),
-      "on-system blend"
+      "tokens \xB7 components \xB7 overrides"
     ),
     kpiTile(
       "Design debt",
@@ -26923,7 +27233,13 @@ var BREAKING_SOURCE_LABEL = {
 function breakingCalendarSection(data) {
   const calendar = data.breakingCalendar;
   if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel("Breaking calendar", emptyState2("tokens check"));
+    const measured = (data.driftTrend?.length ?? 0) > 0;
+    return panel(
+      "Breaking calendar",
+      measured ? emptyHint(
+        "No breaking changes recorded \u2014 no stale tokens and no breaking library changes."
+      ) : emptyState2("tokens check")
+    );
   }
   const rows = calendar.entries.map((entry) => {
     const badge2 = `<span class="badge">${escapeHtml(
@@ -26961,7 +27277,12 @@ function changeFrequencySection(data) {
 function targetsSection(data) {
   const targets = data.targets;
   if (targets === void 0 || targets.length === 0) {
-    return panel("Targets / SLAs", emptyState2("report"));
+    return panel(
+      "Targets / SLAs",
+      emptyHint(
+        "No targets set \u2014 add metric_targets to .ds-bridge.json to track goals."
+      )
+    );
   }
   const rows = targets.map((verdict) => ({
     label: COMPONENT_LABEL2[verdict.metric] ?? verdict.metric,
@@ -28036,7 +28357,8 @@ function systemScoreTerminalSection(data, color) {
   const gauge = renderGauge(score.current, {
     label: "System score",
     width: 24,
-    color
+    color,
+    unit: "score"
   });
   const trend = sparkline(score.trend.map((point) => point.score));
   const legend = renderTable(
@@ -28241,7 +28563,10 @@ function libraryHealthTerminalSection(data, color) {
 function breakingCalendarTerminalSection(data, color) {
   const calendar = data.breakingCalendar;
   if (calendar === void 0 || calendar.entries.length === 0) {
-    return panel2("Breaking calendar", emptyState3("tokens check"));
+    return panel2(
+      "Breaking calendar",
+      (data.driftTrend?.length ?? 0) > 0 ? "No breaking changes recorded \u2014 no stale tokens and no breaking library changes." : emptyState3("tokens check")
+    );
   }
   const BREAKING_SOURCE_LABEL2 = {
     tokens: "tokens",
@@ -28274,7 +28599,10 @@ function changeFrequencyTerminalSection(data, color) {
 function targetsTerminalSection(data, color) {
   const targets = data.targets;
   if (targets === void 0 || targets.length === 0) {
-    return panel2("Targets / SLAs", emptyState3("report"));
+    return panel2(
+      "Targets / SLAs",
+      "No data yet \u2014 no targets set: add metric_targets to .ds-bridge.json to track goals."
+    );
   }
   const COMPONENT_LABEL3 = {
     drift: "drift",
@@ -30699,6 +31027,8 @@ function checkJson(result, skippedModes, source2, loaderWarnings = []) {
     {
       entries: result.entries,
       inSync: result.entries.length === 0,
+      // How many token/output pairs agree (the terminal's "N in sync").
+      inSyncCount: result.inSync,
       source: source2,
       ...result.unbuiltLayers !== void 0 ? { unbuiltLayers: result.unbuiltLayers } : {},
       ...notes.length > 0 ? { notes } : {},
@@ -30864,7 +31194,7 @@ function registerTokensCommand(program2) {
     if (format === "json") {
       const emitted = emittedVarNames(process.cwd(), map.tokens);
       const tokens2 = map.tokens.map((token2) => {
-        const cssVar = emitted(token2);
+        const cssVar = emitted?.(token2);
         return cssVar === void 0 ? token2 : { ...token2, cssVar };
       });
       process.stdout.write(

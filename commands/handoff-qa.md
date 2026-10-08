@@ -68,7 +68,7 @@ available to inline skills):
 
 - **(a) Post a summary as a Figma comment** — rerun the CLI with `--comment
   --yes`, i.e.
-  `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs handoff $ARGUMENTS --comment --yes`.
+  `node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs handoff '$ARGUMENTS' --comment --yes`.
   Tell the user plainly that this **writes a comment to the Figma file** (the
   score plus the top deductions), so the designer sees the findings in context.
 - **(b) Show per-node detail** — walk the deductions one node at a time with the

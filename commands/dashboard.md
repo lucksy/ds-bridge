@@ -19,7 +19,7 @@ Arguments received: `$ARGUMENTS`
 
 ### Mode 1 — render (no `--setup`)
 
-1. Run `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs report $ARGUMENTS --open`
+1. Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs report '$ARGUMENTS' --open`
    (pass the user's path/flags through verbatim; `--view`/`--artifacts` are
    valid passthroughs).
 2. If it exits non-zero, surface stderr and stop.

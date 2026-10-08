@@ -23,8 +23,8 @@ arguments (`$ARGUMENTS`). It is a **ParityReport** with these fields:
 ### If the command errored
 
 On a missing registry the `parity` command prints a stderr message instead of a
-ParityReport; the `2>&1 || true` on the precondition folds that message into the
-block so it never aborts this command. If the block is that "No registry found …
+ParityReport; the `run-cli.mjs` wrapper on the precondition folds that message into the
+block (it merges stderr and always exits 0) so it never aborts this command. If the block is that "No registry found …
 Run ds-bridge registry build first" message rather than a ParityReport JSON
 object:
 
@@ -80,7 +80,7 @@ so `AskUserQuestion` is available):
   `[component]` filter the user gave.
 - **(b) Markdown export** — rerun the CLI with `--markdown` for an issue or PR
   description:
-  `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs parity $ARGUMENTS --markdown`.
+  `node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs parity '$ARGUMENTS' --markdown`.
   Show the resulting GitHub-flavored markdown table so the user can paste it
   straight into an issue or PR body.
 - **(c) Stop** — report only, change nothing.
