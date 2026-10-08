@@ -3515,7 +3515,7 @@ var require_picocolors = __commonJS({
 
 // src/cli.ts
 import { createRequire } from "module";
-import { join as join33 } from "path";
+import { join as join34 } from "path";
 
 // node_modules/commander/esm.mjs
 var import_index = __toESM(require_commander(), 1);
@@ -10417,7 +10417,7 @@ async function scanUsage(registry, projectDir) {
     globals.__filename = filename;
     globals.__dirname = dirname3(filename);
   }
-  const { mapCodeUsage } = await import("./usage-XZ5TWVZQ.mjs");
+  const { mapCodeUsage } = await import("./usage-QOCQXXON.mjs");
   return mapCodeUsage({ registry, projectDir });
 }
 function appendAdoptionHistory(targetDir, coverage) {
@@ -12192,14 +12192,23 @@ function validateWeights(raw) {
   }
   return { kind: "ok", weights };
 }
+function perHundred(penalty, measured) {
+  return measured > 100 ? penalty * 100 / measured : penalty;
+}
 function driftScore(r2) {
-  const penalty = 25 * asNumber5(r2.stale) + 10 * asNumber5(r2.missing) + 5 * asNumber5(r2.orphan);
-  return Math.max(0, 100 - penalty);
+  const stale = asNumber5(r2.stale);
+  const missing = asNumber5(r2.missing);
+  const orphan = asNumber5(r2.orphan);
+  const penalty = 25 * stale + 10 * missing + 5 * orphan;
+  const measured = typeof r2.inSyncCount === "number" && Number.isFinite(r2.inSyncCount) ? r2.inSyncCount + stale + missing + orphan : 0;
+  return Math.max(0, 100 - perHundred(penalty, measured));
 }
 function lintScore(r2) {
   const byKind = typeof r2.byKind === "object" && r2.byKind !== null ? r2.byKind : {};
   const penalty = 10 * asNumber5(byKind.offSystem) + 5 * asNumber5(byKind.near) + 2 * asNumber5(byKind.exact);
-  return Math.max(0, 100 - penalty);
+  const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
+  const measured = adoption === void 0 ? 0 : asNumber5(adoption.refs) + asNumber5(adoption.literals);
+  return Math.max(0, 100 - perHundred(penalty, measured));
 }
 function readinessScore(r2) {
   return clamp014(asNumber5(r2.score));
@@ -18008,7 +18017,7 @@ function normalizeName2(name) {
 }
 async function scanCode(targetDir, registry) {
   shimCjsGlobals();
-  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-HGZHV5GL.mjs");
+  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-LXNJDCUH.mjs");
   const packaged = new Set(
     registry.matches.filter((m) => !/\.(?:tsx?|jsx?)$/.test(m.importPath)).map((m) => normalizeName2(m.codeName))
   );
@@ -18027,7 +18036,7 @@ function shimCjsGlobals() {
 }
 async function importSpecifiers(targetDir, importPaths) {
   shimCjsGlobals();
-  const { aliasSpecifier } = await import("./tsconfig-paths-ER2KFXCO.mjs");
+  const { aliasSpecifier } = await import("./tsconfig-paths-TQOT2GJH.mjs");
   const specifiers = /* @__PURE__ */ new Map();
   for (const importPath of importPaths) {
     if (importPath === "") continue;
@@ -21391,7 +21400,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
     globals.__filename = filename;
     globals.__dirname = dirname7(filename);
   }
-  const { mapUsage } = await import("./usage-XZ5TWVZQ.mjs");
+  const { mapUsage } = await import("./usage-QOCQXXON.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
@@ -21946,12 +21955,15 @@ function renderTerm9(report, color) {
   const lines = [header, "", summary];
   if (report.overrideHotspots.length > 0) {
     lines.push("", "Top override hotspots:");
+    const grouped = /* @__PURE__ */ new Map();
     for (const h of report.overrideHotspots) {
       const named2 = h.componentName !== void 0 ? ` (${h.componentName})` : "";
       const fields = h.fields !== void 0 && h.fields.length > 0 ? ` \u2014 ${h.fields.join(", ")}` : "";
-      lines.push(
-        `  ${h.name}${named2}: ${h.overrideCount} override(s)${fields}`
-      );
+      const line2 = `  ${h.name}${named2}: ${h.overrideCount} override(s)${fields}`;
+      grouped.set(line2, (grouped.get(line2) ?? 0) + 1);
+    }
+    for (const [line2, count] of grouped) {
+      lines.push(count > 1 ? `${line2}  \xD7${count}` : line2);
     }
   }
   lines.push(
@@ -22091,12 +22103,12 @@ function registerLibraryHealthCommand(program2) {
 import { spawnSync as spawnSync2 } from "child_process";
 import {
   existsSync as existsSync17,
-  readdirSync as readdirSync3,
-  readFileSync as readFileSync19,
+  readdirSync as readdirSync4,
+  readFileSync as readFileSync20,
   statSync as statSync10,
   writeFileSync as writeFileSync11
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join23, relative as relative2, resolve as resolve10, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute2, join as join24, relative as relative2, resolve as resolve10, sep as sep2 } from "path";
 
 // src/engines/lint/adoption.ts
 function countTokenRefs(css) {
@@ -22152,8 +22164,11 @@ function tallyAdoption(files) {
 function isCompositeToken(token2) {
   return typeof token2.value === "object" && token2.value !== null;
 }
-function toCssVar(token2) {
-  return `var(--${token2.name.replaceAll(".", "-")})`;
+function defaultCssVarName(token2) {
+  return token2.name.split(".").map((segment) => segment.replace(/^[@$]/, "").trim().replace(/\s+/g, "-")).join("-");
+}
+function toCssVar(token2, emittedName) {
+  return `var(--${emittedName?.(token2) ?? defaultCssVarName(token2)})`;
 }
 function quoteOf(raw) {
   const first = raw[0];
@@ -22163,8 +22178,8 @@ function quoteOf(raw) {
   }
   return void 0;
 }
-function replacementFor(literal2, token2) {
-  const cssVar = toCssVar(token2);
+function replacementFor(literal2, token2, emittedName) {
+  const cssVar = toCssVar(token2, emittedName);
   if (literal2.context !== "style-object") return cssVar;
   const quote = quoteOf(literal2.raw);
   if (quote !== void 0) return `${quote}${cssVar}${quote}`;
@@ -22175,7 +22190,7 @@ function compareEdits(a, b) {
   if (a.line !== b.line) return b.line - a.line;
   return b.col - a.col;
 }
-function planFixes(findings) {
+function planFixes(findings, emittedName) {
   const edits = [];
   for (const { literal: literal2, match } of findings) {
     if (match.kind !== "exact") continue;
@@ -22185,7 +22200,7 @@ function planFixes(findings) {
       line: literal2.line,
       col: literal2.col,
       length: literal2.raw.length,
-      replacement: replacementFor(literal2, match.token)
+      replacement: replacementFor(literal2, match.token, emittedName)
     });
   }
   return edits.sort(compareEdits);
@@ -22214,8 +22229,302 @@ function applyEdits(content, edits) {
   return lines.join("\n");
 }
 
-// src/cli-commands/lint.ts
+// src/io/emitted-vars.ts
+import { readdirSync as readdirSync3, readFileSync as readFileSync19 } from "fs";
+import { join as join23 } from "path";
+
+// src/engines/tokens/align-names.ts
+function nameKey(name) {
+  return name.toLowerCase().replace(/\./g, "-");
+}
+function baseKey(name) {
+  return nameKey(
+    name.split(".").map((segment) => segment.replace(/^[@$]/, "").replace(/\s+/g, "-")).join(".")
+  );
+}
+function stemmed(name) {
+  const [first, ...rest] = name.split(".");
+  if (first === void 0 || rest.length === 0) return void 0;
+  const stem = first.replace(/^[@$]/, "").split(/[\s_-]+/)[0];
+  if (stem === void 0 || stem === "" || stem === first.replace(/^[@$]/, ""))
+    return void 0;
+  return baseKey([stem, ...rest].join("."));
+}
+function detectPrefixes(outputKeys, tokenKeys) {
+  const tokenFirsts = new Set(tokenKeys.map((k4) => k4.split("-")[0]));
+  const counts = /* @__PURE__ */ new Map();
+  for (const key2 of outputKeys) {
+    const first = key2.split("-")[0];
+    if (first === void 0 || first === "" || first === key2) continue;
+    counts.set(first, (counts.get(first) ?? 0) + 1);
+  }
+  return [...counts].filter(
+    ([first, n]) => !tokenFirsts.has(first) && n >= Math.max(2, outputKeys.length * 0.4)
+  ).map(([first]) => first).sort();
+}
+function alignTokenKeys(tokenNames, outputNames) {
+  const outputKeys = [...new Set(outputNames.map(nameKey))];
+  const outputSet = new Set(outputKeys);
+  const names = [...new Set(tokenNames)];
+  const plain = new Map(names.map((n) => [n, nameKey(n)]));
+  const prefixes = detectPrefixes(outputKeys, [...plain.values()]);
+  const withPrefixes = (key2) => key2 === void 0 ? [] : [key2, ...prefixes.map((p4) => `${p4}-${key2}`)];
+  const steps = [
+    (name) => [nameKey(name)],
+    (name) => withPrefixes(baseKey(name)),
+    (name) => withPrefixes(stemmed(name))
+  ];
+  const aligned = /* @__PURE__ */ new Map();
+  const claimed = /* @__PURE__ */ new Set();
+  for (const step of steps) {
+    const wants = /* @__PURE__ */ new Map();
+    for (const name of names) {
+      if (aligned.has(name)) continue;
+      const key2 = step(name).find((k4) => outputSet.has(k4) && !claimed.has(k4));
+      if (key2 === void 0) continue;
+      wants.set(key2, [...wants.get(key2) ?? [], name]);
+    }
+    for (const [key2, claimants] of wants) {
+      claimed.add(key2);
+      if (claimants.length === 1) aligned.set(claimants[0], key2);
+    }
+  }
+  return {
+    key: (tokenName) => aligned.get(tokenName) ?? plain.get(tokenName) ?? nameKey(tokenName),
+    prefixes
+  };
+}
+
+// src/engines/tokens/scan-outputs.ts
+var CSS_EXTENSIONS = [".css", ".scss"];
+var TS_EXTENSIONS = [".ts", ".tsx", ".js", ".mjs", ".cjs"];
+function scanOutputs(file) {
+  const lower = file.path.toLowerCase();
+  if (CSS_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
+    return finish(scanCss(file.content), []);
+  }
+  if (TS_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
+    const { values, warnings } = scanTsTheme(file.content);
+    return finish(values, warnings);
+  }
+  return { kind: "unsupported-file", path: file.path };
+}
+function finish(values, warnings) {
+  values.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  return { kind: "ok", values, warnings };
+}
+var CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
+var CUSTOM_PROP_RE = /^--([A-Za-z0-9_-]+)\s*:\s*([\s\S]+)$/;
+var CUSTOM_MEDIA_RE = /^@custom-media\s+--([A-Za-z0-9_-]+)\s+([\s\S]+)$/;
+var ROOT_SELECTORS = /* @__PURE__ */ new Set([":root", "html", ":host", "*"]);
+function isRootPrelude(prelude) {
+  return prelude.split(",").every((part) => ROOT_SELECTORS.has(part.trim().toLowerCase()));
+}
+function scanCss(content) {
+  const stripped = content.replace(CSS_COMMENT_RE, "");
+  const values = [];
+  const stack2 = [];
+  let buffer2 = "";
+  const declaration = (text2) => {
+    const match = text2.trim().match(CUSTOM_PROP_RE) ?? text2.trim().match(CUSTOM_MEDIA_RE);
+    if (match === null) return;
+    const name = match[1];
+    const raw = match[2].replace(/!important/g, "").trim();
+    if (raw === "") return;
+    const scoped = stack2.some((prelude) => !isRootPrelude(prelude));
+    values.push(scoped ? { name, raw, scope: stack2.join(" ") } : { name, raw });
+  };
+  for (const char of stripped) {
+    if (char === "{") {
+      stack2.push(buffer2.trim().replace(/\s+/g, " "));
+      buffer2 = "";
+    } else if (char === "}") {
+      declaration(buffer2);
+      stack2.pop();
+      buffer2 = "";
+    } else if (char === ";") {
+      declaration(buffer2);
+      buffer2 = "";
+    } else {
+      buffer2 += char;
+    }
+  }
+  declaration(buffer2);
+  return values;
+}
+var THEME_EXPORT_RE = /export\s+const\s+[\w$]+(?:\s*:\s*[^={]+?)?\s*=\s*\{/;
+function scanTsTheme(content) {
+  const start = THEME_EXPORT_RE.exec(content);
+  if (start === null) return { values: [], warnings: [] };
+  const values = [];
+  const warnings = [];
+  let i = start.index + start[0].length;
+  function skipTrivia() {
+    for (; ; ) {
+      while (i < content.length && /\s/.test(content[i])) i += 1;
+      if (content.startsWith("//", i)) {
+        const nl = content.indexOf("\n", i);
+        i = nl === -1 ? content.length : nl + 1;
+        continue;
+      }
+      if (content.startsWith("/*", i)) {
+        const end = content.indexOf("*/", i + 2);
+        i = end === -1 ? content.length : end + 2;
+        continue;
+      }
+      return;
+    }
+  }
+  function parseString() {
+    const quote = content[i];
+    if (quote !== '"' && quote !== "'" && quote !== "`") return void 0;
+    let out = "";
+    i += 1;
+    while (i < content.length) {
+      const ch = content[i];
+      if (ch === "\\") {
+        out += content[i + 1] ?? "";
+        i += 2;
+        continue;
+      }
+      if (ch === quote) {
+        i += 1;
+        return out;
+      }
+      out += ch;
+      i += 1;
+    }
+    return void 0;
+  }
+  function skipExpression() {
+    let depth = 0;
+    while (i < content.length) {
+      const ch = content[i];
+      if (ch === '"' || ch === "'" || ch === "`") {
+        parseString();
+        continue;
+      }
+      if (ch === "(" || ch === "[" || ch === "{") depth += 1;
+      if (ch === ")" || ch === "]") depth -= 1;
+      if (ch === "}") {
+        if (depth === 0) return;
+        depth -= 1;
+      }
+      if (ch === "," && depth === 0) return;
+      i += 1;
+    }
+  }
+  function parseObjectBody(prefix) {
+    for (; ; ) {
+      skipTrivia();
+      if (i >= content.length) return;
+      if (content[i] === "}") {
+        i += 1;
+        return;
+      }
+      if (content[i] === ",") {
+        i += 1;
+        continue;
+      }
+      let key2;
+      if (content[i] === '"' || content[i] === "'") {
+        key2 = parseString();
+      } else {
+        const m = /^[\w$-]+/.exec(content.slice(i));
+        if (m !== null) {
+          key2 = m[0];
+          i += m[0].length;
+        }
+      }
+      if (key2 === void 0) {
+        warnings.push(`unparseable key near offset ${i} \u2014 stopping theme scan`);
+        return;
+      }
+      skipTrivia();
+      if (content[i] !== ":") {
+        warnings.push(`expected ":" after key "${key2}" \u2014 skipping`);
+        skipExpression();
+        continue;
+      }
+      i += 1;
+      skipTrivia();
+      const name = prefix === "" ? key2 : `${prefix}.${key2}`;
+      const ch = content[i];
+      if (ch === "{") {
+        i += 1;
+        parseObjectBody(name);
+      } else if (ch === '"' || ch === "'" || ch === "`") {
+        const value2 = parseString();
+        if (value2 !== void 0) values.push({ name, raw: value2 });
+      } else {
+        const num4 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
+        if (num4 !== null) {
+          values.push({ name, raw: num4[0] });
+          i += num4[0].length;
+        } else {
+          warnings.push(`non-literal value for "${name}" \u2014 skipped`);
+          skipExpression();
+        }
+      }
+    }
+  }
+  parseObjectBody("");
+  return { values, warnings };
+}
+
+// src/io/emitted-vars.ts
 var EXCLUDED_DIRS2 = /* @__PURE__ */ new Set([
+  "node_modules",
+  ".git",
+  ".ds-bridge",
+  "dist",
+  "build",
+  "out",
+  ".next",
+  "coverage",
+  "storybook-static"
+]);
+function walkStyles(dir, acc) {
+  let entries;
+  try {
+    entries = readdirSync3(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join23(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!EXCLUDED_DIRS2.has(entry.name)) walkStyles(full, acc);
+    } else if (entry.isFile() && /\.(?:css|scss)$/i.test(entry.name)) {
+      acc.push(full);
+    }
+  }
+}
+function emittedVarNames(projectDir, tokens) {
+  const files = [];
+  walkStyles(projectDir, files);
+  const names = [];
+  for (const file of files.sort()) {
+    let content;
+    try {
+      content = readFileSync19(file, "utf8");
+    } catch {
+      continue;
+    }
+    const scanned = scanOutputs({ path: file, content });
+    if (scanned.kind === "ok") names.push(...scanned.values.map((v) => v.name));
+  }
+  if (names.length === 0) return () => void 0;
+  const actual = new Map(names.map((n) => [nameKey(n), n]));
+  const alignment = alignTokenKeys(
+    tokens.map((t) => t.name),
+    names
+  );
+  return (token2) => actual.get(alignment.key(token2.name));
+}
+
+// src/cli-commands/lint.ts
+var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
@@ -22248,7 +22557,7 @@ function computeAdoption(files, findings) {
   const perFile = scoped.map((file) => {
     let refs = 0;
     try {
-      const text2 = readFileSync19(file.abs, "utf8");
+      const text2 = readFileSync20(file.abs, "utf8");
       refs = isCssLike(file.rel) ? countTokenRefs(text2) : countInlineStyleTokenRefs(text2);
     } catch {
       refs = 0;
@@ -22275,7 +22584,7 @@ function isCssLike(path) {
   return lower.endsWith(".css") || lower.endsWith(".scss");
 }
 function appendLintHistory(targetDir, findings, files) {
-  const stateDir = join23(targetDir, ".ds-bridge");
+  const stateDir = join24(targetDir, ".ds-bridge");
   const record = {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
@@ -22291,14 +22600,14 @@ function hasExtension(name) {
 function walkLintableFiles(dir, acc) {
   let entries;
   try {
-    entries = readdirSync3(dir, { withFileTypes: true });
+    entries = readdirSync4(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join23(dir, entry.name);
+    const full = join24(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS2.has(entry.name)) continue;
+      if (EXCLUDED_DIRS3.has(entry.name)) continue;
       walkLintableFiles(full, acc);
       continue;
     }
@@ -22320,11 +22629,11 @@ function resolveTokenSource(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join23(targetDir, ".ds-bridge.json");
+  const configPath = join24(targetDir, ".ds-bridge.json");
   if (existsSync17(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync19(configPath, "utf8");
+      projectFileText = readFileSync20(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -22358,7 +22667,7 @@ function isTokenOutputFile(absPath, tokenKeys) {
   if (!/\.(css|scss)$/i.test(absPath)) return false;
   let text2;
   try {
-    text2 = readFileSync19(absPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    text2 = readFileSync20(absPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   } catch {
     return false;
   }
@@ -22373,7 +22682,7 @@ function isTokenOutputFile(absPath, tokenKeys) {
 function isGeneratedFile(absPath) {
   let head;
   try {
-    head = readFileSync19(absPath, "utf8").slice(0, 600);
+    head = readFileSync20(absPath, "utf8").slice(0, 600);
   } catch {
     return false;
   }
@@ -22382,7 +22691,7 @@ function isGeneratedFile(absPath) {
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync19(absPath, "utf8");
+    content = readFileSync20(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -22415,15 +22724,17 @@ function toJsonFinding(finding) {
   };
   if (finding.match.kind === "exact") {
     base.expectedToken = finding.match.token.name;
+    if (finding.cssVar !== void 0)
+      base.expectedVar = `var(--${finding.cssVar})`;
   } else if (finding.match.kind === "near") {
     base.expectedCandidates = candidateNames(finding.match);
   }
   return base;
 }
-function suggestionFor(match) {
+function suggestionFor(match, cssVar) {
   switch (match.kind) {
     case "exact":
-      return `use token ${match.token.name}`;
+      return cssVar === void 0 ? `use token ${match.token.name}` : `use token ${match.token.name} \u2014 var(--${cssVar})`;
     case "near": {
       const names = candidateNames(match).join(", ");
       return `near token(s): ${names}`;
@@ -22443,12 +22754,12 @@ function renderTerm10(findings, color) {
   for (const [file, fileFindings] of byFile) {
     const lines = [severityColor("ok", file, { color })];
     for (const finding of fileFindings) {
-      const { literal: literal2, match } = finding;
+      const { literal: literal2, match, cssVar } = finding;
       const severity = KIND_SEVERITY[match.kind];
       const position = `${literal2.file}:${literal2.line}:${literal2.col}`;
       const label = severityColor(severity, match.kind, { color });
       lines.push(
-        `  ${position}  ${label}  ${literal2.property}: ${literal2.raw} \u2014 ${suggestionFor(match)}`
+        `  ${position}  ${label}  ${literal2.property}: ${literal2.raw} \u2014 ${suggestionFor(match, cssVar)}`
       );
     }
     blocks.push(lines.join("\n"));
@@ -22489,7 +22800,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync19(absPath, "utf8");
+      content = readFileSync20(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -22518,6 +22829,13 @@ function lintAll(files, tokens) {
     const result = lintFile(file.abs, file.rel, tokens);
     if (result.kind === "error") return result;
     all.push(...result.findings);
+  }
+  if (tokens.emittedName !== void 0) {
+    for (const finding of all) {
+      if (finding.match.kind !== "exact") continue;
+      const name = tokens.emittedName(finding.match.token);
+      if (name !== void 0) finding.cssVar = name;
+    }
   }
   return { kind: "ok", findings: all };
 }
@@ -22552,7 +22870,7 @@ function registerLintCommand(program2) {
     let projectDir = targetDir;
     let tokenSource = resolveTokenSource(targetDir, options.tokens);
     const cwd5 = process.cwd();
-    if (tokenSource.kind === "error" && !isFile && options.tokens === void 0 && targetDir !== cwd5 && isInside(targetDir, cwd5) && !existsSync17(join23(targetDir, ".ds-bridge.json"))) {
+    if (tokenSource.kind === "error" && !isFile && options.tokens === void 0 && targetDir !== cwd5 && isInside(targetDir, cwd5) && !existsSync17(join24(targetDir, ".ds-bridge.json"))) {
       const fromProject = resolveTokenSource(cwd5, void 0);
       if (fromProject.kind === "ok") {
         tokenSource = fromProject;
@@ -22571,7 +22889,8 @@ function registerLintCommand(program2) {
     const tokens = {
       map: loaded.map,
       index: buildTokenIndex(loaded.map.tokens),
-      compositeColors: buildCompositeColorLookup(loaded.map.tokens)
+      compositeColors: buildCompositeColorLookup(loaded.map.tokens),
+      emittedName: emittedVarNames(projectDir, loaded.map.tokens)
     };
     const walked = [];
     if (isFile) walked.push(targetPath);
@@ -22646,7 +22965,7 @@ function runFix(files, tokens, findings, historyDir) {
     literal: f3.literal,
     match: f3.match
   }));
-  const edits = planFixes(engineFindings);
+  const edits = planFixes(engineFindings, tokens.emittedName);
   const editsByFile = /* @__PURE__ */ new Map();
   for (const edit of edits) {
     const abs2 = relToAbs.get(edit.file);
@@ -22681,8 +23000,8 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync18, readFileSync as readFileSync20, statSync as statSync11 } from "fs";
-import { join as join24, resolve as resolvePath4 } from "path";
+import { existsSync as existsSync18, readFileSync as readFileSync21, statSync as statSync11 } from "fs";
+import { join as join25, resolve as resolvePath4 } from "path";
 function fail14(message) {
   process.stderr.write(`${message}
 `);
@@ -22703,7 +23022,7 @@ function statusSeverity2(status) {
   }
 }
 function loadRegistry6(targetDir) {
-  const registryPath = join24(targetDir, ".ds-bridge", "registry.json");
+  const registryPath = join25(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync18(registryPath)) {
     fail14(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -22712,7 +23031,7 @@ function loadRegistry6(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync20(registryPath, "utf8");
+    raw = readFileSync21(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail14(`Could not read registry "${registryPath}": ${detail}`);
@@ -22812,7 +23131,7 @@ function renderMarkdown(report) {
 }
 function hasRegistry2(candidate) {
   return existsSync18(
-    join24(resolvePath4(candidate), ".ds-bridge", "registry.json")
+    join25(resolvePath4(candidate), ".ds-bridge", "registry.json")
   );
 }
 function disambiguate2(component, path) {
@@ -22824,11 +23143,11 @@ function disambiguate2(component, path) {
 }
 function appendParityHistory(targetDir, registry, report) {
   try {
-    const stateDir = join24(targetDir, ".ds-bridge");
+    const stateDir = join25(targetDir, ".ds-bridge");
     const snapshot = typeof registry.generatedAt === "string" ? registry.generatedAt : void 0;
     let text2 = "";
     try {
-      text2 = readFileSync20(join24(stateDir, "history.jsonl"), "utf8");
+      text2 = readFileSync21(join25(stateDir, "history.jsonl"), "utf8");
     } catch {
       text2 = "";
     }
@@ -22901,8 +23220,8 @@ function registerParityCommand(program2) {
 // src/cli-commands/record.ts
 import { spawnSync as spawnSync3 } from "child_process";
 import { randomUUID as randomUUID2 } from "crypto";
-import { existsSync as existsSync19, readFileSync as readFileSync21, statSync as statSync12 } from "fs";
-import { join as join25, resolve as resolve11 } from "path";
+import { existsSync as existsSync19, readFileSync as readFileSync22, statSync as statSync12 } from "fs";
+import { join as join26, resolve as resolve11 } from "path";
 
 // src/engines/history/score-record.ts
 function scoreRecordPayload(text2, profile) {
@@ -23031,11 +23350,11 @@ function fail15(message) {
   process.exitCode = 2;
 }
 function readProjectSettings(targetDir, env) {
-  const configPath = join25(targetDir, ".ds-bridge.json");
+  const configPath = join26(targetDir, ".ds-bridge.json");
   let projectFileText;
   if (existsSync19(configPath)) {
     try {
-      projectFileText = readFileSync21(configPath, "utf8");
+      projectFileText = readFileSync22(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -23057,7 +23376,7 @@ function readProjectSettings(targetDir, env) {
 }
 function readHistoryText3(stateDir) {
   try {
-    return readFileSync21(historyFilePath(stateDir), "utf8");
+    return readFileSync22(historyFilePath(stateDir), "utf8");
   } catch {
     return "";
   }
@@ -23124,9 +23443,9 @@ function runRecord(path, options, deps) {
     fail15(`Path "${targetDir}" is not a directory.`);
     return 2;
   }
-  const stateDir = join25(targetDir, ".ds-bridge");
+  const stateDir = join26(targetDir, ".ds-bridge");
   const detectEnv = { ...deps.env };
-  loadDotenvInto(join25(targetDir, ".ds-bridge.env"), detectEnv);
+  loadDotenvInto(join26(targetDir, ".ds-bridge.env"), detectEnv);
   const settings = readProjectSettings(targetDir, detectEnv);
   if (settings.kind === "error") {
     fail15(settings.message);
@@ -23139,7 +23458,7 @@ function runRecord(path, options, deps) {
     DS_BRIDGE_SOURCE: source2
   };
   const steps = planRecordSteps({
-    hasRegistry: existsSync19(join25(stateDir, "registry.json")),
+    hasRegistry: existsSync19(join26(stateDir, "registry.json")),
     figmaConfigured: settings.figmaConfigured,
     figma: options.figma === true,
     figmaToken: settings.figmaToken,
@@ -23237,11 +23556,11 @@ function registerRecordCommand(program2) {
 import {
   existsSync as existsSync20,
   mkdirSync as mkdirSync9,
-  readFileSync as readFileSync23,
+  readFileSync as readFileSync24,
   statSync as statSync13,
   writeFileSync as writeFileSync12
 } from "fs";
-import { dirname as dirname9, join as join27, posix, resolve as resolvePath5, sep as sep3 } from "path";
+import { dirname as dirname9, join as join28, posix, resolve as resolvePath5, sep as sep3 } from "path";
 import { fileURLToPath as fileURLToPath5 } from "url";
 
 // src/engines/registry/match.ts
@@ -23281,7 +23600,19 @@ function nameScore(codeName, figmaName) {
 function normValue(value2) {
   return value2.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
+function unprefixed(values) {
+  if (values.length < 2) return [...values];
+  const first = /^([a-z0-9]+)[-_ ]/i.exec(values[0])?.[1];
+  if (first === void 0) return [...values];
+  const prefix = new RegExp(`^${first}[-_ ]`, "i");
+  if (!values.every((v) => prefix.test(v))) return [...values];
+  return values.map((v) => v.replace(prefix, ""));
+}
 function valueJaccard(a, b) {
+  const plain = jaccardOf(a, b);
+  return plain === 1 ? 1 : Math.max(plain, jaccardOf(unprefixed(a), unprefixed(b)));
+}
+function jaccardOf(a, b) {
   const setA = new Set(a.map(normValue));
   const setB = new Set(b.map(normValue));
   if (setA.size === 0 && setB.size === 0) return 0;
@@ -23312,13 +23643,57 @@ var STATE_AXIS = /* @__PURE__ */ new Set([
   "interaction",
   "interactionstate"
 ]);
+var BOOLEAN_VALUE = /^(?:true|false|on|off|yes|no|checked|unchecked|indeterminate|enabled|disabled|selected|unselected|open|closed|active|inactive|expanded|collapsed)$/i;
+var RESPONSIVE_AXIS = /* @__PURE__ */ new Set([
+  "platform",
+  "device",
+  "breakpoint",
+  "viewport",
+  "screen",
+  "screensize"
+]);
+var RESPONSIVE_VALUE = /^(?:desktop|mobile|tablet|web|ios|android|phone)$/i;
+var CONTENT_VALUE = /^(?:placeholder|filled|empty|default)$/i;
+var HTML_ATTRIBUTE_AXIS = /* @__PURE__ */ new Set([
+  "type",
+  "as",
+  "elementtype",
+  "tag",
+  "component",
+  "dir",
+  "target",
+  "rel",
+  "method",
+  "enctype",
+  "autocomplete",
+  "autocapitalize",
+  "inputmode",
+  "enterkeyhint",
+  "loading",
+  "decoding",
+  "wrap"
+]);
+function isConventionAxis(key2, values, codeBooleans) {
+  if (STATE_AXIS.has(key2)) return true;
+  if (values.length > 0 && values.every((v) => BOOLEAN_VALUE.test(v.trim())))
+    return true;
+  if (values.some((v) => codeBooleans.has(normalizeName5(v)))) return true;
+  if (codeBooleans.has(key2)) return true;
+  if (RESPONSIVE_AXIS.has(key2) || values.length > 0 && values.every((v) => RESPONSIVE_VALUE.test(v.trim())))
+    return true;
+  return values.some((v) => /^placeholder$/i.test(v.trim())) || values.length > 0 && values.every((v) => CONTENT_VALUE.test(v.trim())) && !values.every((v) => /^default$/i.test(v.trim()));
+}
 var AXIS_PAIR_THRESHOLD = 0.5;
-function pairAxes(codeVariants, figmaVariants) {
+function pairAxes(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set()) {
   const codeIndex = normalizedKeyIndex(codeVariants);
   const figmaIndex = normalizedKeyIndex(figmaVariants);
+  for (const [key2, axis] of [...codeIndex]) {
+    if (figmaIndex.has(key2)) continue;
+    const scaleSteps = axis.values.every((v) => /^(?:negative-)?\d+$/.test(v));
+    if (HTML_ATTRIBUTE_AXIS.has(key2) || scaleSteps) codeIndex.delete(key2);
+  }
   for (const [key2, axis] of figmaIndex) {
-    const boolean = axis.values.every((v) => /^(?:true|false)$/i.test(v));
-    if ((boolean || STATE_AXIS.has(key2)) && !codeIndex.has(key2)) {
+    if (!codeIndex.has(key2) && isConventionAxis(key2, axis.values, codeBooleans)) {
       figmaIndex.delete(key2);
     }
   }
@@ -23365,10 +23740,11 @@ function pairAxes(codeVariants, figmaVariants) {
     figmaEmpty: figmaIndex.size === 0
   };
 }
-function shapeScore(codeVariants, figmaVariants) {
+function shapeScore(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set()) {
   const { pairs, codeEmpty, figmaEmpty } = pairAxes(
     codeVariants,
-    figmaVariants
+    figmaVariants,
+    codeBooleans
   );
   if (codeEmpty && figmaEmpty) return 0.5;
   if (codeEmpty || figmaEmpty) return 0.25;
@@ -23380,8 +23756,8 @@ function missingFrom(a, b) {
   const have = new Set(b.map(normValue));
   return a.filter((v) => !have.has(normValue(v)));
 }
-function variantGaps(codeVariants, figmaVariants) {
-  const { pairs } = pairAxes(codeVariants, figmaVariants);
+function variantGaps(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */ new Set()) {
+  const { pairs } = pairAxes(codeVariants, figmaVariants, codeBooleans);
   const codeKeyed = [];
   const figmaOnly = [];
   for (const { code, figma } of pairs) {
@@ -23396,8 +23772,11 @@ function variantGaps(codeVariants, figmaVariants) {
         line: `${figma.key}: Figma only (${figma.values.join("|")})`
       });
     } else if (code !== void 0 && figma !== void 0) {
-      const extraFigma = missingFrom(figma.values, code.values);
-      const extraCode = missingFrom(code.values, figma.values);
+      const plain = missingFrom(figma.values, code.values).length + missingFrom(code.values, figma.values).length === 0;
+      const codeValues = plain ? code.values : unprefixed(code.values);
+      const figmaValues = plain ? figma.values : unprefixed(figma.values);
+      const extraFigma = missingFrom(figmaValues, codeValues);
+      const extraCode = missingFrom(codeValues, figmaValues);
       if (extraFigma.length === 0 && extraCode.length === 0) continue;
       const line2 = extraCode.length === 0 ? `${code.key}: Figma also has ${extraFigma.join("|")}` : extraFigma.length === 0 ? `${code.key}: code also has ${extraCode.join("|")}` : `${code.key}: code ${code.values.join("|")} \u2260 Figma ${figma.key} ${figma.values.join("|")}`;
       codeKeyed.push({ key: code.key, line: line2 });
@@ -23408,6 +23787,17 @@ function variantGaps(codeVariants, figmaVariants) {
     (g) => g.line
   );
 }
+function booleanProps(component) {
+  const out = /* @__PURE__ */ new Set();
+  for (const prop of component.props ?? []) {
+    if (prop.type !== "boolean") continue;
+    const key2 = normalizeName5(prop.name);
+    out.add(key2);
+    const bare = key2.replace(/^(?:is|has|show|default)/, "");
+    if (bare !== "" && bare !== key2) out.add(bare);
+  }
+  return out;
+}
 function isIconName(codeName, figmaModel) {
   if (figmaModel.kind !== "icon") return false;
   const c3 = normalizeName5(codeName);
@@ -23416,7 +23806,11 @@ function isIconName(codeName, figmaModel) {
 }
 function scorePair(codeComponent, figmaModel) {
   const name = isIconName(codeComponent.name, figmaModel) ? 1 : nameScore(codeComponent.name, figmaModel.name);
-  const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
+  const shape = shapeScore(
+    codeComponent.variants,
+    figmaModel.variantProps,
+    booleanProps(codeComponent)
+  );
   return {
     nameScore: name,
     shapeScore: shape,
@@ -23467,8 +23861,16 @@ function matchComponents(code, figma, options = {}) {
       figma: figmaModel,
       score: 1,
       nameScore: 1,
-      shapeScore: shapeScore(codeComponent.variants, figmaModel.variantProps),
-      variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps)
+      shapeScore: shapeScore(
+        codeComponent.variants,
+        figmaModel.variantProps,
+        booleanProps(codeComponent)
+      ),
+      variantGaps: variantGaps(
+        codeComponent.variants,
+        figmaModel.variantProps,
+        booleanProps(codeComponent)
+      )
     });
   }
   const edges = [];
@@ -23529,7 +23931,11 @@ function matchComponents(code, figma, options = {}) {
       score: edge.parts.score,
       nameScore: edge.parts.nameScore,
       shapeScore: edge.parts.shapeScore,
-      variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps)
+      variantGaps: variantGaps(
+        codeComponent.variants,
+        figmaModel.variantProps,
+        booleanProps(codeComponent)
+      )
     });
   }
   matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
@@ -23559,9 +23965,9 @@ function matchComponents(code, figma, options = {}) {
 }
 
 // src/io/code-connect.ts
-import { readdirSync as readdirSync4, readFileSync as readFileSync22 } from "fs";
-import { join as join26 } from "path";
-var EXCLUDED_DIRS3 = /* @__PURE__ */ new Set([
+import { readdirSync as readdirSync5, readFileSync as readFileSync23 } from "fs";
+import { join as join27 } from "path";
+var EXCLUDED_DIRS4 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   "dist",
@@ -23575,7 +23981,7 @@ var CODE_CONNECT_FILE = /\.figma\.(?:[cm]?[jt]sx?)$/i;
 var BATCH_FILE = /\.figma\.batch\.json$/i;
 function readText2(path) {
   try {
-    return readFileSync22(path, "utf8");
+    return readFileSync23(path, "utf8");
   } catch {
     return void 0;
   }
@@ -23584,7 +23990,7 @@ function isPlainObject7(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 function substitutions(root2) {
-  const text2 = readText2(join26(root2, "figma.config.json"));
+  const text2 = readText2(join27(root2, "figma.config.json"));
   if (text2 === void 0) return [];
   let parsed;
   try {
@@ -23605,14 +24011,14 @@ function nodeIdOf(url, subs) {
 function walk2(dir, acc) {
   let entries;
   try {
-    entries = readdirSync4(dir, { withFileTypes: true });
+    entries = readdirSync5(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join26(dir, entry.name);
+    const full = join27(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!EXCLUDED_DIRS3.has(entry.name)) walk2(full, acc);
+      if (!EXCLUDED_DIRS4.has(entry.name)) walk2(full, acc);
     } else if (entry.isFile() && (CODE_CONNECT_FILE.test(entry.name) || BATCH_FILE.test(entry.name))) {
       acc.push(full);
     }
@@ -23671,17 +24077,20 @@ function readCodeConnectPins(root2) {
 }
 
 // src/cli-commands/registry.ts
-async function scanCode2(targetDir, configuredPaths) {
+function backfillCjsGlobals() {
   const globals = globalThis;
   if (typeof globals.__filename !== "string") {
     const filename = fileURLToPath5(import.meta.url);
     globals.__filename = filename;
     globals.__dirname = dirname9(filename);
   }
+}
+async function scanCode2(targetDir, configuredPaths) {
+  backfillCjsGlobals();
   const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
     [
-      import("./scan-code-HGZHV5GL.mjs"),
-      import("./component-paths-DSRHTXXS.mjs")
+      import("./scan-code-LXNJDCUH.mjs"),
+      import("./component-paths-YQ7K5KU3.mjs")
     ]
   );
   const scope = resolveComponentPaths(targetDir, configuredPaths);
@@ -23692,7 +24101,7 @@ async function scanCode2(targetDir, configuredPaths) {
     return { code: code2, scope };
   }
   const code = scope.paths.flatMap(
-    (dir) => scanCodeComponents(join27(targetDir, dir)).map((component) => ({
+    (dir) => scanCodeComponents(join28(targetDir, dir)).map((component) => ({
       ...component,
       importPath: posix.join(dir.split(sep3).join("/"), component.importPath)
     }))
@@ -23704,7 +24113,7 @@ async function scanCode2(targetDir, configuredPaths) {
 }
 async function scanPackages(targetDir, wanted) {
   if (wanted.size === 0) return [];
-  const { scanPackageComponents } = await import("./scan-code-HGZHV5GL.mjs");
+  const { scanPackageComponents } = await import("./scan-code-LXNJDCUH.mjs");
   return scanPackageComponents(targetDir, wanted);
 }
 function byPath(a, b) {
@@ -23833,8 +24242,8 @@ async function runBuild(path, options) {
   const matchResult = matchComponents([...code, ...packaged], figma, { pins });
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
-  const stateDir = join27(targetDir, ".ds-bridge");
-  const registryPath = join27(stateDir, "registry.json");
+  const stateDir = join28(targetDir, ".ds-bridge");
+  const registryPath = join28(stateDir, "registry.json");
   try {
     mkdirSync9(stateDir, { recursive: true });
     writeFileSync12(
@@ -23901,7 +24310,7 @@ function renderBuildSummary(registry, registryPath, parity, scope) {
   return lines.join("\n");
 }
 function loadRegistry7(targetDir) {
-  const registryPath = join27(targetDir, ".ds-bridge", "registry.json");
+  const registryPath = join28(targetDir, ".ds-bridge", "registry.json");
   if (!existsSync20(registryPath)) {
     fail16(
       `No registry found at "${registryPath}". Run "ds-bridge registry build" first.`
@@ -23910,7 +24319,7 @@ function loadRegistry7(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync23(registryPath, "utf8");
+    raw = readFileSync24(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail16(`Could not read registry "${registryPath}": ${detail}`);
@@ -23924,7 +24333,7 @@ function loadRegistry7(targetDir) {
     return void 0;
   }
 }
-function runResolve(nodeNameOrId, path) {
+async function runResolve(nodeNameOrId, path) {
   const targetDir = resolvePath5(path);
   if (!existsSync20(targetDir) || !statSync13(targetDir).isDirectory()) {
     fail16(`Path "${targetDir}" is not a directory.`);
@@ -23934,10 +24343,20 @@ function runResolve(nodeNameOrId, path) {
   if (registry === void 0) return;
   const outcome = resolveEntry(registry, nodeNameOrId);
   switch (outcome.kind) {
-    case "match":
+    case "match": {
+      backfillCjsGlobals();
+      const { aliasSpecifier } = await import("./tsconfig-paths-TQOT2GJH.mjs");
+      const importSpecifier = aliasSpecifier(
+        targetDir,
+        outcome.entry.importPath
+      );
       process.stdout.write(
         `${JSON.stringify(
-          outcome.replaces === void 0 ? outcome.entry : { ...outcome.entry, replaces: outcome.replaces },
+          {
+            ...outcome.entry,
+            ...importSpecifier !== void 0 ? { importSpecifier } : {},
+            ...outcome.replaces !== void 0 ? { replaces: outcome.replaces } : {}
+          },
           null,
           2
         )}
@@ -23945,6 +24364,7 @@ function runResolve(nodeNameOrId, path) {
       );
       process.exitCode = 0;
       return;
+    }
     case "candidates":
       process.stdout.write(
         `${JSON.stringify(
@@ -23980,14 +24400,14 @@ function registerRegistryCommand(program2) {
     "[path]",
     "project directory holding .ds-bridge/registry.json",
     "."
-  ).action((nodeNameOrId, path) => {
-    runResolve(nodeNameOrId, path);
+  ).action(async (nodeNameOrId, path) => {
+    await runResolve(nodeNameOrId, path);
   });
 }
 
 // src/cli-commands/release-check.ts
-import { existsSync as existsSync21, readFileSync as readFileSync24, statSync as statSync14 } from "fs";
-import { join as join28, resolve as resolve12 } from "path";
+import { existsSync as existsSync21, readFileSync as readFileSync25, statSync as statSync14 } from "fs";
+import { join as join29, resolve as resolve12 } from "path";
 function fail17(message) {
   process.stderr.write(`${message}
 `);
@@ -23995,7 +24415,7 @@ function fail17(message) {
 }
 function readHistoryText4(stateDir) {
   try {
-    return readFileSync24(join28(stateDir, "history.jsonl"), "utf8");
+    return readFileSync25(join29(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
@@ -24024,7 +24444,7 @@ function runReleaseCheck(path, options) {
     fail17(`Path "${targetDir}" is not a directory.`);
     return;
   }
-  const stateDir = join28(targetDir, ".ds-bridge");
+  const stateDir = join29(targetDir, ".ds-bridge");
   const signals = extractReleaseSignals(
     replayHistory(readHistoryText4(stateDir))
   );
@@ -24055,11 +24475,11 @@ import { spawn } from "child_process";
 import {
   existsSync as existsSync22,
   mkdirSync as mkdirSync10,
-  readFileSync as readFileSync25,
+  readFileSync as readFileSync26,
   statSync as statSync15,
   writeFileSync as writeFileSync13
 } from "fs";
-import { dirname as dirname10, join as join29, resolve as resolve13 } from "path";
+import { dirname as dirname10, join as join30, resolve as resolve13 } from "path";
 import { platform } from "process";
 
 // src/engines/report/manager-report.ts
@@ -27793,7 +28213,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
     process.exitCode = 0;
     return;
   }
-  const outPath = options.out !== void 0 ? resolve13(options.out) : join29(stateDir, "reports", "exec.html");
+  const outPath = options.out !== void 0 ? resolve13(options.out) : join30(stateDir, "reports", "exec.html");
   const written = writeDashboard(outPath, renderManagerHtml(report));
   if (written.kind === "error") {
     failReport(written.message);
@@ -27855,7 +28275,7 @@ function runMarkdownReport(targetDir, options, selection) {
     selection.scoreWeights,
     selection.scoreWeightsByView
   );
-  const stateDir = join29(targetDir, ".ds-bridge");
+  const stateDir = join30(targetDir, ".ds-bridge");
   const currentText = readHistoryText(stateDir);
   const currentRecords = replayHistory(currentText);
   let baseText;
@@ -27864,7 +28284,7 @@ function runMarkdownReport(targetDir, options, selection) {
   if (options.delta !== void 0) {
     const outcome = readFileAtRef({
       ref: options.delta,
-      path: join29(".ds-bridge", "history.jsonl"),
+      path: join30(".ds-bridge", "history.jsonl"),
       cwd: targetDir,
       exec: spawnGitExec
     });
@@ -27986,10 +28406,10 @@ function runMarkdownReport(targetDir, options, selection) {
   process.exitCode = 0;
 }
 function readPublishConfig(targetDir) {
-  const configPath = join29(targetDir, ".ds-bridge.json");
+  const configPath = join30(targetDir, ".ds-bridge.json");
   if (!existsSync22(configPath)) return void 0;
   try {
-    const projectFileText = readFileSync25(configPath, "utf8");
+    const projectFileText = readFileSync26(configPath, "utf8");
     const resolved = resolveConfig({ projectFileText });
     return resolved.kind === "ok" ? resolved.config.publish : void 0;
   } catch {
@@ -28006,16 +28426,16 @@ function resolvePublishNames(targetDir, options) {
   return readPublishConfig(targetDir) ?? [];
 }
 function runSiteReport(targetDir, options, selection, data, weightProfile, mode, timeline = []) {
-  const stateDir = join29(targetDir, ".ds-bridge");
+  const stateDir = join30(targetDir, ".ds-bridge");
   const snapshot = mode === "snapshot";
   const suffix = snapshot ? ".snapshot.html" : ".html";
   const transform = snapshot ? normalizeSnapshot : (html) => html;
-  const outDir = options.out !== void 0 ? resolve13(options.out) : join29(stateDir, snapshot ? "snapshots" : "reports");
+  const outDir = options.out !== void 0 ? resolve13(options.out) : join30(stateDir, snapshot ? "snapshots" : "reports");
   const names = resolvePublishNames(targetDir, options);
   const entries = [];
   const writePage = (name, html) => {
     const written = writeDashboard(
-      join29(outDir, `${name}${suffix}`),
+      join30(outDir, `${name}${suffix}`),
       transform(html)
     );
     if (written.kind === "error") {
@@ -28065,7 +28485,7 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode,
   }
   const indexName = snapshot ? "index.snapshot.html" : "index.html";
   const indexWritten = writeDashboard(
-    join29(outDir, indexName),
+    join30(outDir, indexName),
     transform(renderIndex(entries))
   );
   if (indexWritten.kind === "error") {
@@ -28222,7 +28642,7 @@ function runReport(path, options) {
       ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
     }
   });
-  const outPath = options.out !== void 0 ? resolve13(options.out) : join29(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve13(options.out) : join30(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -28285,8 +28705,8 @@ function registerReportCommand(program2) {
 }
 
 // src/cli-commands/rollup.ts
-import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync27, writeFileSync as writeFileSync14 } from "fs";
-import { basename as basename2, dirname as dirname11, join as join31, resolve as resolve14 } from "path";
+import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync28, writeFileSync as writeFileSync14 } from "fs";
+import { basename as basename2, dirname as dirname11, join as join32, resolve as resolve14 } from "path";
 
 // src/engines/rollup/rollup.ts
 var ROLLUP_SCHEMA = "ds-bridge/rollup";
@@ -28628,9 +29048,9 @@ function parseRollupConfig(text2) {
 }
 
 // src/io/rollup-sources.ts
-import { readFileSync as readFileSync26, statSync as statSync16 } from "fs";
-import { join as join30 } from "path";
-var HISTORY_REL = join30(".ds-bridge", "history.jsonl");
+import { readFileSync as readFileSync27, statSync as statSync16 } from "fs";
+import { join as join31 } from "path";
+var HISTORY_REL = join31(".ds-bridge", "history.jsonl");
 var RECORD_HINT = "run ds-bridge record there to start one.";
 function kindOf(path) {
   try {
@@ -28643,7 +29063,7 @@ function kindOf(path) {
 }
 function readText3(file, label) {
   try {
-    return { kind: "ok", text: readFileSync26(file, "utf8") };
+    return { kind: "ok", text: readFileSync27(file, "utf8") };
   } catch (error) {
     const code = error.code;
     const detail = code ?? (error instanceof Error ? error.message : String(error));
@@ -28680,7 +29100,7 @@ function loadRollupSource(spec, exec) {
   }
   if (kind === "file") return readText3(spec.path, label);
   if (kind === "dir") {
-    const file = join30(spec.path, HISTORY_REL);
+    const file = join31(spec.path, HISTORY_REL);
     if (kindOf(file) !== "file") {
       return {
         kind: "missing",
@@ -29042,7 +29462,7 @@ function specFor(raw, base) {
 function loadConfig(path) {
   let text2;
   try {
-    text2 = readFileSync27(path, "utf8");
+    text2 = readFileSync28(path, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail18(`Could not read rollup config ${path}: ${detail}`);
@@ -29071,7 +29491,7 @@ function runRollup(sources, options) {
   }
   const cwd5 = process.cwd();
   const pending = [];
-  const defaultConfig = join31(cwd5, ".ds-bridge", "rollup.json");
+  const defaultConfig = join32(cwd5, ".ds-bridge", "rollup.json");
   const configPath = options.config !== void 0 ? resolve14(options.config) : sources.length === 0 && existsSync23(defaultConfig) ? defaultConfig : void 0;
   if (configPath !== void 0) {
     const entries = loadConfig(configPath);
@@ -29137,74 +29557,12 @@ function registerRollupCommand(program2) {
 import {
   existsSync as existsSync24,
   mkdirSync as mkdirSync12,
-  readdirSync as readdirSync5,
-  readFileSync as readFileSync28,
+  readdirSync as readdirSync6,
+  readFileSync as readFileSync29,
   statSync as statSync17,
   writeFileSync as writeFileSync15
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join32, relative as relative3, resolve as resolve15, sep as sep4 } from "path";
-
-// src/engines/tokens/align-names.ts
-function nameKey(name) {
-  return name.toLowerCase().replace(/\./g, "-");
-}
-function baseKey(name) {
-  return nameKey(
-    name.split(".").map((segment) => segment.replace(/^[@$]/, "").replace(/\s+/g, "-")).join(".")
-  );
-}
-function stemmed(name) {
-  const [first, ...rest] = name.split(".");
-  if (first === void 0 || rest.length === 0) return void 0;
-  const stem = first.replace(/^[@$]/, "").split(/[\s_-]+/)[0];
-  if (stem === void 0 || stem === "" || stem === first.replace(/^[@$]/, ""))
-    return void 0;
-  return baseKey([stem, ...rest].join("."));
-}
-function detectPrefixes(outputKeys, tokenKeys) {
-  const tokenFirsts = new Set(tokenKeys.map((k4) => k4.split("-")[0]));
-  const counts = /* @__PURE__ */ new Map();
-  for (const key2 of outputKeys) {
-    const first = key2.split("-")[0];
-    if (first === void 0 || first === "" || first === key2) continue;
-    counts.set(first, (counts.get(first) ?? 0) + 1);
-  }
-  return [...counts].filter(
-    ([first, n]) => !tokenFirsts.has(first) && n >= Math.max(2, outputKeys.length * 0.4)
-  ).map(([first]) => first).sort();
-}
-function alignTokenKeys(tokenNames, outputNames) {
-  const outputKeys = [...new Set(outputNames.map(nameKey))];
-  const outputSet = new Set(outputKeys);
-  const names = [...new Set(tokenNames)];
-  const plain = new Map(names.map((n) => [n, nameKey(n)]));
-  const prefixes = detectPrefixes(outputKeys, [...plain.values()]);
-  const withPrefixes = (key2) => key2 === void 0 ? [] : [key2, ...prefixes.map((p4) => `${p4}-${key2}`)];
-  const steps = [
-    (name) => [nameKey(name)],
-    (name) => withPrefixes(baseKey(name)),
-    (name) => withPrefixes(stemmed(name))
-  ];
-  const aligned = /* @__PURE__ */ new Map();
-  const claimed = /* @__PURE__ */ new Set();
-  for (const step of steps) {
-    const wants = /* @__PURE__ */ new Map();
-    for (const name of names) {
-      if (aligned.has(name)) continue;
-      const key2 = step(name).find((k4) => outputSet.has(k4) && !claimed.has(k4));
-      if (key2 === void 0) continue;
-      wants.set(key2, [...wants.get(key2) ?? [], name]);
-    }
-    for (const [key2, claimants] of wants) {
-      claimed.add(key2);
-      if (claimants.length === 1) aligned.set(claimants[0], key2);
-    }
-  }
-  return {
-    key: (tokenName) => aligned.get(tokenName) ?? plain.get(tokenName) ?? nameKey(tokenName),
-    prefixes
-  };
-}
+import { isAbsolute as isAbsolute3, join as join33, relative as relative3, resolve as resolve15, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 var WEIGHT_NAMES = {
@@ -29549,183 +29907,6 @@ function classifyDriftByMode(modes2, outputs) {
   };
 }
 
-// src/engines/tokens/scan-outputs.ts
-var CSS_EXTENSIONS = [".css", ".scss"];
-var TS_EXTENSIONS = [".ts", ".tsx", ".js", ".mjs", ".cjs"];
-function scanOutputs(file) {
-  const lower = file.path.toLowerCase();
-  if (CSS_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
-    return finish(scanCss(file.content), []);
-  }
-  if (TS_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
-    const { values, warnings } = scanTsTheme(file.content);
-    return finish(values, warnings);
-  }
-  return { kind: "unsupported-file", path: file.path };
-}
-function finish(values, warnings) {
-  values.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
-  return { kind: "ok", values, warnings };
-}
-var CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
-var CUSTOM_PROP_RE = /^--([A-Za-z0-9_-]+)\s*:\s*([\s\S]+)$/;
-var CUSTOM_MEDIA_RE = /^@custom-media\s+--([A-Za-z0-9_-]+)\s+([\s\S]+)$/;
-var ROOT_SELECTORS = /* @__PURE__ */ new Set([":root", "html", ":host", "*"]);
-function isRootPrelude(prelude) {
-  return prelude.split(",").every((part) => ROOT_SELECTORS.has(part.trim().toLowerCase()));
-}
-function scanCss(content) {
-  const stripped = content.replace(CSS_COMMENT_RE, "");
-  const values = [];
-  const stack2 = [];
-  let buffer2 = "";
-  const declaration = (text2) => {
-    const match = text2.trim().match(CUSTOM_PROP_RE) ?? text2.trim().match(CUSTOM_MEDIA_RE);
-    if (match === null) return;
-    const name = match[1];
-    const raw = match[2].replace(/!important/g, "").trim();
-    if (raw === "") return;
-    const scoped = stack2.some((prelude) => !isRootPrelude(prelude));
-    values.push(scoped ? { name, raw, scope: stack2.join(" ") } : { name, raw });
-  };
-  for (const char of stripped) {
-    if (char === "{") {
-      stack2.push(buffer2.trim().replace(/\s+/g, " "));
-      buffer2 = "";
-    } else if (char === "}") {
-      declaration(buffer2);
-      stack2.pop();
-      buffer2 = "";
-    } else if (char === ";") {
-      declaration(buffer2);
-      buffer2 = "";
-    } else {
-      buffer2 += char;
-    }
-  }
-  declaration(buffer2);
-  return values;
-}
-var THEME_EXPORT_RE = /export\s+const\s+[\w$]+(?:\s*:\s*[^={]+?)?\s*=\s*\{/;
-function scanTsTheme(content) {
-  const start = THEME_EXPORT_RE.exec(content);
-  if (start === null) return { values: [], warnings: [] };
-  const values = [];
-  const warnings = [];
-  let i = start.index + start[0].length;
-  function skipTrivia() {
-    for (; ; ) {
-      while (i < content.length && /\s/.test(content[i])) i += 1;
-      if (content.startsWith("//", i)) {
-        const nl = content.indexOf("\n", i);
-        i = nl === -1 ? content.length : nl + 1;
-        continue;
-      }
-      if (content.startsWith("/*", i)) {
-        const end = content.indexOf("*/", i + 2);
-        i = end === -1 ? content.length : end + 2;
-        continue;
-      }
-      return;
-    }
-  }
-  function parseString() {
-    const quote = content[i];
-    if (quote !== '"' && quote !== "'" && quote !== "`") return void 0;
-    let out = "";
-    i += 1;
-    while (i < content.length) {
-      const ch = content[i];
-      if (ch === "\\") {
-        out += content[i + 1] ?? "";
-        i += 2;
-        continue;
-      }
-      if (ch === quote) {
-        i += 1;
-        return out;
-      }
-      out += ch;
-      i += 1;
-    }
-    return void 0;
-  }
-  function skipExpression() {
-    let depth = 0;
-    while (i < content.length) {
-      const ch = content[i];
-      if (ch === '"' || ch === "'" || ch === "`") {
-        parseString();
-        continue;
-      }
-      if (ch === "(" || ch === "[" || ch === "{") depth += 1;
-      if (ch === ")" || ch === "]") depth -= 1;
-      if (ch === "}") {
-        if (depth === 0) return;
-        depth -= 1;
-      }
-      if (ch === "," && depth === 0) return;
-      i += 1;
-    }
-  }
-  function parseObjectBody(prefix) {
-    for (; ; ) {
-      skipTrivia();
-      if (i >= content.length) return;
-      if (content[i] === "}") {
-        i += 1;
-        return;
-      }
-      if (content[i] === ",") {
-        i += 1;
-        continue;
-      }
-      let key2;
-      if (content[i] === '"' || content[i] === "'") {
-        key2 = parseString();
-      } else {
-        const m = /^[\w$-]+/.exec(content.slice(i));
-        if (m !== null) {
-          key2 = m[0];
-          i += m[0].length;
-        }
-      }
-      if (key2 === void 0) {
-        warnings.push(`unparseable key near offset ${i} \u2014 stopping theme scan`);
-        return;
-      }
-      skipTrivia();
-      if (content[i] !== ":") {
-        warnings.push(`expected ":" after key "${key2}" \u2014 skipping`);
-        skipExpression();
-        continue;
-      }
-      i += 1;
-      skipTrivia();
-      const name = prefix === "" ? key2 : `${prefix}.${key2}`;
-      const ch = content[i];
-      if (ch === "{") {
-        i += 1;
-        parseObjectBody(name);
-      } else if (ch === '"' || ch === "'" || ch === "`") {
-        const value2 = parseString();
-        if (value2 !== void 0) values.push({ name, raw: value2 });
-      } else {
-        const num4 = /^-?\d+(?:\.\d+)?/.exec(content.slice(i));
-        if (num4 !== null) {
-          values.push({ name, raw: num4[0] });
-          i += num4[0].length;
-        } else {
-          warnings.push(`non-literal value for "${name}" \u2014 skipped`);
-          skipExpression();
-        }
-      }
-    }
-  }
-  parseObjectBody("");
-  return { values, warnings };
-}
-
 // src/cli-commands/tokens.ts
 var TABLE_LIMIT = 20;
 function previewValue(value2) {
@@ -29765,7 +29946,7 @@ function loadTokenMap2(path) {
   }
   return loaded.map;
 }
-var EXCLUDED_DIRS4 = /* @__PURE__ */ new Set([
+var EXCLUDED_DIRS5 = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
   ".ds-bridge",
@@ -29787,14 +29968,14 @@ function hasOutputExtension(name) {
 function walkOutputFiles(dir, acc) {
   let entries;
   try {
-    entries = readdirSync5(dir, { withFileTypes: true });
+    entries = readdirSync6(dir, { withFileTypes: true });
   } catch {
     return;
   }
   for (const entry of entries) {
-    const full = join32(dir, entry.name);
+    const full = join33(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS4.has(entry.name)) continue;
+      if (EXCLUDED_DIRS5.has(entry.name)) continue;
       walkOutputFiles(full, acc);
       continue;
     }
@@ -29812,11 +29993,11 @@ function resolveTokenSource2(targetDir, flagTokens) {
     }
     return { kind: "ok", path: abs2 };
   }
-  const configPath = join32(targetDir, ".ds-bridge.json");
+  const configPath = join33(targetDir, ".ds-bridge.json");
   if (existsSync24(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync28(configPath, "utf8");
+      projectFileText = readFileSync29(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -29865,7 +30046,7 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
     if (abs2 === source2 || abs2.startsWith(source2 + sep4)) continue;
     let content;
     try {
-      content = readFileSync28(file, "utf8");
+      content = readFileSync29(file, "utf8");
     } catch {
       continue;
     }
@@ -30002,10 +30183,10 @@ function appendHistory(stateDir, record) {
   appendHistoryRecord(stateDir, record);
 }
 function readDriftTrend(stateDir) {
-  const historyPath = join32(stateDir, "history.jsonl");
+  const historyPath = join33(stateDir, "history.jsonl");
   let text2;
   try {
-    text2 = readFileSync28(historyPath, "utf8");
+    text2 = readFileSync29(historyPath, "utf8");
   } catch {
     return [];
   }
@@ -30037,10 +30218,10 @@ function writeReport(stateDir, project, generatedAt) {
     project,
     driftTrend: trend
   });
-  const reportsDir = join32(stateDir, "reports");
+  const reportsDir = join33(stateDir, "reports");
   mkdirSync12(reportsDir, { recursive: true });
   const date = generatedAt.slice(0, 10);
-  const reportPath = join32(reportsDir, `tokens-${date}.html`);
+  const reportPath = join33(reportsDir, `tokens-${date}.html`);
   writeFileSync15(reportPath, html, "utf8");
   return reportPath;
 }
@@ -30093,7 +30274,7 @@ function runCheck(path, options) {
   }
   const { stale, missing, orphan } = countByKind2(result);
   const inSync = result.entries.length === 0;
-  const stateDir = join32(targetDir, ".ds-bridge");
+  const stateDir = join33(targetDir, ".ds-bridge");
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   appendHistory(stateDir, {
     at: generatedAt,
@@ -30101,7 +30282,8 @@ function runCheck(path, options) {
     stale,
     missing,
     orphan,
-    inSync
+    inSync,
+    inSyncCount: result.inSync
   });
   const rel2 = relative3(targetDir, tokenSource.path);
   const source2 = {
@@ -30149,8 +30331,15 @@ function registerTokensCommand(program2) {
     const map = loadTokenMap2(path);
     if (map === void 0) return;
     if (format === "json") {
-      process.stdout.write(`${JSON.stringify(map, null, 2)}
-`);
+      const emitted = emittedVarNames(process.cwd(), map.tokens);
+      const tokens2 = map.tokens.map((token2) => {
+        const cssVar = emitted(token2);
+        return cssVar === void 0 ? token2 : { ...token2, cssVar };
+      });
+      process.stdout.write(
+        `${JSON.stringify({ ...map, tokens: tokens2 }, null, 2)}
+`
+      );
       return;
     }
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
@@ -30190,7 +30379,7 @@ function buildProgram() {
   registerRollupCommand(program2);
   return program2;
 }
-loadDotenvInto(join33(process.cwd(), ".ds-bridge.env"), process.env);
+loadDotenvInto(join34(process.cwd(), ".ds-bridge.env"), process.env);
 buildProgram().parse();
 export {
   buildProgram

@@ -28,7 +28,9 @@ Figma component. Shape (`schemaVersion: 1`):
 
 Resolve a node with `ds-bridge registry resolve <nodeId|name>`:
 
-- **match** (exit 0) — prints the `RegistryMatch`. Use `codeName` + `importPath`.
+- **match** (exit 0) — prints the `RegistryMatch`. Use `codeName`, imported from
+  `importSpecifier` when present (the project's own alias, e.g. `primitives` or
+  `@/components/ui/button`), else from `importPath`.
 - **candidates** (exit 1) — prints `{ kind: "candidates", node, candidates }`.
   The node is **ambiguous**: more than one code component could be it. Do **not**
   pick one yourself — this is a gap.
@@ -43,8 +45,13 @@ ds-bridge tokens parse <token-source-file> --format=json
 ```
 
 It prints a `TokenMap` whose `tokens[]` are
-`{ name, type, value, aliasOf?, group? }`. `name` is the canonical dot path
-(e.g. `color.brand.primary`), `value` is alias-resolved (e.g. `#3b82f6`).
+`{ name, type, value, aliasOf?, group?, cssVar? }`. `name` is the canonical dot
+path (e.g. `color.brand.primary`), `value` is alias-resolved (e.g. `#3b82f6`).
+`cssVar` is the custom property the project's build emits for the token (run the
+command from the project root): write `var(--<cssVar>)` — never derive a
+variable from the token path (Figma's Simple Design System emits
+`@size.space.400` as `--sds-size-space-400`). A token without `cssVar` is not
+emitted as CSS; use the project's existing way of consuming it.
 
 A raw design value (a hex color, a px dimension) is **on-system** only when it
 exactly equals a token's canonical value. When two tokens share a value (a

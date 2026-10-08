@@ -56,7 +56,9 @@ function hasLintableExtension(filePath) {
 /** Short suggestion text for a single finding (mirrors the term renderer). */
 function suggestionFor(finding) {
 	if (finding.kind === "exact" && typeof finding.expectedToken === "string") {
-		return finding.expectedToken;
+		return typeof finding.expectedVar === "string"
+			? `${finding.expectedToken} (${finding.expectedVar})`
+			: finding.expectedToken;
 	}
 	if (
 		finding.kind === "near" &&

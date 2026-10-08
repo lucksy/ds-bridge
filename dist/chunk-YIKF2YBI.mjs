@@ -3,7 +3,8 @@ import { createRequire as __createRequire } from "node:module";
 const require = __createRequire(import.meta.url);
 import {
   __commonJS,
-  __require
+  __require,
+  __toESM
 } from "./chunk-VL4BT7E7.mjs";
 
 // ../../../node_modules/source-map-support/node_modules/source-map/lib/base64.js
@@ -228,7 +229,7 @@ var require_util = __commonJS({
     exports.isAbsolute = function(aPath) {
       return aPath.charAt(0) === "/" || urlRegexp.test(aPath);
     };
-    function relative(aRoot, aPath) {
+    function relative2(aRoot, aPath) {
       if (aRoot === "") {
         aRoot = ".";
       }
@@ -247,7 +248,7 @@ var require_util = __commonJS({
       }
       return Array(level + 1).join("../") + aPath.substr(aRoot.length + 1);
     }
-    exports.relative = relative;
+    exports.relative = relative2;
     var supportsNullProto = (function() {
       var obj = /* @__PURE__ */ Object.create(null);
       return !("__proto__" in obj);
@@ -2289,7 +2290,7 @@ var require_source_map_support = __commonJS({
 var require_typescript = __commonJS({
   "node_modules/@ts-morph/common/dist/typescript.js"(exports, module) {
     "use strict";
-    var ts = {};
+    var ts2 = {};
     ((module2) => {
       "use strict";
       var __defProp = Object.defineProperty;
@@ -11689,11 +11690,11 @@ ${lanes.join("\n")}
           return toComponents;
         }
         const components = toComponents.slice(start);
-        const relative = [];
+        const relative2 = [];
         for (; start < fromComponents.length; start++) {
-          relative.push("..");
+          relative2.push("..");
         }
-        return ["", ...relative, ...components];
+        return ["", ...relative2, ...components];
       }
       function getRelativePathFromDirectory(fromDirectory, to, getCanonicalFileNameOrIgnoreCase) {
         Debug.assert(getRootLength(fromDirectory) > 0 === getRootLength(to) > 0, "Paths must either both be absolute or both be relative");
@@ -50389,11 +50390,11 @@ ${lanes.join("\n")}
             if (i < rootLength) {
               return void 0;
             }
-            const sep = directory.lastIndexOf(directorySeparator, i - 1);
-            if (sep === -1) {
+            const sep2 = directory.lastIndexOf(directorySeparator, i - 1);
+            if (sep2 === -1) {
               return void 0;
             }
-            return directory.substr(0, Math.max(sep, rootLength));
+            return directory.substr(0, Math.max(sep2, rootLength));
           }
         }
       }
@@ -56236,9 +56237,9 @@ ${lanes.join("\n")}
               if (!startsWithDirectory(target, realPathDirectory, getCanonicalFileName)) {
                 return;
               }
-              const relative = getRelativePathFromDirectory(realPathDirectory, target, getCanonicalFileName);
+              const relative2 = getRelativePathFromDirectory(realPathDirectory, target, getCanonicalFileName);
               for (const symlinkDirectory of symlinkDirectories) {
-                const option = resolvePath(symlinkDirectory, relative);
+                const option = resolvePath(symlinkDirectory, relative2);
                 const result2 = cb(option, target === referenceRedirect);
                 shouldFilterIgnoredPaths = true;
                 if (result2) return result2;
@@ -126576,7 +126577,7 @@ ${lanes.join("\n")}
           }
         }
         function createImportCallExpressionAMD(arg, containsLexicalThis) {
-          const resolve = factory2.createUniqueName("resolve");
+          const resolve2 = factory2.createUniqueName("resolve");
           const reject = factory2.createUniqueName("reject");
           const parameters = [
             factory2.createParameterDeclaration(
@@ -126585,7 +126586,7 @@ ${lanes.join("\n")}
               /*dotDotDotToken*/
               void 0,
               /*name*/
-              resolve
+              resolve2
             ),
             factory2.createParameterDeclaration(
               /*modifiers*/
@@ -126602,7 +126603,7 @@ ${lanes.join("\n")}
                 factory2.createIdentifier("require"),
                 /*typeArguments*/
                 void 0,
-                [factory2.createArrayLiteralExpression([arg || factory2.createOmittedExpression()]), resolve, reject]
+                [factory2.createArrayLiteralExpression([arg || factory2.createOmittedExpression()]), resolve2, reject]
               )
             )
           ]);
@@ -213513,8 +213514,8 @@ Additional information: BADCLIENT: Bad error code, ${badCode} not found in range
         installPackage(options) {
           this.packageInstallId++;
           const request = { kind: "installPackage", ...options, id: this.packageInstallId };
-          const promise = new Promise((resolve, reject) => {
-            (this.packageInstalledPromise ?? (this.packageInstalledPromise = /* @__PURE__ */ new Map())).set(this.packageInstallId, { resolve, reject });
+          const promise = new Promise((resolve2, reject) => {
+            (this.packageInstalledPromise ?? (this.packageInstalledPromise = /* @__PURE__ */ new Map())).set(this.packageInstallId, { resolve: resolve2, reject });
           });
           this.installer.send(request);
           return promise;
@@ -213786,9 +213787,9 @@ Additional information: BADCLIENT: Bad error code, ${badCode} not found in range
         };
       }
     })({ get exports() {
-      return ts;
+      return ts2;
     }, set exports(v) {
-      ts = v;
+      ts2 = v;
       if (typeof module !== "undefined" && module.exports) {
         module.exports = v;
       }
@@ -215829,7 +215830,7 @@ var require_path_browserify = __commonJS({
       }
       return res;
     }
-    function _format(sep, pathObject) {
+    function _format(sep2, pathObject) {
       var dir = pathObject.dir || pathObject.root;
       var base = pathObject.base || (pathObject.name || "") + (pathObject.ext || "");
       if (!dir) {
@@ -215838,11 +215839,11 @@ var require_path_browserify = __commonJS({
       if (dir === pathObject.root) {
         return dir + base;
       }
-      return dir + sep + base;
+      return dir + sep2 + base;
     }
     var posix = {
       // path.resolve([from ...], to)
-      resolve: function resolve() {
+      resolve: function resolve2() {
         var resolvedPath = "";
         var resolvedAbsolute = false;
         var cwd;
@@ -215907,7 +215908,7 @@ var require_path_browserify = __commonJS({
           return ".";
         return posix.normalize(joined);
       },
-      relative: function relative(from, to) {
+      relative: function relative2(from, to) {
         assertPath(from);
         assertPath(to);
         if (from === to) return "";
@@ -215976,7 +215977,7 @@ var require_path_browserify = __commonJS({
       _makeLong: function _makeLong(path) {
         return path;
       },
-      dirname: function dirname(path) {
+      dirname: function dirname2(path) {
         assertPath(path);
         if (path.length === 0) return ".";
         var code = path.charCodeAt(0);
@@ -217960,12 +217961,12 @@ var require_dist = __commonJS({
       }
       return to;
     };
-    var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+    var __toESM2 = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
       value: mod,
       enumerable: true
     }) : target, mod));
-    var path = __toESM(__require("path"));
-    var fs = __toESM(__require("fs"));
+    var path = __toESM2(__require("path"));
+    var fs = __toESM2(__require("fs"));
     function cleanPath(path$1) {
       let normalized = (0, path.normalize)(path$1);
       if (normalized.length > 1 && normalized[normalized.length - 1] === path.sep) normalized = normalized.substring(0, normalized.length - 1);
@@ -218494,7 +218495,7 @@ var require_dist2 = __commonJS({
       }
       return to;
     };
-    var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+    var __toESM2 = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
       value: mod,
       enumerable: true
     }) : target, mod));
@@ -218503,7 +218504,7 @@ var require_dist2 = __commonJS({
     var url = __require("url");
     var fdir = require_dist();
     var picomatch = require_picomatch2();
-    picomatch = __toESM(picomatch, 1);
+    picomatch = __toESM2(picomatch, 1);
     var isReadonlyArray = Array.isArray;
     var BACKSLASHES = /\\/g;
     var DRIVE_RELATIVE_PATH = /^[A-Za-z]:$/;
@@ -218766,12 +218767,12 @@ var require_dist2 = __commonJS({
       return patterns.length > 0 ? buildCrawler(options, patterns) : [];
     }
     async function glob(globInput, options) {
-      const [crawler, relative] = getCrawler(globInput, options);
-      return crawler ? formatPaths(await crawler.withPromise(), relative) : [];
+      const [crawler, relative2] = getCrawler(globInput, options);
+      return crawler ? formatPaths(await crawler.withPromise(), relative2) : [];
     }
     function globSync(globInput, options) {
-      const [crawler, relative] = getCrawler(globInput, options);
-      return crawler ? formatPaths(crawler.sync(), relative) : [];
+      const [crawler, relative2] = getCrawler(globInput, options);
+      return crawler ? formatPaths(crawler.sync(), relative2) : [];
     }
     exports.convertPathToPattern = convertPathToPattern;
     exports.escapePath = escapePath;
@@ -218785,7 +218786,7 @@ var require_dist2 = __commonJS({
 var require_ts_morph_common = __commonJS({
   "node_modules/@ts-morph/common/dist/ts-morph-common.js"(exports) {
     "use strict";
-    var ts = require_typescript();
+    var ts2 = require_typescript();
     var minimatch = require_commonjs3();
     var path$1 = require_path_browserify();
     var fs$1 = __require("fs");
@@ -218815,7 +218816,7 @@ var require_ts_morph_common = __commonJS({
       n.default = e;
       return Object.freeze(n);
     }
-    var ts__namespace = /* @__PURE__ */ _interopNamespaceCompat(ts);
+    var ts__namespace = /* @__PURE__ */ _interopNamespaceCompat(ts2);
     var minimatch__namespace = /* @__PURE__ */ _interopNamespaceCompat(minimatch);
     var path__default = /* @__PURE__ */ _interopDefaultCompat(path$1);
     var fs__namespace = /* @__PURE__ */ _interopNamespaceCompat(fs$1);
@@ -220062,12 +220063,12 @@ ${nodeLocation}` : message;
     };
     var NodeRuntimeFileSystem = class {
       delete(path2) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           fs__namespace.rm(path2, { recursive: true }, (err) => {
             if (err)
               reject(err);
             else
-              resolve();
+              resolve2();
           });
         });
       }
@@ -220086,12 +220087,12 @@ ${nodeLocation}` : message;
         }));
       }
       readFile(filePath, encoding = "utf-8") {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           fs__namespace.readFile(filePath, encoding, (err, data) => {
             if (err)
               reject(err);
             else
-              resolve(data);
+              resolve2(data);
           });
         });
       }
@@ -220099,12 +220100,12 @@ ${nodeLocation}` : message;
         return fs__namespace.readFileSync(filePath, encoding);
       }
       async writeFile(filePath, fileText) {
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve2, reject) => {
           fs__namespace.writeFile(filePath, fileText, (err) => {
             if (err)
               reject(err);
             else
-              resolve();
+              resolve2();
           });
         });
       }
@@ -220118,12 +220119,12 @@ ${nodeLocation}` : message;
         fs__namespace.mkdirSync(dirPath, { recursive: true });
       }
       move(srcPath, destPath) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           fs__namespace.rename(srcPath, destPath, (err) => {
             if (err)
               reject(err);
             else
-              resolve();
+              resolve2();
           });
         });
       }
@@ -220131,12 +220132,12 @@ ${nodeLocation}` : message;
         fs__namespace.renameSync(srcPath, destPath);
       }
       copy(srcPath, destPath) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           fs__namespace.copyFile(srcPath, destPath, (err) => {
             if (err)
               reject(err);
             else
-              resolve();
+              resolve2();
           });
         });
       }
@@ -220144,15 +220145,15 @@ ${nodeLocation}` : message;
         fs__namespace.copyFileSync(srcPath, destPath);
       }
       stat(path2) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           fs__namespace.stat(path2, (err, stat) => {
             if (err) {
               if (err.code === "ENOENT" || err.code === "ENOTDIR")
-                resolve(void 0);
+                resolve2(void 0);
               else
                 reject(err);
             } else {
-              resolve(stat);
+              resolve2(stat);
             }
           });
         });
@@ -221925,85 +221926,85 @@ ${nodeLocation}` : message;
     Object.defineProperty(exports, "DiagnosticCategory", {
       enumerable: true,
       get: function() {
-        return ts.DiagnosticCategory;
+        return ts2.DiagnosticCategory;
       }
     });
     Object.defineProperty(exports, "EmitHint", {
       enumerable: true,
       get: function() {
-        return ts.EmitHint;
+        return ts2.EmitHint;
       }
     });
     Object.defineProperty(exports, "LanguageVariant", {
       enumerable: true,
       get: function() {
-        return ts.LanguageVariant;
+        return ts2.LanguageVariant;
       }
     });
     Object.defineProperty(exports, "ModuleKind", {
       enumerable: true,
       get: function() {
-        return ts.ModuleKind;
+        return ts2.ModuleKind;
       }
     });
     Object.defineProperty(exports, "ModuleResolutionKind", {
       enumerable: true,
       get: function() {
-        return ts.ModuleResolutionKind;
+        return ts2.ModuleResolutionKind;
       }
     });
     Object.defineProperty(exports, "NewLineKind", {
       enumerable: true,
       get: function() {
-        return ts.NewLineKind;
+        return ts2.NewLineKind;
       }
     });
     Object.defineProperty(exports, "NodeFlags", {
       enumerable: true,
       get: function() {
-        return ts.NodeFlags;
+        return ts2.NodeFlags;
       }
     });
     Object.defineProperty(exports, "ObjectFlags", {
       enumerable: true,
       get: function() {
-        return ts.ObjectFlags;
+        return ts2.ObjectFlags;
       }
     });
     Object.defineProperty(exports, "ScriptKind", {
       enumerable: true,
       get: function() {
-        return ts.ScriptKind;
+        return ts2.ScriptKind;
       }
     });
     Object.defineProperty(exports, "ScriptTarget", {
       enumerable: true,
       get: function() {
-        return ts.ScriptTarget;
+        return ts2.ScriptTarget;
       }
     });
     Object.defineProperty(exports, "SymbolFlags", {
       enumerable: true,
       get: function() {
-        return ts.SymbolFlags;
+        return ts2.SymbolFlags;
       }
     });
     Object.defineProperty(exports, "SyntaxKind", {
       enumerable: true,
       get: function() {
-        return ts.SyntaxKind;
+        return ts2.SyntaxKind;
       }
     });
     Object.defineProperty(exports, "TypeFlags", {
       enumerable: true,
       get: function() {
-        return ts.TypeFlags;
+        return ts2.TypeFlags;
       }
     });
     Object.defineProperty(exports, "TypeFormatFlags", {
       enumerable: true,
       get: function() {
-        return ts.TypeFormatFlags;
+        return ts2.TypeFormatFlags;
       }
     });
     exports.ts = ts__namespace;
@@ -244045,8 +244046,124 @@ Node text: ${this.#forgottenText}`;
   }
 });
 
+// src/io/tsconfig-paths.ts
+var import_ts_morph = __toESM(require_ts_morph(), 1);
+import { existsSync, readFileSync } from "fs";
+import { dirname, relative, resolve, sep } from "path";
+function readTsconfig(configPath) {
+  const read = import_ts_morph.ts.readConfigFile(configPath, import_ts_morph.ts.sys.readFile);
+  if (read.error !== void 0) return void 0;
+  const parsed = import_ts_morph.ts.parseJsonConfigFileContent(
+    read.config,
+    import_ts_morph.ts.sys,
+    dirname(configPath),
+    void 0,
+    configPath
+  );
+  const references = (parsed.projectReferences ?? []).map(
+    (ref) => ref.path.endsWith(".json") ? ref.path : resolve(ref.path, "tsconfig.json")
+  );
+  return { options: parsed.options, references };
+}
+function readPathAliases(root) {
+  const rootConfig = resolve(root, "tsconfig.json");
+  if (!existsSync(rootConfig)) return {};
+  const queue = [rootConfig];
+  const seen = /* @__PURE__ */ new Set();
+  try {
+    while (queue.length > 0) {
+      const configPath = queue.shift();
+      if (seen.has(configPath) || !existsSync(configPath)) continue;
+      seen.add(configPath);
+      const config = readTsconfig(configPath);
+      if (config === void 0) continue;
+      const { paths, baseUrl } = config.options;
+      if (paths !== void 0) {
+        return { paths, baseUrl: baseUrl ?? dirname(configPath) };
+      }
+      queue.push(...config.references);
+    }
+  } catch {
+  }
+  return {};
+}
+var SOURCE_EXTENSION = /\.(?:tsx|ts|jsx|js|mjs|cjs)$/;
+function aliasSpecifier(root, relPath) {
+  const { paths, baseUrl } = readPathAliases(root);
+  if (paths === void 0 || baseUrl === void 0) return void 0;
+  const target = resolve(root, relPath).replace(SOURCE_EXTENSION, "").replace(/[\\/]index$/, "");
+  for (const [pattern, mappings] of Object.entries(paths)) {
+    for (const mapping of mappings) {
+      const base = resolve(baseUrl, mapping);
+      if (!pattern.includes("*")) {
+        if (base.replace(SOURCE_EXTENSION, "") === target) return pattern;
+        if (barrelExports(base, target)) return pattern;
+        continue;
+      }
+      const [prefix = "", suffix = ""] = base.split("*");
+      if (!target.startsWith(prefix) || !target.endsWith(suffix)) continue;
+      const middle = target.slice(prefix.length, target.length - suffix.length);
+      return pattern.replace("*", middle.split(sep).join("/"));
+    }
+  }
+  return void 0;
+}
+var INDEX_FILES = ["index.ts", "index.tsx", "index.js", "index.mjs"];
+var REEXPORT_RE = /export\s+(?:\*|\{[^}]*\}|type\s+\{[^}]*\})\s+from\s+["'](\.[^"']+)["']/g;
+function moduleTarget(fromDir, spec) {
+  return resolve(fromDir, spec).replace(SOURCE_EXTENSION, "").replace(/[\\/]index$/, "");
+}
+function barrelExports(dir, target, depth = 0) {
+  if (depth > 4) return false;
+  const index = INDEX_FILES.map((f) => resolve(dir, f)).find(
+    (f) => existsSync(f)
+  );
+  if (index === void 0) return false;
+  let text;
+  try {
+    text = readFileSync(index, "utf8");
+  } catch {
+    return false;
+  }
+  for (const match of text.matchAll(REEXPORT_RE)) {
+    const next = moduleTarget(dir, match[1]);
+    if (next === target) return true;
+    if (barrelExports(next, target, depth + 1)) return true;
+  }
+  return false;
+}
+function resolveAliasDir(root, specifier) {
+  const { paths, baseUrl } = readPathAliases(root);
+  if (paths === void 0 || baseUrl === void 0) return void 0;
+  for (const [pattern, mappings] of Object.entries(paths)) {
+    const mapping = mappings[0];
+    if (mapping === void 0) continue;
+    let target;
+    if (pattern.includes("*")) {
+      const [prefix = "", suffix = ""] = pattern.split("*");
+      if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) {
+        continue;
+      }
+      const middle = specifier.slice(
+        prefix.length,
+        specifier.length - suffix.length
+      );
+      target = resolve(baseUrl, mapping.replace("*", middle));
+    } else if (pattern === specifier) {
+      target = resolve(baseUrl, mapping);
+    }
+    if (target !== void 0) {
+      return relative(root, target).split(sep).join("/");
+    }
+  }
+  return void 0;
+}
+
 export {
-  require_ts_morph
+  require_ts_morph,
+  readPathAliases,
+  aliasSpecifier,
+  resolveAliasDir
 };
 /*! Bundled license information:
 
