@@ -186,6 +186,7 @@ function mapUsage(input) {
   }
   return results;
 }
+var DOCS_FILE = /\.(?:stories|story|figma)\.[cm]?[jt]sx?$/i;
 function mapCodeUsage(input) {
   const { registry, projectDir } = input;
   const root = resolve(projectDir);
@@ -199,7 +200,9 @@ function mapCodeUsage(input) {
   if (entries.length === 0) return [];
   const project = buildProject(root);
   return entries.map(({ codeName, importPath }) => {
-    const usages = scanUsages(project, root, codeName, importPath);
+    const usages = scanUsages(project, root, codeName, importPath).filter(
+      (site) => !DOCS_FILE.test(site.file)
+    );
     return { codeName, importPath, usages, count: usages.length };
   });
 }
