@@ -309,7 +309,10 @@ async function runConnect(path: string, verify: boolean): Promise<void> {
 			"`config connect` is interactive and needs a real terminal so it can " +
 				"prompt for your token without echoing it. Run it directly in your shell " +
 				"(not through Claude Code's tool runner):\n\n" +
-				`  node ${cliPath} config connect\n\n` +
+				"  ds-bridge config connect --verify\n\n" +
+				"No `ds-bridge` command in your shell? Install it once with " +
+				"`npm i -g github:lucksy/ds-bridge#release`, or run the plugin's CLI directly:\n\n" +
+				`  node ${cliPath} config connect --verify\n\n` +
 				"Already have FIGMA_TOKEN in your environment? Use `config persist-token` " +
 				"instead, which is non-interactive.",
 		);

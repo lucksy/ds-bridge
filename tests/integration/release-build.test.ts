@@ -6,7 +6,14 @@
 // node_modules) and lean (no sources, tests or dev tooling).
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+	cp,
+	mkdtemp,
+	readFile,
+	rm,
+	symlink,
+	writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -102,6 +109,70 @@ describe("scripts/build-release.mjs", () => {
 		);
 		expect(stdout.trim()).toBe(manifest.version);
 	});
+
+	// The docs tell users to run `ds-bridge config connect --verify`. Inside a
+	// Claude Code session the plugin's bin/ is on the Bash PATH; in a plain
+	// terminal `npm i -g github:lucksy/ds-bridge#release` installs the same
+	// command from this payload's package.json "bin".
+	it("ships a bin/ds-bridge launcher that runs the CLI", async () => {
+		const launcher = join(out, "bin", "ds-bridge");
+		expect(existsSync(launcher)).toBe(true);
+		const manifest = JSON.parse(
+			await readFile(join(out, ".claude-plugin", "plugin.json"), "utf8"),
+		) as { version: string };
+		const { stdout } = await execFileAsync(launcher, ["--version"], {
+			cwd: tmpdir(),
+			encoding: "utf8",
+		});
+		expect(stdout.trim()).toBe(manifest.version);
+		// Linked into a directory on the PATH (e.g. ~/bin), it still finds dist/.
+		const linkDir = await mkdtemp(join(tmpdir(), "ds-release-link-"));
+		tmpDirs.push(linkDir);
+		await symlink(launcher, join(linkDir, "ds-bridge"));
+		const linked = await execFileAsync(
+			join(linkDir, "ds-bridge"),
+			["--version"],
+			{
+				cwd: tmpdir(),
+				encoding: "utf8",
+			},
+		);
+		expect(linked.stdout.trim()).toBe(manifest.version);
+	});
+
+	it("installs a global ds-bridge command with npm from the payload", async () => {
+		const parent = await mkdtemp(join(tmpdir(), "ds-release-npm-"));
+		tmpDirs.push(parent);
+		const { stdout: tarball } = await execFileAsync(
+			"npm",
+			["pack", out, "--pack-destination", parent, "--silent"],
+			{ cwd: parent, encoding: "utf8" },
+		);
+		const prefix = join(parent, "prefix");
+		await execFileAsync(
+			"npm",
+			[
+				"install",
+				"--global",
+				"--prefix",
+				prefix,
+				"--no-audit",
+				"--no-fund",
+				join(parent, tarball.trim()),
+			],
+			{ cwd: parent, encoding: "utf8" },
+		);
+		const pkg = JSON.parse(
+			await readFile(join(out, "package.json"), "utf8"),
+		) as { version: string; bin?: Record<string, string> };
+		expect(pkg.bin).toEqual({ "ds-bridge": "dist/cli.mjs" });
+		const { stdout } = await execFileAsync(
+			join(prefix, "bin", "ds-bridge"),
+			["--version"],
+			{ cwd: tmpdir(), encoding: "utf8" },
+		);
+		expect(stdout.trim()).toBe(pkg.version);
+	}, 120_000);
 
 	it("--from packages another checkout (an older tag) with this script", async () => {
 		const parent = await mkdtemp(join(tmpdir(), "ds-release-from-"));

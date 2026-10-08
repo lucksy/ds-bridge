@@ -16336,7 +16336,11 @@ async function runConnect(path, verify) {
     fail5(
       `\`config connect\` is interactive and needs a real terminal so it can prompt for your token without echoing it. Run it directly in your shell (not through Claude Code's tool runner):
 
-  node ${cliPath} config connect
+  ds-bridge config connect --verify
+
+No \`ds-bridge\` command in your shell? Install it once with \`npm i -g github:lucksy/ds-bridge#release\`, or run the plugin's CLI directly:
+
+  node ${cliPath} config connect --verify
 
 Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` instead, which is non-interactive.`
     );

@@ -54,6 +54,8 @@ const DIRS = [
 	"hooks/",
 	"schemas/",
 	"types/",
+	// `ds-bridge` on the Bash PATH inside Claude Code sessions.
+	"bin/",
 ];
 /** Runtime scripts: the hooks and the slash-command adapter. */
 const SCRIPT = /^scripts\/(?:hook-[\w-]+|run-cli)\.mjs$/;
@@ -229,7 +231,8 @@ for (const path of sourceFiles()) {
 cpSync(join(root, "dist"), join(out, "dist"), { recursive: true });
 
 // The CLI and the history writer read package.json for the tool version; ship
-// a trimmed one — no dependency lists, nothing is installed from it.
+// a trimmed one — no dependency lists (dist/ is self-contained), so a global
+// npm install from the release branch installs nothing else.
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const runtimePkg = {};
 for (const key of [
@@ -237,6 +240,8 @@ for (const key of [
 	"version",
 	"description",
 	"type",
+	// `npm i -g github:lucksy/ds-bridge#release` → a global `ds-bridge`.
+	"bin",
 	"private",
 	"license",
 	"engines",

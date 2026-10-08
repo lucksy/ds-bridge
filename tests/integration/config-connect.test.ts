@@ -111,6 +111,9 @@ describe("ds-bridge config connect — non-TTY guard (built dist/cli.mjs)", () =
 		expect(code).toBe(2);
 		expect(stderr).toContain("config connect");
 		expect(stderr.toLowerCase()).toContain("terminal");
+		// The documented command first, then how to get it onto the PATH.
+		expect(stderr).toContain("ds-bridge config connect --verify");
+		expect(stderr).toContain("npm i -g github:lucksy/ds-bridge#release");
 		// It must not have blocked on stdin or written the secret file.
 		await expect(stat(envPath())).rejects.toThrow();
 	});
