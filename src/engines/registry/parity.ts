@@ -117,7 +117,9 @@ export function buildParity(registry: RegistryFile): ParityReport {
 
 	for (const match of matches) {
 		const score = typeof match.score === "number" ? match.score : 0;
-		if (score >= OK_THRESHOLD) {
+		const gaps = Array.isArray(match.variantGaps) ? match.variantGaps : [];
+		// A confident pair whose variants still differ is a prop mismatch, not ok.
+		if (score >= OK_THRESHOLD && gaps.length === 0) {
 			rows.push({
 				component: match.codeName,
 				status: "ok",
@@ -142,6 +144,18 @@ export function buildParity(registry: RegistryFile): ParityReport {
 		}
 	}
 
+	// Figma components Code Connect builds as recipes over a code component
+	// (SDS's page sections over <Section>): implemented, not missing.
+	for (const entry of Array.isArray(registry?.composed)
+		? registry.composed
+		: []) {
+		rows.push({
+			component: entry.name,
+			status: "ok",
+			detail: `Composed in code with ${entry.codeName} (${entry.nodeId}, Code Connect).`,
+		});
+	}
+
 	for (const entry of unmatchedFigma) {
 		// A deprecated Figma component is on its way out: no code is owed.
 		if (DEFAULT_DEPRECATED_PATTERN.test(entry.name)) continue;
@@ -159,6 +173,18 @@ export function buildParity(registry: RegistryFile): ParityReport {
 
 	for (const entry of unmatchedCode) {
 		if (isPart.has(`${entry.importPath}\u0000${entry.name}`)) continue;
+		if (Array.isArray(entry.composes) && entry.composes.length > 0) {
+			rows.push({
+				component: entry.name,
+				status: "ok",
+				detail: withParts(
+					`Code Connect builds ${entry.composes.length} Figma component(s) from it: ${entry.composes.join(", ")}.`,
+					entry.name,
+					entry.importPath,
+				),
+			});
+			continue;
+		}
 		const top = entry.candidates?.[0];
 		const detail =
 			top !== undefined

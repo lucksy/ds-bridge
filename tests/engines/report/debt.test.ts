@@ -47,7 +47,7 @@ describe("buildDebt", () => {
 		// `lint --fix` never touches off-system values, so the advice names the
 		// CLI listing command instead (SPEC-exec-report §3, review fix).
 		expect(it?.recommendation).toBe(
-			"Replace 10 off-system values with design tokens (run ds-bridge lint to list them)",
+			"Snap 10 off-system values to an existing token, or add the missing tokens (run ds-bridge lint to list them)",
 		);
 		// Zero off-system → no item at all.
 		expect(buildDebt({ offSystem: 0 }).items).toHaveLength(0);
@@ -190,7 +190,7 @@ describe("buildDebt — aggregate fallback for counts-only library-health", () =
 		expect(rollup.items.map((i) => i.recommendation)).toEqual([
 			"Replace 1 usage of deprecated components (run ds-bridge library-health for the list)",
 			"Re-attach 1 detached instance to its DS component (heuristic — verify)",
-			"Replace 1 off-system value with design tokens (run ds-bridge lint to list them)",
+			"Snap 1 off-system value to an existing token, or add the missing token (run ds-bridge lint to list them)",
 		]);
 	});
 

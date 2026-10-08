@@ -70,6 +70,11 @@ describe("tokens check — a Figma variables export", () => {
 			"missing-output @responsive.device",
 		]);
 		expect(run.stderr).toMatch(/mode "brand-b-light" skipped: .*Brand B\.800/);
+		expect(
+			(JSON.parse(run.stdout) as { notes?: string[] }).notes?.some((n) =>
+				n.startsWith('mode "brand-b-light" skipped'),
+			),
+		).toBe(true);
 	});
 });
 

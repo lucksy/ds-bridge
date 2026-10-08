@@ -30,12 +30,16 @@ export interface RegistryMatch {
 	aliasNodeIds?: string[];
 	/** "icon" for an icon-library component (reported apart from components). */
 	kind?: "icon";
+	/** The component's direct layers (`name:TYPE`), to spot detached copies. */
+	layers?: string[];
 }
 
 /** A persisted code component with no confident match + its figma candidates. */
 export interface RegistryUnmatchedCode {
 	name: string;
 	importPath: string;
+	/** Figma components Code Connect builds from this component (recipes). */
+	composes?: string[];
 	candidates: { figmaName: string; nodeId: string; score: number }[];
 }
 
@@ -45,6 +49,8 @@ export interface RegistryUnmatchedFigma {
 	nodeId: string;
 	/** Same-name copies collapsed into this component (an icon's sizes). */
 	aliasNodeIds?: string[];
+	/** The component's direct layers (`name:TYPE`), to spot detached copies. */
+	layers?: string[];
 	/** The Figma component's description; omitted when it has none. */
 	description?: string;
 	candidates: { codeName: string; score: number }[];
@@ -57,6 +63,8 @@ export interface RegistryFile {
 	matches: RegistryMatch[];
 	unmatchedCode: RegistryUnmatchedCode[];
 	unmatchedFigma: RegistryUnmatchedFigma[];
+	/** Figma components implemented as recipes over a code component. */
+	composed?: { name: string; nodeId: string; codeName: string }[];
 }
 
 // ── Helpers ──
@@ -111,13 +119,24 @@ export function toRegistryFile(
 				: {}),
 			...aliasesOf(m.figma.aliasNodeIds),
 			...(m.figma.kind === "icon" ? { kind: "icon" as const } : {}),
+			...(m.figma.layers !== undefined ? { layers: m.figma.layers } : {}),
 		}))
 		.sort((a, b) => byNameAsc(a.codeName, b.codeName));
 
+	const composedBy = new Map<string, string[]>();
+	for (const c of result.composed ?? []) {
+		composedBy.set(c.codeName, [
+			...(composedBy.get(c.codeName) ?? []),
+			c.figma.name,
+		]);
+	}
 	const unmatchedCode: RegistryUnmatchedCode[] = result.unmatchedCode
 		.map((u) => ({
 			name: u.code.name,
 			importPath: u.code.importPath,
+			...(composedBy.has(u.code.name)
+				? { composes: [...(composedBy.get(u.code.name) ?? [])].sort(byNameAsc) }
+				: {}),
 			candidates: u.candidates.map((c) => ({
 				figmaName: c.figma.name,
 				nodeId: c.figma.nodeId,
@@ -131,6 +150,7 @@ export function toRegistryFile(
 			name: u.figma.name,
 			nodeId: u.figma.nodeId,
 			...aliasesOf(u.figma.aliasNodeIds),
+			...(u.figma.layers !== undefined ? { layers: u.figma.layers } : {}),
 			...describedBy(u.figma.description),
 			candidates: u.candidates.map((c) => ({
 				codeName: c.code.name,
@@ -139,12 +159,20 @@ export function toRegistryFile(
 		}))
 		.sort((a, b) => byNameAsc(a.name, b.name));
 
+	const composed = (result.composed ?? [])
+		.map((c) => ({
+			name: c.figma.name,
+			nodeId: c.figma.nodeId,
+			codeName: c.codeName,
+		}))
+		.sort((a, b) => byNameAsc(a.name, b.name));
 	return {
 		schemaVersion: 1,
 		generatedAt,
 		matches,
 		unmatchedCode,
 		unmatchedFigma,
+		...(composed.length > 0 ? { composed } : {}),
 	};
 }
 

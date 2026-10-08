@@ -100,7 +100,8 @@ function actionText(action: DigestAction): string {
 		const n = action.count ?? 0;
 		const values = n === 1 ? "value" : "values";
 		const count = n > 0 ? `${n} ` : "";
-		return `Replace ${count}off-system ${values} with design tokens (run \`ds-bridge lint\` to list them)`;
+		const tokens = n === 1 ? "token" : "tokens";
+		return `Snap ${count}off-system ${values} to an existing token, or add the missing ${tokens} (run \`ds-bridge lint\` to list them)`;
 	}
 	const reason = ACTION_REASON[action.command] ?? "see the docs";
 	return `Run \`${action.command}\` — ${reason}`;

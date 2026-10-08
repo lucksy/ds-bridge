@@ -593,7 +593,9 @@ describe("matchComponents — icon libraries and Code Connect", () => {
 			"IconActivity=Activity",
 			"TextListItem=Text List Item",
 		]);
-		expect(result.matches.every((m) => m.score === 1)).toBe(true);
+		// Declared pairs: the name is certain (1), the score still carries shape.
+		expect(result.matches.every((m) => m.nameScore === 1)).toBe(true);
+		expect(result.matches.every((m) => m.score >= 0.85)).toBe(true);
 	});
 });
 
@@ -672,6 +674,76 @@ describe("variantGaps — namespaced values and spacing-scale props", () => {
 				}),
 			],
 			[figma("Section", { Tone: ["Brand", "Neutral"] })],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([]);
+	});
+});
+
+describe("matchComponents — Code Connect recipes (one code component, many Figma components)", () => {
+	it("keeps a 1:1 match only where names correspond; the rest are composed in code", () => {
+		const result = matchComponents(
+			[code("Hero"), code("Section"), code("TextListItem")],
+			[
+				figma("Hero Basic", {}, "1:1"),
+				figma("Hero Form", {}, "1:2"),
+				figma("Page Accordion", {}, "2:1"),
+				figma("Page Product", {}, "2:2"),
+				figma("Text List Item", {}, "3:1"),
+				figma("Text Link List Item", {}, "3:2"),
+			],
+			{
+				pins: [
+					{ codeName: "Hero", nodeId: "1:1" },
+					{ codeName: "Hero", nodeId: "1:2" },
+					{ codeName: "Section", nodeId: "2:1" },
+					{ codeName: "Section", nodeId: "2:2" },
+					{ codeName: "TextListItem", nodeId: "3:1" },
+					{ codeName: "TextListItem", nodeId: "3:2" },
+				],
+			},
+		);
+		expect(
+			result.matches.map((m) => `${m.code.name}=${m.figma.name}`).sort(),
+		).toEqual(["Hero=Hero Basic", "TextListItem=Text List Item"]);
+		expect(
+			(result.composed ?? [])
+				.map((c) => `${c.figma.name}<${c.codeName}`)
+				.sort(),
+		).toEqual([
+			"Hero Form<Hero",
+			"Page Accordion<Section",
+			"Page Product<Section",
+			"Text Link List Item<TextListItem",
+		]);
+		expect(result.unmatchedFigma).toEqual([]);
+	});
+
+	it("scores a pinned pair by its real shape, so variant gaps still show", () => {
+		const result = matchComponents(
+			[code("AvatarGroup", { spacing: ["100", "200"] })],
+			[figma("Avatar Group", { Spacing: ["Overlap", "Spaced"] }, "9:1")],
+			{ pins: [{ codeName: "AvatarGroup", nodeId: "9:1" }] },
+		);
+		expect(result.matches[0]?.score).toBeLessThan(1);
+		expect(result.matches[0]?.variantGaps.length).toBeGreaterThan(0);
+	});
+
+	it("never offers an icon as the closest Figma component of a non-icon code component", () => {
+		const result = matchComponents(
+			[code("Table", { size: ["sm", "md"] })],
+			[{ ...figma("Table", {}, "4:1"), kind: "icon" }],
+		);
+		expect(result.unmatchedCode[0]?.candidates).toEqual([]);
+	});
+
+	it("drops a Figma-only axis the code component inherits (Tooltip placement)", () => {
+		const tooltip: CodeComponent = {
+			...code("Tooltip"),
+			inherited: ["placement"],
+		};
+		const result = matchComponents(
+			[tooltip],
+			[figma("Tooltip", { Placement: ["Top", "Bottom"] })],
 		);
 		expect(result.matches[0]?.variantGaps).toEqual([]);
 	});

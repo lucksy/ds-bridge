@@ -35,6 +35,11 @@ export interface FigmaComponentModel {
 	aliasNodeIds?: string[];
 	/** "icon" when it lives in an icon library (a page / section named Icons). */
 	kind?: "icon";
+	/**
+	 * The component's direct layers as `name:TYPE` (a set's first variant):
+	 * a detached copy keeps them, whatever it is renamed. Two or more only.
+	 */
+	layers?: string[];
 }
 
 // ── Structural input shapes (only the fields we reason about) ──
@@ -63,6 +68,41 @@ interface DocumentNode {
 	type?: unknown;
 	description?: unknown;
 	children?: DocumentNode[];
+}
+
+/** A component node's layer signature (`name:TYPE` per direct child), ≥2 layers. */
+export function layerSignature(node: DocumentNode): string[] | undefined {
+	const owner =
+		node.type === "COMPONENT_SET"
+			? node.children?.find((c) => c.type === "COMPONENT")
+			: node;
+	const layers = (owner?.children ?? []).map(
+		(c) => `${asString(c.name)}:${asString(c.type)}`,
+	);
+	// A component built only of instances (Button Group) has the signature of
+	// any layout row of those instances — never evidence of a detached copy.
+	return layers.length >= 2 && layers.some((l) => !l.endsWith(":INSTANCE"))
+		? layers
+		: undefined;
+}
+
+/** Every component (set) id in the document → its layer signature. */
+function layerSignatures(
+	document: DocumentNode | undefined,
+): Map<string, string[]> {
+	const out = new Map<string, string[]>();
+	if (document === undefined) return out;
+	const stack: DocumentNode[] = [document];
+	while (stack.length > 0) {
+		const node = stack.pop() as DocumentNode;
+		if (node.type === "COMPONENT_SET" || node.type === "COMPONENT") {
+			const layers = layerSignature(node);
+			if (layers !== undefined) out.set(asString(node.id), layers);
+			if (node.type === "COMPONENT_SET") continue;
+		}
+		for (const child of node.children ?? []) stack.push(child);
+	}
+	return out;
 }
 
 /** A file-level `components` / `componentSets` map (GET /v1/files/:key). */
@@ -159,6 +199,13 @@ interface PublishedAccumulator {
 	icon?: boolean;
 }
 
+/**
+ * Example screens and templates — a page called Examples, or a component named
+ * `Examples/Shop` — show the system in use; they are not library components.
+ */
+const EXAMPLE_NAME = /^(?:examples?|templates?)\s*\//i;
+const EXAMPLE_PAGE = /^(?:examples?|templates?|playground|sandbox)$/i;
+
 /** A page / section / frame name that marks an icon library. */
 const ICON_CONTEXT = /(^|[^a-z])icons?([^a-z]|$)/i;
 
@@ -207,6 +254,7 @@ function buildPublished(input: PublishedComponentsInput | undefined): {
 			}
 		} else {
 			const frame = component.containing_frame;
+			if (EXAMPLE_PAGE.test(asString(frame?.pageName).trim())) continue;
 			const icon =
 				ICON_CONTEXT.test(asString(frame?.pageName)) ||
 				ICON_CONTEXT.test(asString(frame?.name));
@@ -264,6 +312,10 @@ function buildInline(
 		// Non-null: guarded by stack.length > 0.
 		const { node, icon } = stack.pop() as { node: DocumentNode; icon: boolean };
 		const type = node.type;
+		// An Examples / Templates page shows the system in use: not the library.
+		if (type === "CANVAS" && EXAMPLE_PAGE.test(asString(node.name).trim())) {
+			continue;
+		}
 
 		if (type === "COMPONENT_SET" || type === "COMPONENT") {
 			const nodeId = asString(node.id);
@@ -324,7 +376,12 @@ export function buildFigmaComponentModel(
 		if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
 	}
 
-	return normalizeComponentModels([...byId.values()]);
+	const signatures = layerSignatures(input.fileDocument);
+	const withLayers = [...byId.values()].map((model) => {
+		const layers = signatures.get(model.nodeId);
+		return layers === undefined ? model : { ...model, layers };
+	});
+	return normalizeComponentModels(withLayers);
 }
 
 /**
@@ -337,7 +394,9 @@ export function buildFigmaComponentModel(
 export function normalizeComponentModels(
 	models: readonly FigmaComponentModel[],
 ): FigmaComponentModel[] {
-	const visible = models.filter((m) => !/^[._]/.test(m.name.trim()));
+	const visible = models.filter(
+		(m) => !/^[._]/.test(m.name.trim()) && !EXAMPLE_NAME.test(m.name.trim()),
+	);
 	return collapseSameName(visible).sort((a, b) => {
 		if (a.name !== b.name) return a.name < b.name ? -1 : 1;
 		return compareIds(a.nodeId, b.nodeId);

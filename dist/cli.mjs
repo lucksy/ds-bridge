@@ -10605,7 +10605,7 @@ function buildDebt(input) {
         subject: "off-system values",
         count: offSystem,
         weight: WEIGHT["off-system"],
-        recommendation: `Replace ${offSystem} off-system ${offSystem === 1 ? "value" : "values"} with design tokens (run ds-bridge lint to list them)`
+        recommendation: `Snap ${offSystem} off-system ${offSystem === 1 ? "value" : "values"} to an existing token, or add the missing ${offSystem === 1 ? "token" : "tokens"} (run ds-bridge lint to list them)`
       }
     });
   }
@@ -10953,6 +10953,23 @@ function assessLibraryHealth(file, opts) {
     }
     layersByName.set(node.name, layers);
   });
+  const signatures = /* @__PURE__ */ new Set();
+  walk(file.document, (node) => {
+    if (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return;
+    const owner = node.type === "COMPONENT_SET" ? node.children?.find((c3) => c3?.type === "COMPONENT") : node;
+    const layers = (owner?.children ?? []).filter(
+      (c3) => c3 !== void 0
+    );
+    if (layers.length >= 2 && layers.some((c3) => c3.type !== "INSTANCE")) {
+      signatures.add(layers.map((c3) => `${c3.name}:${c3.type}`).join("|"));
+    }
+  });
+  const signatureOf = (node) => {
+    const children = (node.children ?? []).filter(
+      (c3) => c3 !== void 0
+    );
+    return children.length >= 2 ? children.map((c3) => `${c3.name}:${c3.type}`).join("|") : void 0;
+  };
   const looksDetached = (node) => {
     const layers = layersByName.get(node.name);
     if (layers === void 0 || layers.size === 0) return true;
@@ -10964,6 +10981,7 @@ function assessLibraryHealth(file, opts) {
     return shared / children.length >= 0.5;
   };
   const hotspots = [];
+  let placedInstances = 0;
   const deprecatedCounts = /* @__PURE__ */ new Map();
   const detached = [];
   const mainNameOf = (componentId) => {
@@ -10975,6 +10993,7 @@ function assessLibraryHealth(file, opts) {
   walk(file.document, (node, ctx) => {
     const isInstance = node.type === "INSTANCE";
     const placed = isInstance && !ctx.inDefinition && !ctx.inInstance && !isPrivateName(mainNameOf(node.componentId));
+    if (placed) placedInstances += 1;
     if (placed) {
       const drifted = subtreeOverrides(node).filter(isDesignOverride);
       const overrideCount = drifted.length;
@@ -11000,7 +11019,7 @@ function assessLibraryHealth(file, opts) {
           );
         }
       }
-    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && !ctx.topLevel && !ctx.inDefinition && !ctx.inInstance && !isPrivateName(node.name) && componentNames.has(node.name) && looksDetached(node)) {
+    } else if (hasComponents && (node.type === "FRAME" || node.type === "GROUP") && !ctx.topLevel && !ctx.inDefinition && !ctx.inInstance && !isPrivateName(node.name) && (componentNames.has(node.name) && looksDetached(node) || signatures.has(signatureOf(node) ?? "\0"))) {
       detached.push({ nodeId: node.id, name: node.name, heuristic: true });
     }
   });
@@ -11009,7 +11028,8 @@ function assessLibraryHealth(file, opts) {
   const totals = {
     overrideHotspots: hotspots.length,
     deprecatedUsage: deprecatedUsageTotal,
-    detachedCandidates: detached.length
+    detachedCandidates: detached.length,
+    placedInstances
   };
   hotspots.sort((a, b) => {
     if (a.overrideCount !== b.overrideCount) {
@@ -11074,7 +11094,8 @@ function buildParity(registry) {
   const rows = [];
   for (const match of matches) {
     const score = typeof match.score === "number" ? match.score : 0;
-    if (score >= OK_THRESHOLD) {
+    const gaps = Array.isArray(match.variantGaps) ? match.variantGaps : [];
+    if (score >= OK_THRESHOLD && gaps.length === 0) {
       rows.push({
         component: match.codeName,
         status: "ok",
@@ -11096,6 +11117,13 @@ function buildParity(registry) {
       });
     }
   }
+  for (const entry of Array.isArray(registry?.composed) ? registry.composed : []) {
+    rows.push({
+      component: entry.name,
+      status: "ok",
+      detail: `Composed in code with ${entry.codeName} (${entry.nodeId}, Code Connect).`
+    });
+  }
   for (const entry of unmatchedFigma) {
     if (DEFAULT_DEPRECATED_PATTERN.test(entry.name)) continue;
     const top2 = entry.candidates?.[0];
@@ -11108,6 +11136,18 @@ function buildParity(registry) {
   }
   for (const entry of unmatchedCode) {
     if (isPart.has(`${entry.importPath}\0${entry.name}`)) continue;
+    if (Array.isArray(entry.composes) && entry.composes.length > 0) {
+      rows.push({
+        component: entry.name,
+        status: "ok",
+        detail: withParts(
+          `Code Connect builds ${entry.composes.length} Figma component(s) from it: ${entry.composes.join(", ")}.`,
+          entry.name,
+          entry.importPath
+        )
+      });
+      continue;
+    }
     const top2 = entry.candidates?.[0];
     const detail = top2 !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top2.figmaName} (${top2.nodeId}) @ ${show(top2.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
     rows.push({
@@ -11405,7 +11445,9 @@ function subScore(kind, input) {
     case "overrides": {
       if (input.overrides === void 0) return void 0;
       const hotspots = asNumber2(input.overrides.hotspots);
-      return clamp01(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots);
+      const instances = asNumber2(input.overrides.instances);
+      const scale = instances > 100 ? 100 / instances : 1;
+      return clamp01(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots * scale);
     }
   }
 }
@@ -11586,10 +11628,11 @@ function executiveInputs(records, registry) {
   }
   if (health !== void 0) {
     const hotspots = health.overrideHotspots;
+    const instances = isFiniteNumber2(health.placedInstances) ? { instances: health.placedInstances } : {};
     if (Array.isArray(hotspots)) {
-      consistency.overrides = { hotspots: hotspots.length };
+      consistency.overrides = { hotspots: hotspots.length, ...instances };
     } else if (isFiniteNumber2(hotspots)) {
-      consistency.overrides = { hotspots };
+      consistency.overrides = { hotspots, ...instances };
     }
   }
   if (lint === void 0 && health === void 0) {
@@ -17251,7 +17294,8 @@ function actionText(action) {
     const n = action.count ?? 0;
     const values = n === 1 ? "value" : "values";
     const count = n > 0 ? `${n} ` : "";
-    return `Replace ${count}off-system ${values} with design tokens (run \`ds-bridge lint\` to list them)`;
+    const tokens = n === 1 ? "token" : "tokens";
+    return `Snap ${count}off-system ${values} to an existing token, or add the missing ${tokens} (run \`ds-bridge lint\` to list them)`;
   }
   const reason = ACTION_REASON[action.command] ?? "see the docs";
   return `Run \`${action.command}\` \u2014 ${reason}`;
@@ -18017,7 +18061,7 @@ function normalizeName2(name) {
 }
 async function scanCode(targetDir, registry) {
   shimCjsGlobals();
-  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-LXNJDCUH.mjs");
+  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-NGHFEHEE.mjs");
   const packaged = new Set(
     registry.matches.filter((m) => !/\.(?:tsx?|jsx?)$/.test(m.importPath)).map((m) => normalizeName2(m.codeName))
   );
@@ -18888,11 +18932,20 @@ function toRegistryFile(result, generatedAt) {
     ...describedBy(m.figma.description),
     ...m.variantGaps !== void 0 && m.variantGaps.length > 0 ? { variantGaps: m.variantGaps } : {},
     ...aliasesOf(m.figma.aliasNodeIds),
-    ...m.figma.kind === "icon" ? { kind: "icon" } : {}
+    ...m.figma.kind === "icon" ? { kind: "icon" } : {},
+    ...m.figma.layers !== void 0 ? { layers: m.figma.layers } : {}
   })).sort((a, b) => byNameAsc4(a.codeName, b.codeName));
+  const composedBy = /* @__PURE__ */ new Map();
+  for (const c3 of result.composed ?? []) {
+    composedBy.set(c3.codeName, [
+      ...composedBy.get(c3.codeName) ?? [],
+      c3.figma.name
+    ]);
+  }
   const unmatchedCode = result.unmatchedCode.map((u) => ({
     name: u.code.name,
     importPath: u.code.importPath,
+    ...composedBy.has(u.code.name) ? { composes: [...composedBy.get(u.code.name) ?? []].sort(byNameAsc4) } : {},
     candidates: u.candidates.map((c3) => ({
       figmaName: c3.figma.name,
       nodeId: c3.figma.nodeId,
@@ -18903,18 +18956,25 @@ function toRegistryFile(result, generatedAt) {
     name: u.figma.name,
     nodeId: u.figma.nodeId,
     ...aliasesOf(u.figma.aliasNodeIds),
+    ...u.figma.layers !== void 0 ? { layers: u.figma.layers } : {},
     ...describedBy(u.figma.description),
     candidates: u.candidates.map((c3) => ({
       codeName: c3.code.name,
       score: round3(c3.score)
     }))
   })).sort((a, b) => byNameAsc4(a.name, b.name));
+  const composed = (result.composed ?? []).map((c3) => ({
+    name: c3.figma.name,
+    nodeId: c3.figma.nodeId,
+    codeName: c3.codeName
+  })).sort((a, b) => byNameAsc4(a.name, b.name));
   return {
     schemaVersion: 1,
     generatedAt,
     matches,
     unmatchedCode,
-    unmatchedFigma
+    unmatchedFigma,
+    ...composed.length > 0 ? { composed } : {}
   };
 }
 var DEPRECATED_RE = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
@@ -18972,6 +19032,19 @@ function resolveEntry(registry, nodeNameOrId) {
 var DIMENSION_NEAR_PX2 = 1;
 var NEAR_LIMIT2 = 3;
 function resolveComponent(requirement, registry) {
+  if (requirement.detachedFrom !== void 0) {
+    const candidates = requirement.detachedFrom.map((figmaName) => {
+      const outcome2 = resolveEntry(registry, figmaName);
+      return outcome2.kind === "match" ? outcome2.entry.codeName : figmaName;
+    });
+    const names = requirement.detachedFrom.join(" or ");
+    return {
+      requirement,
+      reason: "detached-instance",
+      candidates,
+      suggestion: `"${requirement.name}" is a detached copy of ${names} \u2014 reattach it in Figma, then implement it as that component. Do not rebuild it by hand.`
+    };
+  }
   const byComponent = requirement.componentName !== void 0 ? resolveEntry(registry, requirement.componentName) : void 0;
   const byId = byComponent !== void 0 && byComponent.kind !== "not-found" ? byComponent : resolveEntry(registry, requirement.nodeId);
   const outcome = byId.kind === "not-found" ? resolveEntry(registry, requirement.name) : byId;
@@ -19235,11 +19308,31 @@ function mainComponentName(node, maps) {
   const set = component.componentSetId !== void 0 ? maps.componentSets?.[component.componentSetId]?.name : void 0;
   return set ?? component.name;
 }
-function deriveRequirements(root2, maps = {}) {
+function deriveRequirements(root2, maps = {}, signatures = []) {
+  const bySignature = /* @__PURE__ */ new Map();
+  for (const { figmaName, layers } of signatures) {
+    if (layers.length < 2 || layers.every((l) => l.endsWith(":INSTANCE")))
+      continue;
+    const key2 = layers.join("|");
+    bySignature.set(key2, [...bySignature.get(key2) ?? [], figmaName]);
+  }
   const requirements = [];
   const stack2 = [root2];
   while (stack2.length > 0) {
     const node = stack2.pop();
+    if (node !== root2 && (node.type === "FRAME" || node.type === "GROUP") && Array.isArray(node.children) && node.children.length >= 2) {
+      const key2 = node.children.map((c3) => `${c3?.name ?? ""}:${c3?.type ?? ""}`).join("|");
+      const from = bySignature.get(key2);
+      if (from !== void 0) {
+        requirements.push({
+          kind: "component",
+          nodeId: node.id,
+          name: node.name,
+          detachedFrom: [...from].sort()
+        });
+        continue;
+      }
+    }
     if (node.type === "INSTANCE") {
       const componentName = mainComponentName(node, maps);
       requirements.push({
@@ -19485,7 +19578,19 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     fail8(fetched.message);
     return;
   }
-  const requirements = deriveRequirements(fetched.root, fetched.maps);
+  const signatures = [
+    ...registryOutcome.registry.matches.flatMap(
+      (m) => m.layers !== void 0 ? [{ figmaName: m.figmaName, layers: m.layers }] : []
+    ),
+    ...registryOutcome.registry.unmatchedFigma.flatMap(
+      (u) => u.layers !== void 0 ? [{ figmaName: u.name, layers: u.layers }] : []
+    )
+  ];
+  const requirements = deriveRequirements(
+    fetched.root,
+    fetched.maps,
+    signatures
+  );
   const gapsReport = findGaps({
     requirements,
     registry: registryOutcome.registry,
@@ -21105,6 +21210,28 @@ function diffComponents(before, after) {
 }
 
 // src/engines/registry/scan-figma.ts
+function layerSignature(node) {
+  const owner = node.type === "COMPONENT_SET" ? node.children?.find((c3) => c3.type === "COMPONENT") : node;
+  const layers = (owner?.children ?? []).map(
+    (c3) => `${asString2(c3.name)}:${asString2(c3.type)}`
+  );
+  return layers.length >= 2 && layers.some((l) => !l.endsWith(":INSTANCE")) ? layers : void 0;
+}
+function layerSignatures(document) {
+  const out = /* @__PURE__ */ new Map();
+  if (document === void 0) return out;
+  const stack2 = [document];
+  while (stack2.length > 0) {
+    const node = stack2.pop();
+    if (node.type === "COMPONENT_SET" || node.type === "COMPONENT") {
+      const layers = layerSignature(node);
+      if (layers !== void 0) out.set(asString2(node.id), layers);
+      if (node.type === "COMPONENT_SET") continue;
+    }
+    for (const child of node.children ?? []) stack2.push(child);
+  }
+  return out;
+}
 function isString(value2) {
   return typeof value2 === "string";
 }
@@ -21151,6 +21278,8 @@ function mergeVariantProps(into, from) {
 function compareIds(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+var EXAMPLE_NAME = /^(?:examples?|templates?)\s*\//i;
+var EXAMPLE_PAGE = /^(?:examples?|templates?|playground|sandbox)$/i;
 var ICON_CONTEXT = /(^|[^a-z])icons?([^a-z]|$)/i;
 function buildPublished(input) {
   const components = input?.meta?.components;
@@ -21185,6 +21314,7 @@ function buildPublished(input) {
       }
     } else {
       const frame = component.containing_frame;
+      if (EXAMPLE_PAGE.test(asString2(frame?.pageName).trim())) continue;
       const icon = ICON_CONTEXT.test(asString2(frame?.pageName)) || ICON_CONTEXT.test(asString2(frame?.name));
       standalone.push({
         name: rawName,
@@ -21226,6 +21356,9 @@ function buildInline(document, publishedIds, descriptions) {
   while (stack2.length > 0) {
     const { node, icon } = stack2.pop();
     const type = node.type;
+    if (type === "CANVAS" && EXAMPLE_PAGE.test(asString2(node.name).trim())) {
+      continue;
+    }
     if (type === "COMPONENT_SET" || type === "COMPONENT") {
       const nodeId = asString2(node.id);
       if (nodeId.length > 0 && !publishedIds.has(nodeId) && !byId.has(nodeId)) {
@@ -21263,10 +21396,17 @@ function buildFigmaComponentModel(input) {
   for (const model of inlineModels) {
     if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
   }
-  return normalizeComponentModels([...byId.values()]);
+  const signatures = layerSignatures(input.fileDocument);
+  const withLayers = [...byId.values()].map((model) => {
+    const layers = signatures.get(model.nodeId);
+    return layers === void 0 ? model : { ...model, layers };
+  });
+  return normalizeComponentModels(withLayers);
 }
 function normalizeComponentModels(models) {
-  const visible = models.filter((m) => !/^[._]/.test(m.name.trim()));
+  const visible = models.filter(
+    (m) => !/^[._]/.test(m.name.trim()) && !EXAMPLE_NAME.test(m.name.trim())
+  );
   return collapseSameName(visible).sort((a, b) => {
     if (a.name !== b.name) return a.name < b.name ? -1 : 1;
     return compareIds(a.nodeId, b.nodeId);
@@ -21930,6 +22070,7 @@ function appendLibraryHealthHistory(totals, lists, fileKey) {
     overrideHotspots: totals.overrideHotspots,
     deprecatedUsage: totals.deprecatedUsage,
     detachedCandidates: totals.detachedCandidates,
+    ...totals.placedInstances !== void 0 ? { placedInstances: totals.placedInstances } : {},
     // F2 — the top-N lists (new keys; the counts above stay numbers).
     ...lists !== void 0 ? lists : {}
   };
@@ -23789,6 +23930,7 @@ function variantGaps(codeVariants, figmaVariants, codeBooleans = /* @__PURE__ */
 }
 function booleanProps(component) {
   const out = /* @__PURE__ */ new Set();
+  for (const name of component.inherited ?? []) out.add(normalizeName5(name));
   for (const prop of component.props ?? []) {
     if (prop.type !== "boolean") continue;
     const key2 = normalizeName5(prop.name);
@@ -23803,6 +23945,10 @@ function isIconName(codeName, figmaModel) {
   const c3 = normalizeName5(codeName);
   const f3 = normalizeName5(figmaModel.name);
   return c3 === `icon${f3}` || c3 === `${f3}icon`;
+}
+function iconCompatible(codeComponent, figmaModel) {
+  if (figmaModel.kind !== "icon") return true;
+  return isIconName(codeComponent.name, figmaModel) || /(^|\/)icons?\//i.test(codeComponent.importPath);
 }
 function scorePair(codeComponent, figmaModel) {
   const name = isIconName(codeComponent.name, figmaModel) ? 1 : nameScore(codeComponent.name, figmaModel.name);
@@ -23821,7 +23967,9 @@ function byNameAsc6(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 function rankFigmaCandidates(codeComponent, figma) {
-  return figma.map((figmaModel) => ({
+  return figma.filter(
+    (figmaModel) => figmaModel.kind !== "icon" || isIconName(codeComponent.name, figmaModel)
+  ).map((figmaModel) => ({
     figma: figmaModel,
     score: scorePair(codeComponent, figmaModel).score
   })).sort(
@@ -23847,29 +23995,61 @@ function matchComponents(code, figma, options = {}) {
       if (!figmaIndexById.has(key2)) figmaIndexById.set(key2, i);
     }
   });
+  const composed = [];
+  const pinsByCode = /* @__PURE__ */ new Map();
   for (const pin of options.pins ?? []) {
     const f3 = figmaIndexById.get(pin.nodeId.replace(/-/g, ":"));
-    const c3 = code.findIndex((comp) => comp.name === pin.codeName);
-    if (f3 === void 0 || c3 === -1) continue;
-    if (matchedCode.has(c3) || matchedFigma.has(f3)) continue;
+    if (f3 === void 0) continue;
+    const list = pinsByCode.get(pin.codeName) ?? [];
+    if (!list.includes(f3)) list.push(f3);
+    pinsByCode.set(pin.codeName, list);
+  }
+  for (const [codeName, figmaIndexes] of pinsByCode) {
+    const c3 = code.findIndex((comp) => comp.name === codeName);
+    if (c3 === -1 || matchedCode.has(c3)) continue;
     const codeComponent = code[c3];
-    const figmaModel = figma[f3];
+    const free = figmaIndexes.filter((f3) => !matchedFigma.has(f3));
+    if (free.length === 0) continue;
+    let primary = free.length === 1 ? free[0] : void 0;
+    if (primary === void 0) {
+      let best = MATCH_THRESHOLD;
+      for (const f3 of free) {
+        const score = nameScore(
+          codeName,
+          figma[f3].name
+        );
+        if (score >= best) {
+          if (score > best || primary === void 0) primary = f3;
+          best = score;
+        }
+      }
+    }
+    for (const f3 of free) {
+      if (f3 === primary) continue;
+      matchedFigma.add(f3);
+      composed.push({ figma: figma[f3], codeName });
+    }
+    if (primary === void 0) continue;
+    const figmaModel = figma[primary];
+    const booleans = booleanProps(codeComponent);
+    const shape = shapeScore(
+      codeComponent.variants,
+      figmaModel.variantProps,
+      booleans
+    );
     matchedCode.add(c3);
-    matchedFigma.add(f3);
+    matchedFigma.add(primary);
     matches.push({
       code: codeComponent,
       figma: figmaModel,
-      score: 1,
+      // The pairing is declared, so the name is certain; the shape is not.
+      score: NAME_WEIGHT + SHAPE_WEIGHT * shape,
       nameScore: 1,
-      shapeScore: shapeScore(
-        codeComponent.variants,
-        figmaModel.variantProps,
-        booleanProps(codeComponent)
-      ),
+      shapeScore: shape,
       variantGaps: variantGaps(
         codeComponent.variants,
         figmaModel.variantProps,
-        booleanProps(codeComponent)
+        booleans
       )
     });
   }
@@ -23882,6 +24062,7 @@ function matchComponents(code, figma, options = {}) {
       if (matchedFigma.has(f3)) continue;
       const figmaModel = figma[f3];
       if (figmaModel === void 0) continue;
+      if (!iconCompatible(codeComponent, figmaModel)) continue;
       const parts = scorePair(codeComponent, figmaModel);
       if (parts.score >= MATCH_THRESHOLD) {
         edges.push({ codeIndex: c3, figmaIndex: f3, parts });
@@ -23909,6 +24090,7 @@ function matchComponents(code, figma, options = {}) {
       if (matchedFigma.has(f3)) continue;
       const figmaModel2 = figma[f3];
       if (figmaModel2 === void 0) continue;
+      if (!iconCompatible(codeComponent, figmaModel2)) continue;
       const s = scorePair(codeComponent, figmaModel2).score;
       if (s > best) {
         second = best;
@@ -23961,7 +24143,16 @@ function matchComponents(code, figma, options = {}) {
     });
   }
   unmatchedFigma.sort((a, b) => byNameAsc6(a.figma.name, b.figma.name));
-  return { matches, unmatchedCode, unmatchedFigma };
+  return {
+    matches,
+    unmatchedCode,
+    unmatchedFigma,
+    ...composed.length > 0 ? {
+      composed: composed.sort(
+        (a, b) => byNameAsc6(a.figma.name, b.figma.name)
+      )
+    } : {}
+  };
 }
 
 // src/io/code-connect.ts
@@ -24089,7 +24280,7 @@ async function scanCode2(targetDir, configuredPaths) {
   backfillCjsGlobals();
   const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
     [
-      import("./scan-code-LXNJDCUH.mjs"),
+      import("./scan-code-NGHFEHEE.mjs"),
       import("./component-paths-YQ7K5KU3.mjs")
     ]
   );
@@ -24113,7 +24304,7 @@ async function scanCode2(targetDir, configuredPaths) {
 }
 async function scanPackages(targetDir, wanted) {
   if (wanted.size === 0) return [];
-  const { scanPackageComponents } = await import("./scan-code-LXNJDCUH.mjs");
+  const { scanPackageComponents } = await import("./scan-code-NGHFEHEE.mjs");
   return scanPackageComponents(targetDir, wanted);
 }
 function byPath(a, b) {
@@ -30165,14 +30356,15 @@ function notesFor(result, skippedModes) {
   }
   return notes;
 }
-function checkJson(result, skippedModes, source2) {
+function checkJson(result, skippedModes, source2, loaderWarnings = []) {
+  const notes = [...loaderWarnings, ...notesFor(result, skippedModes)];
   return JSON.stringify(
     {
       entries: result.entries,
       inSync: result.entries.length === 0,
       source: source2,
       ...result.unbuiltLayers !== void 0 ? { unbuiltLayers: result.unbuiltLayers } : {},
-      ...notesFor(result, skippedModes).length > 0 ? { notes: notesFor(result, skippedModes) } : {},
+      ...notes.length > 0 ? { notes } : {},
       ...skippedModes.length > 0 ? { skippedModes } : {}
     },
     null,
@@ -30292,8 +30484,10 @@ function runCheck(path, options) {
     modes: (loaded.modes ?? []).map((m) => m.mode)
   };
   if (format === "json") {
-    process.stdout.write(`${checkJson(result, skippedModes, source2)}
-`);
+    process.stdout.write(
+      `${checkJson(result, skippedModes, source2, loaded.warnings)}
+`
+    );
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
     process.stdout.write(`${renderCheckTerm(result, color, source2)}

@@ -7,7 +7,8 @@
 // The three sub-signals (each 0–100), from already-extracted inputs:
 //   - tokens:     100·refs/(refs+literals)            — a true on-system ratio
 //   - components: 100·matched/(matched+custom)        — a true match ratio
-//   - overrides:  max(0, 100 − 8·hotspots)            — a DOCUMENTED-OPINION penalty
+//   - overrides:  max(0, 100 − 8·hotspots), per 100 placed instances when more
+//                 were checked                       — a DOCUMENTED-OPINION penalty
 // `library-health` carries override COUNTS without a denominator, so the override
 // sub-signal is a documented opinion, not a ratio — the same honesty caveat
 // score.ts states for drift/lint. A sub-signal whose input is absent OR whose
@@ -44,7 +45,8 @@ export interface ConsistencyInput {
 	/** Component match: registry matches (`matched`) vs unmatched-code (`custom`). */
 	components?: { matched: number; custom: number };
 	/** Library override hotspots count (documented-opinion penalty input). */
-	overrides?: { hotspots: number };
+	/** `instances`: placed instances checked (1.20.1+); scales the penalty. */
+	overrides?: { hotspots: number; instances?: number };
 	/** Optional weights override (merged onto defaults is not needed — full table). */
 	weights?: ConsistencyWeights;
 }
@@ -112,7 +114,11 @@ function subScore(
 		case "overrides": {
 			if (input.overrides === undefined) return undefined;
 			const hotspots = asNumber(input.overrides.hotspots);
-			return clamp01(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots);
+			// Per 100 placed instances once more than 100 were checked: 35
+			// hotspots in a whole library are not 35 in one screen.
+			const instances = asNumber(input.overrides.instances);
+			const scale = instances > 100 ? 100 / instances : 1;
+			return clamp01(100 - OVERRIDE_PENALTY_PER_HOTSPOT * hotspots * scale);
 		}
 	}
 }

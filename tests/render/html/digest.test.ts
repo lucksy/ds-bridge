@@ -159,7 +159,7 @@ describe("renderDigestHtml — CLI actions (D6)", () => {
 			"<li>Run <code>ds-bridge handoff &lt;frame-url&gt;</code> — readiness is below the gate</li>",
 		);
 		expect(html).toContain(
-			"<li>Replace 1 off-system value with design tokens (run <code>ds-bridge lint</code> to list them)</li>",
+			"<li>Snap 1 off-system value to an existing token, or add the missing token (run <code>ds-bridge lint</code> to list them)</li>",
 		);
 		expect(html).not.toContain("/ds-bridge:");
 		expect(html).not.toContain("T00:00:00");

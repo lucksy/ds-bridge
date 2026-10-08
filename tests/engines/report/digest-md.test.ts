@@ -77,7 +77,7 @@ _Window: changes since 2026-06-01._
 ## Actions
 
 1. Run \`ds-bridge tokens check\` — review breaking token drift
-2. Replace 4 off-system values with design tokens (run \`ds-bridge lint\` to list them)
+2. Snap 4 off-system values to an existing token, or add the missing tokens (run \`ds-bridge lint\` to list them)
 3. Run \`ds-bridge handoff <frame-url>\` — readiness is below the gate
 `,
 		);
@@ -173,7 +173,7 @@ describe("renderDigestMarkdown — actions capped at 3", () => {
 		const md = renderDigestMarkdown(model);
 		expect(md).toContain("1. Run `ds-bridge tokens check`");
 		expect(md).toContain(
-			"2. Replace 4 off-system values with design tokens (run `ds-bridge lint` to list them)",
+			"2. Snap 4 off-system values to an existing token, or add the missing tokens (run `ds-bridge lint` to list them)",
 		);
 		expect(md).not.toContain("/ds-bridge:");
 		expect(md).not.toContain("--fix");

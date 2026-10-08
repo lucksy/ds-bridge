@@ -33,6 +33,11 @@ export type FrameRequirement =
 			name: string;
 			/** The instance's main component (set) name, when known. */
 			componentName?: string;
+			/**
+			 * Set for a FRAME that is a detached copy: the Figma component(s)
+			 * whose exact layers it still carries (`Archive` → Button).
+			 */
+			detachedFrom?: string[];
 	  }
 	| {
 			kind: "token";
@@ -69,6 +74,7 @@ export interface ResolvedRequirement {
 export type GapReason =
 	| "no-registry-match"
 	| "ambiguous-registry-match"
+	| "detached-instance"
 	| "no-token-match"
 	| "near-token-only";
 
@@ -97,6 +103,21 @@ function resolveComponent(
 	requirement: Extract<FrameRequirement, { kind: "component" }>,
 	registry: RegistryFile,
 ): ResolvedRequirement | Gap {
+	// A detached copy is never implementable as is: the designer reattaches it
+	// to the component it came from, then it resolves like any instance.
+	if (requirement.detachedFrom !== undefined) {
+		const candidates = requirement.detachedFrom.map((figmaName) => {
+			const outcome = resolveEntry(registry, figmaName);
+			return outcome.kind === "match" ? outcome.entry.codeName : figmaName;
+		});
+		const names = requirement.detachedFrom.join(" or ");
+		return {
+			requirement,
+			reason: "detached-instance",
+			candidates,
+			suggestion: `"${requirement.name}" is a detached copy of ${names} — reattach it in Figma, then implement it as that component. Do not rebuild it by hand.`,
+		};
+	}
 	// Prefer the main component (an instance renamed "Cancel" is still a
 	// Button), then the node id, then the layer name.
 	const byComponent =

@@ -37,10 +37,21 @@ export interface UnmatchedFigma {
 	candidates: { code: CodeComponent; score: number }[];
 }
 
+/**
+ * A Figma component that Code Connect builds from a code component it is not
+ * the 1:1 counterpart of — SDS's "Page Accordion" is a recipe over `Section`.
+ */
+export interface ComposedFigma {
+	figma: FigmaComponentModel;
+	codeName: string;
+}
+
 export interface ComponentMatchResult {
 	matches: ComponentMatch[];
 	unmatchedCode: UnmatchedCode[];
 	unmatchedFigma: UnmatchedFigma[];
+	/** Figma components implemented as recipes over a code component. */
+	composed?: ComposedFigma[];
 }
 
 // ── Tuning constants (mirror the scoring contract in the test header) ──
@@ -421,6 +432,9 @@ export function variantGaps(
  */
 function booleanProps(component: CodeComponent): Set<string> {
 	const out = new Set<string>();
+	// Props the component inherits from a library type (react-aria's
+	// `placement`) are its API too: a Figma axis of that name is no gap.
+	for (const name of component.inherited ?? []) out.add(normalizeName(name));
 	for (const prop of component.props ?? []) {
 		if (prop.type !== "boolean") continue;
 		const key = normalizeName(prop.name);
@@ -451,6 +465,22 @@ function isIconName(
 	const c = normalizeName(codeName);
 	const f = normalizeName(figmaModel.name);
 	return c === `icon${f}` || c === `${f}icon`;
+}
+
+/**
+ * Whether a code component may pair with an icon-library component at all:
+ * an `Icon<Name>` / `<Name>Icon` export, or one living in an icons folder
+ * (lucide-style `Activity`). A `Table` component is never the `Table` icon.
+ */
+function iconCompatible(
+	codeComponent: CodeComponent,
+	figmaModel: FigmaComponentModel,
+): boolean {
+	if (figmaModel.kind !== "icon") return true;
+	return (
+		isIconName(codeComponent.name, figmaModel) ||
+		/(^|\/)icons?\//i.test(codeComponent.importPath)
+	);
 }
 
 function scorePair(
@@ -484,17 +514,25 @@ function rankFigmaCandidates(
 	codeComponent: CodeComponent,
 	figma: readonly FigmaComponentModel[],
 ): { figma: FigmaComponentModel; score: number }[] {
-	return figma
-		.map((figmaModel) => ({
-			figma: figmaModel,
-			score: scorePair(codeComponent, figmaModel).score,
-		}))
-		.sort((a, b) =>
-			a.score !== b.score
-				? b.score - a.score
-				: byNameAsc(a.figma.name, b.figma.name),
-		)
-		.slice(0, MAX_CANDIDATES);
+	return (
+		figma
+			// An icon is never the closest Figma component of a non-icon component.
+			.filter(
+				(figmaModel) =>
+					figmaModel.kind !== "icon" ||
+					isIconName(codeComponent.name, figmaModel),
+			)
+			.map((figmaModel) => ({
+				figma: figmaModel,
+				score: scorePair(codeComponent, figmaModel).score,
+			}))
+			.sort((a, b) =>
+				a.score !== b.score
+					? b.score - a.score
+					: byNameAsc(a.figma.name, b.figma.name),
+			)
+			.slice(0, MAX_CANDIDATES)
+	);
 }
 
 function rankCodeCandidates(
@@ -551,29 +589,64 @@ export function matchComponents(
 			if (!figmaIndexById.has(key)) figmaIndexById.set(key, i);
 		}
 	});
+	// A code component several Figma components pin to is a recipe base (SDS
+	// builds 14 page sections with <Section>): the 1:1 match is only the pinned
+	// Figma component whose name corresponds; the rest are composed in code.
+	const composed: ComposedFigma[] = [];
+	const pinsByCode = new Map<string, number[]>();
 	for (const pin of options.pins ?? []) {
 		const f = figmaIndexById.get(pin.nodeId.replace(/-/g, ":"));
-		const c = code.findIndex((comp) => comp.name === pin.codeName);
-		if (f === undefined || c === -1) continue;
-		if (matchedCode.has(c) || matchedFigma.has(f)) continue;
+		if (f === undefined) continue;
+		const list = pinsByCode.get(pin.codeName) ?? [];
+		if (!list.includes(f)) list.push(f);
+		pinsByCode.set(pin.codeName, list);
+	}
+	for (const [codeName, figmaIndexes] of pinsByCode) {
+		const c = code.findIndex((comp) => comp.name === codeName);
+		if (c === -1 || matchedCode.has(c)) continue;
 		const codeComponent = code[c] as CodeComponent;
-		const figmaModel = figma[f] as FigmaComponentModel;
+		const free = figmaIndexes.filter((f) => !matchedFigma.has(f));
+		if (free.length === 0) continue;
+		let primary: number | undefined = free.length === 1 ? free[0] : undefined;
+		if (primary === undefined) {
+			let best = MATCH_THRESHOLD;
+			for (const f of free) {
+				const score = nameScore(
+					codeName,
+					(figma[f] as FigmaComponentModel).name,
+				);
+				if (score >= best) {
+					if (score > best || primary === undefined) primary = f;
+					best = score;
+				}
+			}
+		}
+		for (const f of free) {
+			if (f === primary) continue;
+			matchedFigma.add(f);
+			composed.push({ figma: figma[f] as FigmaComponentModel, codeName });
+		}
+		if (primary === undefined) continue;
+		const figmaModel = figma[primary] as FigmaComponentModel;
+		const booleans = booleanProps(codeComponent);
+		const shape = shapeScore(
+			codeComponent.variants,
+			figmaModel.variantProps,
+			booleans,
+		);
 		matchedCode.add(c);
-		matchedFigma.add(f);
+		matchedFigma.add(primary);
 		matches.push({
 			code: codeComponent,
 			figma: figmaModel,
-			score: 1,
+			// The pairing is declared, so the name is certain; the shape is not.
+			score: NAME_WEIGHT + SHAPE_WEIGHT * shape,
 			nameScore: 1,
-			shapeScore: shapeScore(
-				codeComponent.variants,
-				figmaModel.variantProps,
-				booleanProps(codeComponent),
-			),
+			shapeScore: shape,
 			variantGaps: variantGaps(
 				codeComponent.variants,
 				figmaModel.variantProps,
-				booleanProps(codeComponent),
+				booleans,
 			),
 		});
 	}
@@ -588,6 +661,7 @@ export function matchComponents(
 			if (matchedFigma.has(f)) continue;
 			const figmaModel = figma[f];
 			if (figmaModel === undefined) continue;
+			if (!iconCompatible(codeComponent, figmaModel)) continue;
 			const parts = scorePair(codeComponent, figmaModel);
 			if (parts.score >= MATCH_THRESHOLD) {
 				edges.push({ codeIndex: c, figmaIndex: f, parts });
@@ -624,6 +698,7 @@ export function matchComponents(
 			if (matchedFigma.has(f)) continue;
 			const figmaModel = figma[f];
 			if (figmaModel === undefined) continue;
+			if (!iconCompatible(codeComponent, figmaModel)) continue;
 			const s = scorePair(codeComponent, figmaModel).score;
 			if (s > best) {
 				second = best;
@@ -691,5 +766,16 @@ export function matchComponents(
 	}
 	unmatchedFigma.sort((a, b) => byNameAsc(a.figma.name, b.figma.name));
 
-	return { matches, unmatchedCode, unmatchedFigma };
+	return {
+		matches,
+		unmatchedCode,
+		unmatchedFigma,
+		...(composed.length > 0
+			? {
+					composed: composed.sort((a, b) =>
+						byNameAsc(a.figma.name, b.figma.name),
+					),
+				}
+			: {}),
+	};
 }

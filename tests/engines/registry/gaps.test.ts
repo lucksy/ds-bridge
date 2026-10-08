@@ -467,3 +467,25 @@ describe("findGaps — text colors resolve to text tokens", () => {
 		expect(report.resolved).toHaveLength(1);
 	});
 });
+
+describe("findGaps — a detached copy", () => {
+	it("is a detached-instance gap naming the component(s) it was detached from", () => {
+		const report = findGaps({
+			requirements: [
+				{
+					kind: "component",
+					nodeId: "9:9",
+					name: "Archive",
+					detachedFrom: ["Button"],
+				},
+			],
+			registry: REGISTRY,
+			tokens: TOKENS,
+		});
+		expect(report.resolved).toEqual([]);
+		expect(report.gaps[0]).toMatchObject({
+			reason: "detached-instance",
+			candidates: ["Button"],
+		});
+	});
+});

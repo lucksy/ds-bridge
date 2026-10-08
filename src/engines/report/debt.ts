@@ -193,7 +193,7 @@ export function buildDebt(input: DebtInput): DebtRollup {
 				subject: "off-system values",
 				count: offSystem,
 				weight: WEIGHT["off-system"],
-				recommendation: `Replace ${offSystem} off-system ${offSystem === 1 ? "value" : "values"} with design tokens (run ds-bridge lint to list them)`,
+				recommendation: `Snap ${offSystem} off-system ${offSystem === 1 ? "value" : "values"} to an existing token, or add the missing ${offSystem === 1 ? "token" : "tokens"} (run ds-bridge lint to list them)`,
 			},
 		});
 	}

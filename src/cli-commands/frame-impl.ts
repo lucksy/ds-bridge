@@ -295,14 +295,50 @@ function mainComponentName(
  * raise no requirement. An instance's subtree belongs to its component, so the
  * walk does not descend into it.
  */
+/** A library component's layer signature (from the registry). */
+export interface ComponentSignature {
+	figmaName: string;
+	layers: string[];
+}
+
 export function deriveRequirements(
 	root: FigmaNode,
 	maps: ComponentMaps = {},
+	signatures: readonly ComponentSignature[] = [],
 ): FrameRequirement[] {
+	// A detached copy keeps its component's layers (`Star`, `Button`, `X`)
+	// whatever it is renamed: index the library's signatures to spot it.
+	const bySignature = new Map<string, string[]>();
+	for (const { figmaName, layers } of signatures) {
+		if (layers.length < 2 || layers.every((l) => l.endsWith(":INSTANCE")))
+			continue;
+		const key = layers.join("|");
+		bySignature.set(key, [...(bySignature.get(key) ?? []), figmaName]);
+	}
 	const requirements: FrameRequirement[] = [];
 	const stack: FigmaNode[] = [root];
 	while (stack.length > 0) {
 		const node = stack.pop() as FigmaNode;
+		if (
+			node !== root &&
+			(node.type === "FRAME" || node.type === "GROUP") &&
+			Array.isArray(node.children) &&
+			node.children.length >= 2
+		) {
+			const key = node.children
+				.map((c) => `${c?.name ?? ""}:${c?.type ?? ""}`)
+				.join("|");
+			const from = bySignature.get(key);
+			if (from !== undefined) {
+				requirements.push({
+					kind: "component",
+					nodeId: node.id,
+					name: node.name,
+					detachedFrom: [...from].sort(),
+				});
+				continue;
+			}
+		}
 		if (node.type === "INSTANCE") {
 			const componentName = mainComponentName(node, maps);
 			requirements.push({
@@ -636,7 +672,22 @@ async function runFrameImpl(
 	}
 
 	// Derive requirements, resolve against the system (pure), roll up.
-	const requirements = deriveRequirements(fetched.root, fetched.maps);
+	// Library layer signatures from the registry: detached copies in the frame.
+	const signatures: ComponentSignature[] = [
+		...registryOutcome.registry.matches.flatMap((m) =>
+			m.layers !== undefined
+				? [{ figmaName: m.figmaName, layers: m.layers }]
+				: [],
+		),
+		...registryOutcome.registry.unmatchedFigma.flatMap((u) =>
+			u.layers !== undefined ? [{ figmaName: u.name, layers: u.layers }] : [],
+		),
+	];
+	const requirements = deriveRequirements(
+		fetched.root,
+		fetched.maps,
+		signatures,
+	);
 	const gapsReport = findGaps({
 		requirements,
 		registry: registryOutcome.registry,

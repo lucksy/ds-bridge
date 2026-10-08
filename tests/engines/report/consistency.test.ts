@@ -133,3 +133,16 @@ describe("buildConsistency", () => {
 		expect(ok(outcome).score).toBe(100);
 	});
 });
+
+describe("buildConsistency — overrides scale with the instances checked", () => {
+	it("counts the hotspot penalty per 100 placed instances when known", () => {
+		const big = ok(
+			buildConsistency({ overrides: { hotspots: 35, instances: 700 } }),
+		);
+		const small = ok(buildConsistency({ overrides: { hotspots: 5 } }));
+		expect(big.components.find((c) => c.kind === "overrides")?.score).toBe(60);
+		expect(small.components.find((c) => c.kind === "overrides")?.score).toBe(
+			60,
+		);
+	});
+});

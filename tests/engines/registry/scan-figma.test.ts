@@ -486,3 +486,76 @@ describe("normalizeComponentModels — a snapshot saved by an earlier version", 
 		expect(normalizeComponentModels(once)).toEqual(once);
 	});
 });
+
+describe("buildFigmaComponentModel — layer signatures", () => {
+	it("records a component's direct layers (a set's first variant) as name:type", () => {
+		const models = buildFigmaComponentModel({
+			fileDocument: {
+				id: "0:0",
+				name: "Document",
+				type: "DOCUMENT",
+				children: [
+					{
+						id: "p",
+						name: "Buttons",
+						type: "CANVAS",
+						children: [
+							{
+								id: "s:1",
+								name: "Button",
+								type: "COMPONENT_SET",
+								children: [
+									{
+										id: "v:1",
+										name: "Variant=Primary",
+										type: "COMPONENT",
+										children: [
+											{ id: "a", name: "Star", type: "INSTANCE" },
+											{ id: "b", name: "Button", type: "TEXT" },
+										],
+									},
+								],
+							},
+							{ id: "c:1", name: "Divider", type: "COMPONENT", children: [] },
+						],
+					},
+				],
+			} as never,
+		});
+		expect(models.find((m) => m.name === "Button")?.layers).toEqual([
+			"Star:INSTANCE",
+			"Button:TEXT",
+		]);
+		expect(models.find((m) => m.name === "Divider")?.layers).toBeUndefined();
+	});
+});
+
+describe("buildFigmaComponentModel — example and template pages", () => {
+	it("leaves components on an Examples page or named Examples/… out", () => {
+		const models = buildFigmaComponentModel({
+			fileDocument: {
+				id: "0:0",
+				name: "Document",
+				type: "DOCUMENT",
+				children: [
+					{
+						id: "p1",
+						name: "Examples",
+						type: "CANVAS",
+						children: [{ id: "e:1", name: "Landing Page", type: "COMPONENT" }],
+					},
+					{
+						id: "p2",
+						name: "Buttons",
+						type: "CANVAS",
+						children: [
+							{ id: "b:1", name: "Button", type: "COMPONENT" },
+							{ id: "e:2", name: "Examples/Shop", type: "COMPONENT" },
+						],
+					},
+				],
+			} as never,
+		});
+		expect(models.map((m) => m.name)).toEqual(["Button"]);
+	});
+});

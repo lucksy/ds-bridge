@@ -346,6 +346,7 @@ describe("assessLibraryHealth — tolerance & determinism", () => {
 			overrideHotspots: 0,
 			deprecatedUsage: 0,
 			detachedCandidates: 0,
+			placedInstances: 0,
 		});
 	});
 
@@ -422,6 +423,7 @@ describe("assessLibraryHealth — recorded fixture", () => {
 			overrideHotspots: 2,
 			deprecatedUsage: 3,
 			detachedCandidates: 3,
+			placedInstances: 7,
 		});
 	});
 });
@@ -590,5 +592,87 @@ describe("assessLibraryHealth — detached candidates keep their component's lay
 			file(doc([page]), { "c:1": { name: "Text", description: "" } }),
 		);
 		expect(report.detachedCandidates.map((d) => d.nodeId)).toEqual(["det"]);
+	});
+});
+
+describe("assessLibraryHealth — a renamed detached copy", () => {
+	it("is found by its component's exact layers, whatever its name", () => {
+		const page: FigmaNode = {
+			id: "p",
+			name: "Page",
+			type: "CANVAS",
+			children: [
+				{
+					id: "c:1",
+					name: "Button",
+					type: "COMPONENT",
+					children: [
+						{ id: "c:1a", name: "Star", type: "INSTANCE" },
+						{ id: "c:1b", name: "Button", type: "TEXT" },
+					],
+				},
+				{
+					id: "screen",
+					name: "Settings",
+					type: "FRAME",
+					children: [
+						{
+							id: "arch",
+							name: "Archive",
+							type: "FRAME",
+							children: [
+								{ id: "a1", name: "Star", type: "INSTANCE" },
+								{ id: "a2", name: "Button", type: "TEXT" },
+							],
+						},
+					],
+				},
+			],
+		};
+		const report = assessLibraryHealth(
+			file(doc([page]), { "c:1": { name: "Button", description: "" } }),
+		);
+		expect(report.detachedCandidates.map((d) => d.nodeId)).toEqual(["arch"]);
+	});
+});
+
+describe("assessLibraryHealth — instance-only components", () => {
+	it("never call a layout row of instances a detached Button Group", () => {
+		const page: FigmaNode = {
+			id: "p",
+			name: "Page",
+			type: "CANVAS",
+			children: [
+				{
+					id: "g:1",
+					name: "Button Group",
+					type: "COMPONENT",
+					children: [
+						{ id: "g1", name: "Button", type: "INSTANCE" },
+						{ id: "g2", name: "Button", type: "INSTANCE" },
+					],
+				},
+				{
+					id: "screen",
+					name: "Account",
+					type: "FRAME",
+					children: [
+						{
+							id: "row",
+							name: "Actions",
+							type: "FRAME",
+							children: [
+								{ id: "r1", name: "Button", type: "INSTANCE" },
+								{ id: "r2", name: "Button", type: "INSTANCE" },
+							],
+						},
+					],
+				},
+			],
+		};
+		const report = assessLibraryHealth(
+			file(doc([page]), { "g:1": { name: "Button Group", description: "" } }),
+		);
+		expect(report.detachedCandidates).toEqual([]);
 	});
 });

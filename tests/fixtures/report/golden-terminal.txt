@@ -198,13 +198,13 @@ overrides is a documented-opinion penalty (8 per hotspot)
 Design debt
 ───────────
 41/100 · medium
-┌───────────────────────┬────────────┬───────┬───────────────────────────────────────────────────────────────────────────────────────┐
-│ Subject               │ Kind       │ Count │ Recommendation                                                                        │
-├───────────────────────┼────────────┼───────┼───────────────────────────────────────────────────────────────────────────────────────┤
-│ deprecated components │ deprecated │     3 │ Replace 3 usages of deprecated components (run ds-bridge library-health for the list) │
-│ detached instances    │ detached   │     3 │ Re-attach 3 detached instances to their DS components (heuristic — verify)            │
-│ off-system values     │ off-system │     1 │ Replace 1 off-system value with design tokens (run ds-bridge lint to list them)       │
-└───────────────────────┴────────────┴───────┴───────────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────┬────────────┬───────┬──────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Subject               │ Kind       │ Count │ Recommendation                                                                                           │
+├───────────────────────┼────────────┼───────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ deprecated components │ deprecated │     3 │ Replace 3 usages of deprecated components (run ds-bridge library-health for the list)                    │
+│ detached instances    │ detached   │     3 │ Re-attach 3 detached instances to their DS components (heuristic — verify)                               │
+│ off-system values     │ off-system │     1 │ Snap 1 off-system value to an existing token, or add the missing token (run ds-bridge lint to list them) │
+└───────────────────────┴────────────┴───────┴──────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 Executive summary
 ─────────────────

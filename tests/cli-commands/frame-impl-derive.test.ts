@@ -200,3 +200,44 @@ describe("deriveRequirements — overrides and text color", () => {
 		);
 	});
 });
+
+describe("deriveRequirements — detached copies (Simple Design System)", () => {
+	it("turns a frame with a component's exact layers into a detached requirement", () => {
+		const root: FigmaNode = {
+			id: "screen",
+			name: "Settings",
+			type: "FRAME",
+			children: [
+				{
+					id: "3003:608",
+					name: "Archive",
+					type: "FRAME",
+					children: [
+						{ id: "a", name: "Star", type: "INSTANCE", visible: false },
+						{ id: "b", name: "Button", type: "TEXT" },
+						{ id: "c", name: "X", type: "INSTANCE", visible: false },
+					],
+				},
+			],
+		} as FigmaNode;
+		const requirements = deriveRequirements(root, {}, [
+			{
+				figmaName: "Button",
+				layers: ["Star:INSTANCE", "Button:TEXT", "X:INSTANCE"],
+			},
+			{
+				figmaName: "Button Danger",
+				layers: ["Star:INSTANCE", "Button:TEXT", "X:INSTANCE"],
+			},
+			{ figmaName: "Tag", layers: ["Label:TEXT", "X:INSTANCE"] },
+		]);
+		expect(requirements).toEqual([
+			{
+				kind: "component",
+				nodeId: "3003:608",
+				name: "Archive",
+				detachedFrom: ["Button", "Button Danger"],
+			},
+		]);
+	});
+});

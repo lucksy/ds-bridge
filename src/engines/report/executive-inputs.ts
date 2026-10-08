@@ -69,10 +69,13 @@ export function executiveInputs(
 	}
 	if (health !== undefined) {
 		const hotspots = health.overrideHotspots;
+		const instances = isFiniteNumber(health.placedInstances)
+			? { instances: health.placedInstances }
+			: {};
 		if (Array.isArray(hotspots)) {
-			consistency.overrides = { hotspots: hotspots.length };
+			consistency.overrides = { hotspots: hotspots.length, ...instances };
 		} else if (isFiniteNumber(hotspots)) {
-			consistency.overrides = { hotspots };
+			consistency.overrides = { hotspots, ...instances };
 		}
 	}
 

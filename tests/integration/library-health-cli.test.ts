@@ -216,6 +216,7 @@ describe("ds-bridge library-health (built dist/cli.mjs)", () => {
 			overrideHotspots: 2,
 			deprecatedUsage: 3,
 			detachedCandidates: 3,
+			placedInstances: 7,
 		});
 		// Ranked desc by override count — the Primary CTA (3 overrides) leads.
 		expect(parsed.overrideHotspots[0]?.nodeId).toBe("1:10");

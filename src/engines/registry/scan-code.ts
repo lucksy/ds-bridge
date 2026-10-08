@@ -34,6 +34,11 @@ export interface CodeComponent {
 	 * the literal values in union order, e.g. `{ variant: ["primary", …] }`.
 	 */
 	variants: Record<string, string[]>;
+	/**
+	 * Props inherited from a library's compiled typings (react-aria's
+	 * `placement`) — left out of `props`, but still the component's API.
+	 */
+	inherited?: string[];
 }
 
 export interface ScanCodeOptions {
@@ -196,6 +201,7 @@ function readComponent(
 ): CodeComponent {
 	const props: CodeProp[] = [];
 	const variants: Record<string, string[]> = {};
+	const inherited: string[] = [];
 
 	const propsType = resolvePropsType(decl);
 	const destructured = destructuredPropNames(decl);
@@ -222,6 +228,7 @@ function readComponent(
 				) &&
 				!destructured.has(symbol.getName())
 			) {
+				inherited.push(symbol.getName());
 				continue;
 			}
 			const propDecl =
@@ -244,7 +251,13 @@ function readComponent(
 		}
 	}
 
-	return { name, importPath, props, variants };
+	return {
+		name,
+		importPath,
+		props,
+		variants,
+		...(inherited.length > 0 ? { inherited } : {}),
+	};
 }
 
 /**

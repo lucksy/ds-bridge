@@ -83,7 +83,8 @@ If it reports a missing Figma file key or PAT, surface that one fix
 (`/plugin configure` + restart) and stop. Then resolve every component node:
 
 - For each component node: `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry resolve <nodeId>`.
-  - **match** (exit 0) → resolved: use `codeName` + `importPath`. When the match
+  - **match** (exit 0) → resolved: use `codeName`, imported from
+    `importSpecifier` when present, else `importPath`. When the match
     carries `replaces` (`{ name, hint }`), the node is an instance of a
     deprecated component whose Figma description names this replacement:
     implement the replacement, applying the `hint` (e.g. `variant=primary`) as
@@ -92,6 +93,11 @@ If it reports a missing Figma file key or PAT, surface that one fix
   - **candidates** (exit 1) → gap `ambiguous-registry-match` (list the
     candidate code names; do **not** pick one).
   - **not-found** (exit 1) → gap `no-registry-match`.
+- A plain frame (not an instance) whose layers are exactly a library
+  component's (a detached copy, often renamed — "Archive" with Button's `Star`,
+  label and `X` layers) → gap `detached-instance`: name the component, ask the
+  designer to reattach it, and do not rebuild it by hand. The `frame-impl` run
+  below reports these for you.
 - For each raw value: map it through the token source —
   `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs tokens parse <token-source> --format=json`.
   An exact value hit → resolved `token-exact` (prefer the semantic alias token).

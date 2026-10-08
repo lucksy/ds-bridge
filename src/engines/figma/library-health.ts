@@ -49,6 +49,8 @@ export interface LibraryHealthTotals {
 	overrideHotspots: number;
 	deprecatedUsage: number;
 	detachedCandidates: number;
+	/** Placed instances checked (the hotspots' denominator). */
+	placedInstances?: number;
 }
 
 export interface LibraryHealthReport {
@@ -296,6 +298,31 @@ export function assessLibraryHealth(
 		}
 		layersByName.set(node.name, layers);
 	});
+	// Exact `name:TYPE` layer signatures: a renamed detached copy ("Archive"
+	// detached from Button) still carries its component's layers.
+	const signatures = new Set<string>();
+	walk(file.document, (node) => {
+		if (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return;
+		const owner =
+			node.type === "COMPONENT_SET"
+				? node.children?.find((c) => c?.type === "COMPONENT")
+				: node;
+		const layers = (owner?.children ?? []).filter(
+			(c): c is FigmaNode => c !== undefined,
+		);
+		// Instance-only components (Button Group) look like any layout row.
+		if (layers.length >= 2 && layers.some((c) => c.type !== "INSTANCE")) {
+			signatures.add(layers.map((c) => `${c.name}:${c.type}`).join("|"));
+		}
+	});
+	const signatureOf = (node: FigmaNode): string | undefined => {
+		const children = (node.children ?? []).filter(
+			(c): c is FigmaNode => c !== undefined,
+		);
+		return children.length >= 2
+			? children.map((c) => `${c.name}:${c.type}`).join("|")
+			: undefined;
+	};
 	const looksDetached = (node: FigmaNode): boolean => {
 		const layers = layersByName.get(node.name);
 		// The component's layers are not in this file: the name is all we have.
@@ -309,6 +336,7 @@ export function assessLibraryHealth(
 	};
 
 	const hotspots: OverrideHotspot[] = [];
+	let placedInstances = 0;
 	// component name -> usage count, in first-seen order for determinism.
 	const deprecatedCounts = new Map<string, number>();
 	const detached: DetachedCandidate[] = [];
@@ -337,6 +365,7 @@ export function assessLibraryHealth(
 			!ctx.inInstance &&
 			!isPrivateName(mainNameOf(node.componentId));
 
+		if (placed) placedInstances += 1;
 		if (placed) {
 			const drifted = subtreeOverrides(node).filter(isDesignOverride);
 			const overrideCount = drifted.length;
@@ -373,8 +402,8 @@ export function assessLibraryHealth(
 			!ctx.inDefinition &&
 			!ctx.inInstance &&
 			!isPrivateName(node.name) &&
-			componentNames.has(node.name) &&
-			looksDetached(node)
+			((componentNames.has(node.name) && looksDetached(node)) ||
+				signatures.has(signatureOf(node) ?? "\u0000"))
 		) {
 			detached.push({ nodeId: node.id, name: node.name, heuristic: true });
 		}
@@ -389,6 +418,7 @@ export function assessLibraryHealth(
 		overrideHotspots: hotspots.length,
 		deprecatedUsage: deprecatedUsageTotal,
 		detachedCandidates: detached.length,
+		placedInstances,
 	};
 
 	// override-hotspots: rank desc by override count, ties by node name asc; cap 20.

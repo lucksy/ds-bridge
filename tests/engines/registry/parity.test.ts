@@ -367,3 +367,50 @@ describe("toParitySection", () => {
 		expect(section.rows).toEqual([]);
 	});
 });
+
+describe("buildParity — Code Connect recipes and real variant gaps", () => {
+	it("counts a composed Figma component as ok and a gap-carrying match as prop-mismatch", () => {
+		const report = buildParity({
+			schemaVersion: 1,
+			generatedAt: "2026-10-08T00:00:00.000Z",
+			matches: [
+				{
+					codeName: "Avatar",
+					importPath: "a.tsx",
+					figmaName: "Avatar",
+					nodeId: "1:1",
+					score: 0.95,
+					variantGaps: ["Type: Figma only (Image|Initial)"],
+				},
+				{
+					codeName: "Button",
+					importPath: "b.tsx",
+					figmaName: "Button",
+					nodeId: "1:2",
+					score: 1,
+				},
+			],
+			unmatchedCode: [
+				{
+					name: "Section",
+					importPath: "s.tsx",
+					candidates: [],
+					composes: ["Page Accordion"],
+				},
+			],
+			unmatchedFigma: [],
+			composed: [
+				{ name: "Page Accordion", nodeId: "2:1", codeName: "Section" },
+			],
+		});
+		const by = Object.fromEntries(
+			report.rows.map((r) => [r.component, r.status]),
+		);
+		expect(by).toEqual({
+			Avatar: "prop-mismatch",
+			Button: "ok",
+			"Page Accordion": "ok",
+			Section: "ok",
+		});
+	});
+});

@@ -450,7 +450,11 @@ function checkJson(
 	result: DriftResult,
 	skippedModes: string[],
 	source: SourceInfo,
+	loaderWarnings: readonly string[] = [],
 ): string {
+	// A mode the loader could not read (a broken alias) is part of the result,
+	// not only a stderr line: JSON consumers see it in `notes`.
+	const notes = [...loaderWarnings, ...notesFor(result, skippedModes)];
 	return JSON.stringify(
 		{
 			entries: result.entries,
@@ -459,9 +463,7 @@ function checkJson(
 			...(result.unbuiltLayers !== undefined
 				? { unbuiltLayers: result.unbuiltLayers }
 				: {}),
-			...(notesFor(result, skippedModes).length > 0
-				? { notes: notesFor(result, skippedModes) }
-				: {}),
+			...(notes.length > 0 ? { notes } : {}),
 			...(skippedModes.length > 0 ? { skippedModes } : {}),
 		},
 		null,
@@ -611,7 +613,9 @@ function runCheck(path: string, options: CheckOptions): void {
 		modes: (loaded.modes ?? []).map((m) => m.mode),
 	};
 	if (format === "json") {
-		process.stdout.write(`${checkJson(result, skippedModes, source)}\n`);
+		process.stdout.write(
+			`${checkJson(result, skippedModes, source, loaded.warnings)}\n`,
+		);
 	} else {
 		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
 		process.stdout.write(`${renderCheckTerm(result, color, source)}\n`);

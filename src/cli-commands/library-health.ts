@@ -169,6 +169,8 @@ interface LibraryHealthHistoryRecord extends Partial<LibraryHealthTopLists> {
 	overrideHotspots: number;
 	deprecatedUsage: number;
 	detachedCandidates: number;
+	/** Placed instances checked: the denominator the overrides score scales by. */
+	placedInstances?: number;
 }
 
 /**
@@ -181,6 +183,7 @@ function appendLibraryHealthHistory(
 		overrideHotspots: number;
 		deprecatedUsage: number;
 		detachedCandidates: number;
+		placedInstances?: number;
 	},
 	lists: LibraryHealthTopLists | undefined,
 	fileKey: string,
@@ -193,6 +196,9 @@ function appendLibraryHealthHistory(
 		overrideHotspots: totals.overrideHotspots,
 		deprecatedUsage: totals.deprecatedUsage,
 		detachedCandidates: totals.detachedCandidates,
+		...(totals.placedInstances !== undefined
+			? { placedInstances: totals.placedInstances }
+			: {}),
 		// F2 — the top-N lists (new keys; the counts above stay numbers).
 		...(lists !== undefined ? lists : {}),
 	};
