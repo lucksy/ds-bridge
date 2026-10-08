@@ -43,7 +43,7 @@ describe("deriveRequirements", () => {
 			{
 				kind: "token",
 				property: "fill",
-				rawValue: "rgb(59, 130, 246)",
+				rawValue: "#3b82f6",
 				valueKind: "color",
 			},
 		]);
@@ -62,7 +62,7 @@ describe("deriveRequirements", () => {
 		expect(deriveRequirements(root)).toEqual([]);
 	});
 
-	it("emits an rgba() rawValue when the fill is translucent", () => {
+	it("emits an 8-digit hex rawValue when the fill is translucent", () => {
 		const root: FigmaNode = {
 			id: "1:1",
 			name: "Translucent",
@@ -73,7 +73,7 @@ describe("deriveRequirements", () => {
 			{
 				kind: "token",
 				property: "fill",
-				rawValue: "rgba(255, 0, 0, 0.5)",
+				rawValue: "#ff000080",
 				valueKind: "color",
 			},
 		]);
@@ -102,7 +102,7 @@ describe("deriveRequirements", () => {
 			{
 				kind: "token",
 				property: "fill",
-				rawValue: "rgb(255, 0, 0)",
+				rawValue: "#ff0000",
 				valueKind: "color",
 			},
 			{ kind: "component", nodeId: "1:3", name: "Mystery" },

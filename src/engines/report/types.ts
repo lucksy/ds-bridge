@@ -179,6 +179,15 @@ export interface LibraryHealth {
 	deprecatedUsage: DeprecatedUsageGroup[];
 	detachedCandidates: DetachedCandidate[];
 	totals: LibraryHealthTotals;
+	/**
+	 * The ranked top-N lists a history line carries (by component name), so a
+	 * report rebuilt from history can still name what the totals count.
+	 */
+	top?: {
+		overrides: { name: string; count: number }[];
+		deprecated: { name: string; count: number }[];
+		detached: { name: string; count: number }[];
+	};
 }
 
 /**

@@ -191,10 +191,10 @@ function kpis(data: ReportData, selection: readonly ArtifactId[]): Kpi[] {
 	const lastDrift = drift?.[drift.length - 1];
 	if (on.has("drift-trend") && lastDrift) {
 		out.push({
-			label: "Breaking drift",
+			label: "Stale tokens",
 			value: String(lastDrift.breaking),
 			tone: lastDrift.breaking > 0 ? "error" : "ok",
-			sub: `${lastDrift.additive} additive · ${lastDrift.cosmetic} cosmetic`,
+			sub: `${lastDrift.additive} missing · ${lastDrift.cosmetic} orphan outputs`,
 		});
 	}
 

@@ -17,6 +17,16 @@ export function dayOf(value: string): string {
 }
 
 /** A styled "no data yet" panel body shown when a section is absent. */
+/** An empty state whose fix is not a single command: say what is needed. */
+export function emptyHint(text: string): string {
+	return [
+		'<div class="empty">',
+		'<span class="empty-title">No data yet</span>',
+		`<span>${escapeHtml(text)}</span>`,
+		"</div>",
+	].join("");
+}
+
 export function emptyState(command: string): string {
 	return [
 		'<div class="empty">',

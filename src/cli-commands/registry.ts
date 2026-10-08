@@ -26,6 +26,7 @@ import { dirname, join, posix, resolve as resolvePath, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { readProjectConfigText, resolveConfig } from "../config.js";
+import { DEFAULT_DEPRECATED_PATTERN } from "../engines/figma/library-health.js";
 import { matchComponents, type PinnedPair } from "../engines/registry/match.js";
 import {
 	buildParity,
@@ -386,6 +387,14 @@ function worstAmbiguities(registry: RegistryFile): string[] {
 }
 
 /** Human-readable terminal summary for a completed build. */
+/** "(1 deprecated — no code owed)": why parity's missing-in-code count is lower. */
+function deprecatedNote(registry: RegistryFile): string {
+	const deprecated = registry.unmatchedFigma.filter((u) =>
+		DEFAULT_DEPRECATED_PATTERN.test(u.name),
+	).length;
+	return deprecated > 0 ? ` (${deprecated} deprecated — no code owed)` : "";
+}
+
 function renderBuildSummary(
 	registry: RegistryFile,
 	registryPath: string,
@@ -401,7 +410,7 @@ function renderBuildSummary(
 		}`,
 		`  matched:        ${registry.matches.length}`,
 		`  unmatched code: ${registry.unmatchedCode.length}`,
-		`  unmatched figma:${registry.unmatchedFigma.length}`,
+		`  unmatched figma:${registry.unmatchedFigma.length}${deprecatedNote(registry)}`,
 		`  parity score: ${parity.score} (${parity.ok}/${parity.total})`,
 	];
 	const ambiguities = worstAmbiguities(registry);
@@ -469,6 +478,27 @@ async function runResolve(nodeNameOrId: string, path: string): Promise<void> {
 						...(outcome.replaces !== undefined
 							? { replaces: outcome.replaces }
 							: {}),
+					},
+					null,
+					2,
+				)}\n`,
+			);
+			process.exitCode = 0;
+			return;
+		}
+		case "composed": {
+			backfillCjsGlobals();
+			const { aliasSpecifier } = await import("../io/tsconfig-paths.js");
+			const importSpecifier =
+				outcome.importPath === undefined
+					? undefined
+					: aliasSpecifier(targetDir, outcome.importPath);
+			// Implemented as a recipe: compose it from `codeName` as Code Connect does.
+			process.stdout.write(
+				`${JSON.stringify(
+					{
+						...outcome,
+						...(importSpecifier !== undefined ? { importSpecifier } : {}),
 					},
 					null,
 					2,

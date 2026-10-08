@@ -149,7 +149,7 @@ describe("ds-bridge report --format exec (markdown manager report)", () => {
 		expect(md.startsWith("# Design system report: ")).toBe(true);
 		expect(md).toContain("Report date 2026-10-05");
 		// The score engine's replay of this history: 71 now, +24 over the window.
-		expect(md).toContain("| System score | 71/100 | ▲ +24 in 30 days |");
+		expect(md).toContain("| System score | 67/100 | ▲ +20 in 30 days |");
 		// On-system 90% (36/40), up from 75% (30/40).
 		expect(md).toContain(
 			"| On-system usage | 90% | +15 pts since 2026-09-10 |",
@@ -202,7 +202,7 @@ describe("ds-bridge report --format exec (markdown manager report)", () => {
 		const result = await runCli(["report", dir, "--format", "exec"]);
 		expect(result.code).toBe(0);
 		expect(result.stdout).toContain(
-			"| On-system usage | 90% | ≥ 95% | At risk |\n| System score | 71 | ≥ 90 | Off track |",
+			"| On-system usage | 90% | ≥ 95% | At risk |\n| System score | 67 | ≥ 90 | Off track |",
 		);
 		// Severity 3 (red target) → 2 (frame) → 1 (amber target); the lower
 		// never-measured risk is capped out.
@@ -210,13 +210,13 @@ describe("ds-bridge report --format exec (markdown manager report)", () => {
 			[
 				"## Top risks",
 				"",
-				"1. System score is off target: 71 vs goal ≥ 90",
+				"1. System score is off target: 67 vs goal ≥ 90",
 				'2. 1 of 2 tracked frames is below the 80 readiness bar (lowest: "Checkout" at 60)',
 				"3. On-system usage is close to its goal: 90% vs ≥ 95%",
 				"",
 			].join("\n"),
 		);
-		expect(result.stdout).toContain("1. Bring System score to ≥ 90 (now 71)");
+		expect(result.stdout).toContain("1. Bring System score to ≥ 90 (now 67)");
 	});
 
 	it("is byte-stable across runs with a pinned instant", async () => {

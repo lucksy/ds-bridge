@@ -60,7 +60,7 @@ describe("digestDocument", () => {
 			{
 				heading: "For managers",
 				lines: [
-					"Drift ▼ 5 → 2",
+					"Stale tokens ▼ 5 → 2",
 					"Lint violations ▲ 3 → 4",
 					"Readiness ▲ 70 → 85",
 				],
@@ -81,7 +81,7 @@ _Window: changes since 2026-09-05._
 
 ## For managers
 
-- Drift ▼ 5 → 2
+- Stale tokens ▼ 5 → 2
 - Lint violations ▲ 3 → 4
 - Readiness ▲ 70 → 85
 
@@ -101,7 +101,7 @@ describe("renderDigestHtml", () => {
 		expect(html).toContain("<h1>Design-system digest</h1>");
 		expect(html).toContain("changes since 2026-09-05");
 		expect(html).toContain("<h2>For managers</h2>");
-		expect(html).toContain("<li>Drift ▼ 5 → 2</li>");
+		expect(html).toContain("<li>Stale tokens ▼ 5 → 2</li>");
 		expect(html).toContain("<ol>");
 		expect(html).toContain(
 			"<li>Run <code>ds-bridge tokens check</code> — review breaking token drift</li>",

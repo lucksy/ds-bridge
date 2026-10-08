@@ -765,3 +765,35 @@ describe("matchLiteral — the default role before an accent (Simple Design Syst
 		);
 	});
 });
+
+describe("matchLiteral — resting state before hover / disabled", () => {
+	it("suggests the resting token when a state token shares the value", () => {
+		const tokens: Token[] = [
+			{
+				name: "@color.border.disabled.default",
+				type: "color",
+				value: "#b3b3b3",
+			},
+			{
+				name: "@color.border.default.secondary",
+				type: "color",
+				value: "#b3b3b3",
+			},
+		];
+		const match = matchLiteral(
+			{
+				file: "a.css",
+				line: 1,
+				col: 1,
+				raw: "#b3b3b3",
+				property: "border",
+				valueKind: "color",
+				context: "css-declaration",
+			},
+			buildTokenIndex(tokens),
+		);
+		expect(match.kind === "exact" && match.token.name).toBe(
+			"@color.border.default.secondary",
+		);
+	});
+});

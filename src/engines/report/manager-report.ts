@@ -37,6 +37,8 @@ export interface ManagerReportInput {
 	frames?: FrameReadiness[];
 	/** The latest drift point's breaking count. */
 	breakingDrift?: number;
+	/** Lint literals that equal a token exactly: `lint --fix` swaps them in. */
+	autofixable?: number;
 	/** X9 — the latest contrast audit: failing pairs, level, failing modes. */
 	contrast?: { failed: number; level: "AA" | "AAA"; modes: string[] };
 	/** X9 — the latest drift point's non-breaking gaps. */
@@ -455,6 +457,16 @@ function buildActions(
 				text: item.recommendation,
 			});
 		}
+	}
+
+	// A2b — hardcoded values that equal a token: one command swaps them in.
+	const autofixable = input.autofixable;
+	if (finite(autofixable) && autofixable > 0) {
+		// One command, no design decision: below anything that needs a person.
+		out.push({
+			rank: 1,
+			text: `Swap ${autofixable} hardcoded ${plural(autofixable, "value", "values")} for the ${plural(autofixable, "token", "tokens")} they equal (run ds-bridge lint --fix)`,
+		});
 	}
 
 	// A3 — breaking token drift.

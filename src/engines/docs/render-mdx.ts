@@ -113,6 +113,26 @@ export function renderComponentMdx(doc: ComponentDoc): string {
 		`# ${doc.name}`,
 	];
 
+	// Deprecated and composed components say so first: a reader must not build them.
+	if (doc.deprecated !== undefined) {
+		sections.push(
+			[
+				"> [!CAUTION]",
+				doc.deprecated.replacement !== undefined
+					? `> Deprecated — use **${doc.deprecated.replacement}** instead. No code is owed for this component.`
+					: "> Deprecated — no code is owed for this component.",
+			].join("\n"),
+		);
+	}
+	if (doc.composedWith !== undefined) {
+		sections.push(
+			[
+				"> [!NOTE]",
+				`> Composed in code with \`${doc.composedWith}\` (Code Connect) — there is no separate component to import.`,
+			].join("\n"),
+		);
+	}
+
 	const importBlock = renderImport(doc);
 	if (importBlock !== undefined) sections.push(importBlock);
 

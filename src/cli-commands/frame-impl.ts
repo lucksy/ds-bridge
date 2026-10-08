@@ -31,6 +31,7 @@ import {
 	type GapsReport,
 } from "../engines/registry/gaps.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
+import { isContentLayer } from "../engines/registry/scan-figma.js";
 import { parseStyleDictionary } from "../engines/tokens/parse-style-dictionary.js";
 import { parseTokensStudio } from "../engines/tokens/parse-tokens-studio.js";
 import { parseW3c } from "../engines/tokens/parse-w3c.js";
@@ -100,7 +101,7 @@ interface FrameImplHistoryRecord {
 	gapCount: number;
 	pct: number;
 	byReason: Record<string, number>;
-	topGaps: { reason: GapReason; requirement: string }[];
+	topGaps: { reason: GapReason; requirement: string; candidates?: string[] }[];
 }
 
 /** Print a fatal operational error and set exit code 2. */
@@ -257,10 +258,14 @@ function firstSolidFillColor(node: FigmaNode): string | undefined {
 	for (const paint of node.fills) {
 		if (paint.type !== "SOLID" || paint.color === undefined) continue;
 		const { r, g, b, a } = paint.color;
-		const to255 = (v: number): number => Math.round(v * 255);
+		// Hex, as every other report writes colors (#bf0f0d, not rgb(191, 15, 13)).
+		const hex = (v: number): string =>
+			Math.round(Math.min(1, Math.max(0, v)) * 255)
+				.toString(16)
+				.padStart(2, "0");
 		return a >= 1
-			? `rgb(${to255(r)}, ${to255(g)}, ${to255(b)})`
-			: `rgba(${to255(r)}, ${to255(g)}, ${to255(b)}, ${a})`;
+			? `#${hex(r)}${hex(g)}${hex(b)}`
+			: `#${hex(r)}${hex(g)}${hex(b)}${hex(a)}`;
 	}
 	return undefined;
 }
@@ -310,8 +315,7 @@ export function deriveRequirements(
 	// whatever it is renamed: index the library's signatures to spot it.
 	const bySignature = new Map<string, string[]>();
 	for (const { figmaName, layers } of signatures) {
-		if (layers.length < 2 || layers.every((l) => l.endsWith(":INSTANCE")))
-			continue;
+		if (layers.length < 2 || !layers.some(isContentLayer)) continue;
 		const key = layers.join("|");
 		bySignature.set(key, [...(bySignature.get(key) ?? []), figmaName]);
 	}
@@ -461,7 +465,7 @@ interface Implementability {
 	gapCount: number;
 	pct: number;
 	byReason: Record<string, number>;
-	topGaps: { reason: GapReason; requirement: string }[];
+	topGaps: { reason: GapReason; requirement: string; candidates?: string[] }[];
 	/** Deprecated instances resolved to the replacement their component names. */
 	replacements: Replacement[];
 }
@@ -496,6 +500,7 @@ function rollUp(report: GapsReport, frameName: string): Implementability {
 	const topGaps = report.gaps.slice(0, TOP_GAPS_LIMIT).map((gap: Gap) => ({
 		reason: gap.reason,
 		requirement: requirementLabel(gap.requirement),
+		...(gap.candidates.length > 0 ? { candidates: gap.candidates } : {}),
 	}));
 
 	const replacements: Replacement[] = report.resolved.flatMap((r) =>
@@ -568,8 +573,12 @@ function renderTerm(impl: Implementability, color: boolean): string {
 			"",
 			"Gaps:",
 			renderTable(
-				["requirement", "reason"],
-				impl.topGaps.map((gap) => [gap.requirement, gap.reason]),
+				["requirement", "reason", "nearest / candidates"],
+				impl.topGaps.map((gap) => [
+					gap.requirement,
+					gap.reason,
+					(gap.candidates ?? []).slice(0, 3).join(", ") || "—",
+				]),
 				{ color },
 			),
 		);

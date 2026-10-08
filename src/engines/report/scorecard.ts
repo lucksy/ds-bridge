@@ -26,6 +26,7 @@
 // comment must not list seven "n/a"s); `delta` renders only when BOTH sides have
 // a comparable scalar; zero rows on both sides → `{ kind: "no-data" }`. A model
 // built with `baseText === undefined` is flagged `currentOnly`. Deterministic.
+import { frameAverager } from "./frame-average.js";
 import { replayHistory } from "./history-lines.js";
 import { scoreFromHistory, type Weights } from "./score.js";
 
@@ -189,6 +190,8 @@ interface LatestRecords {
  */
 function extractLatest(text: string): LatestRecords {
 	const latest: LatestRecords = {};
+	// Readiness: each tracked frame's latest score averaged, not the last frame.
+	const averageFrames = frameAverager();
 	for (const { kind, record } of replayHistory(text)) {
 		switch (kind) {
 			case "tokens-check":
@@ -207,7 +210,7 @@ function extractLatest(text: string): LatestRecords {
 				latest.adoptionLine = record;
 				break;
 			case "handoff":
-				latest.handoff = record;
+				latest.handoff = averageFrames(record);
 				break;
 			case "a11y":
 				latest.a11y = record;

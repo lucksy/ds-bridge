@@ -970,3 +970,41 @@ describe("scoreFromHistory — sub-scores scale with the system's size", () => {
 		expect(outcome.components.find((c) => c.kind === "lint")?.score).toBe(70);
 	});
 });
+
+describe("scoreFromHistory — readiness across tracked frames", () => {
+	it("is the mean of each frame's latest score, whatever order they ran in", () => {
+		const a = line({
+			at: "2026-06-01",
+			kind: "handoff",
+			score: 100,
+			fileKey: "K",
+			nodeId: "1:1",
+		});
+		const b = line({
+			at: "2026-06-01",
+			kind: "handoff",
+			score: 71,
+			fileKey: "K",
+			nodeId: "1:2",
+		});
+		const again = line({
+			at: "2026-06-01",
+			kind: "handoff",
+			score: 80,
+			fileKey: "K",
+			nodeId: "1:2",
+		});
+		for (const text of [[a, b].join("\n"), [b, a].join("\n")]) {
+			const outcome = scoreFromHistory(text);
+			if (outcome.kind !== "ok") throw new Error("no score");
+			expect(
+				outcome.components.find((c) => c.kind === "readiness")?.score,
+			).toBe(86);
+		}
+		const outcome = scoreFromHistory([a, b, again].join("\n"));
+		if (outcome.kind !== "ok") throw new Error("no score");
+		expect(outcome.components.find((c) => c.kind === "readiness")?.score).toBe(
+			90,
+		);
+	});
+});

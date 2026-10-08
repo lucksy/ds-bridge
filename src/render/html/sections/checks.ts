@@ -102,7 +102,7 @@ export function systemScoreSection(
 	);
 }
 
-/** Drift trend → multi-series line chart (breaking / additive / cosmetic). */
+/** Drift trend → multi-series line chart (stale / missing / orphan outputs). */
 export function driftSection(data: ReportData): string {
 	const trend = data.driftTrend;
 	if (trend === undefined || trend.length === 0) {
@@ -122,9 +122,9 @@ export function driftSection(data: ReportData): string {
 	});
 
 	const series: LineSeries[] = [
-		toSeries("breaking", (p) => p.breaking),
-		toSeries("additive", (p) => p.additive),
-		toSeries("cosmetic", (p) => p.cosmetic),
+		toSeries("stale", (p) => p.breaking),
+		toSeries("missing", (p) => p.additive),
+		toSeries("orphan", (p) => p.cosmetic),
 	];
 
 	const dateRange =

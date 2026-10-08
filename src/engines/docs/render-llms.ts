@@ -29,6 +29,8 @@ const TOKEN_TYPE_ORDER: TokenType[] = [
 
 /** One-line prop signature, e.g. `(label: string, variant?: "primary" | …)`. */
 function signature(doc: ComponentDoc): string {
+	// A Figma-only entry has no code to call.
+	if (doc.code.importPath.length === 0) return "";
 	const parts = doc.code.props.map(
 		(prop) => `${prop.name}${prop.required ? "" : "?"}: ${prop.type}`,
 	);
@@ -44,6 +46,14 @@ function locationOf(doc: ComponentDoc): string {
 
 /** The status/gaps tag, e.g. `[documented]` or `[gaps: unmatched-in-code]`. */
 function statusTag(doc: ComponentDoc): string {
+	if (doc.deprecated !== undefined) {
+		return doc.deprecated.replacement !== undefined
+			? `[deprecated → use ${doc.deprecated.replacement}]`
+			: "[deprecated]";
+	}
+	if (doc.composedWith !== undefined) {
+		return `[composed in code with ${doc.composedWith}]`;
+	}
 	if (doc.gaps.length === 0) return "[documented]";
 	return `[gaps: ${doc.gaps.join(", ")}]`;
 }

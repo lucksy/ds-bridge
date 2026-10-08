@@ -140,8 +140,8 @@ describe("ds-bridge digest (built dist/cli.mjs)", () => {
 		const result = await runCli(dir, ["digest", "--since", "2026-06-01"]);
 		expect(result.code).toBe(0);
 		// Boundary fixed at 2026-06-01T00:00:00.000Z → the 06-03 line is in-window,
-		// the 05-20 line is the baseline: an exact "Drift ▼ 5 → 2" row.
-		expect(result.stdout).toContain("- Drift ▼ 5 → 2");
+		// the 05-20 line is the baseline: an exact "Stale tokens ▼ 5 → 2" row.
+		expect(result.stdout).toContain("- Stale tokens ▼ 5 → 2");
 		// stale>0 in window → the token-check action fires.
 		expect(result.stdout).toContain("1. Run `ds-bridge tokens check`");
 	});

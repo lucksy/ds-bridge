@@ -167,6 +167,9 @@ function runManagerReport(
 			? { dataFreshness: data.dataFreshness }
 			: {}),
 		frames,
+		...(data.lintSummary !== undefined && data.lintSummary.byKind.exact > 0
+			? { autofixable: data.lintSummary.byKind.exact }
+			: {}),
 		...(lastDrift !== undefined
 			? {
 					breakingDrift: lastDrift.breaking,

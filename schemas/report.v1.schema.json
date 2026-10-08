@@ -515,6 +515,57 @@
 							"type": "number"
 						}
 					}
+				},
+				"top": {
+					"type": "object",
+					"description": "The ranked top-N lists the library-health line carries (by component name): override hotspots, deprecated usage, detached candidates. Absent when the history line carries none.",
+					"properties": {
+						"overrides": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"required": ["name", "count"],
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"count": {
+										"type": "number"
+									}
+								}
+							}
+						},
+						"deprecated": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"required": ["name", "count"],
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"count": {
+										"type": "number"
+									}
+								}
+							}
+						},
+						"detached": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"required": ["name", "count"],
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"count": {
+										"type": "number"
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		},

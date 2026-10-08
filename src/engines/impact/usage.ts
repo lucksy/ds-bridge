@@ -316,6 +316,9 @@ export function mapUsage(input: MapUsageInput): ComponentUsage[] {
 }
 
 /** One code component's import sites, for import coverage. */
+/** Storybook stories and Code Connect templates (`*.stories.tsx`, `*.figma.ts`). */
+const DOCS_FILE = /\.(?:stories|story|figma)\.[cm]?[jt]sx?$/i;
+
 export interface CodeUsage {
 	codeName: string;
 	importPath: string;
@@ -347,7 +350,11 @@ export function mapCodeUsage(input: {
 	if (entries.length === 0) return [];
 	const project = buildProject(root);
 	return entries.map(({ codeName, importPath }) => {
-		const usages = scanUsages(project, root, codeName, importPath);
+		// Stories and Code Connect templates document the system: an import
+		// there is not adoption (SDS imports every primitive in a story).
+		const usages = scanUsages(project, root, codeName, importPath).filter(
+			(site) => !DOCS_FILE.test(site.file),
+		);
 		return { codeName, importPath, usages, count: usages.length };
 	});
 }

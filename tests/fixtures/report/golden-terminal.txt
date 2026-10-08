@@ -17,10 +17,10 @@ System score [██████████████████▎░░░
 
 Drift trend
 ───────────
-Breaking █▁
-Additive ▁█
-Cosmetic ▁█
-Breaking · Additive · Cosmetic over 2026-06-01 → 2026-06-02
+Stale    █▁
+Missing  ▁█
+Orphan   ▁█
+Stale · Missing · Orphan outputs over 2026-06-01 → 2026-06-02
 
 Lint violations
 ───────────────
@@ -144,7 +144,7 @@ up · 0-decline streak
 
 Ownership leaderboard
 ─────────────────────
-No data yet — run `ds-bridge lint` to populate this section.
+No data yet — needs owners — add ownership (or ownership_file, a CODEOWNERS file) to .ds-bridge.json, then run ds-bridge lint.
 
 Changelog by audience
 ─────────────────────

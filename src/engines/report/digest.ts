@@ -19,7 +19,9 @@
 // each carrying its audience tag and filtered with the same membership rule;
 // `readinessThreshold` is a PARAM (resolved at the edge via resolveConfig) so a
 // project that raised its gate is honored rather than silently disagreed with.
+
 import type { ChangelogAudience } from "../changelog/aggregate.js";
+import { frameAverager } from "./frame-average.js";
 import { replayHistory } from "./history-lines.js";
 
 /** parseSince outcome: a resolved instant, or a typed error listing the forms. */
@@ -324,7 +326,10 @@ export function buildDigest(
 	const before: Side = {};
 	const inWindow: Side = {};
 	let anyInWindow = false;
-	for (const { kind, at, record } of records) {
+	// Readiness: each tracked frame's latest score, averaged over the timeline.
+	const averageFrames = frameAverager();
+	for (const { kind, at, record: raw } of records) {
+		const record = kind === "handoff" ? averageFrames(raw) : raw;
 		// Half-open instant window: `at >= sinceIso` (lexicographic ISO) in-window.
 		// A record without a string `at` cannot be placed — it never anchors the
 		// window (consistent with score.ts: dateless records feed last-wins but not

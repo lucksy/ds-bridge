@@ -14,7 +14,14 @@ import {
 	TONE,
 } from "../charts.js";
 import { COMPONENT_LABEL } from "./checks.js";
-import { CARD_W, dateEnds, dayOf, emptyState, WIDE_W } from "./shared.js";
+import {
+	CARD_W,
+	dateEnds,
+	dayOf,
+	emptyHint,
+	emptyState,
+	WIDE_W,
+} from "./shared.js";
 
 /** Human-readable source badge for a breaking-calendar entry (B6). */
 export const BREAKING_SOURCE_LABEL: Record<"tokens" | "figma", string> = {
@@ -304,7 +311,12 @@ export function migrationChecklistSection(data: ReportData): string {
 export function scoreVelocitySection(data: ReportData): string {
 	const velocity = data.scoreVelocity;
 	if (velocity === undefined) {
-		return panel("Score velocity", emptyState("report"));
+		return panel(
+			"Score velocity",
+			emptyHint(
+				"Needs system scores from two different days — run ds-bridge record again on another day.",
+			),
+		);
 	}
 
 	const { delta, windowDays, direction, regressionStreak } = velocity;
@@ -345,7 +357,12 @@ export function scoreVelocitySection(data: ReportData): string {
 export function ownershipLeaderboardSection(data: ReportData): string {
 	const rows = data.ownershipLeaderboard;
 	if (rows === undefined || rows.length === 0) {
-		return panel("Ownership leaderboard", emptyState("lint"));
+		return panel(
+			"Ownership leaderboard",
+			emptyHint(
+				"Needs owners — add ownership (or ownership_file, a CODEOWNERS file) to .ds-bridge.json, then run ds-bridge lint.",
+			),
+		);
 	}
 
 	const bars = rows.map((row) => ({

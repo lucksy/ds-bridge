@@ -62,8 +62,12 @@ export function executiveInputs(
 		Array.isArray(registry.matches) &&
 		Array.isArray(registry.unmatchedCode)
 	) {
+		// Icons are an inventory of their own (import coverage counts them
+		// apart): a few hundred matched icons would drown the component ratio.
 		consistency.components = {
-			matched: registry.matches.length,
+			matched: registry.matches.filter(
+				(m) => (m as { kind?: unknown }).kind !== "icon",
+			).length,
 			custom: registry.unmatchedCode.length,
 		};
 	}

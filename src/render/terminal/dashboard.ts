@@ -103,10 +103,11 @@ function driftTrendTerminalSection(data: ReportData, _color: boolean): string {
 	return panel(
 		"Drift trend",
 		[
-			`Breaking ${breaking}`,
-			`Additive ${additive}`,
-			`Cosmetic ${cosmetic}`,
-			`Breaking · Additive · Cosmetic over ${dateRange}`,
+			// Token drift is stale / missing / orphan outputs — not a change log.
+			`Stale    ${breaking}`,
+			`Missing  ${additive}`,
+			`Orphan   ${cosmetic}`,
+			`Stale · Missing · Orphan outputs over ${dateRange}`,
 		].join("\n"),
 	);
 }
@@ -594,7 +595,10 @@ function scoreVelocityTerminalSection(
 ): string {
 	const velocity = data.scoreVelocity;
 	if (velocity === undefined) {
-		return panel("Score velocity", emptyState("report"));
+		return panel(
+			"Score velocity",
+			"No data yet — needs system scores from two different days — run ds-bridge record again on another day.",
+		);
 	}
 
 	const { delta, windowDays, direction, regressionStreak } = velocity;
@@ -632,7 +636,10 @@ function ownershipLeaderboardTerminalSection(
 ): string {
 	const rows = data.ownershipLeaderboard;
 	if (rows === undefined || rows.length === 0) {
-		return panel("Ownership leaderboard", emptyState("lint"));
+		return panel(
+			"Ownership leaderboard",
+			"No data yet — needs owners — add ownership (or ownership_file, a CODEOWNERS file) to .ds-bridge.json, then run ds-bridge lint.",
+		);
 	}
 
 	// §8 primitive mapping: per-owner on-system % → renderBarChart. The renderer

@@ -70,6 +70,15 @@ interface DocumentNode {
 	children?: DocumentNode[];
 }
 
+/**
+ * A layer that carries content (a label, an icon's vector) rather than
+ * structure: a signature needs one to tell a detached copy from a layout that
+ * happens to share the component's wrappers or instances.
+ */
+export function isContentLayer(layer: string): boolean {
+	return !/:(?:INSTANCE|FRAME|GROUP|SECTION)$/.test(layer);
+}
+
 /** A component node's layer signature (`name:TYPE` per direct child), ≥2 layers. */
 export function layerSignature(node: DocumentNode): string[] | undefined {
 	const owner =
@@ -81,9 +90,8 @@ export function layerSignature(node: DocumentNode): string[] | undefined {
 	);
 	// A component built only of instances (Button Group) has the signature of
 	// any layout row of those instances — never evidence of a detached copy.
-	return layers.length >= 2 && layers.some((l) => !l.endsWith(":INSTANCE"))
-		? layers
-		: undefined;
+	// Only wrappers (`Block:FRAME | Block:FRAME`) are any layout's structure.
+	return layers.length >= 2 && layers.some(isContentLayer) ? layers : undefined;
 }
 
 /** Every component (set) id in the document → its layer signature. */

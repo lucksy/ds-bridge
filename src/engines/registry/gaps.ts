@@ -145,6 +145,17 @@ function resolveComponent(
 		};
 	}
 
+	if (outcome.kind === "composed") {
+		return {
+			requirement,
+			resolution: {
+				kind: "registry-match",
+				codeName: outcome.codeName,
+				importPath: outcome.importPath ?? "",
+			},
+		};
+	}
+
 	if (outcome.kind === "candidates") {
 		const candidates = outcome.entries.map((c) => c.codeName);
 		const list = candidates.length > 0 ? ` (${candidates.join(", ")})` : "";

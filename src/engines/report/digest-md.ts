@@ -30,7 +30,7 @@ const SECTIONS: { heading: string; audience: "designer" | "developer" }[] = [
 
 /** Human label per movement kind (the line's leading noun). */
 const MOVEMENT_LABEL: Record<MovementKind, string> = {
-	drift: "Drift",
+	drift: "Stale tokens",
 	lint: "Lint violations",
 	"on-system": "On-system",
 	coverage: "Import coverage",

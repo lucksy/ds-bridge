@@ -55,7 +55,17 @@ export interface ComponentDoc {
 	figma?: ComponentDocFigma;
 	/** Typed, deterministically ordered gaps for this component. */
 	gaps: DocGap[];
+	/** A deprecated Figma component, and what its description says to use. */
+	deprecated?: { replacement?: string };
+	/** A Figma component Code Connect builds as a recipe over this code component. */
+	composedWith?: string;
 }
+
+/** A component its name or description marks as deprecated. */
+const DEPRECATED_RE = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
+/** "use Button (Variant=Neutral)", "replaced by Card". */
+const REPLACEMENT_RE =
+	/\b(?:use|replaced?\s+(?:with|by))\s+[`"'“]?([A-Za-z][\w-]*(?:\s?\/\s?[A-Za-z][\w-]*)*(?:\s*\([^)]+\))?)/i;
 
 // ── Input ──
 
@@ -145,9 +155,12 @@ export function mergeComponentDocs(input: MergeInput): ComponentDoc[] {
 	for (const match of matches) {
 		const richCode = codeByName.get(match.codeName);
 		const richFigma = figmaById.get(match.nodeId);
-		const description = richFigma?.description ?? "";
+		const description = richFigma?.description || match.description || "";
 		const gaps: DocGap[] = [];
-		if (description.length === 0) gaps.push("missing-figma-description");
+		// An icon needs no authored description; a component does.
+		if (description.length === 0 && match.kind !== "icon") {
+			gaps.push("missing-figma-description");
+		}
 		docs.push({
 			name: match.codeName,
 			code: resolveCode(match.importPath, richCode),
@@ -159,25 +172,53 @@ export function mergeComponentDocs(input: MergeInput): ComponentDoc[] {
 	// Code-only: the codebase has it, Figma does not publish a match.
 	for (const entry of unmatchedCode) {
 		const richCode = codeByName.get(entry.name);
+		const composes = Array.isArray(entry.composes) ? entry.composes : [];
 		docs.push({
 			name: entry.name,
 			code: resolveCode(entry.importPath, richCode),
-			gaps: ["unmatched-in-figma"],
+			// A recipe base Code Connect builds Figma components from is covered.
+			gaps: composes.length > 0 ? [] : ["unmatched-in-figma"],
+		});
+	}
+
+	// Composed: Figma components Code Connect builds over a code component.
+	for (const entry of Array.isArray(registry?.composed)
+		? registry.composed
+		: []) {
+		const richFigma = figmaById.get(entry.nodeId);
+		docs.push({
+			name: entry.name,
+			code: resolveCode("", undefined, richFigma?.variantProps),
+			figma: {
+				nodeId: entry.nodeId,
+				description: richFigma?.description ?? "",
+			},
+			gaps: [],
+			composedWith: entry.codeName,
 		});
 	}
 
 	// Figma-only: Figma publishes it, the codebase has no matching component.
 	for (const entry of unmatchedFigma) {
 		const richFigma = figmaById.get(entry.nodeId);
-		const description = richFigma?.description ?? "";
-		const gaps: DocGap[] = ["unmatched-in-code"];
+		const description = richFigma?.description || entry.description || "";
+		// A deprecated component is on its way out: no code is owed, and the
+		// doc names what to use instead.
+		const deprecated = DEPRECATED_RE.test(`${entry.name} ${description}`);
+		const gaps: DocGap[] = deprecated ? [] : ["unmatched-in-code"];
 		if (description.length === 0) gaps.push("missing-figma-description");
+		const replacement = deprecated
+			? REPLACEMENT_RE.exec(description)?.[1]?.trim()
+			: undefined;
 		docs.push({
 			name: entry.name,
 			// No code side: surface the figma variant axes so the doc is not empty.
 			code: resolveCode("", undefined, richFigma?.variantProps),
 			figma: { nodeId: entry.nodeId, description },
 			gaps,
+			...(deprecated
+				? { deprecated: replacement !== undefined ? { replacement } : {} }
+				: {}),
 		});
 	}
 

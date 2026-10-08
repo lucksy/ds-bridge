@@ -65,6 +65,7 @@ function pickPreferred(
 		roleDepth(t.name, role),
 		t.aliasOf !== undefined && names.has(t.aliasOf) ? 0 : 1,
 		isStatusToken(t.name) ? 1 : 0,
+		isStateToken(t.name) ? 1 : 0,
 		isDefaultVariant(t.name) ? 0 : 1,
 		t.name.split(/[.\-/]/).length,
 	];
@@ -109,6 +110,17 @@ function roleScore(name: string, role: Role | undefined): number {
  */
 function isDefaultVariant(name: string): boolean {
 	return /(^|[.\-/])(?:default|neutral|base)([.\-/]|$)/i.test(name);
+}
+
+/**
+ * A token for an interaction state (`background.danger.hover`,
+ * `border.disabled.default`): a literal in a resting style means the resting
+ * token, so a state token sharing its value ranks after it.
+ */
+function isStateToken(name: string): boolean {
+	return /(^|[.\-/])(?:hover|hovered|pressed|active|focus|focused|disabled|selected|visited)([.\-/]|$)/i.test(
+		name,
+	);
 }
 
 /** A token named for a status: error, danger, warning, success, destructive. */

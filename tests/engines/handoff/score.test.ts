@@ -652,3 +652,33 @@ describe("scoreReadiness — an instance's own paint", () => {
 		).toEqual(["overridden"]);
 	});
 });
+
+describe("scoreReadiness — detached suspects are containers", () => {
+	it("never flags a text layer; finds a renamed copy by its component's layers", () => {
+		const report = scoreReadiness(
+			frame({
+				id: "screen",
+				name: "Settings",
+				layoutMode: "VERTICAL",
+				children: [
+					frame({
+						id: "arch",
+						name: "Archive",
+						layoutMode: "HORIZONTAL",
+						children: [
+							{ id: "s", name: "Star", type: "INSTANCE", visible: false },
+							{ id: "t", name: "Button", type: "TEXT", styles: { text: "x" } },
+							{ id: "x", name: "X", type: "INSTANCE", visible: false },
+						],
+					}),
+				],
+			}),
+			{ signatures: [["Star:INSTANCE", "Button:TEXT", "X:INSTANCE"]] },
+		);
+		expect(
+			report.deductions
+				.filter((d) => d.rule === "component")
+				.map((d) => d.nodeId),
+		).toEqual(["arch"]);
+	});
+});

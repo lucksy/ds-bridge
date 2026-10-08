@@ -293,7 +293,7 @@ export function assessLibraryHealth(
 			node.type === "COMPONENT_SET" ? (node.children ?? []) : [node];
 		for (const variant of variants) {
 			for (const child of variant?.children ?? []) {
-				if (child !== undefined) layers.add(child.name);
+				if (child !== undefined) layers.add(`${child.name}:${child.type}`);
 			}
 		}
 		layersByName.set(node.name, layers);
@@ -310,8 +310,14 @@ export function assessLibraryHealth(
 		const layers = (owner?.children ?? []).filter(
 			(c): c is FigmaNode => c !== undefined,
 		);
-		// Instance-only components (Button Group) look like any layout row.
-		if (layers.length >= 2 && layers.some((c) => c.type !== "INSTANCE")) {
+		// Wrapper- or instance-only components (Button Group, `Block | Block`)
+		// look like any layout: a signature needs a content layer.
+		if (
+			layers.length >= 2 &&
+			layers.some(
+				(c) => !["INSTANCE", "FRAME", "GROUP", "SECTION"].includes(c.type),
+			)
+		) {
 			signatures.add(layers.map((c) => `${c.name}:${c.type}`).join("|"));
 		}
 	});
@@ -331,8 +337,15 @@ export function assessLibraryHealth(
 			(c): c is FigmaNode => c !== undefined,
 		);
 		if (children.length === 0) return false;
-		const shared = children.filter((c) => layers.has(c.name)).length;
-		return shared / children.length >= 0.5;
+		// Same name AND type (a "Text" frame is not the "Text" label), at least
+		// half of the layers, one of them content (a label, a vector).
+		const shared = children.filter((c) => layers.has(`${c.name}:${c.type}`));
+		return (
+			shared.length / children.length >= 0.5 &&
+			shared.some(
+				(c) => !["INSTANCE", "FRAME", "GROUP", "SECTION"].includes(c.type),
+			)
+		);
 	};
 
 	const hotspots: OverrideHotspot[] = [];
@@ -370,7 +383,8 @@ export function assessLibraryHealth(
 			const drifted = subtreeOverrides(node).filter(isDesignOverride);
 			const overrideCount = drifted.length;
 			if (overrideCount > 0) {
-				const componentName = componentNameOf(file, node.componentId);
+				// The component (set) — "Footer", not its variant "Platform=Desktop".
+				const componentName = mainNameOf(node.componentId);
 				const fields = [...new Set(drifted.flatMap(designFields))].sort();
 				hotspots.push({
 					nodeId: node.id,
@@ -384,11 +398,14 @@ export function assessLibraryHealth(
 
 		if (isInstance && !ctx.inInstance) {
 			if (hasComponents) {
-				const componentName = componentNameOf(file, node.componentId);
-				if (
-					componentName !== undefined &&
-					deprecatedPattern.test(componentName)
-				) {
+				// A deprecated SET marks every variant ("Legacy Button" with
+				// `Size=Small` variants); a single deprecated variant counts too.
+				const setName = mainNameOf(node.componentId);
+				const variantName = componentNameOf(file, node.componentId);
+				const componentName = [setName, variantName].find(
+					(n) => n !== undefined && deprecatedPattern.test(n),
+				);
+				if (componentName !== undefined) {
 					deprecatedCounts.set(
 						componentName,
 						(deprecatedCounts.get(componentName) ?? 0) + 1,

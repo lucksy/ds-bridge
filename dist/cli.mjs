@@ -10417,7 +10417,7 @@ async function scanUsage(registry, projectDir) {
     globals.__filename = filename;
     globals.__dirname = dirname3(filename);
   }
-  const { mapCodeUsage } = await import("./usage-QOCQXXON.mjs");
+  const { mapCodeUsage } = await import("./usage-SRR4G2ML.mjs");
   return mapCodeUsage({ registry, projectDir });
 }
 function appendAdoptionHistory(targetDir, coverage) {
@@ -10948,7 +10948,7 @@ function assessLibraryHealth(file, opts) {
     const variants = node.type === "COMPONENT_SET" ? node.children ?? [] : [node];
     for (const variant of variants) {
       for (const child of variant?.children ?? []) {
-        if (child !== void 0) layers.add(child.name);
+        if (child !== void 0) layers.add(`${child.name}:${child.type}`);
       }
     }
     layersByName.set(node.name, layers);
@@ -10960,7 +10960,9 @@ function assessLibraryHealth(file, opts) {
     const layers = (owner?.children ?? []).filter(
       (c3) => c3 !== void 0
     );
-    if (layers.length >= 2 && layers.some((c3) => c3.type !== "INSTANCE")) {
+    if (layers.length >= 2 && layers.some(
+      (c3) => !["INSTANCE", "FRAME", "GROUP", "SECTION"].includes(c3.type)
+    )) {
       signatures.add(layers.map((c3) => `${c3.name}:${c3.type}`).join("|"));
     }
   });
@@ -10977,8 +10979,10 @@ function assessLibraryHealth(file, opts) {
       (c3) => c3 !== void 0
     );
     if (children.length === 0) return false;
-    const shared = children.filter((c3) => layers.has(c3.name)).length;
-    return shared / children.length >= 0.5;
+    const shared = children.filter((c3) => layers.has(`${c3.name}:${c3.type}`));
+    return shared.length / children.length >= 0.5 && shared.some(
+      (c3) => !["INSTANCE", "FRAME", "GROUP", "SECTION"].includes(c3.type)
+    );
   };
   const hotspots = [];
   let placedInstances = 0;
@@ -10998,7 +11002,7 @@ function assessLibraryHealth(file, opts) {
       const drifted = subtreeOverrides(node).filter(isDesignOverride);
       const overrideCount = drifted.length;
       if (overrideCount > 0) {
-        const componentName = componentNameOf(file, node.componentId);
+        const componentName = mainNameOf(node.componentId);
         const fields = [...new Set(drifted.flatMap(designFields))].sort();
         hotspots.push({
           nodeId: node.id,
@@ -11011,8 +11015,12 @@ function assessLibraryHealth(file, opts) {
     }
     if (isInstance && !ctx.inInstance) {
       if (hasComponents) {
-        const componentName = componentNameOf(file, node.componentId);
-        if (componentName !== void 0 && deprecatedPattern.test(componentName)) {
+        const setName = mainNameOf(node.componentId);
+        const variantName = componentNameOf(file, node.componentId);
+        const componentName = [setName, variantName].find(
+          (n) => n !== void 0 && deprecatedPattern.test(n)
+        );
+        if (componentName !== void 0) {
           deprecatedCounts.set(
             componentName,
             (deprecatedCounts.get(componentName) ?? 0) + 1
@@ -11067,6 +11075,9 @@ var SEVERITY_ORDER = {
 };
 function byNameAsc2(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
+}
+function related(candidate) {
+  return candidate !== void 0 && candidate.score >= 0.3 ? candidate : void 0;
 }
 function show(score) {
   if (!Number.isFinite(score)) return "0";
@@ -11126,7 +11137,7 @@ function buildParity(registry) {
   }
   for (const entry of unmatchedFigma) {
     if (DEFAULT_DEPRECATED_PATTERN.test(entry.name)) continue;
-    const top2 = entry.candidates?.[0];
+    const top2 = related(entry.candidates?.[0]);
     const detail = top2 !== void 0 ? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top2.codeName} @ ${show(top2.score)}.` : `No code component matched ${entry.name} (${entry.nodeId}); no candidates.`;
     rows.push({
       component: entry.name,
@@ -11148,7 +11159,7 @@ function buildParity(registry) {
       });
       continue;
     }
-    const top2 = entry.candidates?.[0];
+    const top2 = related(entry.candidates?.[0]);
     const detail = top2 !== void 0 ? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top2.figmaName} (${top2.nodeId}) @ ${show(top2.score)}.` : `No Figma component matched ${entry.name} (${entry.importPath}).`;
     rows.push({
       component: entry.name,
@@ -11622,7 +11633,9 @@ function executiveInputs(records, registry) {
   }
   if (registry !== void 0 && Array.isArray(registry.matches) && Array.isArray(registry.unmatchedCode)) {
     consistency.components = {
-      matched: registry.matches.length,
+      matched: registry.matches.filter(
+        (m) => m.kind !== "icon"
+      ).length,
       custom: registry.unmatchedCode.length
     };
   }
@@ -11657,6 +11670,53 @@ function executiveInputs(records, registry) {
     }
   }
   return { consistency, debt };
+}
+
+// src/engines/report/frame-average.ts
+function frameAverager() {
+  const latest = /* @__PURE__ */ new Map();
+  const scoreOf = (r2) => typeof r2.score === "number" && Number.isFinite(r2.score) ? r2.score : 0;
+  return (record) => {
+    if (typeof record.nodeId !== "string") return record;
+    latest.set(`${String(record.fileKey ?? "")}\0${record.nodeId}`, record);
+    if (latest.size === 1) return record;
+    const frames = [...latest.values()];
+    const mean2 = frames.reduce((sum, r2) => sum + scoreOf(r2), 0) / frames.length;
+    const lowest = frames.reduce(
+      (low, r2) => scoreOf(r2) < scoreOf(low) ? r2 : low
+    );
+    const lowName = typeof lowest.frameName === "string" ? lowest.frameName : String(lowest.nodeId);
+    return {
+      ...lowest,
+      score: mean2,
+      frameName: `mean of ${frames.length} frames \xB7 lowest ${lowName} ${Math.round(scoreOf(lowest))}`,
+      frames: frames.length
+    };
+  };
+}
+function mergeFrameImpl(records) {
+  const latest = /* @__PURE__ */ new Map();
+  for (const r2 of records) {
+    const key2 = typeof r2.nodeId === "string" ? `${String(r2.fileKey ?? "")}\0${r2.nodeId}` : `name\0${String(r2.frameName ?? "")}`;
+    latest.set(key2, r2);
+  }
+  const frames = [...latest.values()];
+  if (frames.length <= 1) return frames[0];
+  const num4 = (v) => typeof v === "number" && Number.isFinite(v) ? v : 0;
+  const byReason = {};
+  for (const f3 of frames) {
+    const reasons = typeof f3.byReason === "object" && f3.byReason !== null ? f3.byReason : {};
+    for (const [k4, v] of Object.entries(reasons))
+      byReason[k4] = (byReason[k4] ?? 0) + num4(v);
+  }
+  return {
+    kind: "frame-impl",
+    frameName: `${frames.length} frames`,
+    resolvedCount: frames.reduce((s, f3) => s + num4(f3.resolvedCount), 0),
+    gapCount: frames.reduce((s, f3) => s + num4(f3.gapCount), 0),
+    byReason,
+    topGaps: frames.flatMap((f3) => Array.isArray(f3.topGaps) ? f3.topGaps : [])
+  };
 }
 
 // src/engines/report/frame-implementability.ts
@@ -12350,10 +12410,15 @@ function combineScore(latest, weights) {
 function scoreFromHistory(text2, weights) {
   const effectiveWeights = weights ?? DEFAULT_WEIGHTS;
   const entries = [];
+  const averageFrames = frameAverager();
   for (const { record } of replayHistory(text2)) {
     const component = componentKindFor(record.kind);
     if (component === void 0) continue;
     const date = typeof record.at === "string" ? record.at.slice(0, 10) : void 0;
+    if (component === "readiness") {
+      entries.push({ component, date, record: averageFrames(record) });
+      continue;
+    }
     entries.push({ component, date, record });
     if (component === "lint" && typeof record.adoption === "object" && record.adoption !== null) {
       entries.push({ component: "adoption", date, record });
@@ -14281,6 +14346,7 @@ function aggregateHistory(text2, historyPath, onWarning) {
   const driftTrend = [];
   let lint;
   let readiness;
+  const averageFrames = frameAverager();
   let a11y;
   let impact;
   const adoptionTrend = [];
@@ -14355,7 +14421,7 @@ function aggregateHistory(text2, historyPath, onWarning) {
       continue;
     }
     if (record.kind === "handoff") {
-      const r2 = record;
+      const r2 = averageFrames(record);
       const deductions = Array.isArray(r2.deductions) ? r2.deductions : [];
       readiness = {
         score: asNumber11(r2.score),
@@ -14400,7 +14466,15 @@ function aggregateHistory(text2, historyPath, onWarning) {
           overrideHotspots: asNumber11(r2.overrideHotspots),
           deprecatedUsage: asNumber11(r2.deprecatedUsage),
           detachedCandidates: asNumber11(r2.detachedCandidates)
-        }
+        },
+        // The line's ranked top lists name what the totals count.
+        ...topList(record.topOverrides) !== void 0 ? {
+          top: {
+            overrides: topList(record.topOverrides) ?? [],
+            deprecated: topList(record.topDeprecated) ?? [],
+            detached: topList(record.topDetached) ?? []
+          }
+        } : {}
       };
     }
   }
@@ -14486,12 +14560,20 @@ function computeAudienceChangelog(records) {
   }
   return buildAudienceChangelog(latestChangelog);
 }
+function topList(value2) {
+  if (!Array.isArray(value2)) return void 0;
+  return value2.flatMap(
+    (entry) => typeof entry === "object" && entry !== null && typeof entry.name === "string" ? [
+      {
+        name: entry.name,
+        count: asNumber11(entry.count)
+      }
+    ] : []
+  );
+}
 function computeFrameImplementability(records) {
-  let latestFrameImpl;
-  for (const entry of records) {
-    if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
-  }
-  return buildFrameImplementability(latestFrameImpl);
+  const frameImpls = records.filter((entry) => entry.kind === "frame-impl").map((entry) => entry.record);
+  return buildFrameImplementability(mergeFrameImpl(frameImpls));
 }
 function resolveOwnership(targetDir, ownership, ownershipFile) {
   if (ownership !== void 0) return ownership;
@@ -14562,6 +14644,7 @@ function latestTargetScalars(records, systemScore) {
   let parity;
   let a11y;
   let handoff;
+  const averageScalarFrames = frameAverager();
   for (const { kind, record } of records) {
     switch (kind) {
       case "lint":
@@ -14577,7 +14660,7 @@ function latestTargetScalars(records, systemScore) {
         a11y = record;
         break;
       case "handoff":
-        handoff = record;
+        handoff = averageScalarFrames(record);
         break;
       default:
         break;
@@ -15392,7 +15475,9 @@ function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
   const before = {};
   const inWindow = {};
   let anyInWindow = false;
-  for (const { kind, at, record } of records) {
+  const averageFrames = frameAverager();
+  for (const { kind, at, record: raw } of records) {
+    const record = kind === "handoff" ? averageFrames(raw) : raw;
     if (at === void 0) continue;
     if (at >= sinceIso) {
       absorb(inWindow, kind, record);
@@ -17245,7 +17330,7 @@ var SECTIONS2 = [
   { heading: "For developers", audience: "developer" }
 ];
 var MOVEMENT_LABEL = {
-  drift: "Drift",
+  drift: "Stale tokens",
   lint: "Lint violations",
   "on-system": "On-system",
   coverage: "Import coverage",
@@ -17823,6 +17908,8 @@ import { dirname as dirname6, join as join16, resolve as resolvePath3 } from "pa
 import { fileURLToPath as fileURLToPath3 } from "url";
 
 // src/engines/docs/merge.ts
+var DEPRECATED_RE = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
+var REPLACEMENT_RE = /\b(?:use|replaced?\s+(?:with|by))\s+[`"'“]?([A-Za-z][\w-]*(?:\s?\/\s?[A-Za-z][\w-]*)*(?:\s*\([^)]+\))?)/i;
 function byNameAsc3(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -17865,9 +17952,11 @@ function mergeComponentDocs(input) {
   for (const match of matches) {
     const richCode = codeByName.get(match.codeName);
     const richFigma = figmaById.get(match.nodeId);
-    const description = richFigma?.description ?? "";
+    const description = richFigma?.description || match.description || "";
     const gaps = [];
-    if (description.length === 0) gaps.push("missing-figma-description");
+    if (description.length === 0 && match.kind !== "icon") {
+      gaps.push("missing-figma-description");
+    }
     docs.push({
       name: match.codeName,
       code: resolveCode(match.importPath, richCode),
@@ -17877,23 +17966,41 @@ function mergeComponentDocs(input) {
   }
   for (const entry of unmatchedCode) {
     const richCode = codeByName.get(entry.name);
+    const composes = Array.isArray(entry.composes) ? entry.composes : [];
     docs.push({
       name: entry.name,
       code: resolveCode(entry.importPath, richCode),
-      gaps: ["unmatched-in-figma"]
+      // A recipe base Code Connect builds Figma components from is covered.
+      gaps: composes.length > 0 ? [] : ["unmatched-in-figma"]
+    });
+  }
+  for (const entry of Array.isArray(registry?.composed) ? registry.composed : []) {
+    const richFigma = figmaById.get(entry.nodeId);
+    docs.push({
+      name: entry.name,
+      code: resolveCode("", void 0, richFigma?.variantProps),
+      figma: {
+        nodeId: entry.nodeId,
+        description: richFigma?.description ?? ""
+      },
+      gaps: [],
+      composedWith: entry.codeName
     });
   }
   for (const entry of unmatchedFigma) {
     const richFigma = figmaById.get(entry.nodeId);
-    const description = richFigma?.description ?? "";
-    const gaps = ["unmatched-in-code"];
+    const description = richFigma?.description || entry.description || "";
+    const deprecated = DEPRECATED_RE.test(`${entry.name} ${description}`);
+    const gaps = deprecated ? [] : ["unmatched-in-code"];
     if (description.length === 0) gaps.push("missing-figma-description");
+    const replacement = deprecated ? REPLACEMENT_RE.exec(description)?.[1]?.trim() : void 0;
     docs.push({
       name: entry.name,
       // No code side: surface the figma variant axes so the doc is not empty.
       code: resolveCode("", void 0, richFigma?.variantProps),
       figma: { nodeId: entry.nodeId, description },
-      gaps
+      gaps,
+      ...deprecated ? { deprecated: replacement !== void 0 ? { replacement } : {} } : {}
     });
   }
   docs.sort((a, b) => byNameAsc3(a.name, b.name));
@@ -17913,6 +18020,7 @@ var TOKEN_TYPE_ORDER = [
   "other"
 ];
 function signature(doc) {
+  if (doc.code.importPath.length === 0) return "";
   const parts = doc.code.props.map(
     (prop) => `${prop.name}${prop.required ? "" : "?"}: ${prop.type}`
   );
@@ -17924,6 +18032,12 @@ function locationOf(doc) {
   return "(no source)";
 }
 function statusTag(doc) {
+  if (doc.deprecated !== void 0) {
+    return doc.deprecated.replacement !== void 0 ? `[deprecated \u2192 use ${doc.deprecated.replacement}]` : "[deprecated]";
+  }
+  if (doc.composedWith !== void 0) {
+    return `[composed in code with ${doc.composedWith}]`;
+  }
   if (doc.gaps.length === 0) return "[documented]";
   return `[gaps: ${doc.gaps.join(", ")}]`;
 }
@@ -18037,6 +18151,22 @@ function renderComponentMdx(doc) {
     ["---", `title: ${doc.name}`, `status: ${statusOf(doc)}`, "---"].join("\n"),
     `# ${doc.name}`
   ];
+  if (doc.deprecated !== void 0) {
+    sections.push(
+      [
+        "> [!CAUTION]",
+        doc.deprecated.replacement !== void 0 ? `> Deprecated \u2014 use **${doc.deprecated.replacement}** instead. No code is owed for this component.` : "> Deprecated \u2014 no code is owed for this component."
+      ].join("\n")
+    );
+  }
+  if (doc.composedWith !== void 0) {
+    sections.push(
+      [
+        "> [!NOTE]",
+        `> Composed in code with \`${doc.composedWith}\` (Code Connect) \u2014 there is no separate component to import.`
+      ].join("\n")
+    );
+  }
   const importBlock = renderImport(doc);
   if (importBlock !== void 0) sections.push(importBlock);
   sections.push(renderProps(doc));
@@ -18629,6 +18759,7 @@ function pickPreferred(tokens, property) {
     roleDepth(t.name, role),
     t.aliasOf !== void 0 && names.has(t.aliasOf) ? 0 : 1,
     isStatusToken(t.name) ? 1 : 0,
+    isStateToken(t.name) ? 1 : 0,
     isDefaultVariant(t.name) ? 0 : 1,
     t.name.split(/[.\-/]/).length
   ];
@@ -18657,6 +18788,11 @@ function roleScore(name, role) {
 }
 function isDefaultVariant(name) {
   return /(^|[.\-/])(?:default|neutral|base)([.\-/]|$)/i.test(name);
+}
+function isStateToken(name) {
+  return /(^|[.\-/])(?:hover|hovered|pressed|active|focus|focused|disabled|selected|visited)([.\-/]|$)/i.test(
+    name
+  );
 }
 function isStatusToken(name) {
   return /(error|danger|warning|warn|success|destructive|critical)/i.test(name);
@@ -18977,12 +19113,12 @@ function toRegistryFile(result, generatedAt) {
     ...composed.length > 0 ? { composed } : {}
   };
 }
-var DEPRECATED_RE = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
-var REPLACEMENT_RE = /\b(?:use|replaced?\s+(?:with|by))\s+[`"'“]?([A-Za-z][\w-]*(?:\s?\/\s?[A-Za-z][\w-]*)*)[`"'”]?(?:\s*\(([^)]+)\))?/i;
+var DEPRECATED_RE2 = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
+var REPLACEMENT_RE2 = /\b(?:use|replaced?\s+(?:with|by))\s+[`"'“]?([A-Za-z][\w-]*(?:\s?\/\s?[A-Za-z][\w-]*)*)[`"'”]?(?:\s*\(([^)]+)\))?/i;
 function namedReplacement(registry, entry) {
   const description = entry.description ?? "";
-  if (!DEPRECATED_RE.test(`${entry.name} ${description}`)) return void 0;
-  const named2 = REPLACEMENT_RE.exec(description);
+  if (!DEPRECATED_RE2.test(`${entry.name} ${description}`)) return void 0;
+  const named2 = REPLACEMENT_RE2.exec(description);
   const target = named2?.[1];
   if (target === void 0) return void 0;
   const key2 = normalizeName3(target);
@@ -19014,6 +19150,19 @@ function resolveEntry(registry, nodeNameOrId) {
         return { kind: "match", entry };
       }
     }
+  }
+  const composed = (Array.isArray(registry.composed) ? registry.composed : []).find(
+    (c3) => c3.nodeId === query || c3.name === query || normalizedQuery.length > 0 && normalizeName3(c3.name) === normalizedQuery
+  );
+  if (composed !== void 0) {
+    const importPath = registry.matches.find((m) => m.codeName === composed.codeName)?.importPath ?? registry.unmatchedCode.find((u) => u.name === composed.codeName)?.importPath;
+    return {
+      kind: "composed",
+      name: composed.name,
+      nodeId: composed.nodeId,
+      codeName: composed.codeName,
+      ...importPath !== void 0 ? { importPath } : {}
+    };
   }
   const unmatched = registry.unmatchedFigma.find(
     (e4) => e4.nodeId === query || e4.aliasNodeIds?.includes(query)
@@ -19056,6 +19205,16 @@ function resolveComponent(requirement, registry) {
         codeName: outcome.entry.codeName,
         importPath: outcome.entry.importPath,
         ...outcome.replaces !== void 0 ? { replaces: outcome.replaces } : {}
+      }
+    };
+  }
+  if (outcome.kind === "composed") {
+    return {
+      requirement,
+      resolution: {
+        kind: "registry-match",
+        codeName: outcome.codeName,
+        importPath: outcome.importPath ?? ""
       }
     };
   }
@@ -19160,6 +19319,245 @@ function findGaps(input) {
     }
   }
   return { resolved, gaps };
+}
+
+// src/engines/registry/scan-figma.ts
+function isContentLayer(layer) {
+  return !/:(?:INSTANCE|FRAME|GROUP|SECTION)$/.test(layer);
+}
+function layerSignature(node) {
+  const owner = node.type === "COMPONENT_SET" ? node.children?.find((c3) => c3.type === "COMPONENT") : node;
+  const layers = (owner?.children ?? []).map(
+    (c3) => `${asString2(c3.name)}:${asString2(c3.type)}`
+  );
+  return layers.length >= 2 && layers.some(isContentLayer) ? layers : void 0;
+}
+function layerSignatures(document) {
+  const out = /* @__PURE__ */ new Map();
+  if (document === void 0) return out;
+  const stack2 = [document];
+  while (stack2.length > 0) {
+    const node = stack2.pop();
+    if (node.type === "COMPONENT_SET" || node.type === "COMPONENT") {
+      const layers = layerSignature(node);
+      if (layers !== void 0) out.set(asString2(node.id), layers);
+      if (node.type === "COMPONENT_SET") continue;
+    }
+    for (const child of node.children ?? []) stack2.push(child);
+  }
+  return out;
+}
+function isString(value2) {
+  return typeof value2 === "string";
+}
+function asString2(value2) {
+  return isString(value2) ? value2 : "";
+}
+function parseVariantName(name) {
+  const props = {};
+  if (!name.includes("=")) return props;
+  for (const pair of name.split(",")) {
+    const eq = pair.indexOf("=");
+    if (eq === -1) continue;
+    const key2 = pair.slice(0, eq).trim();
+    const value2 = pair.slice(eq + 1).trim();
+    if (key2.length === 0) continue;
+    const existing = props[key2];
+    if (existing === void 0) {
+      props[key2] = [value2];
+    } else {
+      existing.push(value2);
+    }
+  }
+  return props;
+}
+function normalizeVariantProps(props) {
+  const out = {};
+  for (const key2 of Object.keys(props).sort()) {
+    const values = props[key2] ?? [];
+    out[key2] = [...new Set(values)].sort();
+  }
+  return out;
+}
+function mergeVariantProps(into, from) {
+  for (const key2 of Object.keys(from)) {
+    const incoming = from[key2] ?? [];
+    const existing = into[key2];
+    if (existing === void 0) {
+      into[key2] = [...incoming];
+    } else {
+      existing.push(...incoming);
+    }
+  }
+}
+function compareIds(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+var EXAMPLE_NAME = /^(?:examples?|templates?)\s*\//i;
+var EXAMPLE_PAGE = /^(?:examples?|templates?|playground|sandbox)$/i;
+var ICON_CONTEXT = /(^|[^a-z])icons?([^a-z]|$)/i;
+function buildPublished(input) {
+  const components = input?.meta?.components;
+  const ids = /* @__PURE__ */ new Set();
+  if (!Array.isArray(components)) return { models: [], ids };
+  const sets = /* @__PURE__ */ new Map();
+  const standalone = [];
+  for (const component of components) {
+    const nodeId = asString2(component.node_id);
+    if (nodeId.length === 0) continue;
+    ids.add(nodeId);
+    const rawName = asString2(component.name);
+    const description = asString2(component.description);
+    const variantProps = parseVariantName(rawName);
+    const isVariant = Object.keys(variantProps).length > 0;
+    const setName = isString(component.containing_frame?.name) ? component.containing_frame.name : void 0;
+    if (isVariant && setName !== void 0) {
+      const existing = sets.get(setName);
+      if (existing === void 0) {
+        sets.set(setName, {
+          name: setName,
+          nodeId,
+          description,
+          variantProps: { ...variantProps }
+        });
+      } else {
+        mergeVariantProps(existing.variantProps, variantProps);
+        if (compareIds(nodeId, existing.nodeId) < 0) existing.nodeId = nodeId;
+        if (existing.description.length === 0 && description.length > 0) {
+          existing.description = description;
+        }
+      }
+    } else {
+      const frame = component.containing_frame;
+      if (EXAMPLE_PAGE.test(asString2(frame?.pageName).trim())) continue;
+      const icon = ICON_CONTEXT.test(asString2(frame?.pageName)) || ICON_CONTEXT.test(asString2(frame?.name));
+      standalone.push({
+        name: rawName,
+        nodeId,
+        description,
+        variantProps,
+        ...icon ? { icon } : {}
+      });
+    }
+  }
+  const models = [];
+  for (const acc of [...sets.values(), ...standalone]) {
+    models.push({
+      name: acc.name,
+      nodeId: acc.nodeId,
+      description: acc.description,
+      variantProps: normalizeVariantProps(acc.variantProps),
+      source: "published",
+      ...acc.icon === true ? { kind: "icon" } : {}
+    });
+  }
+  return { models, ids };
+}
+function variantPropsFromChildren(children) {
+  const props = {};
+  if (!Array.isArray(children)) return props;
+  for (const child of children) {
+    if (child.type !== "COMPONENT") continue;
+    mergeVariantProps(props, parseVariantName(asString2(child.name)));
+  }
+  return props;
+}
+function buildInline(document, publishedIds, descriptions) {
+  if (document === void 0) return [];
+  const byId = /* @__PURE__ */ new Map();
+  const stack2 = [
+    { node: document, icon: false }
+  ];
+  while (stack2.length > 0) {
+    const { node, icon } = stack2.pop();
+    const type = node.type;
+    if (type === "CANVAS" && EXAMPLE_PAGE.test(asString2(node.name).trim())) {
+      continue;
+    }
+    if (type === "COMPONENT_SET" || type === "COMPONENT") {
+      const nodeId = asString2(node.id);
+      if (nodeId.length > 0 && !publishedIds.has(nodeId) && !byId.has(nodeId)) {
+        const variantProps = type === "COMPONENT_SET" ? variantPropsFromChildren(node.children) : {};
+        byId.set(nodeId, {
+          name: asString2(node.name),
+          nodeId,
+          description: asString2(node.description) || descriptions(nodeId),
+          variantProps: normalizeVariantProps(variantProps),
+          source: "inline",
+          ...icon ? { kind: "icon" } : {}
+        });
+      }
+      if (type === "COMPONENT_SET") continue;
+    }
+    const children = node.children;
+    const childIcon = icon || (type === "CANVAS" || type === "SECTION" || type === "FRAME") && ICON_CONTEXT.test(asString2(node.name));
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack2.push({ node: child, icon: childIcon });
+      }
+    }
+  }
+  return [...byId.values()];
+}
+function buildFigmaComponentModel(input) {
+  const { models: publishedModels, ids } = buildPublished(input.published);
+  const descriptions = (nodeId) => asString2(input.fileComponentSets?.[nodeId]?.description) || asString2(input.fileComponents?.[nodeId]?.description);
+  const inlineModels = buildInline(input.fileDocument, ids, descriptions);
+  const byId = /* @__PURE__ */ new Map();
+  for (const model of publishedModels) {
+    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+  }
+  for (const model of inlineModels) {
+    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
+  }
+  const signatures = layerSignatures(input.fileDocument);
+  const withLayers = [...byId.values()].map((model) => {
+    const layers = signatures.get(model.nodeId);
+    return layers === void 0 ? model : { ...model, layers };
+  });
+  return normalizeComponentModels(withLayers);
+}
+function normalizeComponentModels(models) {
+  const visible = models.filter(
+    (m) => !/^[._]/.test(m.name.trim()) && !EXAMPLE_NAME.test(m.name.trim())
+  );
+  return collapseSameName(visible).sort((a, b) => {
+    if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+    return compareIds(a.nodeId, b.nodeId);
+  });
+}
+function collapseSameName(models) {
+  const groups = /* @__PURE__ */ new Map();
+  const out = [];
+  for (const model of models) {
+    if (Object.keys(model.variantProps).length > 0) {
+      out.push(model);
+      continue;
+    }
+    const group = groups.get(model.name) ?? [];
+    group.push(model);
+    groups.set(model.name, group);
+  }
+  for (const group of groups.values()) {
+    const sorted = [...group].sort((a, b) => compareIds(a.nodeId, b.nodeId));
+    const [first, ...rest] = sorted;
+    if (first === void 0) continue;
+    const description = sorted.find((m) => m.description !== "")?.description ?? "";
+    const aliases = [
+      .../* @__PURE__ */ new Set([
+        ...sorted.flatMap((m) => m.aliasNodeIds ?? []),
+        ...rest.map((m) => m.nodeId)
+      ])
+    ].filter((id) => id !== first.nodeId).sort(compareIds);
+    out.push({
+      ...first,
+      description,
+      ...aliases.length > 0 ? { aliasNodeIds: aliases } : {},
+      ...sorted.some((m) => m.kind === "icon") ? { kind: "icon" } : {}
+    });
+  }
+  return out;
 }
 
 // src/cli-commands/figma-auth-help.ts
@@ -19296,8 +19694,8 @@ function firstSolidFillColor(node) {
   for (const paint of node.fills) {
     if (paint.type !== "SOLID" || paint.color === void 0) continue;
     const { r: r2, g, b, a } = paint.color;
-    const to255 = (v) => Math.round(v * 255);
-    return a >= 1 ? `rgb(${to255(r2)}, ${to255(g)}, ${to255(b)})` : `rgba(${to255(r2)}, ${to255(g)}, ${to255(b)}, ${a})`;
+    const hex2 = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
+    return a >= 1 ? `#${hex2(r2)}${hex2(g)}${hex2(b)}` : `#${hex2(r2)}${hex2(g)}${hex2(b)}${hex2(a)}`;
   }
   return void 0;
 }
@@ -19311,8 +19709,7 @@ function mainComponentName(node, maps) {
 function deriveRequirements(root2, maps = {}, signatures = []) {
   const bySignature = /* @__PURE__ */ new Map();
   for (const { figmaName, layers } of signatures) {
-    if (layers.length < 2 || layers.every((l) => l.endsWith(":INSTANCE")))
-      continue;
+    if (layers.length < 2 || !layers.some(isContentLayer)) continue;
     const key2 = layers.join("|");
     bySignature.set(key2, [...bySignature.get(key2) ?? [], figmaName]);
   }
@@ -19435,7 +19832,8 @@ function rollUp(report, frameName) {
   }
   const topGaps = report.gaps.slice(0, TOP_GAPS_LIMIT).map((gap) => ({
     reason: gap.reason,
-    requirement: requirementLabel(gap.requirement)
+    requirement: requirementLabel(gap.requirement),
+    ...gap.candidates.length > 0 ? { candidates: gap.candidates } : {}
   }));
   const replacements = report.resolved.flatMap(
     (r2) => r2.resolution.kind === "registry-match" && r2.resolution.replaces !== void 0 ? [
@@ -19496,8 +19894,12 @@ function renderTerm6(impl, color) {
       "",
       "Gaps:",
       renderTable(
-        ["requirement", "reason"],
-        impl.topGaps.map((gap) => [gap.requirement, gap.reason]),
+        ["requirement", "reason", "nearest / candidates"],
+        impl.topGaps.map((gap) => [
+          gap.requirement,
+          gap.reason,
+          (gap.candidates ?? []).slice(0, 3).join(", ") || "\u2014"
+        ]),
         { color }
       )
     );
@@ -19652,6 +20054,7 @@ function registerFrameImplCommand(program2) {
 }
 
 // src/cli-commands/handoff.ts
+import { readFileSync as readFileSync16 } from "fs";
 import { join as join18 } from "path";
 import { cwd as cwd2 } from "process";
 
@@ -19827,8 +20230,15 @@ function scoreReadiness(root2, options = {}) {
   const framesWithoutAutoLayout = frames.filter((n) => !hasAutoLayout(n));
   const autoLayoutCoverage = frames.length === 0 ? 1 : 1 - framesWithoutAutoLayout.length / frames.length;
   const instanceCount = nodes.filter((n) => n.type === "INSTANCE").length;
+  const signatureKeys = new Set(
+    (options.signatures ?? []).filter((layers) => layers.length >= 2).map((layers) => layers.join("|"))
+  );
+  const carriesSignature = (n) => {
+    const children = n.children ?? [];
+    return children.length >= 2 && signatureKeys.has(children.map((c3) => `${c3.name}:${c3.type}`).join("|"));
+  };
   const suspectNodes = nodes.filter(
-    (n) => n.type !== "INSTANCE" && isComponentName(n.name)
+    (n) => n !== root2 && (n.type === "FRAME" || n.type === "GROUP") && (isComponentName(n.name) || carriesSignature(n))
   );
   const detachedSuspects = suspectNodes.length;
   const deprecated = nodes.map((node) => ({ node, name: deprecatedNameOf(node, options) })).filter(
@@ -19953,6 +20363,41 @@ function scoreReadiness(root2, options = {}) {
 }
 
 // src/cli-commands/handoff.ts
+function nameReplacements(report, registryPath) {
+  let registry;
+  try {
+    registry = JSON.parse(readFileSync16(registryPath, "utf8"));
+  } catch {
+    return report;
+  }
+  const fixFor = (nodeName, fix) => {
+    const outcome = resolveEntry(registry, nodeName);
+    if (outcome.kind !== "match" || outcome.replaces === void 0) return fix;
+    const hint = outcome.replaces.hint !== void 0 ? ` (${outcome.replaces.hint})` : "";
+    return `Swap to ${outcome.entry.figmaName}${hint} \u2014 "${outcome.replaces.name}" is deprecated`;
+  };
+  const blocked = new Set(report.blockers.map((b) => b.nodeId));
+  return {
+    ...report,
+    blockers: report.blockers.map((b) => ({
+      ...b,
+      fix: fixFor(b.nodeName, b.fix)
+    })),
+    deductions: report.deductions.map(
+      (d) => blocked.has(d.nodeId) ? { ...d, fix: fixFor(d.nodeName, d.fix) } : d
+    )
+  };
+}
+function registrySignatures(path) {
+  try {
+    const registry = JSON.parse(readFileSync16(path, "utf8"));
+    return [...registry.matches ?? [], ...registry.unmatchedFigma ?? []].map((entry) => entry.layers).filter(
+      (layers) => Array.isArray(layers) && layers.every((l) => typeof l === "string") && layers.some((l) => !/:(?:INSTANCE|FRAME|GROUP|SECTION)$/.test(l))
+    );
+  } catch {
+    return [];
+  }
+}
 var DEDUCTION_LIMIT = 10;
 var DEFAULT_FIGMA_API_BASE3 = "https://api.figma.com";
 var RULE_LABEL = {
@@ -20190,7 +20635,14 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     fail9(fetched.message);
     return;
   }
-  const report = scoreReadiness(fetched.root, fetched.maps);
+  const registryPath = join18(cwd2(), ".ds-bridge", "registry.json");
+  const report = nameReplacements(
+    scoreReadiness(fetched.root, {
+      ...fetched.maps,
+      signatures: registrySignatures(registryPath)
+    }),
+    registryPath
+  );
   if (options.history) {
     appendHandoffHistory(report, fetched.root.name, {
       fileKey: parsed.fileKey,
@@ -20254,7 +20706,7 @@ function registerHandoffCommand(program2) {
 import {
   appendFileSync as appendFileSync4,
   existsSync as existsSync14,
-  readFileSync as readFileSync16,
+  readFileSync as readFileSync17,
   statSync as statSync9,
   writeFileSync as writeFileSync8
 } from "fs";
@@ -20676,7 +21128,7 @@ function prepare2(path, options) {
 }
 function readText(file) {
   try {
-    return readFileSync16(file, "utf8");
+    return readFileSync17(file, "utf8");
   } catch (error) {
     if (error.code === "ENOENT") return void 0;
     const detail = error instanceof Error ? error.message : String(error);
@@ -20775,7 +21227,7 @@ function rewriteUnderLock(stateDir, dryRun, transform) {
     return { ok: false };
   }
   try {
-    const bytes = readFileSync16(file);
+    const bytes = readFileSync17(file);
     const text2 = bytes.toString("utf8");
     const next = transform(text2);
     if (!dryRun && next.text !== text2)
@@ -20858,7 +21310,7 @@ function runInit(path, options) {
   const file = join19(ctx.targetDir, ".gitattributes");
   let current;
   try {
-    current = readFileSync16(file, "utf8");
+    current = readFileSync17(file, "utf8");
   } catch (error) {
     if (error.code !== "ENOENT") {
       const detail = error instanceof Error ? error.message : String(error);
@@ -21003,7 +21455,7 @@ function registerHistoryCommand(program2) {
 }
 
 // src/cli-commands/impact.ts
-import { existsSync as existsSync15, mkdirSync as mkdirSync7, readFileSync as readFileSync17, writeFileSync as writeFileSync9 } from "fs";
+import { existsSync as existsSync15, mkdirSync as mkdirSync7, readFileSync as readFileSync18, writeFileSync as writeFileSync9 } from "fs";
 import { dirname as dirname7, join as join20 } from "path";
 import { cwd as cwd3, env as processEnv } from "process";
 import { fileURLToPath as fileURLToPath4 } from "url";
@@ -21209,242 +21661,6 @@ function diffComponents(before, after) {
   return { added, removed, renamed, changed };
 }
 
-// src/engines/registry/scan-figma.ts
-function layerSignature(node) {
-  const owner = node.type === "COMPONENT_SET" ? node.children?.find((c3) => c3.type === "COMPONENT") : node;
-  const layers = (owner?.children ?? []).map(
-    (c3) => `${asString2(c3.name)}:${asString2(c3.type)}`
-  );
-  return layers.length >= 2 && layers.some((l) => !l.endsWith(":INSTANCE")) ? layers : void 0;
-}
-function layerSignatures(document) {
-  const out = /* @__PURE__ */ new Map();
-  if (document === void 0) return out;
-  const stack2 = [document];
-  while (stack2.length > 0) {
-    const node = stack2.pop();
-    if (node.type === "COMPONENT_SET" || node.type === "COMPONENT") {
-      const layers = layerSignature(node);
-      if (layers !== void 0) out.set(asString2(node.id), layers);
-      if (node.type === "COMPONENT_SET") continue;
-    }
-    for (const child of node.children ?? []) stack2.push(child);
-  }
-  return out;
-}
-function isString(value2) {
-  return typeof value2 === "string";
-}
-function asString2(value2) {
-  return isString(value2) ? value2 : "";
-}
-function parseVariantName(name) {
-  const props = {};
-  if (!name.includes("=")) return props;
-  for (const pair of name.split(",")) {
-    const eq = pair.indexOf("=");
-    if (eq === -1) continue;
-    const key2 = pair.slice(0, eq).trim();
-    const value2 = pair.slice(eq + 1).trim();
-    if (key2.length === 0) continue;
-    const existing = props[key2];
-    if (existing === void 0) {
-      props[key2] = [value2];
-    } else {
-      existing.push(value2);
-    }
-  }
-  return props;
-}
-function normalizeVariantProps(props) {
-  const out = {};
-  for (const key2 of Object.keys(props).sort()) {
-    const values = props[key2] ?? [];
-    out[key2] = [...new Set(values)].sort();
-  }
-  return out;
-}
-function mergeVariantProps(into, from) {
-  for (const key2 of Object.keys(from)) {
-    const incoming = from[key2] ?? [];
-    const existing = into[key2];
-    if (existing === void 0) {
-      into[key2] = [...incoming];
-    } else {
-      existing.push(...incoming);
-    }
-  }
-}
-function compareIds(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
-var EXAMPLE_NAME = /^(?:examples?|templates?)\s*\//i;
-var EXAMPLE_PAGE = /^(?:examples?|templates?|playground|sandbox)$/i;
-var ICON_CONTEXT = /(^|[^a-z])icons?([^a-z]|$)/i;
-function buildPublished(input) {
-  const components = input?.meta?.components;
-  const ids = /* @__PURE__ */ new Set();
-  if (!Array.isArray(components)) return { models: [], ids };
-  const sets = /* @__PURE__ */ new Map();
-  const standalone = [];
-  for (const component of components) {
-    const nodeId = asString2(component.node_id);
-    if (nodeId.length === 0) continue;
-    ids.add(nodeId);
-    const rawName = asString2(component.name);
-    const description = asString2(component.description);
-    const variantProps = parseVariantName(rawName);
-    const isVariant = Object.keys(variantProps).length > 0;
-    const setName = isString(component.containing_frame?.name) ? component.containing_frame.name : void 0;
-    if (isVariant && setName !== void 0) {
-      const existing = sets.get(setName);
-      if (existing === void 0) {
-        sets.set(setName, {
-          name: setName,
-          nodeId,
-          description,
-          variantProps: { ...variantProps }
-        });
-      } else {
-        mergeVariantProps(existing.variantProps, variantProps);
-        if (compareIds(nodeId, existing.nodeId) < 0) existing.nodeId = nodeId;
-        if (existing.description.length === 0 && description.length > 0) {
-          existing.description = description;
-        }
-      }
-    } else {
-      const frame = component.containing_frame;
-      if (EXAMPLE_PAGE.test(asString2(frame?.pageName).trim())) continue;
-      const icon = ICON_CONTEXT.test(asString2(frame?.pageName)) || ICON_CONTEXT.test(asString2(frame?.name));
-      standalone.push({
-        name: rawName,
-        nodeId,
-        description,
-        variantProps,
-        ...icon ? { icon } : {}
-      });
-    }
-  }
-  const models = [];
-  for (const acc of [...sets.values(), ...standalone]) {
-    models.push({
-      name: acc.name,
-      nodeId: acc.nodeId,
-      description: acc.description,
-      variantProps: normalizeVariantProps(acc.variantProps),
-      source: "published",
-      ...acc.icon === true ? { kind: "icon" } : {}
-    });
-  }
-  return { models, ids };
-}
-function variantPropsFromChildren(children) {
-  const props = {};
-  if (!Array.isArray(children)) return props;
-  for (const child of children) {
-    if (child.type !== "COMPONENT") continue;
-    mergeVariantProps(props, parseVariantName(asString2(child.name)));
-  }
-  return props;
-}
-function buildInline(document, publishedIds, descriptions) {
-  if (document === void 0) return [];
-  const byId = /* @__PURE__ */ new Map();
-  const stack2 = [
-    { node: document, icon: false }
-  ];
-  while (stack2.length > 0) {
-    const { node, icon } = stack2.pop();
-    const type = node.type;
-    if (type === "CANVAS" && EXAMPLE_PAGE.test(asString2(node.name).trim())) {
-      continue;
-    }
-    if (type === "COMPONENT_SET" || type === "COMPONENT") {
-      const nodeId = asString2(node.id);
-      if (nodeId.length > 0 && !publishedIds.has(nodeId) && !byId.has(nodeId)) {
-        const variantProps = type === "COMPONENT_SET" ? variantPropsFromChildren(node.children) : {};
-        byId.set(nodeId, {
-          name: asString2(node.name),
-          nodeId,
-          description: asString2(node.description) || descriptions(nodeId),
-          variantProps: normalizeVariantProps(variantProps),
-          source: "inline",
-          ...icon ? { kind: "icon" } : {}
-        });
-      }
-      if (type === "COMPONENT_SET") continue;
-    }
-    const children = node.children;
-    const childIcon = icon || (type === "CANVAS" || type === "SECTION" || type === "FRAME") && ICON_CONTEXT.test(asString2(node.name));
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i -= 1) {
-        const child = children[i];
-        if (child !== void 0) stack2.push({ node: child, icon: childIcon });
-      }
-    }
-  }
-  return [...byId.values()];
-}
-function buildFigmaComponentModel(input) {
-  const { models: publishedModels, ids } = buildPublished(input.published);
-  const descriptions = (nodeId) => asString2(input.fileComponentSets?.[nodeId]?.description) || asString2(input.fileComponents?.[nodeId]?.description);
-  const inlineModels = buildInline(input.fileDocument, ids, descriptions);
-  const byId = /* @__PURE__ */ new Map();
-  for (const model of publishedModels) {
-    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
-  }
-  for (const model of inlineModels) {
-    if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
-  }
-  const signatures = layerSignatures(input.fileDocument);
-  const withLayers = [...byId.values()].map((model) => {
-    const layers = signatures.get(model.nodeId);
-    return layers === void 0 ? model : { ...model, layers };
-  });
-  return normalizeComponentModels(withLayers);
-}
-function normalizeComponentModels(models) {
-  const visible = models.filter(
-    (m) => !/^[._]/.test(m.name.trim()) && !EXAMPLE_NAME.test(m.name.trim())
-  );
-  return collapseSameName(visible).sort((a, b) => {
-    if (a.name !== b.name) return a.name < b.name ? -1 : 1;
-    return compareIds(a.nodeId, b.nodeId);
-  });
-}
-function collapseSameName(models) {
-  const groups = /* @__PURE__ */ new Map();
-  const out = [];
-  for (const model of models) {
-    if (Object.keys(model.variantProps).length > 0) {
-      out.push(model);
-      continue;
-    }
-    const group = groups.get(model.name) ?? [];
-    group.push(model);
-    groups.set(model.name, group);
-  }
-  for (const group of groups.values()) {
-    const sorted = [...group].sort((a, b) => compareIds(a.nodeId, b.nodeId));
-    const [first, ...rest] = sorted;
-    if (first === void 0) continue;
-    const description = sorted.find((m) => m.description !== "")?.description ?? "";
-    const aliases = [
-      .../* @__PURE__ */ new Set([
-        ...sorted.flatMap((m) => m.aliasNodeIds ?? []),
-        ...rest.map((m) => m.nodeId)
-      ])
-    ].filter((id) => id !== first.nodeId).sort(compareIds);
-    out.push({
-      ...first,
-      description,
-      ...aliases.length > 0 ? { aliasNodeIds: aliases } : {},
-      ...sorted.some((m) => m.kind === "icon") ? { kind: "icon" } : {}
-    });
-  }
-  return out;
-}
-
 // src/cli-commands/impact.ts
 var DEFAULT_FIGMA_API_BASE4 = "https://api.figma.com";
 function fail11(message) {
@@ -21507,7 +21723,7 @@ function cursorPath() {
 function readCursor(path) {
   if (!existsSync15(path)) return void 0;
   try {
-    const parsed = JSON.parse(readFileSync17(path, "utf8"));
+    const parsed = JSON.parse(readFileSync18(path, "utf8"));
     if (!Array.isArray(parsed.snapshot)) return void 0;
     return { ...parsed, snapshot: normalizeComponentModels(parsed.snapshot) };
   } catch {
@@ -21528,7 +21744,7 @@ function loadRegistry5() {
   const registryPath = join20(cwd3(), ".ds-bridge", "registry.json");
   if (!existsSync15(registryPath)) return void 0;
   try {
-    return JSON.parse(readFileSync17(registryPath, "utf8"));
+    return JSON.parse(readFileSync18(registryPath, "utf8"));
   } catch {
     return void 0;
   }
@@ -21540,7 +21756,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
     globals.__filename = filename;
     globals.__dirname = dirname7(filename);
   }
-  const { mapUsage } = await import("./usage-QOCQXXON.mjs");
+  const { mapUsage } = await import("./usage-SRR4G2ML.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
@@ -21914,7 +22130,7 @@ function registerImpactCommand(program2) {
 }
 
 // src/cli-commands/library-health.ts
-import { existsSync as existsSync16, mkdirSync as mkdirSync8, readFileSync as readFileSync18, writeFileSync as writeFileSync10 } from "fs";
+import { existsSync as existsSync16, mkdirSync as mkdirSync8, readFileSync as readFileSync19, writeFileSync as writeFileSync10 } from "fs";
 import { join as join22 } from "path";
 import { cwd as cwd4, env as processEnv2 } from "process";
 
@@ -22053,7 +22269,7 @@ function clientErrorMessage4(result) {
 }
 var fsAdapter = {
   exists: (path) => existsSync16(path),
-  read: (path) => readFileSync18(path, "utf8"),
+  read: (path) => readFileSync19(path, "utf8"),
   mkdir: (path) => {
     mkdirSync8(path, { recursive: true });
   },
@@ -22107,10 +22323,26 @@ function renderTerm9(report, color) {
       lines.push(count > 1 ? `${line2}  \xD7${count}` : line2);
     }
   }
+  if (report.deprecatedUsage.length > 0) {
+    lines.push("", "Deprecated components in use:");
+    for (const d of report.deprecatedUsage) {
+      lines.push(`  ${d.componentName}: ${d.count} instance(s)`);
+    }
+  }
   lines.push(
     "",
     `Detached candidates: ${totals.detachedCandidates} \u2014 heuristic \u2014 REST cannot truly detect detachment; expect false positives.`
   );
+  for (const d of report.detachedCandidates) {
+    lines.push(`  ${d.name} (${d.nodeId})`);
+  }
+  const shown = report.overrideHotspots.length;
+  if (shown < totals.overrideHotspots) {
+    lines.push(
+      "",
+      `Showing the top ${shown} of ${totals.overrideHotspots} override hotspots.`
+    );
+  }
   return lines.join("\n");
 }
 async function runLibraryHealth(options) {
@@ -22217,8 +22449,11 @@ async function runLibraryHealth(options) {
   const lists = topN > 0 ? libraryHealthTopLists(full, topN) : void 0;
   appendLibraryHealthHistory(report.totals, lists, fileKey);
   if (format === "json") {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}
-`);
+    const truncated = report.overrideHotspots.length < report.totals.overrideHotspots || report.detachedCandidates.length < report.totals.detachedCandidates;
+    process.stdout.write(
+      `${JSON.stringify(truncated ? { ...report, truncated: true } : report, null, 2)}
+`
+    );
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
     process.stdout.write(`${renderTerm9(report, color)}
@@ -22245,7 +22480,7 @@ import { spawnSync as spawnSync2 } from "child_process";
 import {
   existsSync as existsSync17,
   readdirSync as readdirSync4,
-  readFileSync as readFileSync20,
+  readFileSync as readFileSync21,
   statSync as statSync10,
   writeFileSync as writeFileSync11
 } from "fs";
@@ -22371,7 +22606,7 @@ function applyEdits(content, edits) {
 }
 
 // src/io/emitted-vars.ts
-import { readdirSync as readdirSync3, readFileSync as readFileSync19 } from "fs";
+import { readdirSync as readdirSync3, readFileSync as readFileSync20 } from "fs";
 import { join as join23 } from "path";
 
 // src/engines/tokens/align-names.ts
@@ -22648,7 +22883,7 @@ function emittedVarNames(projectDir, tokens) {
   for (const file of files.sort()) {
     let content;
     try {
-      content = readFileSync19(file, "utf8");
+      content = readFileSync20(file, "utf8");
     } catch {
       continue;
     }
@@ -22698,7 +22933,7 @@ function computeAdoption(files, findings) {
   const perFile = scoped.map((file) => {
     let refs = 0;
     try {
-      const text2 = readFileSync20(file.abs, "utf8");
+      const text2 = readFileSync21(file.abs, "utf8");
       refs = isCssLike(file.rel) ? countTokenRefs(text2) : countInlineStyleTokenRefs(text2);
     } catch {
       refs = 0;
@@ -22774,7 +23009,7 @@ function resolveTokenSource(targetDir, flagTokens) {
   if (existsSync17(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync20(configPath, "utf8");
+      projectFileText = readFileSync21(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -22808,7 +23043,7 @@ function isTokenOutputFile(absPath, tokenKeys) {
   if (!/\.(css|scss)$/i.test(absPath)) return false;
   let text2;
   try {
-    text2 = readFileSync20(absPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    text2 = readFileSync21(absPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
   } catch {
     return false;
   }
@@ -22823,7 +23058,7 @@ function isTokenOutputFile(absPath, tokenKeys) {
 function isGeneratedFile(absPath) {
   let head;
   try {
-    head = readFileSync20(absPath, "utf8").slice(0, 600);
+    head = readFileSync21(absPath, "utf8").slice(0, 600);
   } catch {
     return false;
   }
@@ -22832,7 +23067,7 @@ function isGeneratedFile(absPath) {
 function lintFile(absPath, relPath, tokens) {
   let content;
   try {
-    content = readFileSync20(absPath, "utf8");
+    content = readFileSync21(absPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return {
@@ -22941,7 +23176,7 @@ function applyFixes(editsByFile) {
   for (const [absPath, edits] of editsByFile) {
     let content;
     try {
-      content = readFileSync20(absPath, "utf8");
+      content = readFileSync21(absPath, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
@@ -23141,7 +23376,7 @@ function runFix(files, tokens, findings, historyDir) {
 }
 
 // src/cli-commands/parity.ts
-import { existsSync as existsSync18, readFileSync as readFileSync21, statSync as statSync11 } from "fs";
+import { existsSync as existsSync18, readFileSync as readFileSync22, statSync as statSync11 } from "fs";
 import { join as join25, resolve as resolvePath4 } from "path";
 function fail14(message) {
   process.stderr.write(`${message}
@@ -23172,7 +23407,7 @@ function loadRegistry6(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync21(registryPath, "utf8");
+    raw = readFileSync22(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail14(`Could not read registry "${registryPath}": ${detail}`);
@@ -23288,7 +23523,7 @@ function appendParityHistory(targetDir, registry, report) {
     const snapshot = typeof registry.generatedAt === "string" ? registry.generatedAt : void 0;
     let text2 = "";
     try {
-      text2 = readFileSync21(join25(stateDir, "history.jsonl"), "utf8");
+      text2 = readFileSync22(join25(stateDir, "history.jsonl"), "utf8");
     } catch {
       text2 = "";
     }
@@ -23361,7 +23596,7 @@ function registerParityCommand(program2) {
 // src/cli-commands/record.ts
 import { spawnSync as spawnSync3 } from "child_process";
 import { randomUUID as randomUUID2 } from "crypto";
-import { existsSync as existsSync19, readFileSync as readFileSync22, statSync as statSync12 } from "fs";
+import { existsSync as existsSync19, readFileSync as readFileSync23, statSync as statSync12 } from "fs";
 import { join as join26, resolve as resolve11 } from "path";
 
 // src/engines/history/score-record.ts
@@ -23495,7 +23730,7 @@ function readProjectSettings(targetDir, env) {
   let projectFileText;
   if (existsSync19(configPath)) {
     try {
-      projectFileText = readFileSync22(configPath, "utf8");
+      projectFileText = readFileSync23(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -23517,7 +23752,7 @@ function readProjectSettings(targetDir, env) {
 }
 function readHistoryText3(stateDir) {
   try {
-    return readFileSync22(historyFilePath(stateDir), "utf8");
+    return readFileSync23(historyFilePath(stateDir), "utf8");
   } catch {
     return "";
   }
@@ -23697,7 +23932,7 @@ function registerRecordCommand(program2) {
 import {
   existsSync as existsSync20,
   mkdirSync as mkdirSync9,
-  readFileSync as readFileSync24,
+  readFileSync as readFileSync25,
   statSync as statSync13,
   writeFileSync as writeFileSync12
 } from "fs";
@@ -24156,7 +24391,7 @@ function matchComponents(code, figma, options = {}) {
 }
 
 // src/io/code-connect.ts
-import { readdirSync as readdirSync5, readFileSync as readFileSync23 } from "fs";
+import { readdirSync as readdirSync5, readFileSync as readFileSync24 } from "fs";
 import { join as join27 } from "path";
 var EXCLUDED_DIRS4 = /* @__PURE__ */ new Set([
   "node_modules",
@@ -24172,7 +24407,7 @@ var CODE_CONNECT_FILE = /\.figma\.(?:[cm]?[jt]sx?)$/i;
 var BATCH_FILE = /\.figma\.batch\.json$/i;
 function readText2(path) {
   try {
-    return readFileSync23(path, "utf8");
+    return readFileSync24(path, "utf8");
   } catch {
     return void 0;
   }
@@ -24485,13 +24720,19 @@ function worstAmbiguities(registry) {
   }
   return lines;
 }
+function deprecatedNote(registry) {
+  const deprecated = registry.unmatchedFigma.filter(
+    (u) => DEFAULT_DEPRECATED_PATTERN.test(u.name)
+  ).length;
+  return deprecated > 0 ? ` (${deprecated} deprecated \u2014 no code owed)` : "";
+}
 function renderBuildSummary(registry, registryPath, parity, scope) {
   const lines = [
     `Registry written to ${registryPath}`,
     `  scanned:        ${scope === void 0 ? "the whole project, minus page folders (pages/, screens/, views/, routes/) \u2014 set component_paths in .ds-bridge.json to narrow it" : `${scope.paths.join(", ")} (${scope.source === "code-connect" ? "the folders your Code Connect files map" : scope.source})`}`,
     `  matched:        ${registry.matches.length}`,
     `  unmatched code: ${registry.unmatchedCode.length}`,
-    `  unmatched figma:${registry.unmatchedFigma.length}`,
+    `  unmatched figma:${registry.unmatchedFigma.length}${deprecatedNote(registry)}`,
     `  parity score: ${parity.score} (${parity.ok}/${parity.total})`
   ];
   const ambiguities = worstAmbiguities(registry);
@@ -24510,7 +24751,7 @@ function loadRegistry7(targetDir) {
   }
   let raw;
   try {
-    raw = readFileSync24(registryPath, "utf8");
+    raw = readFileSync25(registryPath, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail16(`Could not read registry "${registryPath}": ${detail}`);
@@ -24547,6 +24788,24 @@ async function runResolve(nodeNameOrId, path) {
             ...outcome.entry,
             ...importSpecifier !== void 0 ? { importSpecifier } : {},
             ...outcome.replaces !== void 0 ? { replaces: outcome.replaces } : {}
+          },
+          null,
+          2
+        )}
+`
+      );
+      process.exitCode = 0;
+      return;
+    }
+    case "composed": {
+      backfillCjsGlobals();
+      const { aliasSpecifier } = await import("./tsconfig-paths-TQOT2GJH.mjs");
+      const importSpecifier = outcome.importPath === void 0 ? void 0 : aliasSpecifier(targetDir, outcome.importPath);
+      process.stdout.write(
+        `${JSON.stringify(
+          {
+            ...outcome,
+            ...importSpecifier !== void 0 ? { importSpecifier } : {}
           },
           null,
           2
@@ -24597,7 +24856,7 @@ function registerRegistryCommand(program2) {
 }
 
 // src/cli-commands/release-check.ts
-import { existsSync as existsSync21, readFileSync as readFileSync25, statSync as statSync14 } from "fs";
+import { existsSync as existsSync21, readFileSync as readFileSync26, statSync as statSync14 } from "fs";
 import { join as join29, resolve as resolve12 } from "path";
 function fail17(message) {
   process.stderr.write(`${message}
@@ -24606,7 +24865,7 @@ function fail17(message) {
 }
 function readHistoryText4(stateDir) {
   try {
-    return readFileSync25(join29(stateDir, "history.jsonl"), "utf8");
+    return readFileSync26(join29(stateDir, "history.jsonl"), "utf8");
   } catch {
     return "";
   }
@@ -24666,7 +24925,7 @@ import { spawn } from "child_process";
 import {
   existsSync as existsSync22,
   mkdirSync as mkdirSync10,
-  readFileSync as readFileSync26,
+  readFileSync as readFileSync27,
   statSync as statSync15,
   writeFileSync as writeFileSync13
 } from "fs";
@@ -24930,6 +25189,13 @@ function buildActions(input, frames, stale, never) {
       });
     }
   }
+  const autofixable = input.autofixable;
+  if (finite2(autofixable) && autofixable > 0) {
+    out.push({
+      rank: 1,
+      text: `Swap ${autofixable} hardcoded ${plural(autofixable, "value", "values")} for the ${plural(autofixable, "token", "tokens")} they equal (run ds-bridge lint --fix)`
+    });
+  }
   const drift = input.breakingDrift;
   if (finite2(drift) && drift > 0) {
     out.push({
@@ -25096,6 +25362,7 @@ function asRecord3(value2) {
 }
 function extractLatest(text2) {
   const latest = {};
+  const averageFrames = frameAverager();
   for (const { kind, record } of replayHistory(text2)) {
     switch (kind) {
       case "tokens-check":
@@ -25112,7 +25379,7 @@ function extractLatest(text2) {
         latest.adoptionLine = record;
         break;
       case "handoff":
-        latest.handoff = record;
+        latest.handoff = averageFrames(record);
         break;
       case "a11y":
         latest.a11y = record;
@@ -26064,6 +26331,14 @@ function dateEnds(trend) {
 function dayOf(value2) {
   return /^\d{4}-\d{2}-\d{2}T/.test(value2) ? value2.slice(0, 10) : value2;
 }
+function emptyHint(text2) {
+  return [
+    '<div class="empty">',
+    '<span class="empty-title">No data yet</span>',
+    `<span>${escapeHtml(text2)}</span>`,
+    "</div>"
+  ].join("");
+}
 function emptyState2(command) {
   return [
     '<div class="empty">',
@@ -26129,9 +26404,9 @@ function driftSection(data) {
     points: trend.map((point, index) => ({ x: index, y: pick(point) }))
   });
   const series = [
-    toSeries("breaking", (p4) => p4.breaking),
-    toSeries("additive", (p4) => p4.additive),
-    toSeries("cosmetic", (p4) => p4.cosmetic)
+    toSeries("stale", (p4) => p4.breaking),
+    toSeries("missing", (p4) => p4.additive),
+    toSeries("orphan", (p4) => p4.cosmetic)
   ];
   const dateRange = trend.length > 0 ? `${escapeHtml(trend[0]?.date ?? "")} \u2192 ${escapeHtml(trend[trend.length - 1]?.date ?? "")}` : "";
   return panel(
@@ -26769,7 +27044,12 @@ function migrationChecklistSection(data) {
 function scoreVelocitySection(data) {
   const velocity = data.scoreVelocity;
   if (velocity === void 0) {
-    return panel("Score velocity", emptyState2("report"));
+    return panel(
+      "Score velocity",
+      emptyHint(
+        "Needs system scores from two different days \u2014 run ds-bridge record again on another day."
+      )
+    );
   }
   const { delta, windowDays, direction, regressionStreak } = velocity;
   const ARROW = {
@@ -26791,7 +27071,12 @@ function scoreVelocitySection(data) {
 function ownershipLeaderboardSection(data) {
   const rows = data.ownershipLeaderboard;
   if (rows === void 0 || rows.length === 0) {
-    return panel("Ownership leaderboard", emptyState2("lint"));
+    return panel(
+      "Ownership leaderboard",
+      emptyHint(
+        "Needs owners \u2014 add ownership (or ownership_file, a CODEOWNERS file) to .ds-bridge.json, then run ds-bridge lint."
+      )
+    );
   }
   const bars = rows.map((row2) => ({
     label: row2.owner,
@@ -27175,10 +27460,10 @@ function kpis(data, selection) {
   const lastDrift = drift?.[drift.length - 1];
   if (on.has("drift-trend") && lastDrift) {
     out.push({
-      label: "Breaking drift",
+      label: "Stale tokens",
       value: String(lastDrift.breaking),
       tone: lastDrift.breaking > 0 ? "error" : "ok",
-      sub: `${lastDrift.additive} additive \xB7 ${lastDrift.cosmetic} cosmetic`
+      sub: `${lastDrift.additive} missing \xB7 ${lastDrift.cosmetic} orphan outputs`
     });
   }
   const a11y = data.a11y;
@@ -27733,10 +28018,11 @@ function driftTrendTerminalSection(data, _color) {
   return panel2(
     "Drift trend",
     [
-      `Breaking ${breaking}`,
-      `Additive ${additive}`,
-      `Cosmetic ${cosmetic}`,
-      `Breaking \xB7 Additive \xB7 Cosmetic over ${dateRange}`
+      // Token drift is stale / missing / orphan outputs — not a change log.
+      `Stale    ${breaking}`,
+      `Missing  ${additive}`,
+      `Orphan   ${cosmetic}`,
+      `Stale \xB7 Missing \xB7 Orphan outputs over ${dateRange}`
     ].join("\n")
   );
 }
@@ -28048,7 +28334,10 @@ function migrationChecklistTerminalSection(data, color) {
 function scoreVelocityTerminalSection(data, color) {
   const velocity = data.scoreVelocity;
   if (velocity === void 0) {
-    return panel2("Score velocity", emptyState3("report"));
+    return panel2(
+      "Score velocity",
+      "No data yet \u2014 needs system scores from two different days \u2014 run ds-bridge record again on another day."
+    );
   }
   const { delta, windowDays, direction, regressionStreak } = velocity;
   const ARROW = {
@@ -28066,7 +28355,10 @@ function scoreVelocityTerminalSection(data, color) {
 function ownershipLeaderboardTerminalSection(data, color) {
   const rows = data.ownershipLeaderboard;
   if (rows === void 0 || rows.length === 0) {
-    return panel2("Ownership leaderboard", emptyState3("lint"));
+    return panel2(
+      "Ownership leaderboard",
+      "No data yet \u2014 needs owners \u2014 add ownership (or ownership_file, a CODEOWNERS file) to .ds-bridge.json, then run ds-bridge lint."
+    );
   }
   const bars = rows.map((row2) => ({ label: row2.owner, value: row2.pct }));
   const labels = rows.map(
@@ -28377,6 +28669,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
     ...data.debt !== void 0 ? { debt: data.debt } : {},
     ...data.dataFreshness !== void 0 ? { dataFreshness: data.dataFreshness } : {},
     frames,
+    ...data.lintSummary !== void 0 && data.lintSummary.byKind.exact > 0 ? { autofixable: data.lintSummary.byKind.exact } : {},
     ...lastDrift !== void 0 ? {
       breakingDrift: lastDrift.breaking,
       tokenGaps: {
@@ -28600,7 +28893,7 @@ function readPublishConfig(targetDir) {
   const configPath = join30(targetDir, ".ds-bridge.json");
   if (!existsSync22(configPath)) return void 0;
   try {
-    const projectFileText = readFileSync26(configPath, "utf8");
+    const projectFileText = readFileSync27(configPath, "utf8");
     const resolved = resolveConfig({ projectFileText });
     return resolved.kind === "ok" ? resolved.config.publish : void 0;
   } catch {
@@ -28896,7 +29189,7 @@ function registerReportCommand(program2) {
 }
 
 // src/cli-commands/rollup.ts
-import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync28, writeFileSync as writeFileSync14 } from "fs";
+import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync29, writeFileSync as writeFileSync14 } from "fs";
 import { basename as basename2, dirname as dirname11, join as join32, resolve as resolve14 } from "path";
 
 // src/engines/rollup/rollup.ts
@@ -29239,7 +29532,7 @@ function parseRollupConfig(text2) {
 }
 
 // src/io/rollup-sources.ts
-import { readFileSync as readFileSync27, statSync as statSync16 } from "fs";
+import { readFileSync as readFileSync28, statSync as statSync16 } from "fs";
 import { join as join31 } from "path";
 var HISTORY_REL = join31(".ds-bridge", "history.jsonl");
 var RECORD_HINT = "run ds-bridge record there to start one.";
@@ -29254,7 +29547,7 @@ function kindOf(path) {
 }
 function readText3(file, label) {
   try {
-    return { kind: "ok", text: readFileSync27(file, "utf8") };
+    return { kind: "ok", text: readFileSync28(file, "utf8") };
   } catch (error) {
     const code = error.code;
     const detail = code ?? (error instanceof Error ? error.message : String(error));
@@ -29653,7 +29946,7 @@ function specFor(raw, base) {
 function loadConfig(path) {
   let text2;
   try {
-    text2 = readFileSync28(path, "utf8");
+    text2 = readFileSync29(path, "utf8");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail18(`Could not read rollup config ${path}: ${detail}`);
@@ -29749,7 +30042,7 @@ import {
   existsSync as existsSync24,
   mkdirSync as mkdirSync12,
   readdirSync as readdirSync6,
-  readFileSync as readFileSync29,
+  readFileSync as readFileSync30,
   statSync as statSync17,
   writeFileSync as writeFileSync15
 } from "fs";
@@ -30188,7 +30481,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
   if (existsSync24(configPath)) {
     let projectFileText;
     try {
-      projectFileText = readFileSync29(configPath, "utf8");
+      projectFileText = readFileSync30(configPath, "utf8");
     } catch {
       projectFileText = void 0;
     }
@@ -30237,7 +30530,7 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
     if (abs2 === source2 || abs2.startsWith(source2 + sep4)) continue;
     let content;
     try {
-      content = readFileSync29(file, "utf8");
+      content = readFileSync30(file, "utf8");
     } catch {
       continue;
     }
@@ -30378,7 +30671,7 @@ function readDriftTrend(stateDir) {
   const historyPath = join33(stateDir, "history.jsonl");
   let text2;
   try {
-    text2 = readFileSync29(historyPath, "utf8");
+    text2 = readFileSync30(historyPath, "utf8");
   } catch {
     return [];
   }

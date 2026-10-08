@@ -160,7 +160,7 @@ describe("ds-bridge analytics (rollup)", () => {
 		const dir = await project(HISTORY, REGISTRY);
 		const result = await runCli(["analytics", dir]);
 		expect(result.code).toBe(0);
-		expect(result.stdout).toContain("Health           71/100");
+		expect(result.stdout).toContain("Health           67/100");
 		expect(result.stdout).toContain("Consistency      84/100");
 		expect(result.stdout).toContain("Debt             24/100 (low)");
 		expect(result.stdout).toContain(

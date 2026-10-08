@@ -71,6 +71,18 @@ function byNameAsc(a: string, b: string): number {
 	return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/**
+ * A candidate worth naming: below 0.3 the names share nothing (the matcher's
+ * own floor), and "closest is AI -> Conversation @ 0.075" only misleads.
+ */
+function related<T extends { score: number }>(
+	candidate: T | undefined,
+): T | undefined {
+	return candidate !== undefined && candidate.score >= 0.3
+		? candidate
+		: undefined;
+}
+
 /** Round a score to 3dp for display so float fuzz never leaks into details. */
 function show(score: number): string {
 	if (!Number.isFinite(score)) return "0";
@@ -159,7 +171,7 @@ export function buildParity(registry: RegistryFile): ParityReport {
 	for (const entry of unmatchedFigma) {
 		// A deprecated Figma component is on its way out: no code is owed.
 		if (DEFAULT_DEPRECATED_PATTERN.test(entry.name)) continue;
-		const top = entry.candidates?.[0];
+		const top = related(entry.candidates?.[0]);
 		const detail =
 			top !== undefined
 				? `No code component matched ${entry.name} (${entry.nodeId}); closest is ${top.codeName} @ ${show(top.score)}.`
@@ -185,7 +197,7 @@ export function buildParity(registry: RegistryFile): ParityReport {
 			});
 			continue;
 		}
-		const top = entry.candidates?.[0];
+		const top = related(entry.candidates?.[0]);
 		const detail =
 			top !== undefined
 				? `No Figma component matched ${entry.name} (${entry.importPath}); closest is ${top.figmaName} (${top.nodeId}) @ ${show(top.score)}.`

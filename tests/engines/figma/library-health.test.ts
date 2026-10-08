@@ -676,3 +676,44 @@ describe("assessLibraryHealth — instance-only components", () => {
 		expect(report.detachedCandidates).toEqual([]);
 	});
 });
+
+describe("assessLibraryHealth — wrapper-only components", () => {
+	it("never call frames sharing only wrapper layers a detached copy", () => {
+		const page: FigmaNode = {
+			id: "p",
+			name: "Page",
+			type: "CANVAS",
+			children: [
+				{
+					id: "k:1",
+					name: "Card Grid",
+					type: "COMPONENT",
+					children: [
+						{ id: "k1", name: "Block", type: "FRAME" },
+						{ id: "k2", name: "Block", type: "FRAME" },
+					],
+				},
+				{
+					id: "screen",
+					name: "Docs",
+					type: "FRAME",
+					children: [
+						{
+							id: "blk",
+							name: "Layout",
+							type: "FRAME",
+							children: [
+								{ id: "b1", name: "Block", type: "FRAME" },
+								{ id: "b2", name: "Block", type: "FRAME" },
+							],
+						},
+					],
+				},
+			],
+		};
+		const report = assessLibraryHealth(
+			file(doc([page]), { "k:1": { name: "Card Grid", description: "" } }),
+		);
+		expect(report.detachedCandidates).toEqual([]);
+	});
+});

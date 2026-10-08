@@ -427,3 +427,34 @@ describe("resolveEntry — deprecated component naming its replacement", () => {
 		expect(resolveEntry(registry, "4:1").kind).toBe("candidates");
 	});
 });
+
+describe("resolveEntry — components composed in code (Code Connect recipes)", () => {
+	it("resolves a composed Figma component to the code component that builds it", () => {
+		const registry: RegistryFile = {
+			schemaVersion: 1,
+			generatedAt: "2026-10-08T00:00:00.000Z",
+			matches: [],
+			unmatchedCode: [
+				{
+					name: "Section",
+					importPath: "src/ui/Section.tsx",
+					candidates: [],
+					composes: ["Card Grid Icon"],
+				},
+			],
+			unmatchedFigma: [],
+			composed: [
+				{ name: "Card Grid Icon", nodeId: "348:13221", codeName: "Section" },
+			],
+		};
+		for (const query of ["Card Grid Icon", "348:13221"]) {
+			expect(resolveEntry(registry, query)).toEqual({
+				kind: "composed",
+				name: "Card Grid Icon",
+				nodeId: "348:13221",
+				codeName: "Section",
+				importPath: "src/ui/Section.tsx",
+			});
+		}
+	});
+});

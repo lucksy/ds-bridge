@@ -155,7 +155,7 @@ describe("ds-bridge report --format json", () => {
 		expect(doc.view).toBeNull();
 		expect(doc.data.generatedAt).toBe("2026-10-05T12:00:00.000Z");
 		// The same numbers the exec one-pager shows (one assembly).
-		expect(doc.data.systemScore.current).toBe(71);
+		expect(doc.data.systemScore.current).toBe(67);
 		expect(doc.data.consistency.score).toBe(84);
 		expect(doc.data.debt.pct).toBe(24);
 		expect(doc.data.executive.consistency).toBe(84);

@@ -190,6 +190,14 @@ export type ResolveOutcome =
 			replaces?: { name: string; hint?: string };
 	  }
 	| { kind: "candidates"; entries: { codeName: string; score: number }[] }
+	| {
+			/** A Figma component Code Connect builds as a recipe over `codeName`. */
+			kind: "composed";
+			name: string;
+			nodeId: string;
+			codeName: string;
+			importPath?: string;
+	  }
 	| { kind: "not-found" };
 
 /** A component the library marks as deprecated (name or description). */
@@ -256,6 +264,29 @@ export function resolveEntry(
 				return { kind: "match", entry };
 			}
 		}
+	}
+
+	const composed = (
+		Array.isArray(registry.composed) ? registry.composed : []
+	).find(
+		(c) =>
+			c.nodeId === query ||
+			c.name === query ||
+			(normalizedQuery.length > 0 && normalizeName(c.name) === normalizedQuery),
+	);
+	if (composed !== undefined) {
+		const importPath =
+			registry.matches.find((m) => m.codeName === composed.codeName)
+				?.importPath ??
+			registry.unmatchedCode.find((u) => u.name === composed.codeName)
+				?.importPath;
+		return {
+			kind: "composed",
+			name: composed.name,
+			nodeId: composed.nodeId,
+			codeName: composed.codeName,
+			...(importPath !== undefined ? { importPath } : {}),
+		};
 	}
 
 	const unmatched =

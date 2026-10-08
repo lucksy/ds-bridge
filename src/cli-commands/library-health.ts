@@ -256,12 +256,29 @@ function renderTerm(
 		}
 	}
 
+	if (report.deprecatedUsage.length > 0) {
+		lines.push("", "Deprecated components in use:");
+		for (const d of report.deprecatedUsage) {
+			lines.push(`  ${d.componentName}: ${d.count} instance(s)`);
+		}
+	}
+
 	// The detached-candidate caveat is surfaced wherever the number renders —
 	// REST cannot truly distinguish a detached instance from a hand-built frame.
 	lines.push(
 		"",
 		`Detached candidates: ${totals.detachedCandidates} — heuristic — REST cannot truly detect detachment; expect false positives.`,
 	);
+	for (const d of report.detachedCandidates) {
+		lines.push(`  ${d.name} (${d.nodeId})`);
+	}
+	const shown = report.overrideHotspots.length;
+	if (shown < totals.overrideHotspots) {
+		lines.push(
+			"",
+			`Showing the top ${shown} of ${totals.overrideHotspots} override hotspots.`,
+		);
+	}
 
 	return lines.join("\n");
 }
@@ -405,7 +422,13 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 
 	// 5) Emit the report.
 	if (format === "json") {
-		process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+		// The lists are capped; say so instead of letting totals disagree silently.
+		const truncated =
+			report.overrideHotspots.length < report.totals.overrideHotspots ||
+			report.detachedCandidates.length < report.totals.detachedCandidates;
+		process.stdout.write(
+			`${JSON.stringify(truncated ? { ...report, truncated: true } : report, null, 2)}\n`,
+		);
 	} else {
 		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
 		process.stdout.write(`${renderTerm(report, color)}\n`);

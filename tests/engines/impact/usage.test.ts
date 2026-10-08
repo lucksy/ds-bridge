@@ -337,3 +337,38 @@ describe("mapCodeUsage — every registry code component", () => {
 		]);
 	});
 });
+
+describe("mapCodeUsage — documentation files are not adoption", () => {
+	it("leaves Storybook stories and Code Connect files out of import coverage", async () => {
+		const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const { join: j } = await import("node:path");
+		const dir = mkdtempSync(j(tmpdir(), "usage-docs-"));
+		mkdirSync(j(dir, "src", "ui"), { recursive: true });
+		writeFileSync(
+			j(dir, "src", "ui", "Tooltip.tsx"),
+			"export function Tooltip() { return null; }",
+		);
+		writeFileSync(
+			j(dir, "src", "Tooltip.stories.tsx"),
+			'import { Tooltip } from "./ui/Tooltip";\nexport const A = () => <Tooltip />;',
+		);
+		writeFileSync(
+			j(dir, "src", "Tooltip.figma.tsx"),
+			'import { Tooltip } from "./ui/Tooltip";\nexport const B = Tooltip;',
+		);
+		const [usage] = mapCodeUsage({
+			registry: {
+				schemaVersion: 1,
+				generatedAt: "2026-10-08T00:00:00.000Z",
+				matches: [],
+				unmatchedCode: [
+					{ name: "Tooltip", importPath: "src/ui/Tooltip.tsx", candidates: [] },
+				],
+				unmatchedFigma: [],
+			},
+			projectDir: dir,
+		});
+		expect(usage?.count).toBe(0);
+	});
+});

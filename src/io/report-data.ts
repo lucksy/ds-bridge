@@ -22,6 +22,10 @@ import {
 import { buildDebt } from "../engines/report/debt.js";
 import { buildExecutive } from "../engines/report/executive.js";
 import { executiveInputs } from "../engines/report/executive-inputs.js";
+import {
+	frameAverager,
+	mergeFrameImpl,
+} from "../engines/report/frame-average.js";
 import { buildFrameImplementability } from "../engines/report/frame-implementability.js";
 import { buildFrameReadinessTrend } from "../engines/report/frame-readiness-trend.js";
 import { buildFreshness } from "../engines/report/freshness.js";
@@ -245,6 +249,7 @@ function aggregateHistory(
 	const driftTrend: DriftTrendPoint[] = [];
 	let lint: LintSummary | undefined;
 	let readiness: Readiness | undefined;
+	const averageFrames = frameAverager();
 	let a11y: A11ySummary | undefined;
 	let impact: ImpactSummary | undefined;
 	// Adoption: a trend point per dated adoption-bearing lint line; the LATEST
@@ -346,7 +351,9 @@ function aggregateHistory(
 		}
 
 		if (record.kind === "handoff") {
-			const r = record as Partial<HandoffRecord>;
+			// Each tracked frame's latest score averaged, the lowest frame's
+			// deductions shown — not whichever frame ran last.
+			const r = averageFrames(record) as Partial<HandoffRecord>;
 			const deductions = Array.isArray(r.deductions) ? r.deductions : [];
 			// Last handoff record wins — it reflects the most recent QA run. The
 			// rule id is mapped to a human-readable reason for the gauge.
@@ -403,6 +410,16 @@ function aggregateHistory(
 					deprecatedUsage: asNumber(r.deprecatedUsage),
 					detachedCandidates: asNumber(r.detachedCandidates),
 				},
+				// The line's ranked top lists name what the totals count.
+				...(topList(record.topOverrides) !== undefined
+					? {
+							top: {
+								overrides: topList(record.topOverrides) ?? [],
+								deprecated: topList(record.topDeprecated) ?? [],
+								detached: topList(record.topDetached) ?? [],
+							},
+						}
+					: {}),
 			};
 		}
 
@@ -605,14 +622,33 @@ export function computeAudienceChangelog(
  * a rollup with measured requirements into ReportData so an absent frame-impl
  * history keeps the section's empty state (and the no-config render byte-identical).
  */
+/** A history line's `[{ name, count }]` top list, or undefined. */
+function topList(
+	value: unknown,
+): { name: string; count: number }[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	return value.flatMap((entry) =>
+		typeof entry === "object" &&
+		entry !== null &&
+		typeof (entry as { name?: unknown }).name === "string"
+			? [
+					{
+						name: (entry as { name: string }).name,
+						count: asNumber((entry as { count?: unknown }).count),
+					},
+				]
+			: [],
+	);
+}
+
 function computeFrameImplementability(
 	records: HistoryRecord[],
 ): FrameImplementability {
-	let latestFrameImpl: Record<string, unknown> | undefined;
-	for (const entry of records) {
-		if (entry.kind === "frame-impl") latestFrameImpl = entry.record;
-	}
-	return buildFrameImplementability(latestFrameImpl);
+	// Every tracked frame's latest run, merged — not the last frame run.
+	const frameImpls = records
+		.filter((entry) => entry.kind === "frame-impl")
+		.map((entry) => entry.record);
+	return buildFrameImplementability(mergeFrameImpl(frameImpls));
 }
 
 /**
@@ -801,6 +837,7 @@ function latestTargetScalars(
 	let parity: Record<string, unknown> | undefined;
 	let a11y: Record<string, unknown> | undefined;
 	let handoff: Record<string, unknown> | undefined;
+	const averageScalarFrames = frameAverager();
 	for (const { kind, record } of records) {
 		switch (kind) {
 			case "lint":
@@ -818,7 +855,7 @@ function latestTargetScalars(
 				a11y = record;
 				break;
 			case "handoff":
-				handoff = record;
+				handoff = averageScalarFrames(record);
 				break;
 			default:
 				break; // unknown kind — skip (forward compat)

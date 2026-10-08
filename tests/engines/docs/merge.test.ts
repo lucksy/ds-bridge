@@ -261,3 +261,68 @@ describe("mergeComponentDocs", () => {
 		expect(docs).toEqual([]);
 	});
 });
+
+describe("mergeComponentDocs — a real library's conventions (Simple Design System)", () => {
+	const registry = {
+		schemaVersion: 1 as const,
+		generatedAt: "2026-10-08T00:00:00.000Z",
+		matches: [
+			{
+				codeName: "Button",
+				importPath: "src/ui/Button.tsx",
+				figmaName: "Button",
+				nodeId: "1:1",
+				score: 1,
+			},
+			{
+				codeName: "IconStar",
+				importPath: "src/ui/icons/IconStar.tsx",
+				figmaName: "Star",
+				nodeId: "2:1",
+				score: 1,
+				kind: "icon" as const,
+			},
+		],
+		unmatchedCode: [
+			{
+				name: "Section",
+				importPath: "src/ui/Section.tsx",
+				candidates: [],
+				composes: ["Page Accordion"],
+			},
+		],
+		unmatchedFigma: [
+			{
+				name: "Legacy Button",
+				nodeId: "3:1",
+				description: "Deprecated — use Button (Variant=Neutral) instead.",
+				candidates: [],
+			},
+		],
+		composed: [{ name: "Page Accordion", nodeId: "4:1", codeName: "Section" }],
+	};
+	const docs = mergeComponentDocs({
+		registry,
+		code: [],
+		figma: [],
+		tokens: { format: "w3c", tokens: [] },
+	});
+	const by = Object.fromEntries(docs.map((d) => [d.name, d]));
+
+	it("documents a deprecated component by its replacement, owing no code", () => {
+		expect(by["Legacy Button"]?.deprecated).toEqual({
+			replacement: "Button (Variant=Neutral)",
+		});
+		expect(by["Legacy Button"]?.gaps).not.toContain("unmatched-in-code");
+	});
+
+	it("documents a Code Connect recipe as composed in code", () => {
+		expect(by["Page Accordion"]?.composedWith).toBe("Section");
+		expect(by["Page Accordion"]?.gaps).toEqual([]);
+		expect(by.Section?.gaps).toEqual([]);
+	});
+
+	it("does not ask icons for a Figma description", () => {
+		expect(by.IconStar?.gaps).toEqual([]);
+	});
+});

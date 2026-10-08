@@ -10,6 +10,7 @@
 // buckets, timestamps dropped) and reverse-mapping would be fragile.
 // H2: the per-line parse now runs through the shared `replayHistory` iterator
 // (identical tolerance); v1 and v2-enveloped lines score identically.
+import { frameAverager } from "./frame-average.js";
 import { replayHistory } from "./history-lines.js";
 
 /** The weightable sub-score components (adoption joined in A4; parity in C3). */
@@ -426,6 +427,9 @@ export function scoreFromHistory(
 		record: Record<string, unknown>;
 	}
 	const entries: Entry[] = [];
+	// Readiness is per frame: each tracked frame's latest score, averaged — not
+	// whichever frame happened to be recorded last.
+	const averageFrames = frameAverager();
 
 	// H2: the shared tolerant iterator (history-lines.ts) does the per-line parse
 	// with the IDENTICAL tolerance this loop used to own (corrupt / non-object /
@@ -436,6 +440,10 @@ export function scoreFromHistory(
 
 		const date =
 			typeof record.at === "string" ? record.at.slice(0, 10) : undefined;
+		if (component === "readiness") {
+			entries.push({ component, date, record: averageFrames(record) });
+			continue;
+		}
 		entries.push({ component, date, record });
 
 		// A `lint` line that CARRIES an `adoption` block ALSO contributes a parallel

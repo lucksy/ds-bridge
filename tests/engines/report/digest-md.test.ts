@@ -64,13 +64,13 @@ _Window: changes since 2026-06-01._
 
 ## For designers
 
-- Drift ▼ 5 → 2
+- Stale tokens ▼ 5 → 2
 - Import coverage — new 80%
 - Readiness ▲ 70 → 85
 
 ## For developers
 
-- Drift ▼ 5 → 2
+- Stale tokens ▼ 5 → 2
 - Lint violations ▲ 3 → 4
 - Import coverage — new 80%
 
@@ -121,7 +121,7 @@ _Window: changes since 2026-06-01._
 
 ## For designers
 
-- Drift = 1 → 1
+- Stale tokens = 1 → 1
 - Readiness ▲ 70 → 85
 
 ## Actions

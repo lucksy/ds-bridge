@@ -76,6 +76,12 @@ export interface HandoffNode {
 export interface ScoreReadinessOptions {
 	components?: Record<string, { name: string; componentSetId?: string }>;
 	componentSets?: Record<string, { name: string }>;
+	/**
+	 * Library components' layer signatures (`name:TYPE` per direct child, from
+	 * the registry): a frame carrying one exactly is a detached copy, however
+	 * it was renamed.
+	 */
+	signatures?: readonly (readonly string[])[];
 }
 
 // ── Output types ──
@@ -412,8 +418,25 @@ export function scoreReadiness(
 			: 1 - framesWithoutAutoLayout.length / frames.length;
 
 	const instanceCount = nodes.filter((n) => n.type === "INSTANCE").length;
+	// Only a container can be a detached instance — a text layer named
+	// "Button" is a label. A renamed copy is found by its layers.
+	const signatureKeys = new Set(
+		(options.signatures ?? [])
+			.filter((layers) => layers.length >= 2)
+			.map((layers) => layers.join("|")),
+	);
+	const carriesSignature = (n: HandoffNode): boolean => {
+		const children = n.children ?? [];
+		return (
+			children.length >= 2 &&
+			signatureKeys.has(children.map((c) => `${c.name}:${c.type}`).join("|"))
+		);
+	};
 	const suspectNodes = nodes.filter(
-		(n) => n.type !== "INSTANCE" && isComponentName(n.name),
+		(n) =>
+			n !== root &&
+			(n.type === "FRAME" || n.type === "GROUP") &&
+			(isComponentName(n.name) || carriesSignature(n)),
 	);
 	const detachedSuspects = suspectNodes.length;
 	const deprecated = nodes

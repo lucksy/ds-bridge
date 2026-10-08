@@ -62,7 +62,7 @@ Total: 4
 ## Components
 
 - Button(label: string, variant?: "primary" | "secondary") — components/button.tsx [documented]
-- Spinner() — figma:10:7 [gaps: unmatched-in-code, missing-figma-description]
+- Spinner — figma:10:7 [gaps: unmatched-in-code, missing-figma-description]
 `,
 		);
 	});
@@ -84,6 +84,33 @@ _No tokens._
 
 _No components._
 `,
+		);
+	});
+});
+
+describe("renderLlmsTxt — deprecated, composed and Figma-only entries", () => {
+	it("tags a deprecated component with its replacement and never writes a call signature for Figma-only entries", () => {
+		const docs: ComponentDoc[] = [
+			{
+				name: "Legacy Button",
+				code: { importPath: "", props: [], variants: {} },
+				figma: { nodeId: "3:1", description: "Deprecated" },
+				gaps: [],
+				deprecated: { replacement: "Button (Variant=Neutral)" },
+			},
+			{
+				name: "AI Chat Box",
+				code: { importPath: "", props: [], variants: {} },
+				figma: { nodeId: "5:1", description: "" },
+				gaps: ["unmatched-in-code"],
+			},
+		];
+		const text = renderLlmsTxt(docs, TOKENS);
+		expect(text).toContain(
+			"- Legacy Button — figma:3:1 [deprecated → use Button (Variant=Neutral)]",
+		);
+		expect(text).toContain(
+			"- AI Chat Box — figma:5:1 [gaps: unmatched-in-code]",
 		);
 	});
 });

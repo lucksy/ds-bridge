@@ -16,6 +16,7 @@
 // --comment posts the top deductions as ONE Figma comment, but only with the
 // explicit --comment flag AND --yes (a non-interactive confirmation). Without
 // --yes we refuse and still report — never write to Figma on a guess.
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cwd } from "node:process";
 import type { Command } from "commander";
@@ -28,6 +29,10 @@ import {
 	scoreReadiness,
 } from "../engines/handoff/score.js";
 import {
+	type RegistryFile,
+	resolveEntry,
+} from "../engines/registry/persist.js";
+import {
 	createFigmaClient,
 	type FigmaClient,
 	type FigmaFile,
@@ -36,6 +41,65 @@ import {
 	type FigmaResult,
 } from "../io/figma/client.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
+
+/**
+ * Name the replacement a deprecated component's description gives ("use
+ * Button (Variant=Neutral)"), when the registry resolves it — the blocker then
+ * says what to swap to, not just that something must be swapped.
+ */
+function nameReplacements(
+	report: ReadinessReport,
+	registryPath: string,
+): ReadinessReport {
+	let registry: RegistryFile;
+	try {
+		registry = JSON.parse(readFileSync(registryPath, "utf8")) as RegistryFile;
+	} catch {
+		return report;
+	}
+	const fixFor = (nodeName: string, fix: string): string => {
+		const outcome = resolveEntry(registry, nodeName);
+		if (outcome.kind !== "match" || outcome.replaces === undefined) return fix;
+		const hint =
+			outcome.replaces.hint !== undefined ? ` (${outcome.replaces.hint})` : "";
+		return `Swap to ${outcome.entry.figmaName}${hint} — "${outcome.replaces.name}" is deprecated`;
+	};
+	const blocked = new Set(report.blockers.map((b) => b.nodeId));
+	return {
+		...report,
+		blockers: report.blockers.map((b) => ({
+			...b,
+			fix: fixFor(b.nodeName, b.fix),
+		})),
+		deductions: report.deductions.map((d) =>
+			blocked.has(d.nodeId) ? { ...d, fix: fixFor(d.nodeName, d.fix) } : d,
+		),
+	};
+}
+
+/**
+ * Library layer signatures from a built registry (when there is one), so a
+ * renamed detached copy is spotted by its layers. None without a registry.
+ */
+function registrySignatures(path: string): string[][] {
+	try {
+		const registry = JSON.parse(readFileSync(path, "utf8")) as {
+			matches?: { layers?: unknown }[];
+			unmatchedFigma?: { layers?: unknown }[];
+		};
+		return [...(registry.matches ?? []), ...(registry.unmatchedFigma ?? [])]
+			.map((entry) => entry.layers)
+			.filter(
+				(layers): layers is string[] =>
+					Array.isArray(layers) &&
+					layers.every((l) => typeof l === "string") &&
+					layers.some((l) => !/:(?:INSTANCE|FRAME|GROUP|SECTION)$/.test(l)),
+			);
+	} catch {
+		return [];
+	}
+}
+
 import {
 	renderTable,
 	type Severity,
@@ -421,7 +485,14 @@ async function runHandoff(url: string, options: HandoffOptions): Promise<void> {
 		return;
 	}
 
-	const report = scoreReadiness(fetched.root, fetched.maps);
+	const registryPath = join(cwd(), ".ds-bridge", "registry.json");
+	const report = nameReplacements(
+		scoreReadiness(fetched.root, {
+			...fetched.maps,
+			signatures: registrySignatures(registryPath),
+		}),
+		registryPath,
+	);
 
 	// History: record the score for the dashboard readiness gauge (suppressible
 	// with --no-history). The frame name is the scored root node's name.
