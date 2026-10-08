@@ -127,7 +127,23 @@ function namedSurface(name: string): string | undefined {
 	return undefined;
 }
 
-const segmentsOf = (name: string): string[] => name.split(/[.\-/]/);
+/** Name segments, collection markers dropped (`@color` → `color`). */
+const segmentsOf = (name: string): string[] =>
+	name.split(/[.\-/]/).map((s) => s.replace(/^[@$]/, ""));
+
+/** A non-text foreground (an icon): held to WCAG 1.4.11, not 1.4.3. */
+function isNonText(name: string): boolean {
+	return segmentsOf(name).some((s) => /^(?:icon|icons|glyph)$/i.test(s));
+}
+
+/** Tone words: a role's light surfaces (`background.brand.tertiary`). */
+const TONE_SEGMENT =
+	/^(?:secondary|tertiary|subtle|muted|soft|light|weak|faint|quiet|minimal)$/i;
+
+/** The X of a dash-form `on-X` foreground (`text.brand.on-brand` → brand). */
+function onRoleOf(name: string): string | undefined {
+	return name.match(/(?:^|[./])on-([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+}
 
 /** The non-role words of a token name (`bgColor.accent.muted` → accent, muted). */
 function wordsOf(name: string): string[] {
@@ -170,7 +186,8 @@ export function pairColorTokens(map: TokenMap): ColorPair[] {
 	const backgroundByName = new Map(backgrounds.map((t) => [t.name, t]));
 	/** The same name with its role swapped: `x.fgColor.rest` → `x.bgColor.rest`. */
 	const siblingOf = (fg: Token): Token | undefined => {
-		const segments = segmentsOf(fg.name);
+		// Raw segments: the rebuilt name must keep collection markers (`@color`).
+		const segments = fg.name.split(/[.\-/]/);
 		const separators = fg.name.match(/[.\-/]/g) ?? [];
 		for (let i = segments.length - 1; i >= 0; i--) {
 			const swaps = ROLE_SWAP[(segments[i] as string).toLowerCase()];
@@ -199,6 +216,25 @@ export function pairColorTokens(map: TokenMap): ColorPair[] {
 			(s) => FG_RE.test(`.${s}.`) || ON_CAMEL_RE.test(`.${s}.`),
 		);
 	const surfaces = backgrounds.filter((bg) => !isLiteral(bg));
+	// Roles with on-X text (SDS `text.brand.on-brand`): their untoned surfaces
+	// (`background.brand.default`, `.hover`) are strong and carry that text,
+	// not the role's own text (`text.brand.default` is for its light tones).
+	const onRoles = new Set(
+		foregrounds.flatMap((f) => {
+			const role = onRoleOf(f.name);
+			return role === undefined ? [] : [role];
+		}),
+	);
+	const isRoleStrong = (bg: Token): boolean => {
+		const words = wordsOf(bg.name);
+		return (
+			words[0] !== undefined &&
+			onRoles.has(words[0]) &&
+			!words.some((w) => TONE_SEGMENT.test(w))
+		);
+	};
+	const isStrong = (bg: Token): boolean =>
+		wordsOf(bg.name).some((w) => STRONG_SURFACE.test(w)) || isRoleStrong(bg);
 
 	const pairs: ColorPair[] = [];
 	for (const foreground of foregrounds) {
@@ -210,8 +246,16 @@ export function pairColorTokens(map: TokenMap): ColorPair[] {
 			continue;
 		}
 		if (isLiteral(foreground)) continue;
+		const onRole = onRoleOf(foreground.name);
+		if (onRole !== undefined) {
+			const strong = surfaces.filter(
+				(bg) => wordsOf(bg.name)[0] === onRole && isRoleStrong(bg),
+			);
+			for (const background of strong) pairs.push({ foreground, background });
+			if (strong.length > 0) continue;
+		}
 		const sibling = siblingOf(foreground);
-		if (sibling !== undefined) {
+		if (sibling !== undefined && !isRoleStrong(sibling)) {
 			pairs.push({ foreground, background: sibling });
 			continue;
 		}
@@ -252,10 +296,7 @@ export function pairColorTokens(map: TokenMap): ColorPair[] {
 			);
 		};
 		const plain = surfaces.filter(
-			(bg) =>
-				bg.name !== foreground.name &&
-				reachable(bg) &&
-				!wordsOf(bg.name).some((w) => STRONG_SURFACE.test(w)),
+			(bg) => bg.name !== foreground.name && reachable(bg) && !isStrong(bg),
 		);
 		// The first word is the role (`accent`, `muted`, `danger`); later ones are
 		// tones (`bgColor.accent.muted` is an accent surface, not a muted one).
@@ -356,7 +397,12 @@ function auditPair(
 	const shownFg = composite(fgValue, shownBg);
 	// Token-level contrast is judged at the normal-text threshold (SPEC §11.2):
 	// tokens carry no size metadata, so the stricter normal requirement applies.
-	const required = requiredRatio(level, "normal");
+	// Icons are graphical objects: WCAG 1.4.11 asks 3:1 (AA) of them, the
+	// large-text threshold, not the 4.5:1 of body text.
+	const required = requiredRatio(
+		level,
+		isNonText(pair.foreground.name) ? "large" : "normal",
+	);
 
 	const ratio = contrastRatio(shownFg, shownBg);
 	if (ratio === undefined) {

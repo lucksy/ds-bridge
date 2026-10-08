@@ -556,3 +556,99 @@ describe("scoreReadiness — blockers", () => {
 		expect(report.blockers).toEqual([]);
 	});
 });
+
+describe("scoreReadiness — instance internals belong to the main component", () => {
+	// Simple Design System (2026-10-08): a clean screen of SDS instances scored
+	// 88 because a Tag's inner "Tag" frame, Inputs' inner "Input" frames and
+	// hidden icon slots ("Star", "X") were judged as if the designer drew them.
+	const solid = { type: "SOLID" };
+	const screen = (children: HandoffNode[]): HandoffNode =>
+		frame({
+			id: "screen",
+			name: "Account",
+			layoutMode: "VERTICAL",
+			fills: [solid],
+			boundVariables: { fills: [{ type: "VARIABLE_ALIAS", id: "v" }] },
+			children,
+		});
+
+	it("ignores unmodified layers inside an instance", () => {
+		const report = scoreReadiness(
+			screen([
+				{
+					id: "tag",
+					name: "Tag",
+					type: "INSTANCE",
+					children: [
+						frame({ id: "I1;inner", name: "Tag", fills: [solid] }),
+						{ id: "I1;icon", name: "X", type: "VECTOR", strokes: [solid] },
+						{ id: "I1;label", name: "Label 3", type: "TEXT" },
+					],
+				},
+			]),
+		);
+		expect(report.score).toBe(100);
+		expect(report.deductions).toEqual([]);
+	});
+
+	it("still judges a paint the designer overrode inside an instance", () => {
+		const report = scoreReadiness(
+			screen([
+				{
+					id: "btn",
+					name: "Button",
+					type: "INSTANCE",
+					overrides: [{ id: "I2;bg", overriddenFields: ["fills"] }],
+					children: [
+						frame({ id: "I2;bg", name: "Background", fills: [solid] }),
+					],
+				},
+			]),
+		);
+		expect(report.deductions.map((d) => [d.nodeId, d.rule])).toEqual([
+			["I2;bg", "var-binding"],
+		]);
+	});
+
+	it("skips hidden layers", () => {
+		const report = scoreReadiness(
+			screen([
+				frame({
+					id: "hidden",
+					name: "Frame 9",
+					visible: false,
+					fills: [solid],
+				}),
+			]),
+		);
+		expect(report.score).toBe(100);
+	});
+});
+
+describe("scoreReadiness — an instance's own paint", () => {
+	const solid = { type: "SOLID" };
+	it("is the main component's unless overridden on the instance", () => {
+		const report = scoreReadiness(
+			frame({
+				id: "screen",
+				name: "Settings",
+				layoutMode: "VERTICAL",
+				children: [
+					{ id: "inherited", name: "Button", type: "INSTANCE", fills: [solid] },
+					{
+						id: "overridden",
+						name: "Button Danger",
+						type: "INSTANCE",
+						fills: [solid],
+						overrides: [{ id: "overridden", overriddenFields: ["fills"] }],
+					},
+				],
+			}),
+		);
+		expect(
+			report.deductions
+				.filter((d) => d.rule === "var-binding")
+				.map((d) => d.nodeId),
+		).toEqual(["overridden"]);
+	});
+});

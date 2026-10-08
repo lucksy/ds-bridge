@@ -13,7 +13,7 @@ import { resolveAliasDir } from "./tsconfig-paths.js";
 export interface ComponentPaths {
 	/** Project-relative directories, forward slashes. */
 	paths: string[];
-	source: "component_paths" | "components.json";
+	source: "component_paths" | "components.json" | "code-connect";
 }
 
 function isDirectory(path: string): boolean {

@@ -197,3 +197,30 @@ describe("computeCoverage — compound components", () => {
 		expect(result.uncovered).toEqual(["Dialog"]);
 	});
 });
+
+describe("computeCoverage — an icon library is its own inventory", () => {
+	it("keeps icons out of component coverage and counts them apart", () => {
+		const result = computeCoverage(
+			registry([
+				match({ codeName: "Button" }),
+				match({ codeName: "Card", importPath: "components/card.tsx" }),
+				match({
+					codeName: "IconStar",
+					importPath: "icons/star.tsx",
+					kind: "icon",
+				}),
+				match({ codeName: "IconX", importPath: "icons/x.tsx", kind: "icon" }),
+			]),
+			[
+				usage({ codeName: "Button", count: 2 }),
+				usage({ codeName: "IconStar", count: 1 }),
+			],
+		);
+		expect(result).toMatchObject({
+			imported: 1,
+			total: 2,
+			uncovered: ["Card"],
+			icons: { imported: 1, total: 2 },
+		});
+	});
+});

@@ -503,3 +503,105 @@ describe("classifyDriftByMode — underscore theme names (Primer's dark_dimmed)"
 		expect(result.entries).toEqual([]);
 	});
 });
+
+describe("classifyDrift — Figma variable exports (Simple Design System)", () => {
+	const tok = (
+		name: string,
+		type: Token["type"],
+		value: Token["value"],
+	): Token => ({
+		name,
+		type,
+		value,
+	});
+
+	it("aligns collection paths with a prefixed, family-folded build", () => {
+		const result = classifyDrift(
+			mapOf(
+				tok("@color.background.default", "color", "#ffffff"),
+				tok("@color_primitives.gray.100", "color", "#f5f5f5"),
+			),
+			[
+				{ name: "sds-color-background-default", raw: "#fff" },
+				{ name: "sds-color-gray-100", raw: "#f5f5f5" },
+				{ name: "column-count", raw: "3" },
+			],
+		);
+		expect(result.inSync).toBe(2);
+		// `--column-count` sits outside the build's `sds-` namespace: local, not an orphan.
+		expect(result.entries).toEqual([]);
+	});
+
+	it("never aligns two tokens onto one output", () => {
+		const result = classifyDrift(
+			mapOf(
+				tok("@color_primitives.gray.100", "color", "#f5f5f5"),
+				tok("@color-base.gray.100", "color", "#f5f5f5"),
+			),
+			[
+				{ name: "sds-color-gray-100", raw: "#f5f5f5" },
+				{ name: "sds-x", raw: "1" },
+			],
+		);
+		expect(result.inSync).toBe(0);
+	});
+
+	it("compares a unitless number token with a px / rem output", () => {
+		const result = classifyDrift(
+			mapOf(tok("space.400", "number", 16), tok("space.100", "number", 4)),
+			[
+				{ name: "space-400", raw: "1rem" },
+				{ name: "space-100", raw: "8px" },
+			],
+		);
+		expect(result.inSync).toBe(1);
+		expect(result.entries.map((e) => e.kind)).toEqual(["stale-output"]);
+	});
+
+	it("reads a font stack with an appended generic fallback as in sync", () => {
+		const result = classifyDrift(
+			mapOf(tok("family.sans", "fontFamily", "Inter")),
+			[{ name: "family-sans", raw: '"inter", sans-serif' }],
+		);
+		expect(result.inSync).toBe(1);
+	});
+
+	it("reads Figma font-style names as CSS weight + style", () => {
+		const result = classifyDrift(
+			mapOf(
+				tok("weight.semibold-italic", "other", "Semi Bold Italic"),
+				tok("weight.italic", "other", "Italic"),
+				tok("weight.bold", "fontWeight", "Bold"),
+			),
+			[
+				{ name: "weight-semibold-italic", raw: "600 italic" },
+				{ name: "weight-italic", raw: "italic" },
+				{ name: "weight-bold", raw: "700" },
+			],
+		);
+		expect(result.inSync).toBe(3);
+	});
+});
+
+describe("classifyDriftByMode — vendor-named modes (sds_dark)", () => {
+	it("matches a mode named after its scheme to a prefers-color-scheme scope", () => {
+		const t = (value: string): TokenMap =>
+			mapOf({ name: "bg", type: "color", value });
+		const result = classifyDriftByMode(
+			[
+				{ mode: "sds-light", map: t("#ffffff") },
+				{ mode: "sds-dark", map: t("#1e1e1e") },
+			],
+			[
+				{ name: "bg", raw: "#ffffff" },
+				{
+					name: "bg",
+					raw: "#1e1e1e",
+					scope: "@media (prefers-color-scheme: dark) :root",
+				},
+			],
+		);
+		expect(result.inSync).toBe(2);
+		expect(result.skippedModes).toEqual([]);
+	});
+});

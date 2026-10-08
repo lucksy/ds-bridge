@@ -26,6 +26,10 @@ export interface RegistryMatch {
 	description?: string;
 	/** Variant axes that differ between code and Figma; omitted when none. */
 	variantGaps?: string[];
+	/** Same-name copies collapsed into this component (an icon's sizes). */
+	aliasNodeIds?: string[];
+	/** "icon" for an icon-library component (reported apart from components). */
+	kind?: "icon";
 }
 
 /** A persisted code component with no confident match + its figma candidates. */
@@ -39,6 +43,8 @@ export interface RegistryUnmatchedCode {
 export interface RegistryUnmatchedFigma {
 	name: string;
 	nodeId: string;
+	/** Same-name copies collapsed into this component (an icon's sizes). */
+	aliasNodeIds?: string[];
 	/** The Figma component's description; omitted when it has none. */
 	description?: string;
 	candidates: { codeName: string; score: number }[];
@@ -71,6 +77,11 @@ function describedBy(description: string): { description?: string } {
 	return description.length > 0 ? { description } : {};
 }
 
+/** `{ aliasNodeIds }` when there are any — keeps other registries byte-stable. */
+function aliasesOf(ids: string[] | undefined): { aliasNodeIds?: string[] } {
+	return ids !== undefined && ids.length > 0 ? { aliasNodeIds: ids } : {};
+}
+
 function byNameAsc(a: string, b: string): number {
 	return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -98,6 +109,8 @@ export function toRegistryFile(
 			...(m.variantGaps !== undefined && m.variantGaps.length > 0
 				? { variantGaps: m.variantGaps }
 				: {}),
+			...aliasesOf(m.figma.aliasNodeIds),
+			...(m.figma.kind === "icon" ? { kind: "icon" as const } : {}),
 		}))
 		.sort((a, b) => byNameAsc(a.codeName, b.codeName));
 
@@ -117,6 +130,7 @@ export function toRegistryFile(
 		.map((u) => ({
 			name: u.figma.name,
 			nodeId: u.figma.nodeId,
+			...aliasesOf(u.figma.aliasNodeIds),
 			...describedBy(u.figma.description),
 			candidates: u.candidates.map((c) => ({
 				codeName: c.code.name,
@@ -201,7 +215,9 @@ export function resolveEntry(
 	const normalizedQuery = normalizeName(query);
 
 	for (const entry of registry.matches) {
-		if (entry.nodeId === query) return { kind: "match", entry };
+		if (entry.nodeId === query || entry.aliasNodeIds?.includes(query)) {
+			return { kind: "match", entry };
+		}
 	}
 	for (const entry of registry.matches) {
 		if (entry.figmaName === query) return { kind: "match", entry };
@@ -215,7 +231,9 @@ export function resolveEntry(
 	}
 
 	const unmatched =
-		registry.unmatchedFigma.find((e) => e.nodeId === query) ??
+		registry.unmatchedFigma.find(
+			(e) => e.nodeId === query || e.aliasNodeIds?.includes(query),
+		) ??
 		registry.unmatchedFigma.find((e) => e.name === query) ??
 		(normalizedQuery.length > 0
 			? registry.unmatchedFigma.find(

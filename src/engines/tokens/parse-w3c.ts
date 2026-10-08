@@ -115,6 +115,8 @@ function colorObjectHex(value: Record<string, unknown>): string | undefined {
  */
 function flattenValue(type: unknown, value: unknown): TokenValue | undefined {
 	if (typeof value === "string" || typeof value === "number") return value;
+	// Figma BOOLEAN variables export as `true` / `false`.
+	if (typeof value === "boolean") return String(value);
 	if (Array.isArray(value)) {
 		if (type === "fontFamily" && value.every((v) => typeof v === "string")) {
 			return value.join(", ");
@@ -142,9 +144,16 @@ function flattenValue(type: unknown, value: unknown): TokenValue | undefined {
 	return value;
 }
 
+/**
+ * Types read as "other" without a warning: Figma STRING / BOOLEAN variables
+ * export as `string` / `boolean` (or `unknown`), and they are not design values.
+ */
+const QUIET_OTHER_TYPES = new Set(["string", "boolean", "unknown"]);
+
 function mapType(raw: unknown, path: string, warnings: string[]): TokenType {
 	if (typeof raw !== "string") return "other";
 	if (KNOWN_TYPES.has(raw as TokenType)) return raw as TokenType;
+	if (QUIET_OTHER_TYPES.has(raw)) return "other";
 	warnings.push(`${path}: unrecognized $type "${raw}" — treated as "other"`);
 	return "other";
 }
@@ -225,6 +234,46 @@ function withAlpha(color: TokenValue, alpha: number | undefined): TokenValue {
 	return formatHex8({ ...parsed, alpha });
 }
 
+/** Per-segment key forms, loosest last: Figma display names vs slug keys. */
+const LOOSE_FORMS: readonly ((segment: string) => string)[] = [
+	(segment) =>
+		segment
+			.trim()
+			.toLowerCase()
+			.replace(/[\s_]+/g, "-"),
+	(segment) => segment.toLowerCase().replace(/[^a-z0-9@]/g, ""),
+];
+
+/**
+ * Finds the token an alias means when its path is not an exact name. Figma
+ * variable exports (Figma's Simple Design System) key tokens by slug —
+ * `gray.100`, `scale-03` — while aliases keep the variable's display name:
+ * `{@color_primitives.Gray.100}`, `{@typography_primitives.Scale 03}`. Each
+ * segment is compared in a looser form (case, spaces, `_` / `-`, then any
+ * punctuation, so camelCase keys match too). A form two tokens share is never
+ * used — an alias is never guessed.
+ */
+function makeLooseIndex(
+	names: readonly string[],
+): (target: string) => string | undefined {
+	const indexes = LOOSE_FORMS.map((form) => {
+		const index = new Map<string, string | null>();
+		for (const name of names) {
+			const key = name.split(".").map(form).join(".");
+			index.set(key, index.has(key) ? null : name);
+		}
+		return { form, index };
+	});
+	return (target) => {
+		for (const { form, index } of indexes) {
+			const hit = index.get(target.split(".").map(form).join("."));
+			if (hit === null) return undefined;
+			if (hit !== undefined) return hit;
+		}
+		return undefined;
+	};
+}
+
 /**
  * Resolves every token's final value: `{dot.path}` aliases followed
  * transitively (cycles and dangling refs are errors), references embedded in a
@@ -235,6 +284,7 @@ function withAlpha(color: TokenValue, alpha: number | undefined): TokenValue {
 function makeResolver(
 	byName: ReadonlyMap<string, RawToken>,
 	errors: ParseError[],
+	canonical: (target: string) => string | undefined,
 ): (raw: RawToken) => TokenValue | undefined {
 	const memo = new Map<string, TokenValue | undefined>();
 	const visiting = new Set<string>();
@@ -250,7 +300,8 @@ function makeResolver(
 		}
 		visiting.add(raw.name);
 		const lookup = (target: string): TokenValue | undefined => {
-			const ref = byName.get(target);
+			const name = canonical(target);
+			const ref = name === undefined ? undefined : byName.get(name);
 			if (ref === undefined) {
 				errors.push({
 					code: "unknown-alias",
@@ -268,7 +319,7 @@ function makeResolver(
 		} else if (typeof raw.rawValue === "string" && raw.rawValue.includes("{")) {
 			let failed = false;
 			value = raw.rawValue.replace(INLINE_REF_RE, (whole, target: string) => {
-				if (!byName.has(target)) return whole; // not a reference (e.g. JSON-ish text)
+				if (canonical(target) === undefined) return whole; // not a reference (e.g. JSON-ish text)
 				const resolved = lookup(target);
 				if (resolved === undefined || typeof resolved === "object") {
 					failed = true;
@@ -286,6 +337,30 @@ function makeResolver(
 		return value;
 	};
 	return resolveToken;
+}
+
+/** Name segments that make a number token a length (Figma FLOAT variables). */
+const LENGTH_SEGMENT =
+	/^(?:space|spacing|gap|gutter|padding|margin|inset|offset|radius|corner|rounded|size|sizes|width|height|stroke|border|depth|blur|icon|breakpoint)$/i;
+/** Segments that make a number something other than a length. */
+const NOT_LENGTH_SEGMENT =
+	/^(?:weight|opacity|alpha|ratio|scale|z|zindex|z-index|count|columns?|duration|delay|line|leading|lineheight|tracking|letter|spacing-ratio)$/i;
+
+/**
+ * Figma has no dimension type: a spacing, radius or size variable exports as a
+ * plain number (`@size.space.400: 16`), and the build emits it as a length
+ * (`--sds-size-space-400: 1rem`). A number token whose path names a length —
+ * and nothing that is not one (weight, opacity, scale, line height) — reads as
+ * a px dimension, so lint suggests it for `padding: 16px` and drift compares
+ * it with the rem output.
+ */
+function isFigmaLength(name: string, value: TokenValue): boolean {
+	if (typeof value !== "number") return false;
+	const segments = name.split(/[.\-_\s]+/);
+	return (
+		segments.some((s) => LENGTH_SEGMENT.test(s)) &&
+		!segments.some((s) => NOT_LENGTH_SEGMENT.test(s))
+	);
 }
 
 export function parseW3c(source: unknown): ParseOutcome {
@@ -312,19 +387,23 @@ export function parseW3c(source: unknown): ParseOutcome {
 
 	const byName = new Map<string, RawToken>(raws.map((r) => [r.name, r]));
 	const tokens: Token[] = [];
-	const resolveToken = makeResolver(byName, errors);
+	const loose = makeLooseIndex([...byName.keys()]);
+	const canonical = (target: string): string | undefined =>
+		byName.has(target) ? target : loose(target);
+	const resolveToken = makeResolver(byName, errors, canonical);
 	for (const raw of raws) {
 		const value = resolveToken(raw);
 		if (value === undefined) continue;
+		const length = raw.type === "number" && isFigmaLength(raw.name, value);
 		const token: Token = {
 			name: raw.name,
-			type: raw.type,
-			value,
+			type: length ? "dimension" : raw.type,
+			value: length ? `${value}px` : value,
 			group: raw.group,
 		};
 		if (raw.description !== undefined) token.description = raw.description;
 		const aliasOf = aliasTarget(raw.rawValue);
-		if (aliasOf !== undefined) token.aliasOf = aliasOf;
+		if (aliasOf !== undefined) token.aliasOf = canonical(aliasOf) ?? aliasOf;
 		tokens.push(token);
 	}
 

@@ -26,7 +26,7 @@ import { dirname, join, posix, resolve as resolvePath, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Command } from "commander";
 import { readProjectConfigText, resolveConfig } from "../config.js";
-import { matchComponents } from "../engines/registry/match.js";
+import { matchComponents, type PinnedPair } from "../engines/registry/match.js";
 import {
 	buildParity,
 	type ParityHistoryRecord,
@@ -39,6 +39,7 @@ import {
 } from "../engines/registry/persist.js";
 import type { CodeComponent } from "../engines/registry/scan-code.js";
 import { buildFigmaComponentModel } from "../engines/registry/scan-figma.js";
+import { readCodeConnectPins } from "../io/code-connect.js";
 import type { ComponentPaths } from "../io/component-paths.js";
 import { createFigmaClient, type FigmaResult } from "../io/figma/client.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
@@ -113,6 +114,36 @@ function byPath(a: CodeComponent, b: CodeComponent): number {
 }
 
 const DEFAULT_FIGMA_API_BASE = "https://api.figma.com";
+
+/**
+ * Without component_paths, the folders Code Connect points at are the design
+ * system: SDS connects `src/ui/**`, so its data providers, examples and app
+ * pages are not reported as custom components. Unchanged without pins.
+ */
+function scopeByCodeConnect(
+	code: CodeComponent[],
+	pins: readonly PinnedPair[],
+): { code: CodeComponent[]; scope: ComponentPaths | undefined } {
+	if (pins.length === 0) return { code, scope: undefined };
+	const pinned = new Set(pins.map((p) => p.codeName));
+	const roots = [
+		...new Set(
+			code
+				.filter((c) => pinned.has(c.name))
+				.map((c) => {
+					const dirs = c.importPath.split("/").slice(0, -1);
+					return dirs.slice(0, Math.min(2, dirs.length)).join("/");
+				}),
+		),
+	].sort();
+	if (roots.length === 0) return { code, scope: undefined };
+	const inRoot = (c: CodeComponent) =>
+		roots.some((r) => r === "" || c.importPath.startsWith(`${r}/`));
+	return {
+		code: code.filter(inRoot),
+		scope: { paths: roots, source: "code-connect" },
+	};
+}
 
 /** App page folders a whole-project component scan leaves out. */
 const PAGE_DIRS = new Set(["pages", "screens", "views", "routes"]);
@@ -211,7 +242,14 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 	}
 
 	// Code side: ts-morph scan (never throws; weird files are skipped).
-	const { code, scope } = await scanCode(targetDir, config.componentPaths);
+	const scanned = await scanCode(targetDir, config.componentPaths);
+	// Code Connect pairings the project declared: ground truth for the match,
+	// and — when no component_paths narrow the scan — where the system lives.
+	const pins = readCodeConnectPins(targetDir);
+	const { code, scope } =
+		scanned.scope === undefined
+			? scopeByCodeConnect(scanned.code, pins)
+			: scanned;
 
 	// Figma side: published components + file document over REST.
 	const baseUrl = process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE;
@@ -252,7 +290,7 @@ async function runBuild(path: string, options: BuildOptions): Promise<void> {
 		figma.map((f) => normalize(f.name)).filter((n) => !local.has(n)),
 	);
 	const packaged = await scanPackages(targetDir, wanted);
-	const matchResult = matchComponents([...code, ...packaged], figma);
+	const matchResult = matchComponents([...code, ...packaged], figma, { pins });
 
 	// The single io-edge clock read — the persist engine stays pure.
 	const generatedAt = new Date().toISOString();
@@ -350,7 +388,7 @@ function renderBuildSummary(
 		`  scanned:        ${
 			scope === undefined
 				? "the whole project, minus page folders (pages/, screens/, views/, routes/) — set component_paths in .ds-bridge.json to narrow it"
-				: `${scope.paths.join(", ")} (${scope.source})`
+				: `${scope.paths.join(", ")} (${scope.source === "code-connect" ? "the folders your Code Connect files map" : scope.source})`
 		}`,
 		`  matched:        ${registry.matches.length}`,
 		`  unmatched code: ${registry.unmatchedCode.length}`,

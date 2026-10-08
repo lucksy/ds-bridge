@@ -329,3 +329,55 @@ describe("auditContrast — translucent colors", () => {
 		expect(finding?.status).toBe("pass");
 	});
 });
+
+describe("pairColorTokens — Simple Design System semantics (Figma)", () => {
+	// SDS: `text.<role>.on-<role>` sits on the strong `background.<role>.default`
+	// (and its hover); `text.<role>.default` is for the role's light surfaces.
+	const map = makeMap([
+		color("@color.text.default.default", "#1e1e1e"),
+		color("@color.text.default.secondary", "#757575"),
+		color("@color.text.danger.default", "#900b09"),
+		color("@color.text.danger.on-danger", "#fee9e7"),
+		color("@color.text.brand.on-brand", "#f5f5f5"),
+		color("@color.background.default.default", "#ffffff"),
+		color("@color.background.default.default-hover", "#f5f5f5"),
+		color("@color.background.default.secondary", "#f5f5f5"),
+		color("@color.background.danger.default", "#ec221f"),
+		color("@color.background.danger.hover", "#c00f0c"),
+		color("@color.background.danger.tertiary", "#fee9e7"),
+		color("@color.background.brand.default", "#2c2c2c"),
+		color("@color.background.brand.hover", "#1e1e1e"),
+		color("@color.background.brand.tertiary", "#f5f5f5"),
+	]);
+	const keys = pairColorTokens(map)
+		.map((p) => `${p.foreground.name} on ${p.background.name}`)
+		.sort();
+
+	it("pairs on-X with X's strong surfaces and role text with the role's light ones", () => {
+		expect(keys).toEqual([
+			"@color.text.brand.on-brand on @color.background.brand.default",
+			"@color.text.brand.on-brand on @color.background.brand.hover",
+			"@color.text.danger.default on @color.background.danger.tertiary",
+			"@color.text.danger.on-danger on @color.background.danger.default",
+			"@color.text.danger.on-danger on @color.background.danger.hover",
+			"@color.text.default.default on @color.background.default.default",
+			"@color.text.default.secondary on @color.background.default.secondary",
+		]);
+	});
+});
+
+describe("auditContrast — non-text (icon) colors", () => {
+	it("holds an icon color to WCAG 1.4.11's 3:1, not text's 4.5:1", () => {
+		const map = makeMap([
+			color("color.icon.danger.on-danger", "#fee9e7"),
+			color("color.text.danger.on-danger", "#fee9e7"),
+			color("color.background.danger.default", "#ec221f"),
+		]);
+		const report = auditContrast([{ mode: "light", map }], { level: "AA" });
+		const by = Object.fromEntries(
+			report.findings.map((f) => [f.foreground, [f.required, f.status]]),
+		);
+		expect(by["color.icon.danger.on-danger"]).toEqual([3, "pass"]);
+		expect(by["color.text.danger.on-danger"]).toEqual([4.5, "fail"]);
+	});
+});

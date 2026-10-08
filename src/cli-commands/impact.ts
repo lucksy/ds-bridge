@@ -45,6 +45,7 @@ import type { RegistryFile } from "../engines/registry/persist.js";
 import {
 	buildFigmaComponentModel,
 	type FigmaComponentModel,
+	normalizeComponentModels,
 } from "../engines/registry/scan-figma.js";
 import {
 	createFigmaClient,
@@ -167,7 +168,10 @@ function readCursor(path: string): ImpactCursor | undefined {
 	try {
 		const parsed = JSON.parse(readFileSync(path, "utf8")) as ImpactCursor;
 		if (!Array.isArray(parsed.snapshot)) return undefined;
-		return parsed;
+		// A baseline saved by an earlier version holds every private component
+		// and each icon size copy: normalize it like a fresh fetch, so an
+		// upgrade never reads as a mass removal.
+		return { ...parsed, snapshot: normalizeComponentModels(parsed.snapshot) };
 	} catch {
 		return undefined;
 	}

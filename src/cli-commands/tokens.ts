@@ -222,10 +222,14 @@ function resolveTokenSource(
  * outcome. Tokens Studio `$themes` and a folder's per-mode files also yield
  * one map per mode (default first) so drift is checked mode by mode.
  */
-function loadTokenMapForCheck(
-	tokenPath: string,
-):
-	| { kind: "ok"; map: TokenMap; modes?: ModeTokens[]; files: string[] }
+function loadTokenMapForCheck(tokenPath: string):
+	| {
+			kind: "ok";
+			map: TokenMap;
+			modes?: ModeTokens[];
+			files: string[];
+			warnings: string[];
+	  }
 	| CheckError {
 	const loaded = loadTokens(tokenPath);
 	if (loaded.kind === "error") return loaded;
@@ -234,6 +238,7 @@ function loadTokenMapForCheck(
 		map: loaded.map,
 		...(loaded.modes !== undefined ? { modes: loaded.modes } : {}),
 		files: loaded.files,
+		warnings: loaded.warnings,
 	};
 }
 
@@ -268,6 +273,9 @@ function scanMergedOutputs(
 		}
 		const outcome = scanOutputs({ path: file, content });
 		if (outcome.kind !== "ok") continue;
+		// A script that yields no theme values (an API service, a hook) is not
+		// a token output: its parse notes are noise, not warnings.
+		if (outcome.values.length === 0) continue;
 		for (const warning of outcome.warnings) {
 			warnings.push(`${relative(outputsDir, file)}: ${warning}`);
 		}
@@ -295,8 +303,19 @@ function scanMergedOutputs(
  * where a scoped redefinition (e.g. `.dark`) has no mode of its own.
  */
 function latestByName(values: readonly OutputValue[]): OutputValue[] {
+	// A root-level value is the default; a scoped redefinition (a dark
+	// `@media` block) only stands in when nothing is defined at the root.
 	const byName = new Map<string, OutputValue>();
-	for (const value of values) byName.set(value.name, value);
+	for (const value of values) {
+		const prior = byName.get(value.name);
+		if (
+			prior !== undefined &&
+			prior.scope === undefined &&
+			value.scope !== undefined
+		)
+			continue;
+		byName.set(value.name, value);
+	}
 	return [...byName.values()];
 }
 
@@ -551,7 +570,7 @@ function runCheck(path: string, options: CheckOptions): void {
 	}
 
 	const { values, warnings } = scanMergedOutputs(outputsDir, tokenSource.path);
-	for (const warning of warnings) {
+	for (const warning of [...loaded.warnings, ...warnings]) {
 		process.stderr.write(`warning: ${warning}\n`);
 	}
 

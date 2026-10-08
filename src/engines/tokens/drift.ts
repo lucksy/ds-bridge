@@ -1,5 +1,10 @@
 // T3.4 — drift classifier: token source vs built outputs. Classification table
 // lives at the top of the test file. Pure.
+import {
+	alignTokenKeys,
+	nameKey,
+	type TokenKeyAlignment,
+} from "./align-names.js";
 import { normalizeColor, normalizeDimension } from "./normalize.js";
 import type { OutputValue } from "./scan-outputs.js";
 import type { Token, TokenMap } from "./types.js";
@@ -28,9 +33,97 @@ export interface DriftResult {
 	unbuiltLayers?: { prefix: string; tokens: number }[];
 }
 
-/** Notation-insensitive name key: dots and kebab map to one form. */
-function nameKey(name: string): string {
-	return name.toLowerCase().replace(/\./g, "-");
+/** CSS font-weight numbers by Figma / font style name. */
+const WEIGHT_NAMES: Readonly<Record<string, number>> = {
+	thin: 100,
+	hairline: 100,
+	extralight: 200,
+	ultralight: 200,
+	light: 300,
+	regular: 400,
+	normal: 400,
+	book: 400,
+	medium: 500,
+	semibold: 600,
+	demibold: 600,
+	bold: 700,
+	extrabold: 800,
+	ultrabold: 800,
+	black: 900,
+	heavy: 900,
+};
+
+/**
+ * A font style written as a Figma style name ("Semi Bold Italic", "Italic")
+ * or as CSS ("600 italic", "italic") → one canonical "<weight>[ italic]".
+ * Undefined for anything that is not a font style.
+ */
+function fontStyleKey(raw: string): string | undefined {
+	const trimmed = raw.trim().toLowerCase();
+	const italic = /(?:^|\s)(?:italic|oblique)$/.test(trimmed);
+	const weightPart = trimmed.replace(/\s*(?:italic|oblique)$/, "").trim();
+	let weight = 400;
+	if (/^\d{3}$/.test(weightPart)) weight = Number(weightPart);
+	else if (weightPart !== "") {
+		const known = WEIGHT_NAMES[weightPart.replace(/[\s-]+/g, "")];
+		if (known === undefined) return undefined;
+		weight = known;
+	} else if (!italic) return undefined;
+	return `${weight}${italic ? " italic" : ""}`;
+}
+
+/** A font stack's families, unquoted and lowercased. */
+function fontFamilies(raw: string): string[] {
+	return raw
+		.split(",")
+		.map((f) =>
+			f
+				.trim()
+				.replace(/^["']|["']$/g, "")
+				.toLowerCase(),
+		)
+		.filter((f) => f !== "");
+}
+
+/** Generic families a build appends as the stack's last resort. */
+const GENERIC_FAMILIES = new Set([
+	"serif",
+	"sans-serif",
+	"monospace",
+	"cursive",
+	"fantasy",
+	"system-ui",
+	"ui-sans-serif",
+	"ui-serif",
+	"ui-monospace",
+]);
+
+/**
+ * True when a source value and a built output say the same thing in different
+ * notations — the conventions Figma variable exports meet in a CSS build: a
+ * unitless FLOAT (`16`) emitted as a length (`1rem`), a font family emitted
+ * with a generic fallback (`"inter", sans-serif`), a font style named the
+ * Figma way (`Semi Bold Italic`) emitted as CSS (`600 italic`).
+ */
+function equivalent(token: Token, output: string): boolean {
+	const value = token.value;
+	if (typeof value === "number" && /^-?[\d.]+(px|rem)$/.test(output.trim())) {
+		const dim = normalizeDimension(output.trim());
+		return dim !== undefined && Math.abs(dim.px - value) < 1e-6;
+	}
+	if (typeof value !== "string") return false;
+	if (token.type === "fontFamily") {
+		const source = fontFamilies(value);
+		const built = fontFamilies(output);
+		const extra = built.slice(source.length);
+		return (
+			source.length > 0 &&
+			source.every((f, i) => built[i] === f) &&
+			extra.every((f) => GENERIC_FAMILIES.has(f))
+		);
+	}
+	const a = fontStyleKey(value);
+	return a !== undefined && a === fontStyleKey(output);
 }
 
 /** Type-aware canonical value for comparison; raw fallback when unnormalizable. */
@@ -224,6 +317,18 @@ function derivedAliasKeys(
 	return derived;
 }
 
+/**
+ * When the build namespaces its tokens (`--sds-…`), a custom property outside
+ * that namespace (`--column-count` in a layout stylesheet) is a local
+ * variable, not an emitted token — never an orphan.
+ */
+function underBuildPrefix(
+	prefixes: readonly string[],
+): (key: string) => boolean {
+	if (prefixes.length === 0) return () => true;
+	return (key) => prefixes.some((p) => key.startsWith(`${p}-`));
+}
+
 function entryName(entry: DriftEntry): string {
 	return entry.kind === "orphan-output" ? entry.output.name : entry.token.name;
 }
@@ -231,7 +336,13 @@ function entryName(entry: DriftEntry): string {
 export function classifyDrift(
 	source: TokenMap,
 	outputs: readonly OutputValue[],
+	alignment: TokenKeyAlignment = alignTokenKeys(
+		source.tokens.map((t) => t.name),
+		outputs.map((o) => o.name),
+	),
 ): DriftResult {
+	const tokenKey = alignment.key;
+	const isTokenOutput = underBuildPrefix(alignment.prefixes);
 	const outputsByKey = new Map<string, OutputValue>();
 	for (const output of outputs) {
 		outputsByKey.set(nameKey(output.name), output);
@@ -245,7 +356,7 @@ export function classifyDrift(
 
 	for (const token of source.tokens) {
 		if (typeof token.value === "object") continue; // composites: not comparable to flat outputs
-		const key = nameKey(token.name);
+		const key = tokenKey(token.name);
 		const output = outputsByKey.get(key);
 		if (output === undefined) {
 			entries.push({ kind: "missing-output", token });
@@ -253,9 +364,10 @@ export function classifyDrift(
 		}
 		matchedOutputKeys.add(key);
 		emitted.add(token.name);
+		const built = resolved(key) ?? output.raw;
 		if (
-			canonical(token.type, token.value) ===
-			canonical(token.type, resolved(key) ?? output.raw)
+			canonical(token.type, token.value) === canonical(token.type, built) ||
+			equivalent(token, built)
 		) {
 			inSync += 1;
 		} else {
@@ -271,10 +383,11 @@ export function classifyDrift(
 		}
 	}
 
-	const tokenKeys = new Set(source.tokens.map((t) => nameKey(t.name)));
+	const tokenKeys = new Set(source.tokens.map((t) => tokenKey(t.name)));
 	const derived = derivedAliasKeys(outputs, tokenKeys);
 	for (const output of outputs) {
 		const key = nameKey(output.name);
+		if (!isTokenOutput(key)) continue;
 		if (!matchedOutputKeys.has(key) && !derived.has(key)) {
 			entries.push({ kind: "orphan-output", output });
 		}
@@ -339,13 +452,31 @@ export function classifyDriftByMode(
 	const modeNames = modes
 		.map((m) => m.mode)
 		.sort((a, b) => b.length - a.length);
-	const scopedMode = (output: OutputValue): string | undefined =>
-		output.scope === undefined
-			? undefined
-			: modeNames.find((mode) =>
-					scopeSelectsMode(output.scope as string, mode),
-				);
+	// A vendor-named mode (`sds-dark`) is selected by its scheme word when no
+	// scope names it in full: SDS ships dark as `@media (prefers-color-scheme: dark)`.
+	const schemeWord = (mode: string): string | undefined => {
+		const words = mode.toLowerCase().split(/[-_\s.]+/);
+		const scheme = words.filter((w) => w === "light" || w === "dark");
+		return scheme.length === 1 && words.length > 1 ? scheme[0] : undefined;
+	};
+	const scopedMode = (output: OutputValue): string | undefined => {
+		if (output.scope === undefined) return undefined;
+		const scope = output.scope;
+		const exact = modeNames.find((mode) => scopeSelectsMode(scope, mode));
+		if (exact !== undefined) return exact;
+		const byWord = modeNames.filter((mode) => {
+			const word = schemeWord(mode);
+			return word !== undefined && scopeSelectsMode(scope, word);
+		});
+		return byWord.length === 1 ? byWord[0] : undefined;
+	};
 	const base = outputs.filter((o) => scopedMode(o) === undefined);
+	const alignment = alignTokenKeys(
+		modes.flatMap((m) => m.map.tokens.map((t) => t.name)),
+		outputs.map((o) => o.name),
+	);
+	const tokenKey = alignment.key;
+	const isTokenOutput = underBuildPrefix(alignment.prefixes);
 
 	const entries: DriftEntry[] = [];
 	const skippedModes: string[] = [];
@@ -355,7 +486,7 @@ export function classifyDriftByMode(
 	let inSync = 0;
 
 	modes.forEach(({ mode, map }, index) => {
-		for (const token of map.tokens) tokenKeys.add(nameKey(token.name));
+		for (const token of map.tokens) tokenKeys.add(tokenKey(token.name));
 		let effective: OutputValue[] = base;
 		const overrides = outputs.filter((o) => scopedMode(o) === mode);
 		if (index > 0 && overrides.length === 0) {
@@ -369,7 +500,7 @@ export function classifyDriftByMode(
 				...overrides,
 			];
 		}
-		const result = classifyDrift(map, effective);
+		const result = classifyDrift(map, effective, alignment);
 		inSync += result.inSync;
 		for (const layer of result.unbuiltLayers ?? []) {
 			unbuilt.set(
@@ -380,7 +511,7 @@ export function classifyDriftByMode(
 		for (const entry of result.entries) {
 			if (entry.kind === "orphan-output") continue;
 			if (entry.kind === "missing-output") {
-				const key = nameKey(entry.token.name);
+				const key = tokenKey(entry.token.name);
 				if (missingReported.has(key)) continue;
 				missingReported.add(key);
 			}
@@ -392,6 +523,7 @@ export function classifyDriftByMode(
 	const derived = derivedAliasKeys(outputs, tokenKeys);
 	for (const output of outputs) {
 		const key = nameKey(output.name);
+		if (!isTokenOutput(key)) continue;
 		if (tokenKeys.has(key) || derived.has(key) || orphanSeen.has(key)) continue;
 		orphanSeen.add(key);
 		entries.push({ kind: "orphan-output", output });

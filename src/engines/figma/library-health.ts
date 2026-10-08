@@ -120,6 +120,24 @@ const USAGE_FIELDS = new Set([
 	"componentPropertyReferences",
 ]);
 
+/**
+ * Fields that never change how an instance looks: prototype wiring,
+ * annotations, export settings, plugin data, and the variable mode an
+ * instance is set to (theming it is API usage, not drift).
+ */
+const NON_VISUAL_FIELDS = new Set([
+	"annotations",
+	"reactions",
+	"transitionNodeID",
+	"transitionDuration",
+	"transitionEasing",
+	"exportSettings",
+	"pluginData",
+	"sharedPluginData",
+	"explicitVariableModes",
+	"devStatus",
+]);
+
 /** The fields of an override that are drift: not layout, text or API usage. */
 function designFields(override: { overriddenFields?: string[] }): string[] {
 	const fields = override.overriddenFields ?? [];
@@ -127,8 +145,14 @@ function designFields(override: { overriddenFields?: string[] }): string[] {
 		(field) =>
 			!LAYOUT_ONLY_FIELDS.has(field) &&
 			!TEXT_CONTENT_FIELDS.has(field) &&
-			!USAGE_FIELDS.has(field),
+			!USAGE_FIELDS.has(field) &&
+			!NON_VISUAL_FIELDS.has(field),
 	);
+}
+
+/** A private / documentation-only component (`_Component Note`, `.Slot`). */
+function isPrivateName(name: string | undefined): boolean {
+	return name !== undefined && /^[._]/.test(name.trim());
 }
 
 /** An override that changes how the instance looks (not its size or its text). */
@@ -155,23 +179,84 @@ function componentNameOf(
 	return components[componentId]?.name;
 }
 
+/** Where a node sits: what a library's own structure says about it. */
+interface WalkContext {
+	/** Inside a COMPONENT / COMPONENT_SET: the library's own definition. */
+	inDefinition: boolean;
+	/** Inside an instance: owned by its main component. */
+	inInstance: boolean;
+	/** A direct child of a page or section: a screen / board, not a layer. */
+	topLevel: boolean;
+}
+
 /**
- * Walk the document tree depth-first, invoking `visit` on every node. Iterative
- * (explicit stack) so a deep tree never overflows the call stack.
+ * Walk the document tree depth-first, invoking `visit` on every node with its
+ * context. Iterative (explicit stack) so a deep tree never overflows.
  */
-function walk(root: FigmaNode, visit: (node: FigmaNode) => void): void {
-	const stack: FigmaNode[] = [root];
+function walk(
+	root: FigmaNode,
+	visit: (node: FigmaNode, ctx: WalkContext) => void,
+): void {
+	const stack: { node: FigmaNode; ctx: WalkContext }[] = [
+		{
+			node: root,
+			ctx: { inDefinition: false, inInstance: false, topLevel: false },
+		},
+	];
 	while (stack.length > 0) {
 		// Non-null: guarded by stack.length > 0.
-		const node = stack.pop() as FigmaNode;
-		visit(node);
+		const { node, ctx } = stack.pop() as { node: FigmaNode; ctx: WalkContext };
+		visit(node, ctx);
 		const children = node.children;
-		if (Array.isArray(children)) {
-			for (const child of children) {
-				if (child !== undefined) stack.push(child);
-			}
+		if (!Array.isArray(children)) continue;
+		const childCtx: WalkContext = {
+			inDefinition:
+				ctx.inDefinition ||
+				node.type === "COMPONENT" ||
+				node.type === "COMPONENT_SET",
+			inInstance: ctx.inInstance || node.type === "INSTANCE",
+			topLevel: node.type === "CANVAS" || node.type === "SECTION",
+		};
+		for (const child of children) {
+			if (child !== undefined) stack.push({ node: child, ctx: childCtx });
 		}
 	}
+}
+
+/** Every override on an instance and the instances nested in it, one per layer. */
+function subtreeOverrides(
+	node: FigmaNode,
+): { id?: string; overriddenFields?: string[] }[] {
+	const byId = new Map<string, { id?: string; overriddenFields?: string[] }>();
+	const anonymous: { id?: string; overriddenFields?: string[] }[] = [];
+	const stack: FigmaNode[] = [node];
+	while (stack.length > 0) {
+		const current = stack.pop() as FigmaNode;
+		if (current.type === "INSTANCE" && Array.isArray(current.overrides)) {
+			for (const override of current.overrides) {
+				const id = (override as { id?: string }).id;
+				if (id === undefined) {
+					anonymous.push(override);
+					continue;
+				}
+				const prior = byId.get(id);
+				const fields = [
+					...new Set([
+						...(prior?.overriddenFields ?? []),
+						...(override.overriddenFields ?? []),
+					]),
+				];
+				byId.set(id, {
+					id,
+					...(fields.length > 0 ? { overriddenFields: fields } : {}),
+				});
+			}
+		}
+		for (const child of current.children ?? []) {
+			if (child !== undefined) stack.push(child);
+		}
+	}
+	return [...byId.values(), ...anonymous];
 }
 
 /** Compare strings ascending, stable. */
@@ -196,19 +281,64 @@ export function assessLibraryHealth(
 		for (const entry of Object.values(map)) componentNames.add(entry.name);
 	}
 
+	// Each component's own layer names: a detached copy keeps them, a layout
+	// frame that merely shares the component's name ("Text") does not.
+	const layersByName = new Map<string, Set<string>>();
+	walk(file.document, (node) => {
+		if (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET") return;
+		const layers = layersByName.get(node.name) ?? new Set<string>();
+		const variants =
+			node.type === "COMPONENT_SET" ? (node.children ?? []) : [node];
+		for (const variant of variants) {
+			for (const child of variant?.children ?? []) {
+				if (child !== undefined) layers.add(child.name);
+			}
+		}
+		layersByName.set(node.name, layers);
+	});
+	const looksDetached = (node: FigmaNode): boolean => {
+		const layers = layersByName.get(node.name);
+		// The component's layers are not in this file: the name is all we have.
+		if (layers === undefined || layers.size === 0) return true;
+		const children = (node.children ?? []).filter(
+			(c): c is FigmaNode => c !== undefined,
+		);
+		if (children.length === 0) return false;
+		const shared = children.filter((c) => layers.has(c.name)).length;
+		return shared / children.length >= 0.5;
+	};
+
 	const hotspots: OverrideHotspot[] = [];
 	// component name -> usage count, in first-seen order for determinism.
 	const deprecatedCounts = new Map<string, number>();
 	const detached: DetachedCandidate[] = [];
 
-	walk(file.document, (node) => {
+	/** The (set) name of the component an instance points at. */
+	const mainNameOf = (componentId: string | undefined): string | undefined => {
+		if (componentId === undefined) return undefined;
+		const component = file.components?.[componentId];
+		const setId = component?.componentSetId;
+		return (
+			(setId !== undefined ? file.componentSets?.[setId]?.name : undefined) ??
+			component?.name
+		);
+	};
+
+	walk(file.document, (node, ctx) => {
 		const isInstance = node.type === "INSTANCE";
 
-		if (isInstance) {
-			const overrides = node.overrides;
-			const drifted = Array.isArray(overrides)
-				? overrides.filter(isDesignOverride)
-				: [];
+		// Placed usage only: an instance inside a component definition is the
+		// library composing itself, a nested instance is reported on the
+		// instance it sits in, and a private helper (`_Component Note`) is
+		// documentation, not the system.
+		const placed =
+			isInstance &&
+			!ctx.inDefinition &&
+			!ctx.inInstance &&
+			!isPrivateName(mainNameOf(node.componentId));
+
+		if (placed) {
+			const drifted = subtreeOverrides(node).filter(isDesignOverride);
 			const overrideCount = drifted.length;
 			if (overrideCount > 0) {
 				const componentName = componentNameOf(file, node.componentId);
@@ -221,7 +351,9 @@ export function assessLibraryHealth(
 					...(fields.length > 0 ? { fields } : {}),
 				});
 			}
+		}
 
+		if (isInstance && !ctx.inInstance) {
 			if (hasComponents) {
 				const componentName = componentNameOf(file, node.componentId);
 				if (
@@ -237,7 +369,12 @@ export function assessLibraryHealth(
 		} else if (
 			hasComponents &&
 			(node.type === "FRAME" || node.type === "GROUP") &&
-			componentNames.has(node.name)
+			!ctx.topLevel &&
+			!ctx.inDefinition &&
+			!ctx.inInstance &&
+			!isPrivateName(node.name) &&
+			componentNames.has(node.name) &&
+			looksDetached(node)
 		) {
 			detached.push({ nodeId: node.id, name: node.name, heuristic: true });
 		}

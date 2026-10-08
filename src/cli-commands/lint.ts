@@ -240,8 +240,17 @@ function walkLintableFiles(dir: string, acc: string[]): void {
 			walkLintableFiles(full, acc);
 			continue;
 		}
-		if (entry.isFile() && hasExtension(entry.name)) acc.push(full);
+		if (entry.isFile() && hasExtension(entry.name) && !isDocsOnly(entry.name))
+			acc.push(full);
 	}
+}
+
+/**
+ * Storybook stories and Code Connect templates (`*.stories.tsx`,
+ * `*.figma.tsx`) document the system; their demo padding is not product code.
+ */
+function isDocsOnly(name: string): boolean {
+	return /\.(?:stories|story|figma)\.[jt]sx?$/i.test(name);
 }
 
 /**

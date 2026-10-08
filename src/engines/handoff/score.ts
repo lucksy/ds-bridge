@@ -66,6 +66,10 @@ export interface HandoffNode {
 	strokes?: HandoffPaint[];
 	/** Applied styles by kind; a TEXT node with a text style has `text`. */
 	styles?: Record<string, string>;
+	/** False for a hidden layer (and so its whole subtree). */
+	visible?: boolean;
+	/** On an INSTANCE: the layers inside it the designer overrode. */
+	overrides?: { id?: string; overriddenFields?: string[] }[];
 }
 
 /** The file's components / componentSets maps (GET /v1/files/:key/nodes). */
@@ -268,24 +272,93 @@ function isDefaultName(name: string): boolean {
 
 // ── Tree walk ──
 
-function collect(root: HandoffNode): HandoffNode[] {
-	const nodes: HandoffNode[] = [];
-	const stack: HandoffNode[] = [root];
+/** Override fields that change a layer's paint. */
+const PAINT_FIELDS = new Set(["fills", "strokes", "boundVariables"]);
+/** Override fields that change a text layer's type. */
+const TYPE_FIELDS = new Set([
+	"fontSize",
+	"fontFamily",
+	"fontWeight",
+	"fontPostScriptName",
+	"inheritTextStyleId",
+	"textStyleId",
+	"styles",
+	"lineHeightPx",
+	"letterSpacing",
+]);
+
+/**
+ * The frame's visible layers, split by owner. A layer inside an instance
+ * belongs to its main component — the library decided its paint, layout and
+ * name — so it is judged only where the designer overrode it: its paint for
+ * binding, its type for typography. Hidden layers are skipped with their
+ * subtree (an icon slot switched off is not on the screen).
+ */
+interface CollectedTree {
+	/** Layers the designer placed (everything outside instances, and the instances). */
+	own: HandoffNode[];
+	/** Instance layers whose paint the designer overrode. */
+	paintOverridden: HandoffNode[];
+	/** Instance TEXT layers whose type the designer overrode. */
+	typeOverridden: HandoffNode[];
+}
+
+function collect(root: HandoffNode): CollectedTree {
+	const own: HandoffNode[] = [];
+	const paintOverridden: HandoffNode[] = [];
+	const typeOverridden: HandoffNode[] = [];
+	const stack: { node: HandoffNode; overridden?: Map<string, Set<string>> }[] =
+		[{ node: root }];
 	while (stack.length > 0) {
 		// Non-null: guarded by stack.length > 0 above.
-		const node = stack.pop() as HandoffNode;
-		nodes.push(node);
+		const { node, overridden } = stack.pop() as {
+			node: HandoffNode;
+			overridden?: Map<string, Set<string>>;
+		};
+		if (node.visible === false) continue;
+		if (overridden === undefined) {
+			own.push(node);
+		} else {
+			const fields = overridden.get(node.id);
+			if (fields !== undefined) {
+				if ([...fields].some((f) => PAINT_FIELDS.has(f))) {
+					paintOverridden.push(node);
+				}
+				if (
+					node.type === "TEXT" &&
+					[...fields].some((f) => TYPE_FIELDS.has(f))
+				) {
+					typeOverridden.push(node);
+				}
+			}
+		}
+		let inner = overridden;
+		if (node.type === "INSTANCE") {
+			inner = new Map(overridden);
+			for (const o of node.overrides ?? []) {
+				if (o.id === undefined) continue;
+				const set = new Set(inner.get(o.id));
+				for (const f of o.overriddenFields ?? []) set.add(f);
+				inner.set(o.id, set);
+			}
+		}
 		const children = node.children;
 		if (Array.isArray(children)) {
 			// Push in reverse so children are visited in document order; ordering
-			// of the flat list does not affect the score (deductions are sorted).
+			// of the flat lists does not affect the score (deductions are sorted).
 			for (let i = children.length - 1; i >= 0; i -= 1) {
 				const child = children[i];
-				if (child !== undefined) stack.push(child);
+				if (child !== undefined) {
+					stack.push(
+						inner === undefined
+							? { node: child }
+							: { node: child, overridden: inner },
+					);
+				}
 			}
 		}
 	}
-	return nodes;
+	return { own, paintOverridden, typeOverridden };
 }
 
 // ── Scoring ──
@@ -312,10 +385,21 @@ export function scoreReadiness(
 	root: HandoffNode,
 	options: ScoreReadinessOptions = {},
 ): ReadinessReport {
-	const nodes = collect(root);
-	const totalNodes = nodes.length;
+	const tree = collect(root);
+	const nodes = tree.own;
+	const totalNodes = nodes.length + tree.paintOverridden.length;
 
-	const styleable = nodes.filter(isStyleable);
+	// An instance's own paint is its main component's unless overridden on it.
+	const ownPaint = (n: HandoffNode): boolean =>
+		n.type !== "INSTANCE" ||
+		(n.overrides ?? []).some(
+			(o) =>
+				o.id === n.id &&
+				(o.overriddenFields ?? []).some((f) => PAINT_FIELDS.has(f)),
+		);
+	const styleable = [...nodes.filter(ownPaint), ...tree.paintOverridden].filter(
+		isStyleable,
+	);
 	const unbound = styleable.filter((n) => !isPaintBound(n));
 	const boundCoverage =
 		styleable.length === 0 ? 1 : 1 - unbound.length / styleable.length;
@@ -342,7 +426,9 @@ export function scoreReadiness(
 	const componentRatio =
 		1 - (detachedSuspects + deprecatedInstances) / componentDenominator;
 
-	const textNodes = nodes.filter((n) => n.type === "TEXT");
+	const textNodes = [...nodes, ...tree.typeOverridden].filter(
+		(n) => n.type === "TEXT",
+	);
 	const untypedText = textNodes.filter((n) => !isTypedText(n));
 	const typedTextCoverage =
 		textNodes.length === 0 ? 1 : 1 - untypedText.length / textNodes.length;

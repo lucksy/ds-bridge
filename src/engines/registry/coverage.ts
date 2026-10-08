@@ -23,6 +23,11 @@ export interface CoverageResult {
 	uncovered: string[];
 	/** Full count of uncovered components, before the cap. */
 	uncoveredTotal: number;
+	/**
+	 * Icon-library components (matched to Figma's icon pages), counted apart:
+	 * a few hundred unused icons are not a component adoption gap.
+	 */
+	icons?: { imported: number; total: number };
 }
 
 /** Cap on the rendered uncovered list (the full count lives in uncoveredTotal). */
@@ -55,7 +60,12 @@ export function computeCoverage(
 	// Every CODE component the registry knows, de-duplicated by name. Compound
 	// parts fold into their component (Card + CardHeader + CardTitle is one),
 	// which counts as imported when any member is.
-	const exports = codeExports(registry);
+	const iconNames = new Set(
+		(Array.isArray(registry?.matches) ? registry.matches : [])
+			.filter((m) => m.kind === "icon")
+			.map((m) => m.codeName),
+	);
+	const exports = codeExports(registry).filter((e) => !iconNames.has(e.name));
 	const members = new Map<string, string[]>();
 	for (const entry of exports) {
 		const component = componentOf(entry, exports);
@@ -75,5 +85,13 @@ export function computeCoverage(
 		total: members.size,
 		uncovered: uncovered.slice(0, UNCOVERED_CAP),
 		uncoveredTotal: uncovered.length,
+		...(iconNames.size > 0
+			? {
+					icons: {
+						imported: [...iconNames].filter((n) => importedNames.has(n)).length,
+						total: iconNames.size,
+					},
+				}
+			: {}),
 	};
 }

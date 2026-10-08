@@ -425,3 +425,170 @@ describe("assessLibraryHealth — recorded fixture", () => {
 		});
 	});
 });
+
+// ── Real library files (Figma's Simple Design System, 2026-10-08) ──
+// A published library is full of instances that are not usage: the
+// compositions inside its own components, nested instances whose overrides the
+// outer instance already lists, and private helpers (`_Component Note`).
+
+describe("assessLibraryHealth — a real library's own structure", () => {
+	const fill = (id: string) => ({ id, overriddenFields: ["fills"] });
+	const components = {
+		"c:btn": { key: "k1", name: "Button", description: "" },
+		"c:note": { key: "k2", name: "_Component Note", description: "" },
+		"c:list": { key: "k3", name: "Pill List", description: "" },
+		"c:pill": { key: "k4", name: "Pill", description: "" },
+	};
+	const page = (children: FigmaNode[]): FigmaNode => ({
+		id: "p",
+		name: "Page",
+		type: "CANVAS",
+		children,
+	});
+
+	it("skips instances inside component definitions, private helpers and non-visual fields", () => {
+		const f = file(
+			doc([
+				page([
+					{
+						id: "def",
+						name: "Card",
+						type: "COMPONENT",
+						children: [
+							instance({
+								id: "in-def",
+								componentId: "c:btn",
+								overrides: [fill("x")],
+							}),
+						],
+					},
+					instance({
+						id: "note",
+						componentId: "c:note",
+						overrides: [fill("y")],
+					}),
+					instance({
+						id: "proto",
+						componentId: "c:btn",
+						overrides: [
+							{
+								id: "p1",
+								overriddenFields: [
+									"annotations",
+									"transitionNodeID",
+									"explicitVariableModes",
+								],
+							},
+						],
+					}),
+					instance({
+						id: "used",
+						componentId: "c:btn",
+						overrides: [fill("z")],
+					}),
+				]),
+			]),
+			components,
+		);
+		const report = assessLibraryHealth(f);
+		expect(report.overrideHotspots.map((h) => h.nodeId)).toEqual(["used"]);
+	});
+
+	it("reports nested instances once, on the placed instance, counting unique layers", () => {
+		const f = file(
+			doc([
+				page([
+					instance({
+						id: "list",
+						componentId: "c:list",
+						overrides: [fill("I1;a"), fill("I1;b")],
+						children: [
+							instance({
+								id: "I1;pill",
+								componentId: "c:pill",
+								overrides: [fill("I1;a"), fill("I1;c")],
+							}),
+						],
+					}),
+				]),
+			]),
+			components,
+		);
+		const report = assessLibraryHealth(f);
+		expect(report.overrideHotspots).toEqual([
+			expect.objectContaining({ nodeId: "list", overrideCount: 3 }),
+		]);
+	});
+
+	it("never calls a top-level screen or a component's own layer a detached instance", () => {
+		const f = file(
+			doc([
+				page([
+					{
+						id: "screen",
+						name: "Button",
+						type: "FRAME",
+						children: [{ id: "detached", name: "Button", type: "FRAME" }],
+					},
+					{
+						id: "def",
+						name: "Card",
+						type: "COMPONENT",
+						children: [{ id: "inner", name: "Button", type: "FRAME" }],
+					},
+				]),
+			]),
+			components,
+		);
+		const report = assessLibraryHealth(f);
+		expect(report.detachedCandidates.map((d) => d.nodeId)).toEqual([
+			"detached",
+		]);
+	});
+});
+
+describe("assessLibraryHealth — detached candidates keep their component's layers", () => {
+	it("flags a same-named frame only when its layers look like the component's", () => {
+		const page: FigmaNode = {
+			id: "p",
+			name: "Page",
+			type: "CANVAS",
+			children: [
+				{
+					id: "c:1",
+					name: "Text",
+					type: "COMPONENT",
+					children: [{ id: "c:1a", name: "Label", type: "TEXT" }],
+				},
+				{
+					id: "screen",
+					name: "Screen",
+					type: "FRAME",
+					children: [
+						// A layout wrapper that happens to be called "Text".
+						{
+							id: "wrap",
+							name: "Text",
+							type: "FRAME",
+							children: [
+								{ id: "w1", name: "Heading", type: "TEXT" },
+								{ id: "w2", name: "Body", type: "TEXT" },
+							],
+						},
+						// A real detached copy: same layer names as the component.
+						{
+							id: "det",
+							name: "Text",
+							type: "FRAME",
+							children: [{ id: "d1", name: "Label", type: "TEXT" }],
+						},
+					],
+				},
+			],
+		};
+		const report = assessLibraryHealth(
+			file(doc([page]), { "c:1": { name: "Text", description: "" } }),
+		);
+		expect(report.detachedCandidates.map((d) => d.nodeId)).toEqual(["det"]);
+	});
+});

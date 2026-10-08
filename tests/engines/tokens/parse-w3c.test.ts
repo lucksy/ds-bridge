@@ -406,3 +406,120 @@ describe("parseW3c — Primer conventions", () => {
 		expect(tokenValueOf(source, "boxShadow.thin")).toBe("inset 0 0 0 1px");
 	});
 });
+
+describe("parseW3c — Figma variable exports (display-name aliases)", () => {
+	// Figma's own Simple Design System exports variables keyed by slug
+	// (`gray`, `scale-03`) while aliases keep the Figma display name
+	// (`{@color_primitives.Gray.100}`, `{@typography_primitives.Scale 03}`).
+	const source = {
+		"@color_primitives": {
+			gray: { "100": { $type: "color", $value: "#f5f5f5" } },
+			white: { "1000": { $type: "color", $value: "#ffffff" } },
+		},
+		"@typography_primitives": {
+			"scale-03": { $type: "number", $value: 16 },
+			"weight-semibold": { $type: "fontWeight", $value: 600 },
+		},
+		"@typography": {
+			body: {
+				"size-medium": {
+					$type: "number",
+					$value: "{@typography_primitives.Scale 03}",
+				},
+			},
+			code: {
+				size: { $type: "number", $value: "{@typography.Body.Size Medium}" },
+				weight: {
+					$type: "fontWeight",
+					$value: "{@typography_primitives.Weight Semibold}",
+				},
+			},
+		},
+		"@color": {
+			background: {
+				default: { $type: "color", $value: "{@color_primitives.White.1000}" },
+				hover: { $type: "color", $value: "{@color_primitives.Gray.100}" },
+			},
+		},
+	};
+
+	it("resolves aliases written with display names to slug-keyed tokens", () => {
+		const outcome = parseW3c(source);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		const byName = new Map(outcome.map.tokens.map((t) => [t.name, t]));
+		expect(byName.get("@color.background.hover")?.value).toBe("#f5f5f5");
+		expect(byName.get("@color.background.hover")?.aliasOf).toBe(
+			"@color_primitives.gray.100",
+		);
+		expect(byName.get("@typography.code.size")?.value).toBe("16px");
+		expect(byName.get("@typography.code.weight")?.value).toBe(600);
+	});
+
+	it("matches camelCase keys too, but never guesses between two candidates", () => {
+		const camel = parseW3c({
+			font: { sizeSmall: { $type: "number", $value: 12 } },
+			alias: { use: { $type: "number", $value: "{font.Size Small}" } },
+		});
+		expect(camel.kind).toBe("ok");
+		const ambiguous = parseW3c({
+			font: {
+				"size-small": { $type: "number", $value: 12 },
+				size_small: { $type: "number", $value: 13 },
+			},
+			alias: { use: { $type: "number", $value: "{font.Size Small}" } },
+		});
+		expect(ambiguous.kind).toBe("error");
+	});
+});
+
+describe("parseW3c — Figma FLOAT variables that are lengths", () => {
+	it("reads a number token named for a length as a px dimension", () => {
+		const outcome = parseW3c({
+			"@size": {
+				space: { "400": { $type: "number", $value: 16 } },
+				radius: { full: { $type: "number", $value: 9999 } },
+				stroke: { border: { $type: "number", $value: 1 } },
+			},
+			"@typography": {
+				body: {
+					"size-medium": { $type: "number", $value: "{@size.space.400}" },
+					"font-weight": { $type: "number", $value: 400 },
+				},
+				scale: { $type: "number", $value: 1.2 },
+			},
+			opacity: { disabled: { $type: "number", $value: 0.5 } },
+		});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		const by = new Map(outcome.map.tokens.map((t) => [t.name, t]));
+		expect(by.get("@size.space.400")).toMatchObject({
+			type: "dimension",
+			value: "16px",
+		});
+		expect(by.get("@size.radius.full")).toMatchObject({
+			type: "dimension",
+			value: "9999px",
+		});
+		expect(by.get("@size.stroke.border")).toMatchObject({
+			type: "dimension",
+			value: "1px",
+		});
+		expect(by.get("@typography.body.size-medium")).toMatchObject({
+			type: "dimension",
+			value: "16px",
+		});
+		expect(by.get("@typography.body.font-weight")).toMatchObject({
+			type: "number",
+			value: 400,
+		});
+		expect(by.get("@typography.scale")).toMatchObject({
+			type: "number",
+			value: 1.2,
+		});
+		expect(by.get("opacity.disabled")).toMatchObject({
+			type: "number",
+			value: 0.5,
+		});
+	});
+});

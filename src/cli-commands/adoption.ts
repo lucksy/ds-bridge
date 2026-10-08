@@ -140,6 +140,11 @@ function renderTerm(coverage: CoverageResult, color: boolean): string {
 	);
 
 	const lines = [summary];
+	if (coverage.icons !== undefined) {
+		lines.push(
+			`Icons (counted apart): ${coverage.icons.imported}/${coverage.icons.total} imported.`,
+		);
+	}
 
 	if (total > 0) {
 		// A donut-ish proportional bar over imported vs not-yet-imported.

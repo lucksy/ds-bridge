@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import {
 	buildFigmaComponentModel,
 	type FigmaComponentModel,
+	normalizeComponentModels,
 } from "../../../src/engines/registry/scan-figma.js";
 
 // ── Tiny builders matching the recorded shapes ──
@@ -422,5 +423,66 @@ describe("buildFigmaComponentModel — deterministic ordering", () => {
 		expect(buildFigmaComponentModel(input)).toEqual(
 			buildFigmaComponentModel(input),
 		);
+	});
+});
+
+describe("buildFigmaComponentModel — a real library's conventions (Simple Design System)", () => {
+	const node = (
+		id: string,
+		name: string,
+		type: string,
+		children?: unknown[],
+	) => ({
+		id,
+		name,
+		type,
+		...(children !== undefined ? { children } : {}),
+	});
+	const document = node("0:0", "Document", "DOCUMENT", [
+		node("p1", "Icons", "CANVAS", [
+			node("s16", "16", "SECTION", [node("68:1", "Activity", "COMPONENT")]),
+			node("s24", "24", "SECTION", [node("4039:2", "Activity", "COMPONENT")]),
+		]),
+		node("p2", "Buttons", "CANVAS", [
+			node("10:1", "Button", "COMPONENT"),
+			node("10:2", ".Slot", "COMPONENT"),
+			node("10:3", "_Component Note", "COMPONENT"),
+		]),
+	]);
+	const models = buildFigmaComponentModel({ fileDocument: document as never });
+
+	it("leaves private components (`.` / `_` prefix) out", () => {
+		expect(models.map((m) => m.name)).toEqual(["Activity", "Button"]);
+	});
+
+	it("collapses same-name copies (an icon's size sections) into one component", () => {
+		const activity = models.find((m) => m.name === "Activity");
+		expect(activity).toMatchObject({
+			nodeId: "4039:2",
+			aliasNodeIds: ["68:1"],
+			kind: "icon",
+		});
+		expect(models.find((m) => m.name === "Button")?.kind).toBeUndefined();
+	});
+});
+
+describe("normalizeComponentModels — a snapshot saved by an earlier version", () => {
+	it("reads like a fresh build (private out, copies collapsed) and is idempotent", () => {
+		const raw = (name: string, nodeId: string): FigmaComponentModel => ({
+			name,
+			nodeId,
+			description: "",
+			variantProps: {},
+			source: "inline",
+		});
+		const once = normalizeComponentModels([
+			raw("Activity", "68:1"),
+			raw("Activity", "4039:2"),
+			raw(".Slot", "1:1"),
+		]);
+		expect(once).toEqual([
+			{ ...raw("Activity", "4039:2"), aliasNodeIds: ["68:1"] },
+		]);
+		expect(normalizeComponentModels(once)).toEqual(once);
 	});
 });

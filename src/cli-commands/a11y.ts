@@ -96,6 +96,31 @@ function resolveTokenPath(
 	return { kind: "ok", path: discovered };
 }
 
+/**
+ * Modes whose colors are all the default mode's — Figma's responsive
+ * `mobile` / `tablet` modes change sizes, not colors — audit nothing new, so
+ * the default run leaves them out (with a note on stderr).
+ */
+function colorDistinctModes(all: ModeTokenMap[]): {
+	modes: ModeTokenMap[];
+	same: string[];
+} {
+	const [first, ...rest] = all;
+	if (first === undefined) return { modes: all, same: [] };
+	const colors = (m: ModeTokenMap): string =>
+		JSON.stringify(
+			m.map.tokens
+				.filter((t) => t.type === "color")
+				.map((t) => [t.name, t.value]),
+		);
+	const base = colors(first);
+	const same = rest.filter((m) => colors(m) === base).map((m) => m.mode);
+	return {
+		modes: all.filter((m) => !same.includes(m.mode)),
+		same,
+	};
+}
+
 /** Filter mode maps by the comma-separated `--modes` list, or an error. */
 function filterModes(
 	all: ModeTokenMap[],
@@ -271,7 +296,17 @@ async function runA11y(path: string, options: A11yOptions): Promise<void> {
 		return;
 	}
 
-	const report = auditContrast(filtered.modes, { level });
+	let modes = filtered.modes;
+	if (options.modes === undefined || options.modes.trim() === "") {
+		const distinct = colorDistinctModes(modes);
+		modes = distinct.modes;
+		if (distinct.same.length > 0) {
+			process.stderr.write(
+				`note: mode${distinct.same.length === 1 ? "" : "s"} ${distinct.same.join(", ")} not audited — same colors as ${modes[0]?.mode ?? "the default"}\n`,
+			);
+		}
+	}
+	const report = auditContrast(modes, { level });
 
 	// History only for a directory target (project-level audit) — T7.22.
 	const resolvedTarget = resolve(path);

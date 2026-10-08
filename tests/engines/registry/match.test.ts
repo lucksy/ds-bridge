@@ -544,3 +544,55 @@ describe("matchComponents — Figma naming conventions", () => {
 		]);
 	});
 });
+
+describe("matchComponents — icon libraries and Code Connect", () => {
+	const icon = (name: string, nodeId: string): FigmaComponentModel => ({
+		...figma(name, {}, nodeId),
+		kind: "icon",
+	});
+
+	it("matches an icon-library component to its Icon-prefixed code component", () => {
+		const result = matchComponents(
+			[code("IconActivity"), code("IconButton"), code("Button")],
+			[icon("Activity", "1:1"), figma("Icon Button"), figma("Button")],
+		);
+		expect(
+			result.matches.map((m) => `${m.code.name}=${m.figma.name}`).sort(),
+		).toEqual([
+			"Button=Button",
+			"IconActivity=Activity",
+			"IconButton=Icon Button",
+		]);
+	});
+
+	it("takes a Code Connect pairing over any name guess, by node id or a collapsed copy's id", () => {
+		const result = matchComponents(
+			[
+				code("Dialog"),
+				code("DialogClose"),
+				code("TextListItem"),
+				code("IconActivity"),
+			],
+			[
+				figma("Dialog", {}, "192:1"),
+				figma("Text List Item", {}, "2077:1"),
+				{ ...icon("Activity", "4039:2"), aliasNodeIds: ["68:1"] },
+			],
+			{
+				pins: [
+					{ codeName: "Dialog", nodeId: "192:1" },
+					{ codeName: "TextListItem", nodeId: "2077:1" },
+					{ codeName: "IconActivity", nodeId: "68:1" },
+				],
+			},
+		);
+		expect(
+			result.matches.map((m) => `${m.code.name}=${m.figma.name}`).sort(),
+		).toEqual([
+			"Dialog=Dialog",
+			"IconActivity=Activity",
+			"TextListItem=Text List Item",
+		]);
+		expect(result.matches.every((m) => m.score === 1)).toBe(true);
+	});
+});

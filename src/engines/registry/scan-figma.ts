@@ -28,6 +28,13 @@ export interface FigmaComponentModel {
 	/** Variant axis -> sorted, deduped values, e.g. { Size: ["md", "sm"] }. */
 	variantProps: Record<string, string[]>;
 	source: "published" | "inline";
+	/**
+	 * Other components of the same name collapsed into this one — an icon's
+	 * copies per size section (16, 20, 24 …). Code Connect may point at any.
+	 */
+	aliasNodeIds?: string[];
+	/** "icon" when it lives in an icon library (a page / section named Icons). */
+	kind?: "icon";
 }
 
 // ── Structural input shapes (only the fields we reason about) ──
@@ -37,7 +44,11 @@ interface PublishedComponent {
 	node_id?: unknown;
 	name?: unknown;
 	description?: unknown;
-	containing_frame?: { name?: unknown } | null;
+	containing_frame?: {
+		name?: unknown;
+		pageName?: unknown;
+		containingStateGroup?: unknown;
+	} | null;
 }
 
 /** The `meta.components` envelope of the components endpoint. */
@@ -145,7 +156,11 @@ interface PublishedAccumulator {
 	nodeId: string;
 	description: string;
 	variantProps: Record<string, string[]>;
+	icon?: boolean;
 }
+
+/** A page / section / frame name that marks an icon library. */
+const ICON_CONTEXT = /(^|[^a-z])icons?([^a-z]|$)/i;
 
 function buildPublished(input: PublishedComponentsInput | undefined): {
 	models: FigmaComponentModel[];
@@ -191,7 +206,17 @@ function buildPublished(input: PublishedComponentsInput | undefined): {
 				}
 			}
 		} else {
-			standalone.push({ name: rawName, nodeId, description, variantProps });
+			const frame = component.containing_frame;
+			const icon =
+				ICON_CONTEXT.test(asString(frame?.pageName)) ||
+				ICON_CONTEXT.test(asString(frame?.name));
+			standalone.push({
+				name: rawName,
+				nodeId,
+				description,
+				variantProps,
+				...(icon ? { icon } : {}),
+			});
 		}
 	}
 
@@ -203,6 +228,7 @@ function buildPublished(input: PublishedComponentsInput | undefined): {
 			description: acc.description,
 			variantProps: normalizeVariantProps(acc.variantProps),
 			source: "published",
+			...(acc.icon === true ? { kind: "icon" as const } : {}),
 		});
 	}
 	return { models, ids };
@@ -230,11 +256,13 @@ function buildInline(
 	if (document === undefined) return [];
 
 	const byId = new Map<string, FigmaComponentModel>();
-	const stack: DocumentNode[] = [document];
+	const stack: { node: DocumentNode; icon: boolean }[] = [
+		{ node: document, icon: false },
+	];
 
 	while (stack.length > 0) {
 		// Non-null: guarded by stack.length > 0.
-		const node = stack.pop() as DocumentNode;
+		const { node, icon } = stack.pop() as { node: DocumentNode; icon: boolean };
 		const type = node.type;
 
 		if (type === "COMPONENT_SET" || type === "COMPONENT") {
@@ -250,6 +278,7 @@ function buildInline(
 					description: asString(node.description) || descriptions(nodeId),
 					variantProps: normalizeVariantProps(variantProps),
 					source: "inline",
+					...(icon ? { kind: "icon" as const } : {}),
 				});
 			}
 			// A COMPONENT_SET's COMPONENT children describe variants of the set, not
@@ -258,10 +287,14 @@ function buildInline(
 		}
 
 		const children = node.children;
+		const childIcon =
+			icon ||
+			((type === "CANVAS" || type === "SECTION" || type === "FRAME") &&
+				ICON_CONTEXT.test(asString(node.name)));
 		if (Array.isArray(children)) {
 			for (let i = children.length - 1; i >= 0; i -= 1) {
 				const child = children[i];
-				if (child !== undefined) stack.push(child);
+				if (child !== undefined) stack.push({ node: child, icon: childIcon });
 			}
 		}
 	}
@@ -291,8 +324,67 @@ export function buildFigmaComponentModel(
 		if (!byId.has(model.nodeId)) byId.set(model.nodeId, model);
 	}
 
-	return [...byId.values()].sort((a, b) => {
+	return normalizeComponentModels([...byId.values()]);
+}
+
+/**
+ * The component inventory as every command compares it: private components
+ * (`.Slot`, `_Component Note` — a library's own building blocks and
+ * documentation helpers, never published, never code) left out, same-name
+ * copies collapsed, sorted. Idempotent, so a snapshot saved by an earlier
+ * version (impact's baseline) reads like a fresh fetch.
+ */
+export function normalizeComponentModels(
+	models: readonly FigmaComponentModel[],
+): FigmaComponentModel[] {
+	const visible = models.filter((m) => !/^[._]/.test(m.name.trim()));
+	return collapseSameName(visible).sort((a, b) => {
 		if (a.name !== b.name) return a.name < b.name ? -1 : 1;
 		return compareIds(a.nodeId, b.nodeId);
 	});
+}
+
+/**
+ * Same-name plain components are one component drawn several times — an icon
+ * per size section (`16`, `20` … `48`). Keep one (the lowest id), remember the
+ * others so a Code Connect link to any copy still resolves.
+ */
+function collapseSameName(
+	models: readonly FigmaComponentModel[],
+): FigmaComponentModel[] {
+	const groups = new Map<string, FigmaComponentModel[]>();
+	const out: FigmaComponentModel[] = [];
+	for (const model of models) {
+		if (Object.keys(model.variantProps).length > 0) {
+			out.push(model);
+			continue;
+		}
+		const group = groups.get(model.name) ?? [];
+		group.push(model);
+		groups.set(model.name, group);
+	}
+	for (const group of groups.values()) {
+		const sorted = [...group].sort((a, b) => compareIds(a.nodeId, b.nodeId));
+		const [first, ...rest] = sorted;
+		if (first === undefined) continue;
+		const description =
+			sorted.find((m) => m.description !== "")?.description ?? "";
+		const aliases = [
+			...new Set([
+				...sorted.flatMap((m) => m.aliasNodeIds ?? []),
+				...rest.map((m) => m.nodeId),
+			]),
+		]
+			.filter((id) => id !== first.nodeId)
+			.sort(compareIds);
+		out.push({
+			...first,
+			description,
+			...(aliases.length > 0 ? { aliasNodeIds: aliases } : {}),
+			...(sorted.some((m) => m.kind === "icon")
+				? { kind: "icon" as const }
+				: {}),
+		});
+	}
+	return out;
 }

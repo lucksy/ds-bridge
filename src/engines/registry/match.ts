@@ -311,11 +311,27 @@ interface ScoreParts {
 	shapeScore: number;
 }
 
+/**
+ * An icon-library component (`Activity` on the Icons page) is implemented as
+ * `IconActivity` / `ActivityIcon` in code — the same name, exactly.
+ */
+function isIconName(
+	codeName: string,
+	figmaModel: FigmaComponentModel,
+): boolean {
+	if (figmaModel.kind !== "icon") return false;
+	const c = normalizeName(codeName);
+	const f = normalizeName(figmaModel.name);
+	return c === `icon${f}` || c === `${f}icon`;
+}
+
 function scorePair(
 	codeComponent: CodeComponent,
 	figmaModel: FigmaComponentModel,
 ): ScoreParts {
-	const name = nameScore(codeComponent.name, figmaModel.name);
+	const name = isIconName(codeComponent.name, figmaModel)
+		? 1
+		: nameScore(codeComponent.name, figmaModel.name);
 	const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
 	return {
 		nameScore: name,
@@ -374,16 +390,62 @@ interface Edge {
 	parts: ScoreParts;
 }
 
+/** A pairing the project declared itself (Code Connect): code name ↔ node id. */
+export interface PinnedPair {
+	codeName: string;
+	nodeId: string;
+}
+
+export interface MatchOptions {
+	/** Declared pairings, applied before any name guess (score 1). */
+	pins?: readonly PinnedPair[];
+}
+
 export function matchComponents(
 	code: readonly CodeComponent[],
 	figma: readonly FigmaComponentModel[],
+	options: MatchOptions = {},
 ): ComponentMatchResult {
+	const matchedCode = new Set<number>();
+	const matchedFigma = new Set<number>();
+	const matches: ComponentMatch[] = [];
+
+	// Declared pairings first: the project said which code implements which
+	// Figma component (Code Connect), so no name heuristic overrides it.
+	const figmaIndexById = new Map<string, number>();
+	figma.forEach((model, i) => {
+		for (const id of [model.nodeId, ...(model.aliasNodeIds ?? [])]) {
+			const key = id.replace(/-/g, ":");
+			if (!figmaIndexById.has(key)) figmaIndexById.set(key, i);
+		}
+	});
+	for (const pin of options.pins ?? []) {
+		const f = figmaIndexById.get(pin.nodeId.replace(/-/g, ":"));
+		const c = code.findIndex((comp) => comp.name === pin.codeName);
+		if (f === undefined || c === -1) continue;
+		if (matchedCode.has(c) || matchedFigma.has(f)) continue;
+		const codeComponent = code[c] as CodeComponent;
+		const figmaModel = figma[f] as FigmaComponentModel;
+		matchedCode.add(c);
+		matchedFigma.add(f);
+		matches.push({
+			code: codeComponent,
+			figma: figmaModel,
+			score: 1,
+			nameScore: 1,
+			shapeScore: shapeScore(codeComponent.variants, figmaModel.variantProps),
+			variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps),
+		});
+	}
+
 	// Build every scored edge, kept only when it could ever be a match.
 	const edges: Edge[] = [];
 	for (let c = 0; c < code.length; c += 1) {
+		if (matchedCode.has(c)) continue;
 		const codeComponent = code[c];
 		if (codeComponent === undefined) continue;
 		for (let f = 0; f < figma.length; f += 1) {
+			if (matchedFigma.has(f)) continue;
 			const figmaModel = figma[f];
 			if (figmaModel === undefined) continue;
 			const parts = scorePair(codeComponent, figmaModel);
@@ -405,10 +467,6 @@ export function matchComponents(
 		const figmaB = figma[b.figmaIndex]?.name ?? "";
 		return byNameAsc(figmaA, figmaB);
 	});
-
-	const matchedCode = new Set<number>();
-	const matchedFigma = new Set<number>();
-	const matches: ComponentMatch[] = [];
 
 	for (const edge of edges) {
 		if (matchedCode.has(edge.codeIndex)) continue;

@@ -65,6 +65,7 @@ function pickPreferred(
 		roleDepth(t.name, role),
 		t.aliasOf !== undefined && names.has(t.aliasOf) ? 0 : 1,
 		isStatusToken(t.name) ? 1 : 0,
+		isDefaultVariant(t.name) ? 0 : 1,
 		t.name.split(/[.\-/]/).length,
 	];
 	return tokens
@@ -99,6 +100,15 @@ function roleScore(name: string, role: Role | undefined): number {
 	if (fg) return 2;
 	const fits = role === "bg" ? BG_TOKEN.test(name) : BORDER_TOKEN.test(name);
 	return fits ? 0 : 1;
+}
+
+/**
+ * A token of the default / neutral variant (`background.default.secondary`)
+ * — the general choice over an accent (`background.brand.tertiary`) that
+ * happens to share its value.
+ */
+function isDefaultVariant(name: string): boolean {
+	return /(^|[.\-/])(?:default|neutral|base)([.\-/]|$)/i.test(name);
 }
 
 /** A token named for a status: error, danger, warning, success, destructive. */

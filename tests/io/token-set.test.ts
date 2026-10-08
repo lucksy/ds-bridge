@@ -227,3 +227,66 @@ describe("readTokenDocument — Primer override objects", () => {
 		expect(tokenValue(modes.dark, "border.accent")).toBe("#4493f8");
 	});
 });
+
+describe("readTokenDocument — per-mode values in $extensions (Figma variable exports)", () => {
+	// Figma's Simple Design System: each collection lists its modes, each token
+	// carries one value per mode; `$value` is the collection's first mode.
+	const doc = {
+		"@color": {
+			$extensions: {
+				"com.figma.sds": { modes: ["sds_light", "sds_dark", "brand_b_light"] },
+			},
+			bg: {
+				$type: "color",
+				$value: "#ffffff",
+				$extensions: {
+					"com.figma.sds": {
+						modes: {
+							sds_light: "#ffffff",
+							sds_dark: "#1e1e1e",
+							brand_b_light: "#ffffff",
+						},
+					},
+				},
+			},
+		},
+		"@responsive": {
+			$extensions: { "com.figma.sds": { modes: ["desktop", "mobile"] } },
+			scale: {
+				$type: "number",
+				$value: 1,
+				$extensions: {
+					"com.figma.sds": { modes: { desktop: 1, mobile: 0.875 } },
+				},
+			},
+		},
+		"@size": {
+			$extensions: { "com.figma.sds": { modes: ["default"] } },
+			gap: {
+				$type: "number",
+				$value: 8,
+				$extensions: { "com.figma.sds": { modes: { default: 8 } } },
+			},
+		},
+	};
+
+	it("reads one document per mode, the collections' first modes as the default", async () => {
+		const { mkdtempSync, writeFileSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const dir = mkdtempSync(join(tmpdir(), "figma-modes-"));
+		const file = join(dir, "tokens.json");
+		writeFileSync(file, JSON.stringify(doc));
+		const outcome = ok(readTokenDocument(file));
+		const modes = (outcome.modeDocs ?? []).map((m) => m.mode);
+		expect(modes).toEqual(["sds-light", "brand-b-light", "mobile", "sds-dark"]);
+		const byMode = Object.fromEntries(
+			(outcome.modeDocs ?? []).map((m) => [m.mode, m.doc]),
+		);
+		expect(tokenValue(byMode["sds-light"], "@color.bg")).toBe("#ffffff");
+		expect(tokenValue(byMode["sds-dark"], "@color.bg")).toBe("#1e1e1e");
+		// Collections a mode does not belong to keep their default value.
+		expect(tokenValue(byMode["sds-dark"], "@responsive.scale")).toBe(1);
+		expect(tokenValue(byMode.mobile, "@responsive.scale")).toBe(0.875);
+		expect(tokenValue(byMode.mobile, "@size.gap")).toBe("8px");
+	});
+});

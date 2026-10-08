@@ -199,7 +199,10 @@ function* scanValue(
 						continue;
 					}
 					const px = Number.parseFloat(dim[0]);
-					if (Number.isFinite(px) && px !== 0) {
+					// A CSS value's unitless number is a factor (`calc(-1 * …)`),
+					// a ratio or a count — never a length.
+					const hasUnit = /(?:px|rem)$/.test(dim[0]);
+					if (hasUnit && Number.isFinite(px) && px !== 0) {
 						yield { offset: i, raw: dim[0], valueKind: "dimension" };
 					}
 					i += dim[0].length;

@@ -1,0 +1,9 @@
+.grid {
+	--column-count: 3;
+	--column-ratio: calc(1 / var(--column-count));
+	gap: var(--sds-size-space-400);
+}
+.focus::after {
+	bottom: calc(-1 * var(--offset));
+	top: calc(-1 * var(--offset));
+}

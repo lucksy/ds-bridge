@@ -730,3 +730,38 @@ describe("matchLiteral — role-aware near candidates", () => {
 		);
 	});
 });
+
+describe("matchLiteral — the default role before an accent (Simple Design System)", () => {
+	it("suggests background.default.secondary over background.brand.tertiary for one value", () => {
+		const tokens: Token[] = [
+			{
+				name: "@color.background.brand.tertiary",
+				type: "color",
+				value: "#f5f5f5",
+				aliasOf: "@color_primitives.brand.100",
+			},
+			{
+				name: "@color.background.default.secondary",
+				type: "color",
+				value: "#f5f5f5",
+				aliasOf: "@color_primitives.gray.100",
+			},
+		];
+		const index = buildTokenIndex(tokens);
+		const match = matchLiteral(
+			{
+				file: "a.css",
+				line: 1,
+				col: 1,
+				raw: "#f5f5f5",
+				property: "background",
+				valueKind: "color",
+				context: "css-declaration",
+			},
+			index,
+		);
+		expect(match.kind === "exact" && match.token.name).toBe(
+			"@color.background.default.secondary",
+		);
+	});
+});

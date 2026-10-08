@@ -87,14 +87,29 @@ export function loadTokens(path: string): LoadTokensOutcome {
 
 	if (read.modeDocs !== undefined) {
 		const modes: LoadedMode[] = [];
-		for (const { mode, doc } of read.modeDocs) {
+		const warnings = [...base.warnings];
+		for (const [index, { mode, doc }] of read.modeDocs.entries()) {
 			const parsed = parse(doc);
 			if (parsed.kind === "error") {
-				return parseFailure(`mode "${mode}" of "${path}"`, format, parsed);
+				if (index === 0) {
+					return parseFailure(`mode "${mode}" of "${path}"`, format, parsed);
+				}
+				// One broken secondary mode (an alias into a palette the export
+				// never wrote) is reported, not fatal: every other mode still checks.
+				const first = parsed.errors[0];
+				const more =
+					parsed.errors.length > 1
+						? ` (+${parsed.errors.length - 1} more)`
+						: "";
+				warnings.push(
+					`mode "${mode}" skipped: ${first?.message ?? "parse error"}${more}`,
+				);
+				continue;
 			}
 			modes.push({ mode, map: parsed.map });
 		}
-		return { ...base, modes };
+		if (modes.length < 2) return { ...base, warnings };
+		return { ...base, warnings, modes };
 	}
 
 	const themes =

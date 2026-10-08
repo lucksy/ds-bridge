@@ -251,6 +251,113 @@ function applyModeOverrides(
 	return out;
 }
 
+/** A mode name as ds-bridge reports it: `SDS Dark` / `sds_dark` → `sds-dark`. */
+function modeKey(raw: string): string {
+	return raw
+		.trim()
+		.toLowerCase()
+		.replace(/[\s_]+/g, "-");
+}
+
+/** A token's per-mode values from any `$extensions.<vendor>.modes` object. */
+function extensionModeValues(
+	node: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+	const extensions = node.$extensions;
+	if (!isPlainObject(extensions)) return undefined;
+	for (const ext of Object.values(extensions)) {
+		if (isPlainObject(ext) && isPlainObject(ext.modes)) return ext.modes;
+	}
+	return undefined;
+}
+
+/** A collection's declared mode list (`$extensions.<vendor>.modes: [...]`). */
+function declaredModes(node: Record<string, unknown>): string[] | undefined {
+	const extensions = node.$extensions;
+	if (!isPlainObject(extensions)) return undefined;
+	for (const ext of Object.values(extensions)) {
+		if (
+			isPlainObject(ext) &&
+			Array.isArray(ext.modes) &&
+			ext.modes.every((m) => typeof m === "string")
+		)
+			return ext.modes as string[];
+	}
+	return undefined;
+}
+
+/**
+ * Figma variable exports (Figma's Simple Design System) keep every mode in ONE
+ * file: each collection lists its modes, each token carries a value per mode
+ * in `$extensions.<vendor>.modes`, and `$value` is the collection's first
+ * mode. Read that as one document per mode: the default (every collection's
+ * first mode) first, then each other mode, where only the collection that
+ * owns it changes. Undefined when no collection has two modes.
+ */
+function extensionModeDocs(
+	doc: Record<string, unknown>,
+): ModeDocument[] | undefined {
+	const collections: { modes: string[]; tokens: number }[] = [];
+	for (const group of Object.values(doc)) {
+		if (!isPlainObject(group)) continue;
+		let modes = declaredModes(group);
+		let tokens = 0;
+		const walk = (node: Record<string, unknown>): void => {
+			if ("$value" in node) {
+				const values = extensionModeValues(node);
+				if (values !== undefined) {
+					tokens += 1;
+					modes ??= Object.keys(values);
+				}
+				return;
+			}
+			for (const [key, child] of Object.entries(node)) {
+				if (!key.startsWith("$") && isPlainObject(child)) walk(child);
+			}
+		};
+		walk(group);
+		if (modes !== undefined && modes.length >= 2 && tokens > 0) {
+			collections.push({ modes, tokens });
+		}
+	}
+	if (collections.length === 0) return undefined;
+	const primary = [...collections].sort((a, b) => b.tokens - a.tokens)[0];
+	const defaultMode = modeKey(
+		(primary as { modes: string[] }).modes[0] as string,
+	);
+	const others = [
+		...new Set(collections.flatMap((c) => c.modes.slice(1).map(modeKey))),
+	]
+		.filter((m) => m !== defaultMode)
+		.sort();
+
+	const withMode = (
+		node: Record<string, unknown>,
+		mode: string,
+	): Record<string, unknown> => {
+		const out: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(node)) {
+			out[key] =
+				isPlainObject(value) && !key.startsWith("$")
+					? withMode(value, mode)
+					: value;
+		}
+		if ("$value" in node) {
+			const values = extensionModeValues(node);
+			const hit =
+				values === undefined
+					? undefined
+					: Object.keys(values).find((k) => modeKey(k) === mode);
+			if (hit !== undefined && values !== undefined) out.$value = values[hit];
+		}
+		return out;
+	};
+	return [
+		{ mode: defaultMode, doc },
+		...others.map((mode) => ({ mode, doc: withMode(doc, mode) })),
+	];
+}
+
 /** Mode order: light first, then dark, then the rest alphabetically. */
 function modeRank(mode: string): string {
 	if (mode === "light") return "0";
@@ -287,7 +394,14 @@ export function readTokenDocument(path: string): TokenDocumentOutcome {
 			};
 		}
 		try {
-			return { kind: "ok", doc: parseTokenText(raw, path), files: [path] };
+			const doc = parseTokenText(raw, path);
+			const modeDocs = isPlainObject(doc) ? extensionModeDocs(doc) : undefined;
+			return {
+				kind: "ok",
+				doc,
+				...(modeDocs !== undefined ? { modeDocs } : {}),
+				files: [path],
+			};
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
 			return {
@@ -331,7 +445,15 @@ export function readTokenDocument(path: string): TokenDocumentOutcome {
 		}
 	}
 	const files = docs.map((d) => d.file);
-	if (byMode.size === 0) return { kind: "ok", doc: shared, files };
+	if (byMode.size === 0) {
+		const modeDocs = extensionModeDocs(shared);
+		return {
+			kind: "ok",
+			doc: shared,
+			...(modeDocs !== undefined ? { modeDocs } : {}),
+			files,
+		};
+	}
 
 	const modeNames = [...byMode.keys()];
 	/** A variant mode (`dark-dimmed`) builds on its base mode (`dark`). */
