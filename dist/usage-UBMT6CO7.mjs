@@ -18,13 +18,23 @@ function normalizeName(name) {
 function toForwardSlashes(path) {
   return sep === "/" ? path : path.split(sep).join("/");
 }
-function resolveFigmaName(registry, figmaName) {
+function resolveFigmaName(registry, figmaName, nodeId) {
+  if (nodeId !== void 0) {
+    const byId = registry.matches.find(
+      (m) => m.nodeId === nodeId || m.aliasNodeIds?.includes(nodeId)
+    );
+    if (byId !== void 0) return { kind: "matched", match: byId };
+  }
   const normalized = normalizeName(figmaName);
-  for (const match of registry.matches) {
+  const byPreference = [
+    ...registry.matches.filter((m) => m.kind !== "icon"),
+    ...registry.matches.filter((m) => m.kind === "icon")
+  ];
+  for (const match of byPreference) {
     if (match.figmaName === figmaName) return { kind: "matched", match };
   }
   if (normalized.length > 0) {
-    for (const match of registry.matches) {
+    for (const match of byPreference) {
       if (normalizeName(match.figmaName) === normalized) {
         return { kind: "matched", match };
       }
@@ -158,7 +168,11 @@ function mapUsage(input) {
   let project;
   const results = [];
   for (const figmaName of names) {
-    const resolution = resolveFigmaName(registry, figmaName);
+    const resolution = resolveFigmaName(
+      registry,
+      figmaName,
+      input.nodeIdsByName?.[figmaName]
+    );
     if (resolution.kind !== "matched") {
       results.push({
         figmaName,

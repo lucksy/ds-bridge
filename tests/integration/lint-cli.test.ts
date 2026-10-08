@@ -326,6 +326,29 @@ describe("ds-bridge lint (built dist/cli.mjs)", () => {
 		expect(actual.some((f) => f.raw === "#3b82f6")).toBe(true);
 	});
 
+	it("--changed includes a new file git does not track yet", async () => {
+		const { execFileSync } = await import("node:child_process");
+		const dir = await freshTmp("ds-lint-untracked-");
+		await cp(sampleTokens, join(dir, "tokens.json"));
+		const git = (...args: string[]) =>
+			execFileSync("git", args, { cwd: dir, stdio: "ignore" });
+		git("init", "-q");
+		git("-c", "user.email=t@t", "-c", "user.name=t", "add", "-A");
+		git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init");
+		await writeFile(join(dir, "new.css"), ".x { color: #3b82f6; }\n", "utf8");
+		const { stdout } = await runCli([
+			"lint",
+			dir,
+			"--changed",
+			"--format",
+			"json",
+			"--tokens",
+			join(dir, "tokens.json"),
+		]);
+		const findings = JSON.parse(stdout) as { file: string }[];
+		expect(findings.some((f) => f.file.endsWith("new.css"))).toBe(true);
+	});
+
 	it("--changed in a non-git directory exits 2 with actionable stderr", async () => {
 		const dir = await freshTmp("ds-lint-nogit-");
 		await cp(sampleTokens, join(dir, "tokens.json"));

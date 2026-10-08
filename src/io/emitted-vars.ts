@@ -43,12 +43,14 @@ function walkStyles(dir: string, acc: string[]): void {
 
 /**
  * A lookup from token to the custom property name (without `--`) the build
- * emits it as; undefined for a token the build does not emit.
+ * emits it as; undefined for a token the build does not emit. The lookup
+ * itself is undefined when no built output was found, so callers can tell
+ * "the build is unknown" from "the build does not emit this token".
  */
 export function emittedVarNames(
 	projectDir: string,
 	tokens: readonly Token[],
-): (token: Token) => string | undefined {
+): ((token: Token) => string | undefined) | undefined {
 	const files: string[] = [];
 	walkStyles(projectDir, files);
 	const names: string[] = [];
@@ -62,7 +64,7 @@ export function emittedVarNames(
 		const scanned = scanOutputs({ path: file, content });
 		if (scanned.kind === "ok") names.push(...scanned.values.map((v) => v.name));
 	}
-	if (names.length === 0) return () => undefined;
+	if (names.length === 0) return undefined;
 	const actual = new Map(names.map((n) => [nameKey(n), n]));
 	const alignment = alignTokenKeys(
 		tokens.map((t) => t.name),

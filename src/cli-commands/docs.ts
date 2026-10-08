@@ -246,6 +246,35 @@ interface DocsResult {
 	pages: PageResult[];
 }
 
+/** Edit distance between two lowercase names (small strings only). */
+function editDistance(a: string, b: string): number {
+	const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+	for (let i = 1; i <= a.length; i++) {
+		let prev = row[0] as number;
+		row[0] = i;
+		for (let j = 1; j <= b.length; j++) {
+			const next = row[j] as number;
+			row[j] = Math.min(
+				(row[j] as number) + 1,
+				(row[j - 1] as number) + 1,
+				prev + (a[i - 1] === b[j - 1] ? 0 : 1),
+			);
+			prev = next;
+		}
+	}
+	return row[b.length] as number;
+}
+
+/** Up to five catalogue names closest to a mistyped one. */
+function nearestNames(query: string, names: readonly string[]): string[] {
+	const q = normalizeName(query);
+	return [...names]
+		.map((name) => ({ name, d: editDistance(q, normalizeName(name)) }))
+		.sort((a, b) => a.d - b.d || (a.name < b.name ? -1 : 1))
+		.slice(0, 5)
+		.map((c) => c.name);
+}
+
 /** Render the term summary: a per-component pages/gaps table + a footer line. */
 function renderTerm(result: DocsResult): string {
 	const rows = result.pages.map((page) => [
@@ -255,7 +284,7 @@ function renderTerm(result: DocsResult): string {
 	const table = renderTable(["component", "gaps"], rows, { color: false });
 	const gapTotal = result.pages.reduce((sum, p) => sum + p.gaps.length, 0);
 	const heading = `${result.pages.length} pages written to ${result.outDir}`;
-	const footer = `llms.txt: ${result.llmsPath} · ${gapTotal} gaps total`;
+	const footer = `llms.txt: ${result.llmsPath} · ${gapTotal} ${gapTotal === 1 ? "gap" : "gaps"} total`;
 	return [heading, "", table, "", footer].join("\n");
 }
 
@@ -307,7 +336,11 @@ async function runDocs(
 		const needle = normalizeName(component);
 		docs = allDocs.filter((doc) => normalizeName(doc.name) === needle);
 		if (docs.length === 0) {
-			const candidates = allDocs.map((doc) => doc.name).join(", ");
+			// The nearest names, not the whole catalogue (SDS has 467).
+			const candidates = nearestNames(
+				component,
+				allDocs.map((doc) => doc.name),
+			).join(", ");
 			fail(
 				`No component named "${component}" in the registry. ` +
 					`Candidates: ${candidates.length > 0 ? candidates : "(none)"}.`,
@@ -345,7 +378,9 @@ async function runDocs(
 
 	const llmsPath = join(outDir, "llms.txt");
 	try {
-		writeFileSync(llmsPath, renderLlmsTxt(docs, tokens), "utf8");
+		// llms.txt is the system-wide summary: always the whole catalogue, even
+		// when a [component] filter writes just one page.
+		writeFileSync(llmsPath, renderLlmsTxt(allDocs, tokens), "utf8");
 	} catch (error) {
 		const detail = error instanceof Error ? error.message : String(error);
 		fail(`Could not write "${llmsPath}": ${detail}`);

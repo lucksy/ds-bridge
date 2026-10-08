@@ -236,7 +236,7 @@ interface TokenContext {
 	index: ReturnType<typeof buildTokenIndex>;
 	compositeColors: ReturnType<typeof buildCompositeColorLookup>;
 	/** The custom property the build emits a token as, when the build is found. */
-	emittedName?: (token: Token) => string | undefined;
+	emittedName?: ((token: Token) => string | undefined) | undefined;
 }
 
 /** A finding enriched with the relative path for reporting. */
@@ -245,6 +245,8 @@ interface ReportFinding {
 	match: LiteralMatch;
 	/** For an exact match: the custom property to write (`--sds-size-space-400`). */
 	cssVar?: string;
+	/** For an exact match: the build was found but emits no property for the token. */
+	notEmitted?: boolean;
 }
 
 function hasExtension(name: string): boolean {
@@ -436,6 +438,8 @@ interface JsonFinding {
 	expectedToken?: string;
 	/** The `var(--…)` the fix writes for `expectedToken`. */
 	expectedVar?: string;
+	/** True when the build emits no property for `expectedToken` (--fix skips it). */
+	notEmitted?: boolean;
 	expectedCandidates?: string[];
 }
 
@@ -453,6 +457,7 @@ function toJsonFinding(finding: ReportFinding): JsonFinding {
 		base.expectedToken = finding.match.token.name;
 		if (finding.cssVar !== undefined)
 			base.expectedVar = `var(--${finding.cssVar})`;
+		if (finding.notEmitted === true) base.notEmitted = true;
 	} else if (finding.match.kind === "near") {
 		base.expectedCandidates = candidateNames(finding.match);
 	}
@@ -460,9 +465,15 @@ function toJsonFinding(finding: ReportFinding): JsonFinding {
 }
 
 /** Human-readable suggestion text for a finding. */
-function suggestionFor(match: LiteralMatch, cssVar?: string): string {
+function suggestionFor(
+	match: LiteralMatch,
+	cssVar?: string,
+	notEmitted?: boolean,
+): string {
 	switch (match.kind) {
 		case "exact":
+			if (notEmitted === true)
+				return `matches token ${match.token.name}, but the build emits no CSS variable for it (not auto-fixed)`;
 			return cssVar === undefined
 				? `use token ${match.token.name}`
 				: `use token ${match.token.name} — var(--${cssVar})`;
@@ -490,12 +501,12 @@ function renderTerm(findings: ReportFinding[], color: boolean): string {
 	for (const [file, fileFindings] of byFile) {
 		const lines = [severityColor("ok", file, { color })];
 		for (const finding of fileFindings) {
-			const { literal, match, cssVar } = finding;
+			const { literal, match, cssVar, notEmitted } = finding;
 			const severity = KIND_SEVERITY[match.kind];
 			const position = `${literal.file}:${literal.line}:${literal.col}`;
 			const label = severityColor(severity, match.kind, { color });
 			lines.push(
-				`  ${position}  ${label}  ${literal.property}: ${literal.raw} — ${suggestionFor(match, cssVar)}`,
+				`  ${position}  ${label}  ${literal.property}: ${literal.raw} — ${suggestionFor(match, cssVar, notEmitted)}`,
 			);
 		}
 		blocks.push(lines.join("\n"));
@@ -524,11 +535,18 @@ function renderTerm(findings: ReportFinding[], color: boolean): string {
 function changedFiles(
 	targetDir: string,
 ): { kind: "ok"; files: Set<string> } | LintCommandError {
-	const result = spawnSync("git", ["diff", "--name-only", "HEAD"], {
-		cwd: targetDir,
-		encoding: "utf8",
-	});
-	if (result.error !== undefined || result.status !== 0) {
+	// Changed against HEAD (paths relative to targetDir via --relative), plus
+	// new files git does not track yet — a brand-new stylesheet is a change too.
+	const run = (args: string[]) =>
+		spawnSync("git", args, { cwd: targetDir, encoding: "utf8" });
+	const diff = run(["diff", "--name-only", "--relative", "HEAD"]);
+	const untracked = run(["ls-files", "--others", "--exclude-standard"]);
+	if (
+		diff.error !== undefined ||
+		diff.status !== 0 ||
+		untracked.error !== undefined ||
+		untracked.status !== 0
+	) {
 		return {
 			kind: "error",
 			message:
@@ -536,9 +554,8 @@ function changedFiles(
 				"(or git is unavailable). Run without --changed, or lint inside a repo.",
 		};
 	}
-	// git reports paths relative to the repo root; resolve against targetDir.
 	const files = new Set(
-		result.stdout
+		`${diff.stdout}\n${untracked.stdout}`
 			.split("\n")
 			.map((line) => line.trim())
 			.filter((line) => line.length > 0)
@@ -605,6 +622,7 @@ function lintAll(
 			if (finding.match.kind !== "exact") continue;
 			const name = tokens.emittedName(finding.match.token);
 			if (name !== undefined) finding.cssVar = name;
+			else finding.notEmitted = true;
 		}
 	}
 	return { kind: "ok", findings: all };

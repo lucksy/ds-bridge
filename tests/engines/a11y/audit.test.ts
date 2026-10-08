@@ -381,3 +381,22 @@ describe("auditContrast — non-text (icon) colors", () => {
 		expect(by["color.text.danger.on-danger"]).toEqual([4.5, "fail"]);
 	});
 });
+
+describe("auditContrast — suggestions walk both ways", () => {
+	it("darkens light text on a mid-tone red when lightening cannot pass", () => {
+		const map = makeMap([
+			color("color.text.danger.on-danger", "#fee9e7"),
+			color("color.background.danger.default", "#ec221f"),
+		]);
+		const [finding] = auditContrast([{ mode: "light", map }], {
+			level: "AA",
+		}).findings;
+		expect(finding?.status).toBe("fail");
+		expect(finding?.suggestion?.kind).toBe("adjusted");
+		if (finding?.suggestion?.kind === "adjusted") {
+			expect(
+				contrastRatio(finding.suggestion.value, "#ec221f"),
+			).toBeGreaterThanOrEqual(4.5);
+		}
+	});
+});

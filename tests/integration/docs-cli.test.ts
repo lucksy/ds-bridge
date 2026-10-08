@@ -250,6 +250,12 @@ describe("ds-bridge docs (built dist/cli.mjs)", () => {
 			pages: { component: string }[];
 		};
 		expect(parsed.pages.map((p) => p.component)).toEqual(["Button"]);
+		// llms.txt stays the whole system's summary, not just the filtered page.
+		const llms = await readFile(join(outDir, "llms.txt"), "utf8");
+		const entries = llms
+			.split("\n")
+			.filter((l) => l.startsWith("- ") && l.includes("—"));
+		expect(entries.length).toBeGreaterThan(1);
 	}, 60_000);
 
 	it("exits 2 with candidate names when the component is not found", async () => {

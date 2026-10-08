@@ -17,6 +17,8 @@ export interface GaugeOptions {
 	/** Meter width in cells. */
 	width: number;
 	color: boolean;
+	/** "score" prints `76/100` (a score is not a percentage); default `76%`. */
+	unit?: "percent" | "score";
 }
 
 /**
@@ -30,7 +32,8 @@ export function renderGauge(value: number, opts: GaugeOptions): string {
 	const empty = EMPTY_CELL.repeat(Math.max(0, opts.width - filledCells));
 	const filled = opts.color && bar.length > 0 ? colors.cyan(bar) : bar;
 	const meter = `[${filled}${empty}]`;
-	const pct = `${Math.round(v)}%`;
+	const pct =
+		opts.unit === "score" ? `${Math.round(v)}/100` : `${Math.round(v)}%`;
 	return opts.label !== undefined && opts.label !== ""
 		? `${opts.label} ${meter} ${pct}`
 		: `${meter} ${pct}`;

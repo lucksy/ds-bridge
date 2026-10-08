@@ -10,7 +10,11 @@
 import { normalizeColor, normalizeDimension } from "../tokens/normalize.js";
 import type { TokenIndex } from "../tokens/token-index.js";
 import type { Token } from "../tokens/types.js";
-import { type ExtractedLiteral, isRadiusProperty } from "./extract.js";
+import {
+	type ExtractedLiteral,
+	isFontSizeProperty,
+	isRadiusProperty,
+} from "./extract.js";
 
 /** A scored candidate token for a near match (deltaE for colors, abs px for dimensions). */
 export interface MatchCandidate {
@@ -138,7 +142,8 @@ function dimensionFamily(property: string | undefined): RegExp | undefined {
 	const p = property.toLowerCase();
 	if (/radius/.test(p)) return /(radius|corner|rounded|shape)/i;
 	if (/^font-?size$|^fontsize$/.test(p))
-		return /(font-?size|typescale.*size|\.size$|text)/i;
+		// `fontSize.md`, `typescale.body.size`, SDS's `@typography.body.size-small`.
+		return /(font-?size|typescale.*size|(typography|type|font|text)[\w.@-]*size|\.size$)/i;
 	if (/line-?height/.test(p)) return /(line-?height|leading)/i;
 	if (/letter-?spacing/.test(p)) return /(letter-?spacing|tracking)/i;
 	if (
@@ -243,6 +248,18 @@ function matchColor(
 				.map((m) => ({ token: m.token, distance: m.deltaE }))
 				.slice(0, NEAR_LIMIT);
 			if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
+		}
+		// Only an interaction-state token (`danger.hover`, `border.disabled`)
+		// holds this value: in a resting style that is a human call, not an
+		// auto-fix — report it near, so --fix leaves it alone.
+		if (exact.every((t) => isStateToken(t.name))) {
+			const preferred = pickPreferred(exact, literal.property);
+			if (preferred !== undefined) {
+				return {
+					kind: "near",
+					candidates: [{ token: preferred, distance: 0 }],
+				};
+			}
 		}
 		const token = pickPreferred(exact, literal.property);
 		if (token !== undefined) return { kind: "exact", token };
@@ -436,6 +453,11 @@ export function isLintable(
 	index: TokenIndex,
 ): boolean {
 	if (literal.valueKind !== "dimension") return true;
+	// A font size is linted only against a type scale the set defines.
+	if (isFontSizeProperty(literal.property)) {
+		const family = dimensionFamily(literal.property);
+		return family !== undefined && setHasFamily(index, family);
+	}
 	if (!isRadiusProperty(literal.property)) return true;
 	return hasRadiusScale(index);
 }

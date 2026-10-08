@@ -60,6 +60,7 @@ describe("tokens check — a Figma variables export", () => {
 		expect(out.source.path).toBe("scripts/tokens/tokens.json");
 		expect(out.source.modes).toEqual([
 			"sds-light/desktop",
+			"brand-b-light",
 			"mobile",
 			"sds-dark",
 			"tablet",
@@ -69,10 +70,14 @@ describe("tokens check — a Figma variables export", () => {
 		expect(out.entries.map((e) => `${e.kind} ${e.token?.name ?? ""}`)).toEqual([
 			"missing-output @responsive.device",
 		]);
-		expect(run.stderr).toMatch(/mode "brand-b-light" skipped: .*Brand B\.800/);
+		expect(run.stderr).toMatch(
+			/mode "brand-b-light": @color\.background\.brand\.default keeps its default value — .*Brand B\.800/,
+		);
 		expect(
 			(JSON.parse(run.stdout) as { notes?: string[] }).notes?.some((n) =>
-				n.startsWith('mode "brand-b-light" skipped'),
+				n.startsWith(
+					'mode "brand-b-light": @color.background.brand.default keeps',
+				),
 			),
 		).toBe(true);
 	});

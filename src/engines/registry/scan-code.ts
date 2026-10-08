@@ -35,10 +35,13 @@ export interface CodeComponent {
 	 */
 	variants: Record<string, string[]>;
 	/**
-	 * Props inherited from a library's compiled typings (react-aria's
-	 * `placement`) — left out of `props`, but still the component's API.
+	 * String-union props inherited from a library's compiled typings
+	 * (react-aria's `placement: "top" | "bottom" | …`) — left out of `props`
+	 * and `variants`, but still the component's API for a Figma axis whose
+	 * values they share. Non-union inherited props (`style`, `type` as a
+	 * free string) are not kept: they would answer any axis of that name.
 	 */
-	inherited?: string[];
+	inherited?: Record<string, string[]>;
 }
 
 export interface ScanCodeOptions {
@@ -201,7 +204,7 @@ function readComponent(
 ): CodeComponent {
 	const props: CodeProp[] = [];
 	const variants: Record<string, string[]> = {};
-	const inherited: string[] = [];
+	const inherited: Record<string, string[]> = {};
 
 	const propsType = resolvePropsType(decl);
 	const destructured = destructuredPropNames(decl);
@@ -228,7 +231,16 @@ function readComponent(
 				) &&
 				!destructured.has(symbol.getName())
 			) {
-				inherited.push(symbol.getName());
+				try {
+					const declared =
+						symbol.getValueDeclaration() ?? symbol.getDeclarations()[0] ?? decl;
+					const unions = stringLiteralVariants(
+						symbol.getTypeAtLocation(declared),
+					);
+					if (unions !== undefined) inherited[symbol.getName()] = unions;
+				} catch {
+					// An unresolvable inherited type is simply not an axis.
+				}
 				continue;
 			}
 			const propDecl =
@@ -256,7 +268,7 @@ function readComponent(
 		importPath,
 		props,
 		variants,
-		...(inherited.length > 0 ? { inherited } : {}),
+		...(Object.keys(inherited).length > 0 ? { inherited } : {}),
 	};
 }
 

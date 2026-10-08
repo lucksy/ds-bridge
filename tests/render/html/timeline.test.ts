@@ -85,9 +85,9 @@ describe("dashboard timeline", () => {
 			const next = html.indexOf('<div class="wrap tl-state', start + 1);
 			return html.slice(start, next === -1 ? undefined : next);
 		};
-		expect(body(0)).toContain("<title>System score: 41%</title>");
-		expect(body(1)).toContain("<title>System score: 55%</title>");
-		expect(body(2)).toContain("<title>System score: 87%</title>");
+		expect(body(0)).toContain("<title>System score: 41/100</title>");
+		expect(body(1)).toContain("<title>System score: 55/100</title>");
+		expect(body(2)).toContain("<title>System score: 87/100</title>");
 		expect(body(0)).toContain(
 			"as it was at the end of <strong>1 Oct 2026</strong>",
 		);

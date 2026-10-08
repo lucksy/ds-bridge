@@ -39,7 +39,16 @@ export const BREAKING_SOURCE_LABEL: Record<"tokens" | "figma", string> = {
 export function breakingCalendarSection(data: ReportData): string {
 	const calendar = data.breakingCalendar;
 	if (calendar === undefined || calendar.entries.length === 0) {
-		return panel("Breaking calendar", emptyState("tokens check"));
+		// Measured with no breaking events is good news, not missing data.
+		const measured = (data.driftTrend?.length ?? 0) > 0;
+		return panel(
+			"Breaking calendar",
+			measured
+				? emptyHint(
+						"No breaking changes recorded — no stale tokens and no breaking library changes.",
+					)
+				: emptyState("tokens check"),
+		);
 	}
 
 	const rows = calendar.entries
@@ -102,7 +111,12 @@ export function changeFrequencySection(data: ReportData): string {
 export function targetsSection(data: ReportData): string {
 	const targets = data.targets;
 	if (targets === undefined || targets.length === 0) {
-		return panel("Targets / SLAs", emptyState("report"));
+		return panel(
+			"Targets / SLAs",
+			emptyHint(
+				"No targets set — add metric_targets to .ds-bridge.json to track goals.",
+			),
+		);
 	}
 
 	const rows = targets.map((verdict) => ({

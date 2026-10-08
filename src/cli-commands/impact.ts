@@ -41,6 +41,7 @@ import {
 	diffComponents,
 } from "../engines/impact/component-diff.js";
 import type { ComponentUsage } from "../engines/impact/usage.js";
+import { variantUsageLines } from "../engines/impact/variant-sites.js";
 import type { RegistryFile } from "../engines/registry/persist.js";
 import {
 	buildFigmaComponentModel,
@@ -208,6 +209,7 @@ function loadRegistry(): RegistryFile | undefined {
 async function mapChangedUsage(
 	registry: RegistryFile,
 	changedFigmaNames: string[],
+	nodeIdsByName: Record<string, string> = {},
 ): Promise<ComponentUsage[]> {
 	const globals = globalThis as Record<string, unknown>;
 	if (typeof globals.__filename !== "string") {
@@ -216,7 +218,12 @@ async function mapChangedUsage(
 		globals.__dirname = dirname(filename);
 	}
 	const { mapUsage } = await import("../engines/impact/usage.js");
-	return mapUsage({ registry, changedFigmaNames, projectDir: cwd() });
+	return mapUsage({
+		registry,
+		changedFigmaNames,
+		nodeIdsByName,
+		projectDir: cwd(),
+	});
 }
 
 /** Every changed (non-cosmetic-only) Figma name worth mapping to code. */
@@ -227,6 +234,65 @@ function changedNames(diff: ComponentDiff): string[] {
 	for (const changed of diff.changed) names.push(changed.name);
 	for (const added of diff.added) names.push(added.name);
 	return names;
+}
+
+/** The node id behind each changed name — a name an icon may share. */
+function changedNodeIds(diff: ComponentDiff): Record<string, string> {
+	const ids: Record<string, string> = {};
+	for (const removed of diff.removed) ids[removed.name] = removed.nodeId;
+	for (const renamed of diff.renamed) {
+		ids[renamed.fromName] = renamed.fromNodeId;
+	}
+	for (const changed of diff.changed) ids[changed.name] = changed.nodeId;
+	for (const added of diff.added) ids[added.name] = added.nodeId;
+	return ids;
+}
+
+/**
+ * A changed component's call sites are the JSX that uses what changed: an
+ * element passing a removed variant value or setting a removed axis (`<Avatar
+ * size="xl">` for `-Size=XL`), not every import. A change that removes nothing
+ * (an added value, a description) has no migration sites. Removed and renamed
+ * components keep their import sites — the import itself breaks.
+ */
+function refineToVariantSites(
+	diff: ComponentDiff,
+	usageByName: Map<string, ComponentUsage>,
+	importedFiles: Map<string, number>,
+	projectDir: string,
+): void {
+	for (const change of diff.changed) {
+		const usage = usageByName.get(change.name);
+		if (usage === undefined || usage.codeName === undefined) continue;
+		const files = [...new Set(usage.usages.map((u) => u.file))];
+		importedFiles.set(change.name, files.length);
+		const sites: ComponentUsage["usages"] = [];
+		for (const file of files) {
+			let source: string;
+			try {
+				source = readFileSync(join(projectDir, file), "utf8");
+			} catch {
+				continue;
+			}
+			for (const hit of variantUsageLines(
+				source,
+				usage.codeName,
+				change.variantChanges,
+			)) {
+				sites.push({
+					file,
+					line: hit.line,
+					importName: usage.codeName,
+					reason: hit.reason,
+				});
+			}
+		}
+		usageByName.set(change.name, {
+			...usage,
+			usages: sites,
+			count: sites.length,
+		});
+	}
 }
 
 /** True when any diff entry is classified breaking. */
@@ -249,6 +315,8 @@ interface MigrationSiteRecord {
 	from: string;
 	/** The post-change name (empty for a removed component). */
 	to: string;
+	/** What the element at this line does that the change breaks. */
+	reason?: string;
 }
 
 /**
@@ -311,6 +379,7 @@ function buildMigrationSites(
 				subject: row.component,
 				from: row.fromName,
 				to: row.toName,
+				...(site.reason !== undefined ? { reason: site.reason } : {}),
 			});
 		}
 	}
@@ -368,7 +437,9 @@ function renderChecklist(
 				: s.to === ""
 					? `${s.from} → (removed)`
 					: `(new) → ${s.to}`;
-		return `  ${s.file}:${s.line} · ${s.subject} · ${move}`;
+		return s.reason !== undefined
+			? `  ${s.file}:${s.line} · ${s.subject} · ${s.reason}`
+			: `  ${s.file}:${s.line} · ${s.subject} · ${move}`;
 	});
 	return [header, ...lines].join("\n");
 }
@@ -468,6 +539,7 @@ function renderTerm(
 	usageByName: Map<string, ComponentUsage>,
 	registryPresent: boolean,
 	color: boolean,
+	importedFiles: ReadonlyMap<string, number> = new Map(),
 ): string {
 	const rows = diffRows(diff);
 	if (rows.length === 0) {
@@ -492,10 +564,13 @@ function renderTerm(
 	const tableRows = rows.map((row) => {
 		const usage = usageByName.get(row.lookupName);
 		const sites = usage?.count ?? 0;
+		const imported = importedFiles.get(row.lookupName) ?? 0;
 		const touches = registryPresent
 			? sites > 0
 				? `touches ${sites} call site${sites === 1 ? "" : "s"}`
-				: "no call sites"
+				: imported > 0
+					? `imported in ${imported} file${imported === 1 ? "" : "s"} · nothing to migrate`
+					: "no call sites"
 			: "—";
 		const sev =
 			row.impact === "breaking"
@@ -665,9 +740,17 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 	// Usage mapping (best-effort): only when a registry exists.
 	const registry = loadRegistry();
 	const usageByName = new Map<string, ComponentUsage>();
+	// Files that import a changed component — kept for the "imported, nothing
+	// to migrate" note when a change breaks no usage.
+	const importedFiles = new Map<string, number>();
 	if (registry !== undefined) {
-		const usages = await mapChangedUsage(registry, changedNames(diff));
+		const usages = await mapChangedUsage(
+			registry,
+			changedNames(diff),
+			changedNodeIds(diff),
+		);
 		for (const usage of usages) usageByName.set(usage.figmaName, usage);
+		refineToVariantSites(diff, usageByName, importedFiles, cwd());
 	}
 
 	// Per-call-site migration sites (C7, M2.2): join changed components ⋈ their
@@ -702,7 +785,7 @@ async function runImpact(options: ImpactOptions): Promise<void> {
 	} else {
 		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
 		process.stdout.write(
-			`${renderTerm(diff, usageByName, registry !== undefined, color)}\n`,
+			`${renderTerm(diff, usageByName, registry !== undefined, color, importedFiles)}\n`,
 		);
 	}
 

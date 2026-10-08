@@ -15,7 +15,10 @@ The block above is the JSON output of `ds-bridge docs` for the user's arguments
 - `outDir` — the directory the MDX pages were written to.
 - `llmsPath` — the path to the generated `llms.txt` system summary.
 - `pages` — one per documented component. Each has:
-  - `component` — the component name (its MDX file is `<component>.mdx` in `outDir`).
+  - `component` — the component name. Its MDX page is `path` (the name with
+    anything but letters, digits, `.`, `_` and `-` replaced by `_`, e.g.
+    `Legacy_Button.mdx`). A `[component]` filter writes only that page;
+    `llms.txt` always covers the whole system.
   - `path` — the absolute path of the written MDX page.
   - `gaps` — typed documentation gaps for that component (possibly empty). Each
     gap is one of:
@@ -29,7 +32,7 @@ The block above is the JSON output of `ds-bridge docs` for the user's arguments
 ### If the command errored
 
 On an operational error the `docs` command prints a stderr message instead of a
-DocsResult; the `2>&1 || true` above folds that message into the block so a
+DocsResult; the `run-cli.mjs` wrapper above folds that message into the block (it merges stderr and always exits 0) so a
 missing registry never aborts this command (the build is a deliberate,
 user-confirmed step, below — never silent). When the block is NOT a DocsResult
 JSON object but a plain error line, handle these cases:

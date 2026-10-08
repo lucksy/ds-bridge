@@ -797,3 +797,64 @@ describe("matchLiteral — resting state before hover / disabled", () => {
 		);
 	});
 });
+
+describe("lint — font sizes against a type scale (Simple Design System)", () => {
+	const tokens: Token[] = [
+		{ name: "@typography.body.size-small", type: "dimension", value: "14px" },
+		{ name: "@size.space.350", type: "dimension", value: "14px" },
+	];
+	it("flags a font-size literal and suggests the type-scale token, never spacing", () => {
+		const [lit] = extractLiterals({
+			path: "a.css",
+			content: ".p { font-size: 14px; }",
+		});
+		if (lit === undefined) throw new Error("not extracted");
+		const index = buildTokenIndex(tokens);
+		expect(isLintable(lit, index)).toBe(true);
+		const match = matchLiteral(lit, index);
+		expect(match.kind === "exact" && match.token.name).toBe(
+			"@typography.body.size-small",
+		);
+	});
+	it("does not lint font sizes when the set has no type scale", () => {
+		const [lit] = extractLiterals({
+			path: "a.css",
+			content: ".p { font-size: 14px; }",
+		});
+		if (lit === undefined) throw new Error("not extracted");
+		expect(isLintable(lit, buildTokenIndex([tokens[1] as Token]))).toBe(false);
+	});
+});
+
+describe("matchLiteral — only a state token has the value", () => {
+	it("is a near match for review, not an exact auto-fix", () => {
+		const tokens: Token[] = [
+			{
+				name: "@color.background.danger.hover",
+				type: "color",
+				value: "#c00f0c",
+			},
+			{
+				name: "@color.background.danger.default",
+				type: "color",
+				value: "#ec221f",
+			},
+		];
+		const match = matchLiteral(
+			{
+				file: "a.tsx",
+				line: 1,
+				col: 1,
+				raw: '"#c00f0c"',
+				property: "background",
+				valueKind: "color",
+				context: "style-object",
+			},
+			buildTokenIndex(tokens),
+		);
+		expect(match.kind).toBe("near");
+		expect(match.kind === "near" && match.candidates[0]?.token.name).toBe(
+			"@color.background.danger.hover",
+		);
+	});
+});

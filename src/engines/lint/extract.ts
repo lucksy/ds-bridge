@@ -71,7 +71,16 @@ export function isRadiusProperty(property: string): boolean {
 
 /** Properties whose dimension literals are extracted: spacing and radius. */
 function isDimensionProperty(property: string): boolean {
-	return isSpacingProperty(property) || isRadiusProperty(property);
+	return (
+		isSpacingProperty(property) ||
+		isRadiusProperty(property) ||
+		isFontSizeProperty(property)
+	);
+}
+
+/** `font-size` / `fontSize`: linted against a type scale when the set has one. */
+export function isFontSizeProperty(property: string): boolean {
+	return /^font-?size$/i.test(property);
 }
 
 function isSpacingProperty(property: string): boolean {

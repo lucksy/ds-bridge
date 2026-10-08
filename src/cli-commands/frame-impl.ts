@@ -397,9 +397,11 @@ function nodeFromFileNodes(
 	nodeId: string,
 ): FigmaNode | undefined {
 	const direct = nodes[nodeId];
+	// A deleted node comes back as `null` (not a missing key): not found.
+	if (direct === null) return undefined;
 	if (direct !== undefined) return direct.document;
 	const entries = Object.values(nodes).filter(
-		(v): v is { document: FigmaNode } => v !== undefined,
+		(v): v is { document: FigmaNode } => v !== undefined && v !== null,
 	);
 	return entries[0]?.document;
 }
@@ -421,11 +423,12 @@ async function fetchRoot(
 		if (root === undefined) {
 			return {
 				kind: "error",
-				message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`,
+				message: `Node ${nodeId} was not found in file ${fileKey} — it may have been deleted; check the URL (or tracked_frames in .ds-bridge.json).`,
 			};
 		}
 		const entry =
-			result.data.nodes[nodeId] ?? Object.values(result.data.nodes)[0];
+			result.data.nodes[nodeId] ??
+			Object.values(result.data.nodes).find((v) => v != null);
 		return {
 			kind: "ok",
 			root,

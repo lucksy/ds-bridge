@@ -3,7 +3,7 @@ Generated __GENERATED_AT__
 
 System score
 ────────────
-System score [██████████████████▎░░░░░] 76%
+System score [██████████████████▎░░░░░] 76/100
 ▁▇▇▇█
 ┌───────────┬───────────┬────────┐
 │ Component │ Sub-score │ Weight │
@@ -108,7 +108,7 @@ library-health │████████████ 1
 
 Targets / SLAs
 ──────────────
-No data yet — run `ds-bridge report` to populate this section.
+No data yet — no targets set: add metric_targets to .ds-bridge.json to track goals.
 
 Parity trend
 ────────────

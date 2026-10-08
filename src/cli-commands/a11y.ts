@@ -65,6 +65,11 @@ function loadModeMaps(
 ): { kind: "ok"; modes: ModeTokenMap[] } | RunError {
 	const loaded = loadTokens(tokenPath);
 	if (loaded.kind === "error") return loaded;
+	// A mode the loader repaired or skipped is part of what this audit covers.
+	for (const warning of loaded.warnings) {
+		if (warning.startsWith("mode "))
+			process.stderr.write(`warning: ${warning}\n`);
+	}
 	return {
 		kind: "ok",
 		modes: loaded.modes ?? [{ mode: DEFAULT_MODE, map: loaded.map }],
@@ -134,7 +139,13 @@ function filterModes(
 		.map((m) => m.trim())
 		.filter((m) => m.length > 0);
 	const available = new Set(all.map((m) => m.mode));
-	const unknown = requested.filter((m) => !available.has(m));
+	// A default named for two mode axes (`sds-light/desktop`) answers to
+	// either part: `--modes sds-light` selects it.
+	const resolveName = (name: string): string | undefined =>
+		available.has(name)
+			? name
+			: [...available].find((m) => m.split("/").includes(name));
+	const unknown = requested.filter((m) => resolveName(m) === undefined);
 	if (unknown.length > 0) {
 		const list = [...available].sort().join(", ");
 		return {
@@ -142,7 +153,7 @@ function filterModes(
 			message: `Unknown mode(s): ${unknown.join(", ")}. Available modes: ${list || "(none)"}.`,
 		};
 	}
-	const keep = new Set(requested);
+	const keep = new Set(requested.map((m) => resolveName(m) ?? m));
 	return { kind: "ok", modes: all.filter((m) => keep.has(m.mode)) };
 }
 

@@ -60,6 +60,48 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * A mode document with each token an `unknown-alias` error names reverted to
+ * its default-mode node. Undefined when an error names no token (nothing to
+ * revert) or a token cannot be found in both documents.
+ */
+function repairMode(
+	doc: unknown,
+	defaultDoc: unknown,
+	errors: readonly { code: string; message: string }[],
+):
+	| { doc: unknown; reverted: { token: string; message: string }[] }
+	| undefined {
+	if (!isPlainObject(doc) || !isPlainObject(defaultDoc)) return undefined;
+	const reverted: { token: string; message: string }[] = [];
+	const copy = structuredClone(doc) as Record<string, unknown>;
+	for (const error of errors) {
+		if (error.code !== "unknown-alias") return undefined;
+		const match = /^(.+?): (alias references unknown token .*)$/.exec(
+			error.message,
+		);
+		if (match === null) return undefined;
+		const [, token, message] = match as unknown as [string, string, string];
+		const path = token.split(".");
+		const fallback = path.reduce<unknown>(
+			(node, key) => (isPlainObject(node) ? node[key] : undefined),
+			defaultDoc,
+		);
+		const parentPath = path.slice(0, -1);
+		const parent = parentPath.reduce<unknown>(
+			(node, key) => (isPlainObject(node) ? node[key] : undefined),
+			copy,
+		);
+		const last = path[path.length - 1];
+		if (!isPlainObject(parent) || last === undefined || fallback === undefined)
+			return undefined;
+		parent[last] = structuredClone(fallback);
+		if (!reverted.some((r) => r.token === token))
+			reverted.push({ token, message });
+	}
+	return reverted.length > 0 ? { doc: copy, reverted } : undefined;
+}
+
 /** Load and parse the token source at `path` (file or folder). */
 export function loadTokens(path: string): LoadTokensOutcome {
 	const read = readTokenDocument(path);
@@ -88,14 +130,30 @@ export function loadTokens(path: string): LoadTokensOutcome {
 	if (read.modeDocs !== undefined) {
 		const modes: LoadedMode[] = [];
 		const warnings = [...base.warnings];
+		const defaultDoc = read.modeDocs[0]?.doc;
 		for (const [index, { mode, doc }] of read.modeDocs.entries()) {
-			const parsed = parse(doc);
+			let parsed = parse(doc);
+			if (parsed.kind === "error" && index > 0) {
+				// One broken value (an alias into a palette the export never wrote)
+				// must not cost the whole mode: those tokens keep their default
+				// value in it, each named in a warning; every other value stays.
+				const repaired = repairMode(doc, defaultDoc, parsed.errors);
+				if (repaired !== undefined) {
+					const retry = parse(repaired.doc);
+					if (retry.kind === "ok") {
+						for (const { token, message } of repaired.reverted) {
+							warnings.push(
+								`mode "${mode}": ${token} keeps its default value — ${message}`,
+							);
+						}
+						parsed = retry;
+					}
+				}
+			}
 			if (parsed.kind === "error") {
 				if (index === 0) {
 					return parseFailure(`mode "${mode}" of "${path}"`, format, parsed);
 				}
-				// One broken secondary mode (an alias into a palette the export
-				// never wrote) is reported, not fatal: every other mode still checks.
 				const first = parsed.errors[0];
 				const more =
 					parsed.errors.length > 1

@@ -195,7 +195,7 @@ describe("parseW3c — lenient unknown type", () => {
 	it("includes the token as type 'other' and emits a warning", () => {
 		const outcome = parseW3c({
 			misc: {
-				thing: { $type: "cubicBezier", $value: "ease-in-out" },
+				thing: { $type: "custom-string", $value: "ease-in-out" },
 			},
 		});
 
@@ -206,7 +206,9 @@ describe("parseW3c — lenient unknown type", () => {
 			type: "other",
 		});
 		expect(outcome.warnings.length).toBeGreaterThan(0);
-		expect(outcome.warnings.some((w) => w.includes("cubicBezier"))).toBe(true);
+		expect(outcome.warnings.some((w) => w.includes("custom-string"))).toBe(
+			true,
+		);
 	});
 });
 
@@ -521,5 +523,21 @@ describe("parseW3c — Figma FLOAT variables that are lengths", () => {
 			type: "number",
 			value: 0.5,
 		});
+	});
+});
+
+describe("parseW3c — unknown types are reported once per type", () => {
+	it("groups many tokens of one unknown type into a single warning", () => {
+		const outcome = parseW3c({
+			shadow: {
+				a: { $type: "custom-string", $value: "x" },
+				b: { $type: "custom-string", $value: "y" },
+				c: { $type: "custom-string", $value: "z" },
+				d: { $type: "custom-string", $value: "w" },
+			},
+		});
+		expect(outcome.kind === "ok" && outcome.warnings).toEqual([
+			'unrecognized $type "custom-string" on 4 tokens (shadow.a, shadow.b, shadow.c, … 1 more) — treated as "other"',
+		]);
 	});
 });

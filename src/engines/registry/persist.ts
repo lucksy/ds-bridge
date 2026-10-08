@@ -247,7 +247,10 @@ export function resolveEntry(
 	registry: RegistryFile,
 	nodeNameOrId: string,
 ): ResolveOutcome {
-	const query = nodeNameOrId;
+	// A node id copied from a URL (`4185-3778`) is the same node as `4185:3778`.
+	const query = /^\d+-\d+$/.test(nodeNameOrId.trim())
+		? nodeNameOrId.trim().replace("-", ":")
+		: nodeNameOrId;
 	const normalizedQuery = normalizeName(query);
 
 	for (const entry of registry.matches) {

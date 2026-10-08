@@ -192,6 +192,7 @@ const RULE_REASON: Record<string, string> = {
 	"var-binding": "Variable binding",
 	"auto-layout": "Auto layout",
 	component: "Component usage",
+	typography: "Typography",
 	naming: "Naming",
 };
 
@@ -411,7 +412,11 @@ function aggregateHistory(
 			// are left empty (the renderer's hotspot list simply renders nothing).
 			libraryHealth = {
 				overrideHotspots: [],
-				deprecatedUsage: [],
+				// The line's ranked deprecated list has this exact shape.
+				deprecatedUsage: (topList(record.topDeprecated) ?? []).map((d) => ({
+					componentName: d.name,
+					count: d.count,
+				})),
 				detachedCandidates: [],
 				totals: {
 					overrideHotspots: asNumber(r.overrideHotspots),

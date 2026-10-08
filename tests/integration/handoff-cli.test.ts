@@ -97,6 +97,13 @@ function makeServer(): Server {
 			return;
 		}
 
+		// A deleted node: Figma answers 200 with the id mapped to `null`.
+		if (method === "GET" && url.includes("ids=9999")) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ name: "F", nodes: { "9999:1": null } }));
+			return;
+		}
+
 		if (method === "GET" && url.startsWith(`/v1/files/${FILE_KEY}/nodes`)) {
 			res.writeHead(200, { "Content-Type": "application/json" });
 			res.end(fileNodesFixture);
@@ -228,6 +235,16 @@ describe("ds-bridge handoff (built dist/cli.mjs)", () => {
 		await Promise.all(
 			tmpDirs.map((dir) => rm(dir, { recursive: true, force: true })),
 		);
+	});
+
+	it("says the node was not found instead of crashing", async () => {
+		const result = await runCli([
+			"handoff",
+			`https://www.figma.com/design/${FILE_KEY}/F?node-id=9999-1`,
+		]);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toContain("Node 9999:1 was not found");
+		expect(result.stderr).not.toContain("TypeError");
 	});
 
 	it("scores the full file deterministically (90) and exits 0 at threshold 80", async () => {

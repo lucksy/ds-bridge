@@ -295,6 +295,51 @@ describe("ds-bridge SessionStart freshness hook (scripts/hook-freshness.mjs)", (
 		expect(stdout.trim()).toBe("");
 	});
 
+	it("(k) a token file nested a few levels deep (scripts/tokens/tokens.json) is found", async () => {
+		const dir = await freshTmp("ds-fresh-nested-");
+		await mkdir(join(dir, "scripts", "tokens"), { recursive: true });
+		await writeFile(
+			join(dir, "scripts", "tokens", "tokens.json"),
+			"{}\n",
+			"utf8",
+		);
+		const { stdout } = await runHook(JSON.stringify({ cwd: dir }));
+		expect(stdout).toContain("token source tokens.json");
+	});
+
+	it("(l) a token saved in .ds-bridge.env counts as configured (registry nudge)", async () => {
+		const dir = await freshTmp("ds-fresh-saved-");
+		await writeFile(
+			join(dir, ".ds-bridge.env"),
+			"FIGMA_TOKEN=figd_saved\n",
+			"utf8",
+		);
+		await writeFile(
+			join(dir, ".ds-bridge.json"),
+			`${JSON.stringify({ figma_file_key: "key" })}\n`,
+			"utf8",
+		);
+		const { stdout } = await runHook(JSON.stringify({ cwd: dir }));
+		expect(stdout).toContain("registry build");
+		expect(stdout).not.toContain("figd_saved");
+	});
+
+	it("(m) a later non-token check does not hide a changed token source", async () => {
+		const dir = await freshTmp("ds-fresh-otherkind-");
+		const tokens = join(dir, "tokens.json");
+		await writeFile(tokens, "{}\n", "utf8");
+		const stateDir = join(dir, ".ds-bridge");
+		await writeHistory(stateDir, Date.parse("2026-01-01T00:00:00Z"));
+		await setMtime(tokens, Date.parse("2026-02-01T00:00:00Z"));
+		await writeFile(
+			join(stateDir, "history.jsonl"),
+			`${JSON.stringify({ at: "2026-01-01T00:00:00.000Z", kind: "tokens-check", stale: 0 })}\n${JSON.stringify({ at: "2026-03-01T00:00:00.000Z", kind: "lint", byKind: {} })}\n`,
+			"utf8",
+		);
+		const { stdout } = await runHook(JSON.stringify({ cwd: dir }));
+		expect(stdout).toContain("changed since the last drift check");
+	});
+
 	it("(h) file key from .ds-bridge.json (token from env) + no registry → build nudge", async () => {
 		const dir = await freshTmp("ds-fresh-keyfile-");
 		await writeFile(

@@ -367,11 +367,13 @@ function nodeFromFileNodes(
 	nodeId: string,
 ): NodeEntry | undefined {
 	const direct = nodes[nodeId];
+	// A deleted node comes back as `null` (not a missing key): not found.
+	if (direct === null) return undefined;
 	if (direct !== undefined) return direct;
 	// Defensive: the API echoes the requested id verbatim, but fall back to the
 	// single returned entry if the key differs (e.g. canonicalization mismatch).
 	const entries = Object.values(nodes).filter(
-		(v): v is NodeEntry => v !== undefined,
+		(v): v is NodeEntry => v !== undefined && v !== null,
 	);
 	return entries[0];
 }
@@ -409,7 +411,7 @@ async function fetchRoot(
 		if (entry === undefined) {
 			return {
 				kind: "error",
-				message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`,
+				message: `Node ${nodeId} was not found in file ${fileKey} — it may have been deleted; check the URL (or tracked_frames in .ds-bridge.json).`,
 			};
 		}
 		return { kind: "ok", root: entry.document, maps: componentMaps(entry) };

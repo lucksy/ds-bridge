@@ -102,7 +102,7 @@ function destructuredPropNames(decl) {
 function readComponent(name, importPath, decl, ownPackage) {
   const props = [];
   const variants = {};
-  const inherited = [];
+  const inherited = {};
   const propsType = resolvePropsType(decl);
   const destructured = destructuredPropNames(decl);
   if (propsType !== void 0) {
@@ -114,7 +114,14 @@ function readComponent(name, importPath, decl, ownPackage) {
       if (declarations.length > 0 && declarations.every(
         (d) => d.getSourceFile().isDeclarationFile() && !ownTypings(d)
       ) && !destructured.has(symbol.getName())) {
-        inherited.push(symbol.getName());
+        try {
+          const declared = symbol.getValueDeclaration() ?? symbol.getDeclarations()[0] ?? decl;
+          const unions = stringLiteralVariants(
+            symbol.getTypeAtLocation(declared)
+          );
+          if (unions !== void 0) inherited[symbol.getName()] = unions;
+        } catch {
+        }
         continue;
       }
       const propDecl = symbol.getValueDeclaration() ?? symbol.getDeclarations()[0] ?? decl;
@@ -139,7 +146,7 @@ function readComponent(name, importPath, decl, ownPackage) {
     importPath,
     props,
     variants,
-    ...inherited.length > 0 ? { inherited } : {}
+    ...Object.keys(inherited).length > 0 ? { inherited } : {}
   };
 }
 function scanCodeComponents(rootDir, options) {

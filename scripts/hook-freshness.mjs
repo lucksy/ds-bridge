@@ -18,14 +18,15 @@
 // Contract (intentionally fail-quiet AND cheap — a SessionStart hook runs on every
 // session and must never break the user's flow or block on it; target <200ms):
 //   • Reads the SessionStart payload from stdin: { cwd, ... }
-//   • Locates the project token source CHEAPLY (a few statSync probes, NOT a tree
-//     walk): .ds-bridge.json token_source if set, else the conventional names
-//     tokens.json / design-tokens.json at <cwd> root or under <cwd>/tokens/.
-//   • Reads the LAST line of <cwd>/.ds-bridge/history.jsonl and takes its `at`
-//     timestamp as the last-check instant (missing/empty/unparseable → never-checked).
-//   • Figma config is read with the same precedence as src/config.ts: the token
-//     from CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN / FIGMA_TOKEN (env only, never a file),
-//     the file key from CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY else .ds-bridge.json.
+//   • Locates the project token source CHEAPLY: .ds-bridge.json token_source if
+//     set, else the conventional names tokens.json / design-tokens.json at <cwd>
+//     root or under <cwd>/tokens/, else a bounded search (3 levels, 400 entries).
+//   • Takes the `at` of the latest tokens-check line in history.jsonl as the
+//     last-check instant (none → never-checked).
+//   • Figma config follows src/config.ts: the token from
+//     CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN / FIGMA_TOKEN or a saved .ds-bridge.env
+//     (presence only — the value is never read out), the file key from
+//     CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY else .ds-bridge.json.
 //   • Emits a single hookSpecificOutput block (hookEventName "SessionStart") whose
 //     additionalContext carries whichever nudges apply (newline-joined), or stays
 //     silent when none do, and exits 0.
@@ -163,13 +164,59 @@ function findTokenSource(cwd) {
 		}
 	}
 
+	// 5. A bounded search for a conventional token file anywhere shallow
+	// (Figma's Simple Design System keeps it at scripts/tokens/tokens.json) —
+	// the same files the CLI discovers. At most 3 levels and 400 entries.
+	const found = shallowTokenFile(cwd);
+	if (found !== undefined) return found;
+
 	return undefined;
 }
 
+/** A conventional token file within 3 levels of `cwd` (bounded, cheap). */
+function shallowTokenFile(cwd) {
+	let seen = 0;
+	const queue = [{ dir: cwd, depth: 0 }];
+	while (queue.length > 0) {
+		const { dir, depth } = queue.shift();
+		let entries;
+		try {
+			entries = readdirSync(dir, { withFileTypes: true });
+		} catch {
+			continue;
+		}
+		for (const entry of entries) {
+			if (++seen > 400) return undefined;
+			const full = join(dir, entry.name);
+			if (entry.isFile() && CONVENTIONAL_NAMES.includes(entry.name)) {
+				const mtimeMs = fileMtimeMs(full);
+				if (mtimeMs !== undefined) return { path: full, mtimeMs };
+			} else if (
+				entry.isDirectory() &&
+				depth < 3 &&
+				!SKIPPED_DIRS.has(entry.name) &&
+				!entry.name.startsWith(".")
+			) {
+				queue.push({ dir: full, depth: depth + 1 });
+			}
+		}
+	}
+	return undefined;
+}
+
+/** Folders never searched for a token file. */
+const SKIPPED_DIRS = new Set([
+	"node_modules",
+	"dist",
+	"build",
+	"out",
+	"coverage",
+]);
+
 /**
- * Last-check instant (epoch ms) from <cwd>/.ds-bridge/history.jsonl: the `at`
- * timestamp of the last non-empty, JSON-parseable line. undefined ⇒ never checked
- * (missing/empty/unparseable file, no usable `at`).
+ * Last token-check instant (epoch ms) from <cwd>/.ds-bridge/history.jsonl: the
+ * `at` of the latest `tokens-check` line — not any other check's run.
+ * undefined ⇒ never checked.
  */
 function lastCheckMs(cwd) {
 	let text;
@@ -181,7 +228,7 @@ function lastCheckMs(cwd) {
 	const lines = text.split("\n");
 	for (let i = lines.length - 1; i >= 0; i -= 1) {
 		const trimmed = lines[i].trim();
-		if (trimmed === "") continue;
+		if (trimmed === "" || !trimmed.includes('"tokens-check"')) continue;
 		let record;
 		try {
 			record = JSON.parse(trimmed);
@@ -191,13 +238,12 @@ function lastCheckMs(cwd) {
 		if (
 			record !== null &&
 			typeof record === "object" &&
+			record.kind === "tokens-check" &&
 			typeof record.at === "string"
 		) {
 			const ms = Date.parse(record.at);
 			if (Number.isFinite(ms)) return ms;
 		}
-		// A line existed but had no usable `at` — treat as never-checked.
-		return undefined;
 	}
 	return undefined;
 }
@@ -211,6 +257,21 @@ function baseName(path) {
 /** A trimmed-to-presence string, or undefined for empty/non-string. */
 function nonEmpty(value) {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/**
+ * True when <cwd>/.ds-bridge.env (written by /ds-bridge:connect, the CLI's own
+ * token source) holds a non-empty FIGMA_TOKEN. Only presence is checked; the
+ * value is never kept or printed.
+ */
+function savedTokenPresent(cwd) {
+	try {
+		return /^\s*FIGMA_TOKEN\s*=\s*\S+/m.test(
+			readFileSync(join(cwd, ".ds-bridge.env"), "utf8"),
+		);
+	} catch {
+		return false;
+	}
 }
 
 /** True when <cwd>/.ds-bridge/registry.json exists as a regular file. */
@@ -267,7 +328,9 @@ function tokenCheckNudge(cwd) {
  */
 function registryBuildNudge(cwd, env) {
 	const token =
-		nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN) ?? nonEmpty(env.FIGMA_TOKEN);
+		nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN) ??
+		nonEmpty(env.FIGMA_TOKEN) ??
+		(savedTokenPresent(cwd) ? "saved" : undefined);
 	const fileKey =
 		nonEmpty(env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY) ??
 		configuredFigmaFileKey(cwd);

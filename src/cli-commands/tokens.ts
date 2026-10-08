@@ -459,6 +459,8 @@ function checkJson(
 		{
 			entries: result.entries,
 			inSync: result.entries.length === 0,
+			// How many token/output pairs agree (the terminal's "N in sync").
+			inSyncCount: result.inSync,
 			source,
 			...(result.unbuiltLayers !== undefined
 				? { unbuiltLayers: result.unbuiltLayers }
@@ -678,7 +680,7 @@ export function registerTokensCommand(program: Command): void {
 				// not a guess from the token path.
 				const emitted = emittedVarNames(process.cwd(), map.tokens);
 				const tokens = map.tokens.map((token) => {
-					const cssVar = emitted(token);
+					const cssVar = emitted?.(token);
 					return cssVar === undefined ? token : { ...token, cssVar };
 				});
 				process.stdout.write(

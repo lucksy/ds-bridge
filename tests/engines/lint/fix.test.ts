@@ -265,6 +265,31 @@ describe("planFixes — rule 3: composite exact matches are unfixable in v1", ()
 	});
 });
 
+// SDS regression: `html { font-size: 16px }` matched the design-time
+// `@responsive.root-font-size`, which the build never emits — --fix wrote
+// `var(--responsive-root-font-size)`, a property nothing defines.
+describe("planFixes — tokens the build does not emit are left unfixed", () => {
+	const lit = literal({ raw: "16px", property: "font-size" });
+	const space = dimToken("@size.space.400", "16px");
+	const root = dimToken("@responsive.root-font-size", "16px");
+	const emitted = (t: Token) =>
+		t.name === "@size.space.400" ? "sds-size-space-400" : undefined;
+
+	it("skips a token the known build does not emit", () => {
+		expect(planFixes([exactFinding(lit, root)], emitted)).toEqual([]);
+	});
+
+	it("still writes the emitted name for a token the build emits", () => {
+		const [edit] = planFixes([exactFinding(lit, space)], emitted);
+		expect(edit?.replacement).toBe("var(--sds-size-space-400)");
+	});
+
+	it("falls back to the token path when the build is unknown", () => {
+		const [edit] = planFixes([exactFinding(lit, root)]);
+		expect(edit?.replacement).toBe("var(--responsive-root-font-size)");
+	});
+});
+
 describe("planFixes — rule 4: deterministic ordering", () => {
 	it("sorts by file asc, then line/col DESCENDING within a file", () => {
 		const mk = (file: string, line: number, col: number): Finding =>

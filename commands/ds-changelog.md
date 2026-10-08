@@ -61,7 +61,7 @@ so `AskUserQuestion` is available):
 
 - **(a) Markdown export** — rerun the CLI with `--format=md` for a paste-ready,
   audience-segmented document:
-  `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs changelog $ARGUMENTS --format=md`.
+  `node ${CLAUDE_PLUGIN_ROOT}/scripts/run-cli.mjs changelog '$ARGUMENTS' --format=md`.
   Show the resulting markdown so the user can drop it into a release note, a PR
   description, or a wiki page.
 - **(b) Post to Confluence or Slack** — **model-led, ask-first only.** ds-bridge

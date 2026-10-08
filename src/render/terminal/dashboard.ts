@@ -65,6 +65,7 @@ function systemScoreTerminalSection(data: ReportData, color: boolean): string {
 		label: "System score",
 		width: 24,
 		color,
+		unit: "score",
 	});
 
 	// §8 mapping: the score trend → sparkline of each dated composite.
@@ -373,7 +374,13 @@ function breakingCalendarTerminalSection(
 ): string {
 	const calendar = data.breakingCalendar;
 	if (calendar === undefined || calendar.entries.length === 0) {
-		return panel("Breaking calendar", emptyState("tokens check"));
+		// Measured with no breaking events is good news, not missing data.
+		return panel(
+			"Breaking calendar",
+			(data.driftTrend?.length ?? 0) > 0
+				? "No breaking changes recorded — no stale tokens and no breaking library changes."
+				: emptyState("tokens check"),
+		);
 	}
 
 	// Human-readable source badge: built-output drift ("tokens") vs Figma
@@ -427,7 +434,10 @@ function changeFrequencyTerminalSection(
 function targetsTerminalSection(data: ReportData, color: boolean): string {
 	const targets = data.targets;
 	if (targets === undefined || targets.length === 0) {
-		return panel("Targets / SLAs", emptyState("report"));
+		return panel(
+			"Targets / SLAs",
+			"No data yet — no targets set: add metric_targets to .ds-bridge.json to track goals.",
+		);
 	}
 
 	const COMPONENT_LABEL: Record<string, string> = {

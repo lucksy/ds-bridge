@@ -146,15 +146,31 @@ function flattenValue(type: unknown, value: unknown): TokenValue | undefined {
 
 /**
  * Types read as "other" without a warning: Figma STRING / BOOLEAN variables
- * export as `string` / `boolean` (or `unknown`), and they are not design values.
+ * export as `string` / `boolean` (or `unknown`), and DTCG types ds-bridge does
+ * not compare (Primer's `cubicBezier` easings) are valid, not suspect.
  */
-const QUIET_OTHER_TYPES = new Set(["string", "boolean", "unknown"]);
+const QUIET_OTHER_TYPES = new Set([
+	"string",
+	"boolean",
+	"unknown",
+	// DTCG types ds-bridge does not compare: valid, so never a warning.
+	"cubicBezier",
+	"transition",
+	"border",
+	"strokeStyle",
+	"gradient",
+	"fontStyle",
+	"letterSpacing",
+	"lineHeight",
+	"opacity",
+]);
 
 function mapType(raw: unknown, path: string, warnings: string[]): TokenType {
 	if (typeof raw !== "string") return "other";
 	if (KNOWN_TYPES.has(raw as TokenType)) return raw as TokenType;
 	if (QUIET_OTHER_TYPES.has(raw)) return "other";
-	warnings.push(`${path}: unrecognized $type "${raw}" — treated as "other"`);
+	// Collected per type; parseW3c reports one line per unknown type.
+	warnings.push(`\u0000${raw}\u0000${path}`);
 	return "other";
 }
 
@@ -363,6 +379,34 @@ function isFigmaLength(name: string, value: TokenValue): boolean {
 	);
 }
 
+/** Separates a type warning's `$type` from its token path (see mapType). */
+const TYPE_MARK = "\u0000";
+
+/**
+ * One line per unrecognized `$type`, not one per token: Primer's 40
+ * `custom-string` tokens read as a single note naming a few of them.
+ */
+function groupTypeWarnings(warnings: readonly string[]): string[] {
+	const byType = new Map<string, string[]>();
+	const rest: string[] = [];
+	for (const warning of warnings) {
+		const [lead, type, path] = warning.split(TYPE_MARK);
+		if (lead !== "" || type === undefined || path === undefined) {
+			rest.push(warning);
+			continue;
+		}
+		byType.set(type, [...(byType.get(type) ?? []), path]);
+	}
+	const grouped = [...byType].map(([type, paths]) => {
+		const shown = paths.slice(0, 3).join(", ");
+		const more = paths.length > 3 ? `, … ${paths.length - 3} more` : "";
+		return paths.length === 1
+			? `${paths[0]}: unrecognized $type "${type}" — treated as "other"`
+			: `unrecognized $type "${type}" on ${paths.length} tokens (${shown}${more}) — treated as "other"`;
+	});
+	return [...rest, ...grouped];
+}
+
 export function parseW3c(source: unknown): ParseOutcome {
 	if (!isPlainObject(source)) {
 		return {
@@ -416,6 +460,6 @@ export function parseW3c(source: unknown): ParseOutcome {
 	return {
 		kind: "ok",
 		map: { format: "w3c", tokens },
-		warnings,
+		warnings: groupTypeWarnings(warnings),
 	};
 }

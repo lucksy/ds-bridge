@@ -105,13 +105,20 @@ function compareEdits(a: TextEdit, b: TextEdit): number {
  */
 export function planFixes(
 	findings: readonly Finding[],
-	/** The custom property the build emits a token as (`sds-size-space-400`). */
+	/**
+	 * The custom property the build emits a token as (`sds-size-space-400`).
+	 * When given, a token the build does not emit is left unfixed: writing
+	 * `var(--responsive-root-font-size)` for a design-time-only variable would
+	 * reference a property nothing defines.
+	 */
 	emittedName?: (token: Token) => string | undefined,
 ): TextEdit[] {
 	const edits: TextEdit[] = [];
 	for (const { literal, match } of findings) {
 		if (match.kind !== "exact") continue;
 		if (isCompositeToken(match.token)) continue;
+		if (emittedName !== undefined && emittedName(match.token) === undefined)
+			continue;
 		edits.push({
 			file: literal.file,
 			line: literal.line,

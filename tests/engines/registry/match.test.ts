@@ -515,10 +515,10 @@ describe("matchComponents — Figma naming conventions", () => {
 	it("names each axis that still differs", () => {
 		const result = matchComponents(
 			[code("ListItem", { lines: ["one", "two", "three"] })],
-			[figma("List item", { Lines: ["1", "2", "3"] })],
+			[figma("List item", { Lines: ["Single", "Double", "Triple"] })],
 		);
 		expect(result.matches[0]?.variantGaps).toEqual([
-			"lines: code one|two|three ≠ Figma Lines 1|2|3",
+			"lines: code one|two|three ≠ Figma Lines Single|Double|Triple",
 		]);
 	});
 
@@ -739,11 +739,42 @@ describe("matchComponents — Code Connect recipes (one code component, many Fig
 	it("drops a Figma-only axis the code component inherits (Tooltip placement)", () => {
 		const tooltip: CodeComponent = {
 			...code("Tooltip"),
-			inherited: ["placement"],
+			inherited: { placement: ["top", "bottom", "left", "right"] },
 		};
 		const result = matchComponents(
 			[tooltip],
 			[figma("Tooltip", { Placement: ["Top", "Bottom"] })],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([]);
+	});
+});
+
+describe("variantGaps — an inherited HTML prop never answers a design axis", () => {
+	it("keeps Style: Filled|Tonal paired with variant, though the HTML `style` is inherited", () => {
+		const button: CodeComponent = {
+			...code("Button", { variant: ["filled", "tonal"] }),
+			inherited: { type: ["button", "submit", "reset"] },
+		};
+		const result = matchComponents(
+			[button],
+			[
+				figma("Button", {
+					Style: ["Filled", "Tonal"],
+					Type: ["Assist", "Filter"],
+				}),
+			],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([
+			"Type: Figma only (Assist|Filter)",
+		]);
+	});
+});
+
+describe("variantGaps — number words", () => {
+	it("reads `one | two | three` as Figma's `1 | 2 | 3`", () => {
+		const result = matchComponents(
+			[code("ListItem", { lines: ["one", "two", "three"] })],
+			[figma("List item", { Lines: ["1", "2", "3"] })],
 		);
 		expect(result.matches[0]?.variantGaps).toEqual([]);
 	});

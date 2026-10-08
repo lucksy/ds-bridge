@@ -333,21 +333,22 @@ function suggestForeground(
 	const bgLuminance = relativeLuminance(bg);
 	if (bgLuminance === undefined) return { kind: "none" };
 
-	// Light background → darken the foreground; dark background → lighten it.
-	const direction = bgLuminance > 0.5 ? -1 : 1;
+	// Walk lightness both ways and keep the smallest change that passes: a
+	// mid-tone surface (SDS's #ec221f red) can need darker text even though
+	// it is not "light" (#fee9e7 on #ec221f fails, black passes at 4.8:1).
 	const baseL = base.l;
-
+	const preferred = bgLuminance > 0.5 ? -1 : 1;
 	for (let step = 0; step <= SUGGESTION_STEPS; step += 1) {
-		const lightness = Math.min(
-			1,
-			Math.max(0, baseL + direction * (step / SUGGESTION_STEPS)),
-		);
-		// Spread the base Oklch color (hue + chroma preserved) and override only L.
-		const candidate = formatHex(rgb({ ...base, l: lightness }));
-		if (candidate === undefined) continue;
-		const ratio = contrastRatio(candidate, bg);
-		if (ratio !== undefined && ratio >= required) {
-			return { kind: "adjusted", value: candidate };
+		for (const direction of [preferred, -preferred]) {
+			const lightness = baseL + direction * (step / SUGGESTION_STEPS);
+			if (lightness < 0 || lightness > 1) continue;
+			// Spread the base Oklch color (hue + chroma preserved) and override only L.
+			const candidate = formatHex(rgb({ ...base, l: lightness }));
+			if (candidate === undefined) continue;
+			const ratio = contrastRatio(candidate, bg);
+			if (ratio !== undefined && ratio >= required) {
+				return { kind: "adjusted", value: candidate };
+			}
 		}
 	}
 	return { kind: "none" };

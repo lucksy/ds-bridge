@@ -21,6 +21,8 @@ export interface UsageSite {
 	line: number;
 	/** The imported identifier as written, e.g. "Button". */
 	importName: string;
+	/** Set for a value-level site: what this element does that the change breaks. */
+	reason?: string;
 }
 
 /** How a changed Figma name resolved against the registry. */
@@ -46,6 +48,8 @@ export interface MapUsageInput {
 	changedFigmaNames: readonly string[];
 	/** Project directory to scan for import sites. */
 	projectDir: string;
+	/** The node id each changed name came from: resolves before the name. */
+	nodeIdsByName?: Record<string, string>;
 }
 
 // ── Name normalization (local; persist.ts's helper is not exported) ──
@@ -75,13 +79,27 @@ type Resolution =
 function resolveFigmaName(
 	registry: RegistryFile,
 	figmaName: string,
+	nodeId?: string,
 ): Resolution {
+	if (nodeId !== undefined) {
+		const byId = registry.matches.find(
+			(m) => m.nodeId === nodeId || m.aliasNodeIds?.includes(nodeId),
+		);
+		if (byId !== undefined) return { kind: "matched", match: byId };
+	}
 	const normalized = normalizeName(figmaName);
-	for (const match of registry.matches) {
+	// A component and an icon may share a name (SDS: the Tag component and the
+	// Tag icon): a library change names the component, so it wins; the icon
+	// only answers when nothing else has that name.
+	const byPreference = [
+		...registry.matches.filter((m) => m.kind !== "icon"),
+		...registry.matches.filter((m) => m.kind === "icon"),
+	];
+	for (const match of byPreference) {
 		if (match.figmaName === figmaName) return { kind: "matched", match };
 	}
 	if (normalized.length > 0) {
-		for (const match of registry.matches) {
+		for (const match of byPreference) {
 			if (normalizeName(match.figmaName) === normalized) {
 				return { kind: "matched", match };
 			}
@@ -284,7 +302,11 @@ export function mapUsage(input: MapUsageInput): ComponentUsage[] {
 	const results: ComponentUsage[] = [];
 
 	for (const figmaName of names) {
-		const resolution = resolveFigmaName(registry, figmaName);
+		const resolution = resolveFigmaName(
+			registry,
+			figmaName,
+			input.nodeIdsByName?.[figmaName],
+		);
 		if (resolution.kind !== "matched") {
 			results.push({
 				figmaName,

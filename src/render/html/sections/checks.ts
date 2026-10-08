@@ -92,7 +92,7 @@ export function systemScoreSection(
 		"System score",
 		[
 			'<div class="split">',
-			`<div class="chart center">${donutGauge(score.current, { label: "System score" })}</div>`,
+			`<div class="chart center">${donutGauge(score.current, { label: "System score", unit: "score" })}</div>`,
 			`<div class="chart">${lineChart(trendSeries, { width: WIDE_W - 170, height: 180, colors: [PALETTE[0]] })}</div>`,
 			"</div>",
 			legend,

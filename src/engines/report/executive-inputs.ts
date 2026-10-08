@@ -3,10 +3,12 @@
 // debt input out. No measurement: it only threads ALREADY-recorded signals to
 // the engines. Latest record wins per source; an absent source stays absent
 // (absent-not-zero). Never throws on malformed records or registries.
+
 import type {
 	DeprecatedUsageGroup,
 	DetachedCandidate,
 } from "../figma/library-health.js";
+import { buildParity } from "../registry/parity.js";
 import type { RegistryFile } from "../registry/persist.js";
 import type { ConsistencyInput } from "./consistency.js";
 import type { DebtInput } from "./debt.js";
@@ -64,11 +66,13 @@ export function executiveInputs(
 	) {
 		// Icons are an inventory of their own (import coverage counts them
 		// apart): a few hundred matched icons would drown the component ratio.
+		// Custom = parity's missing-in-figma: compound parts fold into their
+		// component and Code Connect recipe bases are covered, as parity counts.
 		consistency.components = {
 			matched: registry.matches.filter(
 				(m) => (m as { kind?: unknown }).kind !== "icon",
 			).length,
-			custom: registry.unmatchedCode.length,
+			custom: buildParity(registry as RegistryFile).summary.missingInFigma,
 		};
 	}
 	if (health !== undefined) {

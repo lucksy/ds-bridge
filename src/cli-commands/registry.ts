@@ -410,7 +410,7 @@ function renderBuildSummary(
 		}`,
 		`  matched:        ${registry.matches.length}`,
 		`  unmatched code: ${registry.unmatchedCode.length}`,
-		`  unmatched figma:${registry.unmatchedFigma.length}${deprecatedNote(registry)}`,
+		`  unmatched figma: ${registry.unmatchedFigma.length}${deprecatedNote(registry)}`,
 		`  parity score: ${parity.score} (${parity.ok}/${parity.total})`,
 	];
 	const ambiguities = worstAmbiguities(registry);

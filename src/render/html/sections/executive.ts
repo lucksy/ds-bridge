@@ -31,7 +31,7 @@ export function executiveSection(data: ReportData): string {
 			"Consistency",
 			exec.consistency === undefined ? undefined : String(exec.consistency),
 			exec.consistency === undefined ? undefined : toneFor(exec.consistency),
-			"on-system blend",
+			"tokens · components · overrides",
 		),
 		kpiTile(
 			"Design debt",

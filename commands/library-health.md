@@ -16,20 +16,26 @@ specific file) and has the shape:
 
 ```
 {
-  "overrideHotspots":   [ { name, nodeId, overriddenProps }, … ],
-  "deprecatedUsage":    [ { name, count, … }, … ],
+  "overrideHotspots":   [ { nodeId, name, componentName, overrideCount, fields }, … ],
+  "deprecatedUsage":    [ { componentName, count }, … ],
   "detachedCandidates": [ { nodeId, name, heuristic: true }, … ],
-  "totals": { "overrideHotspots", "deprecatedUsage", "detachedCandidates" }
+  "totals": { "overrideHotspots", "deprecatedUsage", "detachedCandidates", "placedInstances" },
+  "truncated": true   // only when a list is capped below its total
 }
 ```
 
-- **Override hotspots** — library components whose instances override many props
-  (a sign the component's API doesn't match real usage; candidates for new
-  variants/props).
+- **Override hotspots** — placed instances that override their component's
+  design (`fields`: fills, strokes, visibility…), named by their component set
+  (`componentName`). Instances inside the library's own component definitions,
+  prototype/annotation fields and private helpers (`_Note`) are not counted.
+  Group by `componentName` for "which components drift": many instances of one
+  component overriding the same fields suggests a missing variant/prop.
 - **Deprecated usage** — instances of components whose names match the
   deprecation pattern, still in use.
 - **Detached candidates** — frames that look like detached instances of a library
-  component (matched by exact name).
+  component: they carry its exact layers (`name:TYPE` of the direct children,
+  with at least one content layer), however they were renamed, or share its name
+  and most of its layers. Still a heuristic (`heuristic: true`) — verify.
 
 If the block is empty or shows an error (e.g. no `figma_file_key`/token), surface
 the error + the remedy (set `figma_file_key`, export `FIGMA_TOKEN`, or pass

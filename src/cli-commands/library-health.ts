@@ -209,6 +209,7 @@ function appendLibraryHealthHistory(
 function renderTerm(
 	report: ReturnType<typeof assessLibraryHealth>,
 	color: boolean,
+	full?: ReturnType<typeof assessLibraryHealth>,
 ): string {
 	const { totals } = report;
 	const clean =
@@ -237,22 +238,41 @@ function renderTerm(
 	const lines = [header, "", summary];
 
 	if (report.overrideHotspots.length > 0) {
-		lines.push("", "Top override hotspots:");
-		// Identical lines (the same component overridden the same way in several
-		// places) print once with a count.
-		const grouped = new Map<string, number>();
-		for (const h of report.overrideHotspots) {
-			const named =
-				h.componentName !== undefined ? ` (${h.componentName})` : "";
-			const fields =
-				h.fields !== undefined && h.fields.length > 0
-					? ` — ${h.fields.join(", ")}`
-					: "";
-			const line = `  ${h.name}${named}: ${h.overrideCount} override(s)${fields}`;
-			grouped.set(line, (grouped.get(line) ?? 0) + 1);
+		// Ranked by component across EVERY hotspot (not the first 20 instances):
+		// how many instances of it drift, and which fields they override.
+		const all = (full ?? report).overrideHotspots;
+		const byComponent = new Map<
+			string,
+			{ instances: number; fields: Set<string> }
+		>();
+		for (const h of all) {
+			const name = h.componentName ?? h.name;
+			const entry = byComponent.get(name) ?? {
+				instances: 0,
+				fields: new Set<string>(),
+			};
+			entry.instances += 1;
+			for (const f of h.fields ?? []) entry.fields.add(f);
+			byComponent.set(name, entry);
 		}
-		for (const [line, count] of grouped) {
-			lines.push(count > 1 ? `${line}  ×${count}` : line);
+		const ranked = [...byComponent]
+			.sort((a, b) =>
+				a[1].instances !== b[1].instances
+					? b[1].instances - a[1].instances
+					: a[0] < b[0]
+						? -1
+						: 1,
+			)
+			.slice(0, 10);
+		lines.push("", "Top override hotspots (by component):");
+		for (const [name, { instances, fields }] of ranked) {
+			const list = [...fields].sort().join(", ");
+			lines.push(
+				`  ${name}: ${instances} instance${instances === 1 ? "" : "s"} overridden${list !== "" ? ` — ${list}` : ""}`,
+			);
+		}
+		if (byComponent.size > ranked.length) {
+			lines.push(`  … ${byComponent.size - ranked.length} more components`);
 		}
 	}
 
@@ -271,13 +291,6 @@ function renderTerm(
 	);
 	for (const d of report.detachedCandidates) {
 		lines.push(`  ${d.name} (${d.nodeId})`);
-	}
-	const shown = report.overrideHotspots.length;
-	if (shown < totals.overrideHotspots) {
-		lines.push(
-			"",
-			`Showing the top ${shown} of ${totals.overrideHotspots} override hotspots.`,
-		);
 	}
 
 	return lines.join("\n");
@@ -431,7 +444,7 @@ async function runLibraryHealth(options: LibraryHealthOptions): Promise<void> {
 		);
 	} else {
 		const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-		process.stdout.write(`${renderTerm(report, color)}\n`);
+		process.stdout.write(`${renderTerm(report, color, full)}\n`);
 	}
 
 	process.exitCode = 0;

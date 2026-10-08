@@ -458,3 +458,24 @@ describe("resolveEntry — components composed in code (Code Connect recipes)", 
 		}
 	});
 });
+
+describe("resolveEntry — a node id in URL form", () => {
+	it("resolves 4185-3778 like 4185:3778", () => {
+		const registry: RegistryFile = {
+			schemaVersion: 1,
+			generatedAt: "2026-10-08T00:00:00.000Z",
+			matches: [
+				{
+					codeName: "Button",
+					importPath: "b.tsx",
+					figmaName: "Button",
+					nodeId: "4185:3778",
+					score: 1,
+				},
+			],
+			unmatchedCode: [],
+			unmatchedFigma: [],
+		};
+		expect(resolveEntry(registry, "4185-3778").kind).toBe("match");
+	});
+});

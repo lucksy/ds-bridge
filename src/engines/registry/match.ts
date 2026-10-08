@@ -116,8 +116,25 @@ function nameScore(codeName: string, figmaName: string): number {
 
 /** Compare variant values case- and punctuation-insensitively (`Filled` = `filled`). */
 function normValue(value: string): string {
-	return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+	const key = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+	// `lines: one | two | three` in code is Figma's `Lines: 1 | 2 | 3`.
+	return NUMBER_WORDS[key] ?? key;
 }
+
+/** Number words a variant value may spell out, as their digits. */
+const NUMBER_WORDS: Readonly<Record<string, string>> = {
+	zero: "0",
+	one: "1",
+	two: "2",
+	three: "3",
+	four: "4",
+	five: "5",
+	six: "6",
+	seven: "7",
+	eight: "8",
+	nine: "9",
+	ten: "10",
+};
 
 /**
  * Values with a namespace every one of them shares dropped: `danger-primary`,
@@ -238,8 +255,18 @@ function isConventionAxis(
 	key: string,
 	values: readonly string[],
 	codeBooleans: ReadonlySet<string>,
+	inherited: ReadonlyMap<string, readonly string[]> = new Map(),
 ): boolean {
 	if (STATE_AXIS.has(key)) return true;
+	// An inherited library prop with the same name AND overlapping values
+	// (react-aria's `placement: top | bottom …`) answers the axis; the HTML
+	// `style` / `type` never answer `Style: Filled | Tonal`.
+	const inheritedValues = inherited.get(key);
+	if (
+		inheritedValues !== undefined &&
+		valueJaccard(values, inheritedValues) > 0
+	)
+		return true;
 	if (values.length > 0 && values.every((v) => BOOLEAN_VALUE.test(v.trim())))
 		return true;
 	if (values.some((v) => codeBooleans.has(normalizeName(v)))) return true;
@@ -277,6 +304,7 @@ function pairAxes(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
 	codeBooleans: ReadonlySet<string> = new Set(),
+	inherited: ReadonlyMap<string, readonly string[]> = new Map(),
 ): { pairs: AxisPair[]; codeEmpty: boolean; figmaEmpty: boolean } {
 	const codeIndex = normalizedKeyIndex(codeVariants);
 	const figmaIndex = normalizedKeyIndex(figmaVariants);
@@ -293,7 +321,7 @@ function pairAxes(
 	for (const [key, axis] of figmaIndex) {
 		if (
 			!codeIndex.has(key) &&
-			isConventionAxis(key, axis.values, codeBooleans)
+			isConventionAxis(key, axis.values, codeBooleans, inherited)
 		) {
 			figmaIndex.delete(key);
 		}
@@ -356,11 +384,13 @@ function shapeScore(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
 	codeBooleans: ReadonlySet<string> = new Set(),
+	inherited: ReadonlyMap<string, readonly string[]> = new Map(),
 ): number {
 	const { pairs, codeEmpty, figmaEmpty } = pairAxes(
 		codeVariants,
 		figmaVariants,
 		codeBooleans,
+		inherited,
 	);
 	if (codeEmpty && figmaEmpty) return 0.5;
 	if (codeEmpty || figmaEmpty) return 0.25;
@@ -385,8 +415,14 @@ export function variantGaps(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
 	codeBooleans: ReadonlySet<string> = new Set(),
+	inherited: ReadonlyMap<string, readonly string[]> = new Map(),
 ): string[] {
-	const { pairs } = pairAxes(codeVariants, figmaVariants, codeBooleans);
+	const { pairs } = pairAxes(
+		codeVariants,
+		figmaVariants,
+		codeBooleans,
+		inherited,
+	);
 	const codeKeyed: { key: string; line: string }[] = [];
 	const figmaOnly: { key: string; line: string }[] = [];
 	for (const { code, figma } of pairs) {
@@ -426,15 +462,22 @@ export function variantGaps(
 	);
 }
 
+/** A code component's inherited string-union props, keyed by normalized name. */
+function inheritedAxes(component: CodeComponent): Map<string, string[]> {
+	return new Map(
+		Object.entries(component.inherited ?? {}).map(([name, values]) => [
+			normalizeName(name),
+			values,
+		]),
+	);
+}
+
 /**
  * A code component's boolean props, normalized, with any `is` / `has` /
  * `show` prefix dropped too (`isSelected` → `isselected` and `selected`).
  */
 function booleanProps(component: CodeComponent): Set<string> {
 	const out = new Set<string>();
-	// Props the component inherits from a library type (react-aria's
-	// `placement`) are its API too: a Figma axis of that name is no gap.
-	for (const name of component.inherited ?? []) out.add(normalizeName(name));
 	for (const prop of component.props ?? []) {
 		if (prop.type !== "boolean") continue;
 		const key = normalizeName(prop.name);
@@ -494,6 +537,7 @@ function scorePair(
 		codeComponent.variants,
 		figmaModel.variantProps,
 		booleanProps(codeComponent),
+		inheritedAxes(codeComponent),
 	);
 	return {
 		nameScore: name,
@@ -633,6 +677,7 @@ export function matchComponents(
 			codeComponent.variants,
 			figmaModel.variantProps,
 			booleans,
+			inheritedAxes(codeComponent),
 		);
 		matchedCode.add(c);
 		matchedFigma.add(primary);
@@ -647,6 +692,7 @@ export function matchComponents(
 				codeComponent.variants,
 				figmaModel.variantProps,
 				booleans,
+				inheritedAxes(codeComponent),
 			),
 		});
 	}
@@ -733,6 +779,7 @@ export function matchComponents(
 				codeComponent.variants,
 				figmaModel.variantProps,
 				booleanProps(codeComponent),
+				inheritedAxes(codeComponent),
 			),
 		});
 	}

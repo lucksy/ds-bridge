@@ -146,7 +146,7 @@ describe("renderTerminalDashboard", () => {
 			OPTS,
 		);
 		expect(out).toContain("System score");
-		expect(out).toContain("76%");
+		expect(out).toContain("76/100");
 		expect(out).not.toContain("No data yet");
 	});
 

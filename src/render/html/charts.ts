@@ -49,6 +49,8 @@ export interface DonutGaugeOptions {
 	label?: string;
 	/** The arc's colour; banded by value (ok ≥ 80, warn ≥ 50, else error) when absent. */
 	color?: string;
+	/** "score" titles the gauge `76/100` (a score is not a percentage). */
+	unit?: "percent" | "score";
 }
 
 /** A heat-grid cell. `intensity` is clamped to [0, 1] when rendered. */
@@ -456,7 +458,7 @@ export function donutGauge(
 	const color = opts.color ?? bandColor(clamped);
 
 	const labelText = opts.label !== undefined ? `${opts.label}: ` : "";
-	const title = `${labelText}${display}%`;
+	const title = `${labelText}${display}${opts.unit === "score" ? "/100" : "%"}`;
 
 	return [
 		svgOpen(size, size),

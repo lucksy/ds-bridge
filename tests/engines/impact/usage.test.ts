@@ -372,3 +372,53 @@ describe("mapCodeUsage — documentation files are not adoption", () => {
 		expect(usage?.count).toBe(0);
 	});
 });
+
+describe("mapUsage — a component and an icon share a name (Simple Design System)", () => {
+	it("maps a changed Figma component to the component, not the same-named icon", async () => {
+		const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const { join: j } = await import("node:path");
+		const dir = mkdtempSync(j(tmpdir(), "usage-icon-"));
+		mkdirSync(j(dir, "src", "ui", "icons"), { recursive: true });
+		writeFileSync(
+			j(dir, "src", "ui", "Tag.tsx"),
+			"export function Tag() { return null; }",
+		);
+		writeFileSync(
+			j(dir, "src", "ui", "icons", "IconTag.tsx"),
+			"export function IconTag() { return null; }",
+		);
+		writeFileSync(
+			j(dir, "src", "Page.tsx"),
+			'import { Tag } from "./ui/Tag";\nexport const P = () => <Tag />;',
+		);
+		const [usage] = mapUsage({
+			registry: {
+				schemaVersion: 1,
+				generatedAt: "2026-10-08T00:00:00.000Z",
+				matches: [
+					{
+						codeName: "IconTag",
+						importPath: "src/ui/icons/IconTag.tsx",
+						figmaName: "Tag",
+						nodeId: "4039:1",
+						score: 1,
+						kind: "icon",
+					},
+					{
+						codeName: "Tag",
+						importPath: "src/ui/Tag.tsx",
+						figmaName: "Tag",
+						nodeId: "56:8830",
+						score: 1,
+					},
+				],
+				unmatchedCode: [],
+				unmatchedFigma: [],
+			},
+			changedFigmaNames: ["Tag"],
+			projectDir: dir,
+		});
+		expect(usage).toMatchObject({ codeName: "Tag", count: 1 });
+	});
+});
