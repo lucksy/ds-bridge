@@ -65,22 +65,41 @@ function fileMtimeMs(path) {
 	}
 }
 
+/** Token files a set may hold: *.json, and *.json5 (Style Dictionary v4, Primer). */
+const TOKEN_FILE = /\.json5?$/;
+
 /**
- * Newest mtime of the *.json files directly inside `dir` — a multi-file token
- * set (Material's md.ref / md.sys.color.light / …dark files). One readdir, no
- * walk. undefined when `dir` is not a directory or holds fewer than two.
+ * Newest mtime of the token files in `dir` and its sub-folders (Material's
+ * flat md.ref / md.sys.color.light files, Primer's nested
+ * tokens/base/color/light/*.json5). A bounded walk — at most 200 files, 4
+ * levels — keeps the probe cheap. undefined when `dir` is not a directory or
+ * holds fewer than two.
  */
 function tokenSetMtimeMs(dir) {
-	let names;
-	try {
-		names = readdirSync(dir).filter((n) => n.endsWith(".json"));
-	} catch {
-		return undefined;
-	}
-	if (names.length < 2) return undefined;
+	const files = [];
+	const walk = (current, depth) => {
+		if (depth > 4 || files.length >= 200) return;
+		let entries;
+		try {
+			entries = readdirSync(current, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const entry of entries) {
+			if (entry.isDirectory()) {
+				if (entry.name !== "node_modules" && !entry.name.startsWith(".")) {
+					walk(join(current, entry.name), depth + 1);
+				}
+			} else if (TOKEN_FILE.test(entry.name)) {
+				files.push(join(current, entry.name));
+			}
+		}
+	};
+	walk(dir, 0);
+	if (files.length < 2) return undefined;
 	let newest;
-	for (const name of names) {
-		const ms = fileMtimeMs(join(dir, name));
+	for (const file of files) {
+		const ms = fileMtimeMs(file);
 		if (ms !== undefined && (newest === undefined || ms > newest)) newest = ms;
 	}
 	return newest;

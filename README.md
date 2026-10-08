@@ -178,7 +178,7 @@ When you enable the plugin, Claude Code prompts for these options natively (no
 |---|---|---|---|
 | `figma_file_key` | string | — | Key from your Figma **library file** URL (`…/file/<KEY>/…`). Used by `registry build` and any library-wide audit. |
 | `figma_token` | string · **sensitive** | — | Figma personal access token. ⚠️ Claude Code does **not** persist this across restarts ([#62442](https://github.com/anthropics/claude-code/issues/62442)) — set it once, then run `/ds-bridge:connect` to save it durably. See PAT guidance below. |
-| `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file — or a folder of token files read as one set (cross-file aliases resolve; `*.light.*` / `*.dark.*` files or `light/` / `dark/` folders become modes, as in Material 3). If unset, DS Bridge discovers it from common paths, and `tokens check` prints which source it used. |
+| `token_source` | file | auto-detected | Your W3C / Tokens Studio / Style Dictionary entry file (`.json` or `.json5`) — or a folder of token files read as one set, nested folders included (cross-file aliases resolve; `*.light.*` / `*.dark.*` files or `light/` / `dark/` folders become modes, as in Material 3; theme variants such as `light.high-contrast` / `dark.dimmed` build on their base mode, as in GitHub Primer). DTCG 2025 values (color objects, `{value, unit}` dimensions), per-mode `$extensions` overrides (`org.primer.overrides`) and a token-level `alpha` are read. If unset, DS Bridge discovers it from common paths, and `tokens check` prints which source it used. |
 | `report_style` | string | `both` | Report output: `html`, `terminal`, or `both`. |
 | `readiness_threshold` | number (0–100) | `80` | The handoff-readiness gate `/ds-bridge:handoff-qa` must clear for a frame to pass. |
 | `insights_palette` | string | `harvest` | Chart colours in the [insights pane](#insights-pane-claude-code-mod): `harvest` (autumn berry, olive, mustard, burnt orange, khaki, sage), `nivo`, `echarts`, `ds-bridge` or `mono`. |
@@ -236,6 +236,12 @@ committed `.ds-bridge.json` and the whole team shares them.
   `components.json` (`aliases.ui`, resolved through the tsconfig paths); otherwise
   the whole project is scanned. The build summary prints which it used. Compound
   parts (`CardHeader` beside `Card`) fold into their parent's parity row.
+- **Components from a design-system package:** when your code imports the
+  library's components from npm (`import { Button } from "@primer/react"`), a
+  Figma component no local file implements is matched to the package component
+  of the same name. Its props and variant axes come from the package's own
+  typings, so parity, import coverage, `impact` call sites and `docs` all work
+  without a local wrapper.
 - **Check what resolved:** `ds-bridge config show` prints the effective config
   (token masked) and **which source won** each value — flag, env, `.ds-bridge.env`,
   or `.ds-bridge.json`.
@@ -254,7 +260,7 @@ that runs the CLI and interprets its `--format=json` output. The CLI exits
 |---|---|---|---|
 | `/ds-bridge:connect` | `ds-bridge config persist-token` | Save your Figma token from the session into a gitignored `.ds-bridge.env` (`0600`) so it survives restarts — the durable fix for [#62442](https://github.com/anthropics/claude-code/issues/62442). Run it once after setting the token. | 0 saved · 2 no token in env |
 | `/ds-bridge:ds-lint [--fix] [path]` | `ds-bridge lint [path] [--fix] [--format] [--tokens] [--changed]` | Find hardcoded values that should be design tokens — colors, spacing, and corner radii (radius literals only when the token set has a radius / corner scale). Generated token outputs are skipped. `--fix` rewrites **exact** matches only (never near-misses). | 0 clean · 1 violations · 2 error |
-| `/ds-bridge:token-check [--report] [path]` | `ds-bridge tokens check [path] [--report] [--tokens] [--outputs] [--format]` | Detect drift between the token source and built outputs (stale / missing / orphan); `--report` writes the dashboard. | 0 in-sync · 1 drift · 2 error |
+| `/ds-bridge:token-check [--report] [path]` | `ds-bridge tokens check [path] [--report] [--tokens] [--outputs] [--format]` | Detect drift between the token source and built outputs (stale / missing / orphan); `--report` writes the dashboard. Outputs that reference other outputs (`var(--…)`, Style Dictionary `outputReferences`) are resolved before comparing; a primitive layer the build never emits but reaches through aliases (Primer's `base.color.*`) is reported once as *not built by design*. | 0 in-sync · 1 drift · 2 error |
 | `/ds-bridge:dashboard [--setup] [path]` | `ds-bridge report [path] [--view] [--open] [--out] [--no-timeline]` | Render the offline HTML dashboard from `.ds-bridge/history.jsonl`; `--open` launches the browser; `--setup` composes a persona view (`--view exec` is the leadership view). The header timeline shows the whole dashboard as it was at the end of each earlier day with records (newest 11 days + Now; script-free); `--no-timeline` leaves it out for a smaller file. Snapshots never carry it. | 0 ok · 2 error |
 | `/ds-bridge:record [--figma] [path]` | `ds-bridge record [path] [--figma] [--library-top <n>] [--source] [--format]` | Run every configured check as one batch (shared `runId`) and store the system score; skipped checks name the command that un-skips them. | 0 recorded · 2 internal error |
 | `/ds-bridge:analytics` | `ds-bridge analytics [path] [--format]` | The analytics headline (health · adoption · consistency · debt + per-domain status), then the full fan-out report, prioritized fixes, the manager one-pager (`report --format exec`) or the JSON artifacts (`analytics --emit all`). | 0 ok · 2 error |

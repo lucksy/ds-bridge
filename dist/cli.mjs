@@ -741,8 +741,8 @@ ${itemIndentStr}`);
         const rawLines = str3.split(/\r\n|\n/);
         const chunkPattern = /[\s]*[^\s]+/g;
         const wrappedLines = [];
-        rawLines.forEach((line) => {
-          const chunks = line.match(chunkPattern);
+        rawLines.forEach((line2) => {
+          const chunks = line2.match(chunkPattern);
           if (chunks === null) {
             wrappedLines.push("");
             return;
@@ -1019,9 +1019,9 @@ var require_option = __commonJS({
             this.positiveOptions.set(option.attributeName(), option);
           }
         });
-        this.negativeOptions.forEach((value2, key) => {
-          if (this.positiveOptions.has(key)) {
-            this.dualOptions.add(key);
+        this.negativeOptions.forEach((value2, key2) => {
+          if (this.positiveOptions.has(key2)) {
+            this.dualOptions.add(key2);
           }
         });
       }
@@ -1954,11 +1954,11 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} key
        * @return {object} value
        */
-      getOptionValue(key) {
+      getOptionValue(key2) {
         if (this._storeOptionsAsProperties) {
-          return this[key];
+          return this[key2];
         }
-        return this._optionValues[key];
+        return this._optionValues[key2];
       }
       /**
        * Store option value.
@@ -1967,8 +1967,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {object} value
        * @return {Command} `this` command for chaining
        */
-      setOptionValue(key, value2) {
-        return this.setOptionValueWithSource(key, value2, void 0);
+      setOptionValue(key2, value2) {
+        return this.setOptionValueWithSource(key2, value2, void 0);
       }
       /**
        * Store option value and where the value came from.
@@ -1978,13 +1978,13 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} source - expected values are default/config/env/cli/implied
        * @return {Command} `this` command for chaining
        */
-      setOptionValueWithSource(key, value2, source) {
+      setOptionValueWithSource(key2, value2, source2) {
         if (this._storeOptionsAsProperties) {
-          this[key] = value2;
+          this[key2] = value2;
         } else {
-          this._optionValues[key] = value2;
+          this._optionValues[key2] = value2;
         }
-        this._optionValueSources[key] = source;
+        this._optionValueSources[key2] = source2;
         return this;
       }
       /**
@@ -1994,8 +1994,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} key
        * @return {string}
        */
-      getOptionValueSource(key) {
-        return this._optionValueSources[key];
+      getOptionValueSource(key2) {
+        return this._optionValueSources[key2];
       }
       /**
        * Get source of option value. See also .optsWithGlobals().
@@ -2004,14 +2004,14 @@ Expecting one of '${allowedValues.join("', '")}'`);
        * @param {string} key
        * @return {string}
        */
-      getOptionValueSourceWithGlobals(key) {
-        let source;
+      getOptionValueSourceWithGlobals(key2) {
+        let source2;
         this._getCommandAndAncestors().forEach((cmd) => {
-          if (cmd.getOptionValueSource(key) !== void 0) {
-            source = cmd.getOptionValueSource(key);
+          if (cmd.getOptionValueSource(key2) !== void 0) {
+            source2 = cmd.getOptionValueSource(key2);
           }
         });
-        return source;
+        return source2;
       }
       /**
        * Get user arguments from implied or explicit arguments.
@@ -2734,8 +2734,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
           const result = {};
           const len = this.options.length;
           for (let i = 0; i < len; i++) {
-            const key = this.options[i].attributeName();
-            result[key] = key === this._versionOptionName ? this._version : this[key];
+            const key2 = this.options[i].attributeName();
+            result[key2] = key2 === this._versionOptionName ? this._version : this[key2];
           }
           return result;
         }
@@ -2880,8 +2880,8 @@ Expecting one of '${allowedValues.join("', '")}'`);
         const getErrorMessage = (option2) => {
           const bestOption = findBestOptionFromValue(option2);
           const optionKey = bestOption.attributeName();
-          const source = this.getOptionValueSource(optionKey);
-          if (source === "env") {
+          const source2 = this.getOptionValueSource(optionKey);
+          if (source2 === "env") {
             return `environment variable '${bestOption.envVar}'`;
           }
           return `option '${bestOption.flags}'`;
@@ -3536,7 +3536,7 @@ var {
 
 // src/cli-commands/a11y.ts
 import { existsSync as existsSync2, statSync as statSync3 } from "fs";
-import { join as join3, resolve as resolve3 } from "path";
+import { join as join3, resolve as resolve2 } from "path";
 
 // node_modules/culori/src/rgb/parseNumber.js
 var parseNumber = (color, len) => {
@@ -4083,15 +4083,15 @@ function tokenize(str3 = "") {
 }
 function parseColorSyntax(tokens) {
   tokens._i = 0;
-  let token = tokens[tokens._i++];
-  if (!token || token.type !== Tok.Function || token.value !== "color") {
+  let token2 = tokens[tokens._i++];
+  if (!token2 || token2.type !== Tok.Function || token2.value !== "color") {
     return void 0;
   }
-  token = tokens[tokens._i++];
-  if (token.type !== Tok.Ident) {
+  token2 = tokens[tokens._i++];
+  if (token2.type !== Tok.Ident) {
     return void 0;
   }
-  const mode = colorProfiles[token.value];
+  const mode = colorProfiles[token2.value];
   if (!mode) {
     return void 0;
   }
@@ -4101,11 +4101,11 @@ function parseColorSyntax(tokens) {
     return void 0;
   }
   const channels = getMode(mode).channels;
-  for (let ii = 0, c2, ch; ii < channels.length; ii++) {
-    c2 = coords[ii];
+  for (let ii = 0, c3, ch; ii < channels.length; ii++) {
+    c3 = coords[ii];
     ch = channels[ii];
-    if (c2.type !== Tok.None) {
-      res[ch] = c2.type === Tok.Number ? c2.value : c2.value / 100;
+    if (c3.type !== Tok.None) {
+      res[ch] = c3.type === Tok.Number ? c3.value : c3.value / 100;
       if (ch === "alpha") {
         res[ch] = Math.max(0, Math.min(1, res[ch]));
       }
@@ -4115,14 +4115,14 @@ function parseColorSyntax(tokens) {
 }
 function consumeCoords(tokens, includeHue) {
   const coords = [];
-  let token;
+  let token2;
   while (tokens._i < tokens.length) {
-    token = tokens[tokens._i++];
-    if (token.type === Tok.None || token.type === Tok.Number || token.type === Tok.Alpha || token.type === Tok.Percentage || includeHue && token.type === Tok.Hue) {
-      coords.push(token);
+    token2 = tokens[tokens._i++];
+    if (token2.type === Tok.None || token2.type === Tok.Number || token2.type === Tok.Alpha || token2.type === Tok.Percentage || includeHue && token2.type === Tok.Hue) {
+      coords.push(token2);
       continue;
     }
-    if (token.type === Tok.ParenClose) {
+    if (token2.type === Tok.ParenClose) {
       if (tokens._i < tokens.length) {
         return void 0;
       }
@@ -4142,19 +4142,19 @@ function consumeCoords(tokens, includeHue) {
   if (coords.length === 3) {
     coords.push({ type: Tok.None, value: void 0 });
   }
-  return coords.every((c2) => c2.type !== Tok.Alpha) ? coords : void 0;
+  return coords.every((c3) => c3.type !== Tok.Alpha) ? coords : void 0;
 }
 function parseModernSyntax(tokens, includeHue) {
   tokens._i = 0;
-  let token = tokens[tokens._i++];
-  if (!token || token.type !== Tok.Function) {
+  let token2 = tokens[tokens._i++];
+  if (!token2 || token2.type !== Tok.Function) {
     return void 0;
   }
   let coords = consumeCoords(tokens, includeHue);
   if (!coords) {
     return void 0;
   }
-  coords.unshift(token.value);
+  coords.unshift(token2.value);
   return coords;
 }
 var parse = (color) => {
@@ -4208,7 +4208,7 @@ function parseRgb(color, parsed) {
 var parseRgb_default = parseRgb;
 
 // node_modules/culori/src/rgb/parseTransparent.js
-var parseTransparent = (c2) => c2 === "transparent" ? { mode: "rgb", r: 0, g: 0, b: 0, alpha: 0 } : void 0;
+var parseTransparent = (c3) => c3 === "transparent" ? { mode: "rgb", r: 0, g: 0, b: 0, alpha: 0 } : void 0;
 var parseTransparent_default = parseTransparent;
 
 // node_modules/culori/src/interpolate/lerp.js
@@ -4326,12 +4326,12 @@ var convertXyz65ToA98 = ({ x, y, z, alpha }) => {
 var convertXyz65ToA98_default = convertXyz65ToA98;
 
 // node_modules/culori/src/lrgb/convertRgbToLrgb.js
-var fn = (c2 = 0) => {
-  const abs2 = Math.abs(c2);
+var fn = (c3 = 0) => {
+  const abs2 = Math.abs(c3);
   if (abs2 <= 0.04045) {
-    return c2 / 12.92;
+    return c3 / 12.92;
   }
-  return (Math.sign(c2) || 1) * Math.pow((abs2 + 0.055) / 1.055, 2.4);
+  return (Math.sign(c3) || 1) * Math.pow((abs2 + 0.055) / 1.055, 2.4);
 };
 var convertRgbToLrgb = ({ r: r2, g, b, alpha }) => {
   let res = {
@@ -4362,12 +4362,12 @@ var convertRgbToXyz65 = (rgb3) => {
 var convertRgbToXyz65_default = convertRgbToXyz65;
 
 // node_modules/culori/src/lrgb/convertLrgbToRgb.js
-var fn2 = (c2 = 0) => {
-  const abs2 = Math.abs(c2);
+var fn2 = (c3 = 0) => {
+  const abs2 = Math.abs(c3);
   if (abs2 > 31308e-7) {
-    return (Math.sign(c2) || 1) * (1.055 * Math.pow(abs2, 1 / 2.4) - 0.055);
+    return (Math.sign(c3) || 1) * (1.055 * Math.pow(abs2, 1 / 2.4) - 0.055);
   }
-  return c2 * 12.92;
+  return c3 * 12.92;
 };
 var convertLrgbToRgb = ({ r: r2, g, b, alpha }, mode = "rgb") => {
   let res = {
@@ -4628,22 +4628,22 @@ var definition_default3 = definition3;
 var convertLabToLch = ({ l, a, b, alpha }, mode = "lch") => {
   if (a === void 0) a = 0;
   if (b === void 0) b = 0;
-  let c2 = Math.sqrt(a * a + b * b);
-  let res = { mode, l, c: c2 };
-  if (c2) res.h = normalizeHue_default(Math.atan2(b, a) * 180 / Math.PI);
+  let c3 = Math.sqrt(a * a + b * b);
+  let res = { mode, l, c: c3 };
+  if (c3) res.h = normalizeHue_default(Math.atan2(b, a) * 180 / Math.PI);
   if (alpha !== void 0) res.alpha = alpha;
   return res;
 };
 var convertLabToLch_default = convertLabToLch;
 
 // node_modules/culori/src/lch/convertLchToLab.js
-var convertLchToLab = ({ l, c: c2, h, alpha }, mode = "lab") => {
+var convertLchToLab = ({ l, c: c3, h, alpha }, mode = "lab") => {
   if (h === void 0) h = 0;
   let res = {
     mode,
     l,
-    a: c2 ? c2 * Math.cos(h / 180 * Math.PI) : 0,
-    b: c2 ? c2 * Math.sin(h / 180 * Math.PI) : 0
+    a: c3 ? c3 * Math.cos(h / 180 * Math.PI) : 0,
+    b: c3 ? c3 * Math.sin(h / 180 * Math.PI) : 0
   };
   if (alpha !== void 0) res.alpha = alpha;
   return res;
@@ -4735,15 +4735,15 @@ var sin\u03B8 = Math.sin(\u03B8);
 var factor = 100 / Math.log(139 / 100);
 
 // node_modules/culori/src/dlch/convertDlchToLab65.js
-var convertDlchToLab65 = ({ l, c: c2, h, alpha }) => {
+var convertDlchToLab65 = ({ l, c: c3, h, alpha }) => {
   if (l === void 0) l = 0;
-  if (c2 === void 0) c2 = 0;
+  if (c3 === void 0) c3 = 0;
   if (h === void 0) h = 0;
   let res = {
     mode: "lab65",
     l: (Math.exp(l * kE / factor) - 1) / 39e-4
   };
-  let G = (Math.exp(0.0435 * c2 * kCH * kE) - 1) / 0.075;
+  let G = (Math.exp(0.0435 * c3 * kCH * kE) - 1) / 0.075;
   let e4 = G * Math.cos(h / 180 * Math.PI - \u03B8);
   let f3 = G * Math.sin(h / 180 * Math.PI - \u03B8);
   res.a = e4 * cos\u03B8 - f3 / 0.83 * sin\u03B8;
@@ -4775,19 +4775,19 @@ var convertLab65ToDlch = ({ l, a, b, alpha }) => {
 var convertLab65ToDlch_default = convertLab65ToDlch;
 
 // node_modules/culori/src/dlab/definition.js
-var convertDlabToLab65 = (c2) => convertDlchToLab65_default(convertLabToLch_default(c2, "dlch"));
-var convertLab65ToDlab = (c2) => convertLchToLab_default(convertLab65ToDlch_default(c2), "dlab");
+var convertDlabToLab65 = (c3) => convertDlchToLab65_default(convertLabToLch_default(c3, "dlch"));
+var convertLab65ToDlab = (c3) => convertLchToLab_default(convertLab65ToDlch_default(c3), "dlab");
 var definition4 = {
   mode: "dlab",
   parse: ["--din99o-lab"],
   serialize: "--din99o-lab",
   toMode: {
     lab65: convertDlabToLab65,
-    rgb: (c2) => convertLab65ToRgb_default(convertDlabToLab65(c2))
+    rgb: (c3) => convertLab65ToRgb_default(convertDlabToLab65(c3))
   },
   fromMode: {
     lab65: convertLab65ToDlab,
-    rgb: (c2) => convertLab65ToDlab(convertRgbToLab65_default(c2))
+    rgb: (c3) => convertLab65ToDlab(convertRgbToLab65_default(c3))
   },
   channels: ["l", "a", "b", "alpha"],
   ranges: {
@@ -4814,13 +4814,13 @@ var definition5 = {
   serialize: "--din99o-lch",
   toMode: {
     lab65: convertDlchToLab65_default,
-    dlab: (c2) => convertLchToLab_default(c2, "dlab"),
-    rgb: (c2) => convertLab65ToRgb_default(convertDlchToLab65_default(c2))
+    dlab: (c3) => convertLchToLab_default(c3, "dlab"),
+    rgb: (c3) => convertLab65ToRgb_default(convertDlchToLab65_default(c3))
   },
   fromMode: {
     lab65: convertLab65ToDlch_default,
-    dlab: (c2) => convertLabToLch_default(c2, "dlch"),
-    rgb: (c2) => convertLab65ToDlch_default(convertRgbToLab65_default(c2))
+    dlab: (c3) => convertLabToLch_default(c3, "dlch"),
+    rgb: (c3) => convertLab65ToDlch_default(convertRgbToLab65_default(c3))
   },
   channels: ["l", "c", "h", "alpha"],
   ranges: {
@@ -5103,7 +5103,7 @@ var definition7 = {
   },
   gamut: "rgb",
   parse: [parseHsl_default, parseHslLegacy_default],
-  serialize: (c2) => `hsl(${c2.h !== void 0 ? c2.h : "none"} ${c2.s !== void 0 ? c2.s * 100 + "%" : "none"} ${c2.l !== void 0 ? c2.l * 100 + "%" : "none"}${c2.alpha < 1 ? ` / ${c2.alpha}` : ""})`,
+  serialize: (c3) => `hsl(${c3.h !== void 0 ? c3.h : "none"} ${c3.s !== void 0 ? c3.s * 100 + "%" : "none"} ${c3.l !== void 0 ? c3.l * 100 + "%" : "none"}${c3.alpha < 1 ? ` / ${c3.alpha}` : ""})`,
   interpolate: {
     h: { use: interpolatorLinear, fixup: fixupHueShorter },
     s: interpolatorLinear,
@@ -5287,7 +5287,7 @@ var definition9 = {
   },
   gamut: "rgb",
   parse: [parseHwb_default],
-  serialize: (c2) => `hwb(${c2.h !== void 0 ? c2.h : "none"} ${c2.w !== void 0 ? c2.w * 100 + "%" : "none"} ${c2.b !== void 0 ? c2.b * 100 + "%" : "none"}${c2.alpha < 1 ? ` / ${c2.alpha}` : ""})`,
+  serialize: (c3) => `hwb(${c3.h !== void 0 ? c3.h : "none"} ${c3.w !== void 0 ? c3.w * 100 + "%" : "none"} ${c3.b !== void 0 ? c3.b * 100 + "%" : "none"}${c3.alpha < 1 ? ` / ${c3.alpha}` : ""})`,
   interpolate: {
     h: { use: interpolatorLinear, fixup: fixupHueShorter },
     w: interpolatorLinear,
@@ -5314,17 +5314,17 @@ var C2 = 18.8515625;
 var C3 = 18.6875;
 function transferPqDecode(v) {
   if (v < 0) return 0;
-  const c2 = Math.pow(v, 1 / M2);
-  return 1e4 * Math.pow(Math.max(0, c2 - C1) / (C2 - C3 * c2), 1 / M1);
+  const c3 = Math.pow(v, 1 / M2);
+  return 1e4 * Math.pow(Math.max(0, c3 - C1) / (C2 - C3 * c3), 1 / M1);
 }
 function transferPqEncode(v) {
   if (v < 0) return 0;
-  const c2 = Math.pow(v / 1e4, M1);
-  return Math.pow((C1 + C2 * c2) / (1 + C3 * c2), M2);
+  const c3 = Math.pow(v / 1e4, M1);
+  return Math.pow((C1 + C2 * c3) / (1 + C3 * c3), M2);
 }
 
 // node_modules/culori/src/itp/convertItpToXyz65.js
-var toRel = (c2) => Math.max(c2 / YW, 0);
+var toRel = (c3) => Math.max(c3 / YW, 0);
 var convertItpToXyz65 = ({ i, t, p: p4, alpha }) => {
   if (i === void 0) i = 0;
   if (t === void 0) t = 0;
@@ -5358,7 +5358,7 @@ var convertItpToXyz65 = ({ i, t, p: p4, alpha }) => {
 var convertItpToXyz65_default = convertItpToXyz65;
 
 // node_modules/culori/src/itp/convertXyz65ToItp.js
-var toAbs = (c2 = 0) => Math.max(c2 * YW, 0);
+var toAbs = (c3 = 0) => Math.max(c3 * YW, 0);
 var convertXyz65ToItp = ({ x, y, z, alpha }) => {
   const absX = toAbs(x);
   const absY = toAbs(y);
@@ -5523,13 +5523,13 @@ var definition_default11 = definition11;
 var convertJabToJch = ({ j, a, b, alpha }) => {
   if (a === void 0) a = 0;
   if (b === void 0) b = 0;
-  let c2 = Math.sqrt(a * a + b * b);
+  let c3 = Math.sqrt(a * a + b * b);
   let res = {
     mode: "jch",
     j,
-    c: c2
+    c: c3
   };
-  if (c2) {
+  if (c3) {
     res.h = normalizeHue_default(Math.atan2(b, a) * 180 / Math.PI);
   }
   if (alpha !== void 0) {
@@ -5540,13 +5540,13 @@ var convertJabToJch = ({ j, a, b, alpha }) => {
 var convertJabToJch_default = convertJabToJch;
 
 // node_modules/culori/src/jch/convertJchToJab.js
-var convertJchToJab = ({ j, c: c2, h, alpha }) => {
+var convertJchToJab = ({ j, c: c3, h, alpha }) => {
   if (h === void 0) h = 0;
   let res = {
     mode: "jab",
     j,
-    a: c2 ? c2 * Math.cos(h / 180 * Math.PI) : 0,
-    b: c2 ? c2 * Math.sin(h / 180 * Math.PI) : 0
+    a: c3 ? c3 * Math.cos(h / 180 * Math.PI) : 0,
+    b: c3 ? c3 * Math.sin(h / 180 * Math.PI) : 0
   };
   if (alpha !== void 0) res.alpha = alpha;
   return res;
@@ -5560,10 +5560,10 @@ var definition12 = {
   serialize: "--jzczhz",
   toMode: {
     jab: convertJchToJab_default,
-    rgb: (c2) => convertJabToRgb_default(convertJchToJab_default(c2))
+    rgb: (c3) => convertJabToRgb_default(convertJchToJab_default(c3))
   },
   fromMode: {
-    rgb: (c2) => convertJabToJch_default(convertRgbToJab_default(c2)),
+    rgb: (c3) => convertJabToJch_default(convertRgbToJab_default(c3)),
     jab: convertJabToJch_default
   },
   channels: ["j", "c", "h", "alpha"],
@@ -5732,7 +5732,7 @@ var definition13 = {
     b: [-125, 125]
   },
   parse: [parseLab_default],
-  serialize: (c2) => `lab(${c2.l !== void 0 ? c2.l : "none"} ${c2.a !== void 0 ? c2.a : "none"} ${c2.b !== void 0 ? c2.b : "none"}${c2.alpha < 1 ? ` / ${c2.alpha}` : ""})`,
+  serialize: (c3) => `lab(${c3.l !== void 0 ? c3.l : "none"} ${c3.a !== void 0 ? c3.a : "none"} ${c3.b !== void 0 ? c3.b : "none"}${c3.alpha < 1 ? ` / ${c3.alpha}` : ""})`,
   interpolate: {
     l: interpolatorLinear,
     a: interpolatorLinear,
@@ -5770,17 +5770,17 @@ function parseLch(color, parsed) {
     return void 0;
   }
   const res = { mode: "lch" };
-  const [, l, c2, h, alpha] = parsed;
+  const [, l, c3, h, alpha] = parsed;
   if (l.type !== Tok.None) {
     if (l.type === Tok.Hue) {
       return void 0;
     }
     res.l = Math.min(Math.max(0, l.value), 100);
   }
-  if (c2.type !== Tok.None) {
+  if (c3.type !== Tok.None) {
     res.c = Math.max(
       0,
-      c2.type === Tok.Number ? c2.value : c2.value * 150 / 100
+      c3.type === Tok.Number ? c3.value : c3.value * 150 / 100
     );
   }
   if (h.type !== Tok.None) {
@@ -5807,10 +5807,10 @@ var definition15 = {
   mode: "lch",
   toMode: {
     lab: convertLchToLab_default,
-    rgb: (c2) => convertLabToRgb_default(convertLchToLab_default(c2))
+    rgb: (c3) => convertLabToRgb_default(convertLchToLab_default(c3))
   },
   fromMode: {
-    rgb: (c2) => convertLabToLch_default(convertRgbToLab_default(c2)),
+    rgb: (c3) => convertLabToLch_default(convertRgbToLab_default(c3)),
     lab: convertLabToLch_default
   },
   channels: ["l", "c", "h", "alpha"],
@@ -5820,7 +5820,7 @@ var definition15 = {
     h: [0, 360]
   },
   parse: [parseLch_default],
-  serialize: (c2) => `lch(${c2.l !== void 0 ? c2.l : "none"} ${c2.c !== void 0 ? c2.c : "none"} ${c2.h !== void 0 ? c2.h : "none"}${c2.alpha < 1 ? ` / ${c2.alpha}` : ""})`,
+  serialize: (c3) => `lch(${c3.l !== void 0 ? c3.l : "none"} ${c3.c !== void 0 ? c3.c : "none"} ${c3.h !== void 0 ? c3.h : "none"}${c3.alpha < 1 ? ` / ${c3.alpha}` : ""})`,
   interpolate: {
     h: { use: interpolatorLinear, fixup: fixupHueShorter },
     c: interpolatorLinear,
@@ -5843,12 +5843,12 @@ var definition16 = {
   parse: ["--lch-d65"],
   serialize: "--lch-d65",
   toMode: {
-    lab65: (c2) => convertLchToLab_default(c2, "lab65"),
-    rgb: (c2) => convertLab65ToRgb_default(convertLchToLab_default(c2, "lab65"))
+    lab65: (c3) => convertLchToLab_default(c3, "lab65"),
+    rgb: (c3) => convertLab65ToRgb_default(convertLchToLab_default(c3, "lab65"))
   },
   fromMode: {
-    rgb: (c2) => convertLabToLch_default(convertRgbToLab65_default(c2), "lch65"),
-    lab65: (c2) => convertLabToLch_default(c2, "lch65")
+    rgb: (c3) => convertLabToLch_default(convertRgbToLab65_default(c3), "lch65"),
+    lab65: (c3) => convertLabToLch_default(c3, "lch65")
   },
   ranges: {
     l: [0, 100],
@@ -5862,13 +5862,13 @@ var definition_default16 = definition16;
 var convertLuvToLchuv = ({ l, u, v, alpha }) => {
   if (u === void 0) u = 0;
   if (v === void 0) v = 0;
-  let c2 = Math.sqrt(u * u + v * v);
+  let c3 = Math.sqrt(u * u + v * v);
   let res = {
     mode: "lchuv",
     l,
-    c: c2
+    c: c3
   };
-  if (c2) {
+  if (c3) {
     res.h = normalizeHue_default(Math.atan2(v, u) * 180 / Math.PI);
   }
   if (alpha !== void 0) {
@@ -5879,13 +5879,13 @@ var convertLuvToLchuv = ({ l, u, v, alpha }) => {
 var convertLuvToLchuv_default = convertLuvToLchuv;
 
 // node_modules/culori/src/lchuv/convertLchuvToLuv.js
-var convertLchuvToLuv = ({ l, c: c2, h, alpha }) => {
+var convertLchuvToLuv = ({ l, c: c3, h, alpha }) => {
   if (h === void 0) h = 0;
   let res = {
     mode: "luv",
     l,
-    u: c2 ? c2 * Math.cos(h / 180 * Math.PI) : 0,
-    v: c2 ? c2 * Math.sin(h / 180 * Math.PI) : 0
+    u: c3 ? c3 * Math.cos(h / 180 * Math.PI) : 0,
+    v: c3 ? c3 * Math.sin(h / 180 * Math.PI) : 0
   };
   if (alpha !== void 0) {
     res.alpha = alpha;
@@ -6089,7 +6089,7 @@ var convertOklabToLrgb = ({ l, a, b, alpha }) => {
 var convertOklabToLrgb_default = convertOklabToLrgb;
 
 // node_modules/culori/src/oklab/convertOklabToRgb.js
-var convertOklabToRgb = (c2) => convertLrgbToRgb_default(convertOklabToLrgb_default(c2));
+var convertOklabToRgb = (c3) => convertLrgbToRgb_default(convertOklabToLrgb_default(c3));
 var convertOklabToRgb_default = convertOklabToRgb;
 
 // node_modules/culori/src/okhsl/helpers.js
@@ -6260,24 +6260,24 @@ function convertOklabToOkhsl(lab2) {
   if (lab2.alpha !== void 0) {
     ret.alpha = lab2.alpha;
   }
-  let c2 = Math.sqrt(a * a + b * b);
-  if (!c2) {
+  let c3 = Math.sqrt(a * a + b * b);
+  if (!c3) {
     ret.s = 0;
     return ret;
   }
-  let [C_0, C_mid, C_max] = get_Cs(l, a / c2, b / c2);
+  let [C_0, C_mid, C_max] = get_Cs(l, a / c3, b / c3);
   let s;
-  if (c2 < C_mid) {
+  if (c3 < C_mid) {
     let k_0 = 0;
     let k_1 = 0.8 * C_0;
     let k_2 = 1 - k_1 / C_mid;
-    let t = (c2 - k_0) / (k_1 + k_2 * (c2 - k_0));
+    let t = (c3 - k_0) / (k_1 + k_2 * (c3 - k_0));
     s = t * 0.8;
   } else {
     let k_0 = C_mid;
     let k_1 = 0.2 * C_mid * C_mid * 1.25 * 1.25 / C_0;
     let k_2 = 1 - k_1 / (C_max - C_mid);
-    let t = (c2 - k_0) / (k_1 + k_2 * (c2 - k_0));
+    let t = (c3 - k_0) / (k_1 + k_2 * (c3 - k_0));
     s = 0.8 + 0.2 * t;
   }
   if (s) {
@@ -6330,11 +6330,11 @@ var modeOkhsl = {
   serialize: "--okhsl",
   fromMode: {
     oklab: convertOklabToOkhsl,
-    rgb: (c2) => convertOklabToOkhsl(convertRgbToOklab_default(c2))
+    rgb: (c3) => convertOklabToOkhsl(convertRgbToOklab_default(c3))
   },
   toMode: {
     oklab: convertOkhslToOklab,
-    rgb: (c2) => convertOklabToRgb_default(convertOkhslToOklab(c2))
+    rgb: (c3) => convertOklabToRgb_default(convertOkhslToOklab(c3))
   }
 };
 var modeOkhsl_default = modeOkhsl;
@@ -6344,15 +6344,15 @@ function convertOklabToOkhsv(lab2) {
   let l = lab2.l !== void 0 ? lab2.l : 0;
   let a = lab2.a !== void 0 ? lab2.a : 0;
   let b = lab2.b !== void 0 ? lab2.b : 0;
-  let c2 = Math.sqrt(a * a + b * b);
-  let a_ = c2 ? a / c2 : 1;
-  let b_ = c2 ? b / c2 : 1;
+  let c3 = Math.sqrt(a * a + b * b);
+  let a_ = c3 ? a / c3 : 1;
+  let b_ = c3 ? b / c3 : 1;
   let [S_max, T] = get_ST_max(a_, b_);
   let S_0 = 0.5;
   let k4 = 1 - S_0 / S_max;
-  let t = T / (c2 + l * T);
+  let t = T / (c3 + l * T);
   let L_v = t * l;
-  let C_v = t * c2;
+  let C_v = t * c3;
   let L_vt = toe_inv(L_v);
   let C_vt = C_v * L_vt / L_v;
   let rgb_scale = convertOklabToLrgb_default({ l: L_vt, a: a_ * C_vt, b: b_ * C_vt });
@@ -6360,11 +6360,11 @@ function convertOklabToOkhsv(lab2) {
     1 / Math.max(rgb_scale.r, rgb_scale.g, rgb_scale.b, 0)
   );
   l = l / scale_L;
-  c2 = c2 / scale_L * toe(l) / l;
+  c3 = c3 / scale_L * toe(l) / l;
   l = toe(l);
   const ret = {
     mode: "okhsv",
-    s: c2 ? (S_0 + T) * C_v / (T * S_0 + T * k4 * C_v) : 0,
+    s: c3 ? (S_0 + T) * C_v / (T * S_0 + T * k4 * C_v) : 0,
     v: l ? l / L_v : 0
   };
   if (ret.s) {
@@ -6419,11 +6419,11 @@ var modeOkhsv = {
   serialize: "--okhsv",
   fromMode: {
     oklab: convertOklabToOkhsv,
-    rgb: (c2) => convertOklabToOkhsv(convertRgbToOklab_default(c2))
+    rgb: (c3) => convertOklabToOkhsv(convertRgbToOklab_default(c3))
   },
   toMode: {
     oklab: convertOkhsvToOklab,
-    rgb: (c2) => convertOklabToRgb_default(convertOkhsvToOklab(c2))
+    rgb: (c3) => convertOklabToRgb_default(convertOkhsvToOklab(c3))
   }
 };
 var modeOkhsv_default = modeOkhsv;
@@ -6481,7 +6481,7 @@ var definition20 = {
     b: [-0.4, 0.4]
   },
   parse: [parseOklab_default],
-  serialize: (c2) => `oklab(${c2.l !== void 0 ? c2.l : "none"} ${c2.a !== void 0 ? c2.a : "none"} ${c2.b !== void 0 ? c2.b : "none"}${c2.alpha < 1 ? ` / ${c2.alpha}` : ""})`
+  serialize: (c3) => `oklab(${c3.l !== void 0 ? c3.l : "none"} ${c3.a !== void 0 ? c3.a : "none"} ${c3.b !== void 0 ? c3.b : "none"}${c3.alpha < 1 ? ` / ${c3.alpha}` : ""})`
 };
 var definition_default20 = definition20;
 
@@ -6491,7 +6491,7 @@ function parseOklch(color, parsed) {
     return void 0;
   }
   const res = { mode: "oklch" };
-  const [, l, c2, h, alpha] = parsed;
+  const [, l, c3, h, alpha] = parsed;
   if (l.type !== Tok.None) {
     if (l.type === Tok.Hue) {
       return void 0;
@@ -6501,10 +6501,10 @@ function parseOklch(color, parsed) {
       1
     );
   }
-  if (c2.type !== Tok.None) {
+  if (c3.type !== Tok.None) {
     res.c = Math.max(
       0,
-      c2.type === Tok.Number ? c2.value : c2.value * 0.4 / 100
+      c3.type === Tok.Number ? c3.value : c3.value * 0.4 / 100
     );
   }
   if (h.type !== Tok.None) {
@@ -6531,15 +6531,15 @@ var definition21 = {
   ...definition_default15,
   mode: "oklch",
   toMode: {
-    oklab: (c2) => convertLchToLab_default(c2, "oklab"),
-    rgb: (c2) => convertOklabToRgb_default(convertLchToLab_default(c2, "oklab"))
+    oklab: (c3) => convertLchToLab_default(c3, "oklab"),
+    rgb: (c3) => convertOklabToRgb_default(convertLchToLab_default(c3, "oklab"))
   },
   fromMode: {
-    rgb: (c2) => convertLabToLch_default(convertRgbToOklab_default(c2), "oklch"),
-    oklab: (c2) => convertLabToLch_default(c2, "oklch")
+    rgb: (c3) => convertLabToLch_default(convertRgbToOklab_default(c3), "oklch"),
+    oklab: (c3) => convertLabToLch_default(c3, "oklch")
   },
   parse: [parseOklch_default],
-  serialize: (c2) => `oklch(${c2.l !== void 0 ? c2.l : "none"} ${c2.c !== void 0 ? c2.c : "none"} ${c2.h !== void 0 ? c2.h : "none"}${c2.alpha < 1 ? ` / ${c2.alpha}` : ""})`,
+  serialize: (c3) => `oklch(${c3.l !== void 0 ? c3.l : "none"} ${c3.c !== void 0 ? c3.c : "none"} ${c3.h !== void 0 ? c3.h : "none"}${c3.alpha < 1 ? ` / ${c3.alpha}` : ""})`,
   ranges: {
     l: [0, 1],
     c: [0, 0.4],
@@ -6997,8 +6997,8 @@ var serializeHex8 = (color) => {
   let a = fixup(color.alpha !== void 0 ? color.alpha : 1);
   return serializeHex(color) + (1 << 8 | a).toString(16).slice(1);
 };
-var formatHex = (c2) => serializeHex(rgb(c2));
-var formatHex8 = (c2) => serializeHex8(rgb(c2));
+var formatHex = (c3) => serializeHex(rgb(c3));
+var formatHex8 = (c3) => serializeHex8(rgb(c3));
 
 // node_modules/culori/src/index.js
 var a98 = useMode(definition_default2);
@@ -7063,13 +7063,27 @@ function contrastRatio(fg, bg) {
 }
 
 // src/engines/a11y/audit.ts
-var FG_RE = /(^|[.\-/])(text|fg|foreground|on-[a-z0-9]+|on)([.\-/]|$)/i;
-var BG_RE = /(^|[.\-/])(bg|background|surface|fill)([.\-/]|$)/i;
-function isColor(token) {
-  return token.type === "color" && typeof token.value === "string";
+var FG_RE = /(^|[.\-/])(text|fg|fgcolor|textcolor|foreground|on-[a-z0-9]+|on)([.\-/]|$)/i;
+var ON_CAMEL_RE = /(^|[.\-/])on([A-Z][A-Za-z0-9]*)([.\-/]|$)/;
+var BG_RE = /(^|[.\-/])(bg|bgcolor|background|backgroundcolor|surface|fill)([.\-/]|$)/i;
+var ROLE_SEGMENT = /^(?:text|fg|fgcolor|textcolor|foreground|on|bg|bgcolor|background|backgroundcolor|surface|fill|color|colors|sys|semantic)$/i;
+function isExempt(name) {
+  return segmentsOf(name).some((s) => /^(?:disabled|inactive)$/i.test(s));
+}
+var ROLE_SWAP = {
+  fgcolor: ["bgcolor"],
+  fg: ["bg"],
+  text: ["bg", "background"],
+  textcolor: ["bgcolor", "backgroundcolor"],
+  foreground: ["background"]
+};
+var LITERAL_SEGMENT = /^(?:white|black|transparent)$/i;
+var STRONG_SURFACE = /^(?:emphasis|strong|solid|inverse)$/i;
+function isColor(token2) {
+  return token2.type === "color" && typeof token2.value === "string";
 }
 function isForegroundRole(name) {
-  return FG_RE.test(name);
+  return FG_RE.test(name) || ON_CAMEL_RE.test(name);
 }
 function isBackgroundRole(name) {
   return BG_RE.test(name);
@@ -7086,11 +7100,39 @@ function namedSurface(name) {
   if (onInfix !== null) return `${onInfix[1]}${onInfix[2]}-${onInfix[3]}`;
   return void 0;
 }
+var segmentsOf = (name) => name.split(/[.\-/]/);
+function wordsOf(name) {
+  return segmentsOf(name).filter((s) => !ROLE_SEGMENT.test(s)).map((s) => s.toLowerCase());
+}
 function pairColorTokens(map) {
   const colors4 = map.tokens.filter(isColor);
   const byTokenName = new Map(colors4.map((t) => [t.name, t]));
-  const foregrounds = colors4.filter((t) => isForegroundRole(t.name)).sort(byName);
-  const backgrounds = colors4.filter((t) => isBackgroundRole(t.name)).sort(byName);
+  const foregrounds = colors4.filter((t) => isForegroundRole(t.name) && !isExempt(t.name)).sort(byName);
+  const backgrounds = colors4.filter((t) => isBackgroundRole(t.name) && !isForegroundRole(t.name)).sort(byName);
+  const isLiteral = (t) => wordsOf(t.name).some((w) => LITERAL_SEGMENT.test(w));
+  const backgroundByName = new Map(backgrounds.map((t) => [t.name, t]));
+  const siblingOf = (fg) => {
+    const segments3 = segmentsOf(fg.name);
+    const separators = fg.name.match(/[.\-/]/g) ?? [];
+    for (let i = segments3.length - 1; i >= 0; i--) {
+      const swaps = ROLE_SWAP[segments3[i].toLowerCase()];
+      if (swaps === void 0) continue;
+      for (const swap of swaps) {
+        const cased = segments3[i] === segments3[i].toLowerCase() ? swap : swap.replace(/color$/, "Color");
+        const parts = [...segments3];
+        parts[i] = cased;
+        const name = parts.map((p4, k4) => k4 === 0 ? p4 : `${separators[k4 - 1]}${p4}`).join("");
+        const hit = backgroundByName.get(name);
+        if (hit !== void 0) return hit;
+      }
+    }
+    return void 0;
+  };
+  const bgRoleIndex = (name) => segmentsOf(name).findIndex((s) => BG_RE.test(`.${s}.`));
+  const roleIndex = (name) => segmentsOf(name).findIndex(
+    (s) => FG_RE.test(`.${s}.`) || ON_CAMEL_RE.test(`.${s}.`)
+  );
+  const surfaces = backgrounds.filter((bg) => !isLiteral(bg));
   const pairs = [];
   for (const foreground of foregrounds) {
     const surfaceName = namedSurface(foreground.name);
@@ -7099,10 +7141,41 @@ function pairColorTokens(map) {
       pairs.push({ foreground, background: surface });
       continue;
     }
-    for (const background of backgrounds) {
-      if (foreground.name === background.name) continue;
-      pairs.push({ foreground, background });
+    if (isLiteral(foreground)) continue;
+    const sibling = siblingOf(foreground);
+    if (sibling !== void 0) {
+      pairs.push({ foreground, background: sibling });
+      continue;
     }
+    if (roleIndex(foreground.name) > 1) continue;
+    const onWord = foreground.name.match(ON_CAMEL_RE)?.[2]?.toLowerCase();
+    if (onWord !== void 0) {
+      for (const background of surfaces) {
+        if (wordsOf(background.name).includes(onWord)) {
+          pairs.push({ foreground, background });
+        }
+      }
+      continue;
+    }
+    const role = wordsOf(foreground.name)[0];
+    const fgIndex = roleIndex(foreground.name);
+    const depth = segmentsOf(foreground.name).length;
+    const namespace = segmentsOf(foreground.name)[0];
+    const reachable = (bg) => {
+      const bgIndex = bgRoleIndex(bg.name);
+      const bgSegments = segmentsOf(bg.name);
+      if (fgIndex === 0) {
+        return bgIndex === 0 || bgIndex === 1 && ROLE_SEGMENT.test(bgSegments[0]);
+      }
+      return bgSegments[0] === namespace && (bgSegments.length === depth || bgSegments.length === 2);
+    };
+    const plain = surfaces.filter(
+      (bg) => bg.name !== foreground.name && reachable(bg) && !wordsOf(bg.name).some((w) => STRONG_SURFACE.test(w))
+    );
+    const sharing = role === void 0 ? [] : plain.filter((bg) => wordsOf(bg.name)[0] === role);
+    const defaults = plain.filter((bg) => /(^|[.\-/])default$/i.test(bg.name));
+    const chosen = sharing.length > 0 ? sharing : defaults.length > 0 ? defaults : plain;
+    for (const background of chosen) pairs.push({ foreground, background });
   }
   return pairs;
 }
@@ -7130,11 +7203,32 @@ function suggestForeground(fg, bg, required) {
   }
   return { kind: "none" };
 }
-function auditPair(mode, pair, level) {
+function composite(top2, under) {
+  const a = rgb2(parse_default(top2));
+  const b = rgb2(parse_default(under));
+  if (a === void 0 || b === void 0) return top2;
+  const alpha = a.alpha ?? 1;
+  if (alpha >= 1) return top2;
+  return formatHex({
+    mode: "rgb",
+    r: a.r * alpha + b.r * (1 - alpha),
+    g: a.g * alpha + b.g * (1 - alpha),
+    b: a.b * alpha + b.b * (1 - alpha)
+  });
+}
+function pageSurface(map) {
+  const page = map.tokens.filter(isColor).filter(
+    (t) => isBackgroundRole(t.name) && /(^|[.\-/])(default|background)$/i.test(t.name) && (rgb2(parse_default(t.value))?.alpha ?? 1) >= 1
+  ).sort((a, b) => segmentsOf(a.name).length - segmentsOf(b.name).length)[0];
+  return page?.value ?? "#ffffff";
+}
+function auditPair(mode, pair, level, page = "#ffffff") {
   const fgValue = pair.foreground.value;
   const bgValue = pair.background.value;
+  const shownBg = composite(bgValue, page);
+  const shownFg = composite(fgValue, shownBg);
   const required = requiredRatio(level, "normal");
-  const ratio = contrastRatio(fgValue, bgValue);
+  const ratio = contrastRatio(shownFg, shownBg);
   if (ratio === void 0) {
     return {
       mode,
@@ -7167,14 +7261,15 @@ function auditPair(mode, pair, level) {
     ratio,
     required,
     status: "fail",
-    suggestion: suggestForeground(fgValue, bgValue, required)
+    suggestion: suggestForeground(shownFg, shownBg, required)
   };
 }
 function auditContrast(modes2, options) {
   const findings = [];
   for (const { mode, map } of modes2) {
+    const page = pageSurface(map);
     for (const pair of pairColorTokens(map)) {
-      findings.push(auditPair(mode, pair, options.level));
+      findings.push(auditPair(mode, pair, options.level, page));
     }
   }
   findings.sort(
@@ -7239,8 +7334,8 @@ function buildEnvelope(payload, meta) {
 }
 function payloadOf(record) {
   const payload = {};
-  for (const [key, value2] of Object.entries(record)) {
-    if (!RESERVED_ENVELOPE_KEYS.has(key)) payload[key] = value2;
+  for (const [key2, value2] of Object.entries(record)) {
+    if (!RESERVED_ENVELOPE_KEYS.has(key2)) payload[key2] = value2;
   }
   return payload;
 }
@@ -7277,10 +7372,10 @@ function envelopeOf(record) {
   const v = record.v;
   if (typeof v !== "number" || !Number.isFinite(v) || v < 2) return void 0;
   const env = { v };
-  const source = parseSource(
+  const source2 = parseSource(
     typeof record.source === "string" ? record.source : void 0
   );
-  if (source !== void 0) env.source = source;
+  if (source2 !== void 0) env.source = source2;
   if (typeof record.runId === "string" && record.runId !== "") {
     env.runId = record.runId;
   }
@@ -7407,9 +7502,9 @@ function resolveToolVersion() {
   }
   return cachedToolVersion;
 }
-function countsAsDirty(line) {
-  if (line.trim() === "") return false;
-  const path = line.slice(3);
+function countsAsDirty(line2) {
+  if (line2.trim() === "") return false;
+  const path = line2.slice(3);
   return !path.split(" -> ").every((p4) => p4.includes(".ds-bridge/"));
 }
 function readGitContext(projectDir, exec = spawnGitExec, env = process.env) {
@@ -7444,16 +7539,16 @@ function acquireHistoryLock(stateDir, options = {}) {
   const timeoutMs = options.timeoutMs ?? DEFAULT_LOCK_TIMEOUT_MS;
   const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
   const lockPath = join(stateDir, LOCK_FILE);
-  const token = `${process.pid}:${randomUUID()}
+  const token2 = `${process.pid}:${randomUUID()}
 `;
   const deadline = Date.now() + timeoutMs;
   for (; ; ) {
     try {
       const fd = openSync(lockPath, "wx");
-      writeFileSync(fd, token);
+      writeFileSync(fd, token2);
       closeSync(fd);
       return () => {
-        if (readLockOwner(lockPath) !== token) return;
+        if (readLockOwner(lockPath) !== token2) return;
         try {
           unlinkSync(lockPath);
         } catch {
@@ -7553,8 +7648,8 @@ function hasPlainValue(node) {
   return "value" in node;
 }
 function scan(node, acc) {
-  for (const key of Object.keys(node)) {
-    if (key.startsWith("$")) acc.hasDollarMarker = true;
+  for (const key2 of Object.keys(node)) {
+    if (key2.startsWith("$")) acc.hasDollarMarker = true;
   }
   if (hasW3cValue(node)) {
     acc.hasW3c = true;
@@ -7569,17 +7664,17 @@ function scan(node, acc) {
     if (isObject(child)) scan(child, acc);
   }
 }
-function detectFormat(source) {
-  if (!isObject(source)) return "unknown";
-  const hasThemes = "$themes" in source;
-  const hasMetadata = "$metadata" in source;
+function detectFormat(source2) {
+  if (!isObject(source2)) return "unknown";
+  const hasThemes = "$themes" in source2;
+  const hasMetadata = "$metadata" in source2;
   const acc = {
     hasW3c: false,
     hasPlain: false,
     hasPlainWithType: false,
     hasDollarMarker: false
   };
-  scan(source, acc);
+  scan(source2, acc);
   if (acc.hasW3c) return "w3c";
   if (hasThemes || hasMetadata) return "tokens-studio";
   if (acc.hasPlainWithType) return "tokens-studio";
@@ -7639,11 +7734,11 @@ function collect(node, path, raws, errors) {
     });
     return;
   }
-  for (const [key, child] of Object.entries(node)) {
+  for (const [key2, child] of Object.entries(node)) {
     if (isObject2(child)) {
-      collect(child, [...path, key], raws, errors);
+      collect(child, [...path, key2], raws, errors);
     } else {
-      const name = [...path, key].join(".");
+      const name = [...path, key2].join(".");
       errors.push({
         code: "invalid-shape",
         path: name,
@@ -7683,8 +7778,8 @@ function resolve(start, byName2) {
   }
   return { ok: true, value: current.rawValue };
 }
-function parseStyleDictionary(source) {
-  if (!isObject2(source)) {
+function parseStyleDictionary(source2) {
+  if (!isObject2(source2)) {
     return {
       kind: "error",
       errors: [
@@ -7697,7 +7792,7 @@ function parseStyleDictionary(source) {
   }
   const raws = [];
   const errors = [];
-  collect(source, [], raws, errors);
+  collect(source2, [], raws, errors);
   if (errors.length > 0) {
     return { kind: "error", errors };
   }
@@ -7721,7 +7816,7 @@ function parseStyleDictionary(source) {
       resolveErrors.push(resolved.error);
       continue;
     }
-    const token = {
+    const token2 = {
       name: raw.name,
       type: raw.type,
       value: resolved.value,
@@ -7729,7 +7824,7 @@ function parseStyleDictionary(source) {
       ...raw.aliasOf !== void 0 ? { aliasOf: raw.aliasOf } : {},
       group: raw.group
     };
-    tokens.push(token);
+    tokens.push(token2);
   }
   if (resolveErrors.length > 0) {
     return { kind: "error", errors: resolveErrors };
@@ -7822,22 +7917,22 @@ function collectSet(setName, tree, out, errors) {
       out.set(path, raw);
       return;
     }
-    for (const [key, child] of Object.entries(node)) {
+    for (const [key2, child] of Object.entries(node)) {
       if (!isPlainObject(child)) {
         errors.push({
           code: "invalid-shape",
-          path: `${setName}.${[...pathParts, key].join(".")}`,
-          message: `Expected a group or token object at "${[...pathParts, key].join(".")}" in set "${setName}".`
+          path: `${setName}.${[...pathParts, key2].join(".")}`,
+          message: `Expected a group or token object at "${[...pathParts, key2].join(".")}" in set "${setName}".`
         });
         continue;
       }
-      walk2(child, [...pathParts, key]);
+      walk2(child, [...pathParts, key2]);
     }
   };
   walk2(tree, []);
 }
-function resolveSetOrder(root, setNames) {
-  const metadata = root.$metadata;
+function resolveSetOrder(root2, setNames) {
+  const metadata = root2.$metadata;
   if (isPlainObject(metadata) && Array.isArray(metadata.tokenSetOrder) && metadata.tokenSetOrder.every((s) => typeof s === "string")) {
     const ordered = metadata.tokenSetOrder.filter((s) => setNames.includes(s));
     for (const name of setNames) {
@@ -7847,8 +7942,8 @@ function resolveSetOrder(root, setNames) {
   }
   return setNames;
 }
-function defaultThemeSets(root) {
-  const themes = root.$themes;
+function defaultThemeSets(root2) {
+  const themes = root2.$themes;
   if (!Array.isArray(themes)) return void 0;
   const first = themes[0];
   if (!isPlainObject(first) || !isPlainObject(first.selectedTokenSets)) {
@@ -7857,8 +7952,8 @@ function defaultThemeSets(root) {
   const sets = Object.entries(first.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([name]) => name);
   return sets.length > 0 ? new Set(sets) : void 0;
 }
-function parseTokensStudio(source) {
-  if (!isPlainObject(source)) {
+function parseTokensStudio(source2) {
+  if (!isPlainObject(source2)) {
     return {
       kind: "error",
       errors: [
@@ -7870,14 +7965,14 @@ function parseTokensStudio(source) {
     };
   }
   const errors = [];
-  const setNames = Object.keys(source).filter((k4) => !RESERVED_KEYS.has(k4));
-  const order = resolveSetOrder(source, setNames);
-  const defaultSets = defaultThemeSets(source);
+  const setNames = Object.keys(source2).filter((k4) => !RESERVED_KEYS.has(k4));
+  const order = resolveSetOrder(source2, setNames);
+  const defaultSets = defaultThemeSets(source2);
   const primary = defaultSets === void 0 ? order : order.filter((name) => defaultSets.has(name));
   const secondary = defaultSets === void 0 ? [] : order.filter((name) => !defaultSets.has(name));
   const merged = /* @__PURE__ */ new Map();
   const collect4 = (setName, into) => {
-    const tree = source[setName];
+    const tree = source2[setName];
     if (!isPlainObject(tree)) {
       errors.push({
         code: "invalid-shape",
@@ -7892,15 +7987,15 @@ function parseTokensStudio(source) {
   for (const setName of secondary) {
     const extra = /* @__PURE__ */ new Map();
     collect4(setName, extra);
-    for (const [name, token] of extra) {
-      if (!merged.has(name)) merged.set(name, token);
+    for (const [name, token2] of extra) {
+      if (!merged.has(name)) merged.set(name, token2);
     }
   }
   if (errors.length > 0) {
     return { kind: "error", errors };
   }
   const resolved = /* @__PURE__ */ new Map();
-  const resolve17 = (name, seen) => {
+  const resolve16 = (name, seen) => {
     const cached = resolved.get(name);
     if (cached !== void 0) return cached;
     const raw = merged.get(name);
@@ -7926,7 +8021,7 @@ function parseTokensStudio(source) {
       });
       return void 0;
     }
-    const downstream = resolve17(target, new Set(seen).add(target));
+    const downstream = resolve16(target, new Set(seen).add(target));
     if (downstream === void 0) return void 0;
     const result = { value: downstream.value, aliasOf: target };
     resolved.set(name, result);
@@ -7934,17 +8029,17 @@ function parseTokensStudio(source) {
   };
   const tokens = [];
   for (const [name, raw] of merged) {
-    const res = resolve17(name, /* @__PURE__ */ new Set([name]));
+    const res = resolve16(name, /* @__PURE__ */ new Set([name]));
     if (res === void 0) continue;
-    const token = {
+    const token2 = {
       name,
       type: raw.type,
       value: res.value,
       group: raw.group
     };
-    if (raw.description !== void 0) token.description = raw.description;
-    if (res.aliasOf !== void 0) token.aliasOf = res.aliasOf;
-    tokens.push(token);
+    if (raw.description !== void 0) token2.description = raw.description;
+    if (res.aliasOf !== void 0) token2.aliasOf = res.aliasOf;
+    tokens.push(token2);
   }
   if (errors.length > 0) {
     return { kind: "error", errors };
@@ -7976,6 +8071,75 @@ function aliasTarget3(value2) {
   const match = /^\{([^}]+)\}$/.exec(value2.trim());
   return match ? match[1] : void 0;
 }
+var COLOR_SPACES = {
+  srgb: "rgb",
+  "srgb-linear": "lrgb",
+  hsl: "hsl",
+  hwb: "hwb",
+  lab: "lab",
+  lch: "lch",
+  oklab: "oklab",
+  oklch: "oklch",
+  "display-p3": "p3",
+  "a98-rgb": "a98",
+  "prophoto-rgb": "prophoto",
+  rec2020: "rec2020",
+  "xyz-d65": "xyz65",
+  "xyz-d50": "xyz50"
+};
+function colorObjectHex(value2) {
+  const alpha = typeof value2.alpha === "number" ? value2.alpha : 1;
+  if (typeof value2.hex === "string" && /^#[0-9a-f]{6}$/i.test(value2.hex)) {
+    const hex2 = value2.hex.toLowerCase();
+    if (alpha >= 1) return hex2;
+    const a = Math.round(alpha * 255).toString(16).padStart(2, "0");
+    return `${hex2}${a}`;
+  }
+  const mode = typeof value2.colorSpace === "string" ? COLOR_SPACES[value2.colorSpace] : void 0;
+  const c3 = value2.components;
+  if (mode === void 0 || !Array.isArray(c3) || c3.length !== 3)
+    return void 0;
+  if (!c3.every((n) => typeof n === "number")) return void 0;
+  const [x, y, z] = c3;
+  const channels = {
+    rgb: { r: x, g: y, b: z },
+    lrgb: { r: x, g: y, b: z },
+    p3: { r: x, g: y, b: z },
+    a98: { r: x, g: y, b: z },
+    prophoto: { r: x, g: y, b: z },
+    rec2020: { r: x, g: y, b: z },
+    hsl: { h: x, s: y / 100, l: z / 100 },
+    hwb: { h: x, w: y / 100, b: z / 100 },
+    lab: { l: x, a: y, b: z },
+    lch: { l: x, c: y, h: z },
+    oklab: { l: x, a: y, b: z },
+    oklch: { l: x, c: y, h: z },
+    xyz65: { x, y, z },
+    xyz50: { x, y, z }
+  };
+  const color = { mode, ...channels[mode], alpha };
+  return alpha < 1 ? formatHex8(color) : formatHex(color);
+}
+function flattenValue(type, value2) {
+  if (typeof value2 === "string" || typeof value2 === "number") return value2;
+  if (Array.isArray(value2)) {
+    if (type === "fontFamily" && value2.every((v) => typeof v === "string")) {
+      return value2.join(", ");
+    }
+    if (type === "cubicBezier" && value2.length === 4 && value2.every((v) => typeof v === "number")) {
+      return `cubic-bezier(${value2.join(", ")})`;
+    }
+    return value2;
+  }
+  if (!isPlainObject2(value2)) return void 0;
+  if (type === "color" && ("hex" in value2 || "components" in value2)) {
+    return colorObjectHex(value2) ?? value2;
+  }
+  if ((type === "dimension" || type === "duration") && typeof value2.value === "number" && typeof value2.unit === "string") {
+    return `${value2.value}${value2.unit}`;
+  }
+  return value2;
+}
 function mapType2(raw, path, warnings) {
   if (typeof raw !== "string") return "other";
   if (KNOWN_TYPES.has(raw)) return raw;
@@ -7986,12 +8150,12 @@ function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
   const path = pathSegments.join(".");
   const ownType = "$type" in node && node.$type !== void 0 ? node.$type : inheritedType;
   if ("$value" in node) {
-    const value2 = node.$value;
-    if (typeof value2 !== "string" && typeof value2 !== "number" && !isPlainObject2(value2)) {
+    const value2 = flattenValue(ownType, node.$value);
+    if (value2 === void 0) {
       errors.push({
         code: "invalid-shape",
         path,
-        message: `${path}: $value must be a string, number, or object`
+        message: `${path}: $value must be a string, number, object, or array`
       });
       return;
     }
@@ -8004,21 +8168,24 @@ function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
       });
       return;
     }
-    const token = {
+    const token2 = {
       name: path,
       type: mapType2(ownType, path, warnings),
       rawValue: value2,
       group
     };
     if (typeof node.$description === "string") {
-      token.description = node.$description;
+      token2.description = node.$description;
     }
-    out.push(token);
+    if (typeof node.alpha === "number" && node.alpha >= 0 && node.alpha < 1) {
+      token2.alpha = node.alpha;
+    }
+    out.push(token2);
     return;
   }
-  for (const [key, child] of Object.entries(node)) {
-    if (key.startsWith("$")) continue;
-    const childPath = [...pathSegments, key];
+  for (const [key2, child] of Object.entries(node)) {
+    if (key2.startsWith("$")) continue;
+    const childPath = [...pathSegments, key2];
     if (!isPlainObject2(child)) {
       errors.push({
         code: "invalid-shape",
@@ -8030,22 +8197,19 @@ function collect2(node, pathSegments, inheritedType, warnings, errors, out) {
     collect2(child, childPath, ownType, warnings, errors, out);
   }
 }
-function resolve2(raw, byName2, errors) {
-  const direct = aliasTarget3(raw.rawValue);
-  if (direct === void 0) return { value: raw.rawValue };
-  const seen = /* @__PURE__ */ new Set([raw.name]);
-  let currentTarget = direct;
-  for (; ; ) {
-    const target = byName2.get(currentTarget);
-    if (target === void 0) {
-      errors.push({
-        code: "unknown-alias",
-        path: currentTarget,
-        message: `${raw.name}: alias references unknown token "${currentTarget}"`
-      });
-      return void 0;
-    }
-    if (seen.has(currentTarget)) {
+var INLINE_REF_RE = /\{([^{}]+)\}/g;
+function withAlpha(color, alpha) {
+  if (alpha === void 0 || typeof color !== "string") return color;
+  const parsed = parse_default(color);
+  if (parsed === void 0) return color;
+  return formatHex8({ ...parsed, alpha });
+}
+function makeResolver(byName2, errors) {
+  const memo = /* @__PURE__ */ new Map();
+  const visiting = /* @__PURE__ */ new Set();
+  const resolveToken = (raw) => {
+    if (memo.has(raw.name)) return memo.get(raw.name);
+    if (visiting.has(raw.name)) {
       errors.push({
         code: "alias-cycle",
         path: raw.name,
@@ -8053,16 +8217,47 @@ function resolve2(raw, byName2, errors) {
       });
       return void 0;
     }
-    seen.add(currentTarget);
-    const next = aliasTarget3(target.rawValue);
-    if (next === void 0) {
-      return { value: target.rawValue, aliasOf: direct };
+    visiting.add(raw.name);
+    const lookup = (target) => {
+      const ref = byName2.get(target);
+      if (ref === void 0) {
+        errors.push({
+          code: "unknown-alias",
+          path: target,
+          message: `${raw.name}: alias references unknown token "${target}"`
+        });
+        return void 0;
+      }
+      return resolveToken(ref);
+    };
+    let value2;
+    const direct = aliasTarget3(raw.rawValue);
+    if (direct !== void 0) {
+      value2 = lookup(direct);
+    } else if (typeof raw.rawValue === "string" && raw.rawValue.includes("{")) {
+      let failed = false;
+      value2 = raw.rawValue.replace(INLINE_REF_RE, (whole, target) => {
+        if (!byName2.has(target)) return whole;
+        const resolved = lookup(target);
+        if (resolved === void 0 || typeof resolved === "object") {
+          failed = true;
+          return whole;
+        }
+        return String(resolved);
+      });
+      if (failed) value2 = void 0;
+    } else {
+      value2 = raw.rawValue;
     }
-    currentTarget = next;
-  }
+    if (value2 !== void 0) value2 = withAlpha(value2, raw.alpha);
+    visiting.delete(raw.name);
+    memo.set(raw.name, value2);
+    return value2;
+  };
+  return resolveToken;
 }
-function parseW3c(source) {
-  if (!isPlainObject2(source)) {
+function parseW3c(source2) {
+  if (!isPlainObject2(source2)) {
     return {
       kind: "error",
       errors: [
@@ -8076,24 +8271,26 @@ function parseW3c(source) {
   const warnings = [];
   const errors = [];
   const raws = [];
-  collect2(source, [], void 0, warnings, errors, raws);
+  collect2(source2, [], void 0, warnings, errors, raws);
   if (errors.length > 0) {
     return { kind: "error", errors };
   }
   const byName2 = new Map(raws.map((r2) => [r2.name, r2]));
   const tokens = [];
+  const resolveToken = makeResolver(byName2, errors);
   for (const raw of raws) {
-    const resolved = resolve2(raw, byName2, errors);
-    if (resolved === void 0) continue;
-    const token = {
+    const value2 = resolveToken(raw);
+    if (value2 === void 0) continue;
+    const token2 = {
       name: raw.name,
       type: raw.type,
-      value: resolved.value,
+      value: value2,
       group: raw.group
     };
-    if (raw.description !== void 0) token.description = raw.description;
-    if (resolved.aliasOf !== void 0) token.aliasOf = resolved.aliasOf;
-    tokens.push(token);
+    if (raw.description !== void 0) token2.description = raw.description;
+    const aliasOf = aliasTarget3(raw.rawValue);
+    if (aliasOf !== void 0) token2.aliasOf = aliasOf;
+    tokens.push(token2);
   }
   if (errors.length > 0) {
     return { kind: "error", errors };
@@ -8110,9 +8307,9 @@ function parseW3c(source) {
 function isPlainObject3(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
-function readThemes(source) {
-  if (!isPlainObject3(source)) return void 0;
-  const raw = source.$themes;
+function readThemes(source2) {
+  if (!isPlainObject3(source2)) return void 0;
+  const raw = source2.$themes;
   if (!Array.isArray(raw)) return void 0;
   const themes = [];
   for (const entry of raw) {
@@ -8128,10 +8325,10 @@ function readThemes(source) {
   }
   return themes.length > 0 ? themes : void 0;
 }
-function themeSubDocument(source, theme) {
-  const sets = Object.entries(theme.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([setName]) => setName).filter((setName) => isPlainObject3(source[setName]));
+function themeSubDocument(source2, theme) {
+  const sets = Object.entries(theme.selectedTokenSets).filter(([, state]) => state !== "disabled").map(([setName]) => setName).filter((setName) => isPlainObject3(source2[setName]));
   const doc = {};
-  for (const setName of sets) doc[setName] = source[setName];
+  for (const setName of sets) doc[setName] = source2[setName];
   doc.$metadata = { tokenSetOrder: sets };
   return doc;
 }
@@ -8139,6 +8336,1101 @@ function themeSubDocument(source, theme) {
 // src/io/token-set.ts
 import { readdirSync, readFileSync as readFileSync2, statSync as statSync2 } from "fs";
 import { dirname as dirname2, join as join2, relative, sep } from "path";
+
+// node_modules/json5/dist/index.mjs
+var Space_Separator = /[\u1680\u2000-\u200A\u202F\u205F\u3000]/;
+var ID_Start = /[\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E\u066F\u0671-\u06D3\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u0860-\u086A\u08A0-\u08B4\u08B6-\u08BD\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC\u09DD\u09DF-\u09E1\u09F0\u09F1\u09FC\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0\u0AE1\u0AF9\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3D\u0B5C\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D\u0C58-\u0C5A\u0C60\u0C61\u0C80\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0\u0CE1\u0CF1\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D54-\u0D56\u0D5F-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32\u0E33\u0E40-\u0E46\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB0\u0EB2\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u1884\u1887-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191E\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1C80-\u1C88\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2E2F\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312E\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FEA\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A\uA62B\uA640-\uA66E\uA67F-\uA69D\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA8FD\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uA9E0-\uA9E4\uA9E6-\uA9EF\uA9FA-\uA9FE\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA7E-\uAAAF\uAAB1\uAAB5\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]|\uD800[\uDC00-\uDC0B\uDC0D-\uDC26\uDC28-\uDC3A\uDC3C\uDC3D\uDC3F-\uDC4D\uDC50-\uDC5D\uDC80-\uDCFA\uDD40-\uDD74\uDE80-\uDE9C\uDEA0-\uDED0\uDF00-\uDF1F\uDF2D-\uDF4A\uDF50-\uDF75\uDF80-\uDF9D\uDFA0-\uDFC3\uDFC8-\uDFCF\uDFD1-\uDFD5]|\uD801[\uDC00-\uDC9D\uDCB0-\uDCD3\uDCD8-\uDCFB\uDD00-\uDD27\uDD30-\uDD63\uDE00-\uDF36\uDF40-\uDF55\uDF60-\uDF67]|\uD802[\uDC00-\uDC05\uDC08\uDC0A-\uDC35\uDC37\uDC38\uDC3C\uDC3F-\uDC55\uDC60-\uDC76\uDC80-\uDC9E\uDCE0-\uDCF2\uDCF4\uDCF5\uDD00-\uDD15\uDD20-\uDD39\uDD80-\uDDB7\uDDBE\uDDBF\uDE00\uDE10-\uDE13\uDE15-\uDE17\uDE19-\uDE33\uDE60-\uDE7C\uDE80-\uDE9C\uDEC0-\uDEC7\uDEC9-\uDEE4\uDF00-\uDF35\uDF40-\uDF55\uDF60-\uDF72\uDF80-\uDF91]|\uD803[\uDC00-\uDC48\uDC80-\uDCB2\uDCC0-\uDCF2]|\uD804[\uDC03-\uDC37\uDC83-\uDCAF\uDCD0-\uDCE8\uDD03-\uDD26\uDD50-\uDD72\uDD76\uDD83-\uDDB2\uDDC1-\uDDC4\uDDDA\uDDDC\uDE00-\uDE11\uDE13-\uDE2B\uDE80-\uDE86\uDE88\uDE8A-\uDE8D\uDE8F-\uDE9D\uDE9F-\uDEA8\uDEB0-\uDEDE\uDF05-\uDF0C\uDF0F\uDF10\uDF13-\uDF28\uDF2A-\uDF30\uDF32\uDF33\uDF35-\uDF39\uDF3D\uDF50\uDF5D-\uDF61]|\uD805[\uDC00-\uDC34\uDC47-\uDC4A\uDC80-\uDCAF\uDCC4\uDCC5\uDCC7\uDD80-\uDDAE\uDDD8-\uDDDB\uDE00-\uDE2F\uDE44\uDE80-\uDEAA\uDF00-\uDF19]|\uD806[\uDCA0-\uDCDF\uDCFF\uDE00\uDE0B-\uDE32\uDE3A\uDE50\uDE5C-\uDE83\uDE86-\uDE89\uDEC0-\uDEF8]|\uD807[\uDC00-\uDC08\uDC0A-\uDC2E\uDC40\uDC72-\uDC8F\uDD00-\uDD06\uDD08\uDD09\uDD0B-\uDD30\uDD46]|\uD808[\uDC00-\uDF99]|\uD809[\uDC00-\uDC6E\uDC80-\uDD43]|[\uD80C\uD81C-\uD820\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872\uD874-\uD879][\uDC00-\uDFFF]|\uD80D[\uDC00-\uDC2E]|\uD811[\uDC00-\uDE46]|\uD81A[\uDC00-\uDE38\uDE40-\uDE5E\uDED0-\uDEED\uDF00-\uDF2F\uDF40-\uDF43\uDF63-\uDF77\uDF7D-\uDF8F]|\uD81B[\uDF00-\uDF44\uDF50\uDF93-\uDF9F\uDFE0\uDFE1]|\uD821[\uDC00-\uDFEC]|\uD822[\uDC00-\uDEF2]|\uD82C[\uDC00-\uDD1E\uDD70-\uDEFB]|\uD82F[\uDC00-\uDC6A\uDC70-\uDC7C\uDC80-\uDC88\uDC90-\uDC99]|\uD835[\uDC00-\uDC54\uDC56-\uDC9C\uDC9E\uDC9F\uDCA2\uDCA5\uDCA6\uDCA9-\uDCAC\uDCAE-\uDCB9\uDCBB\uDCBD-\uDCC3\uDCC5-\uDD05\uDD07-\uDD0A\uDD0D-\uDD14\uDD16-\uDD1C\uDD1E-\uDD39\uDD3B-\uDD3E\uDD40-\uDD44\uDD46\uDD4A-\uDD50\uDD52-\uDEA5\uDEA8-\uDEC0\uDEC2-\uDEDA\uDEDC-\uDEFA\uDEFC-\uDF14\uDF16-\uDF34\uDF36-\uDF4E\uDF50-\uDF6E\uDF70-\uDF88\uDF8A-\uDFA8\uDFAA-\uDFC2\uDFC4-\uDFCB]|\uD83A[\uDC00-\uDCC4\uDD00-\uDD43]|\uD83B[\uDE00-\uDE03\uDE05-\uDE1F\uDE21\uDE22\uDE24\uDE27\uDE29-\uDE32\uDE34-\uDE37\uDE39\uDE3B\uDE42\uDE47\uDE49\uDE4B\uDE4D-\uDE4F\uDE51\uDE52\uDE54\uDE57\uDE59\uDE5B\uDE5D\uDE5F\uDE61\uDE62\uDE64\uDE67-\uDE6A\uDE6C-\uDE72\uDE74-\uDE77\uDE79-\uDE7C\uDE7E\uDE80-\uDE89\uDE8B-\uDE9B\uDEA1-\uDEA3\uDEA5-\uDEA9\uDEAB-\uDEBB]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1\uDEB0-\uDFFF]|\uD87A[\uDC00-\uDFE0]|\uD87E[\uDC00-\uDE1D]/;
+var ID_Continue = /[\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u0669\u066E-\u06D3\u06D5-\u06DC\u06DF-\u06E8\u06EA-\u06FC\u06FF\u0710-\u074A\u074D-\u07B1\u07C0-\u07F5\u07FA\u0800-\u082D\u0840-\u085B\u0860-\u086A\u08A0-\u08B4\u08B6-\u08BD\u08D4-\u08E1\u08E3-\u0963\u0966-\u096F\u0971-\u0983\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC-\u09C4\u09C7\u09C8\u09CB-\u09CE\u09D7\u09DC\u09DD\u09DF-\u09E3\u09E6-\u09F1\u09FC\u0A01-\u0A03\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABC-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE3\u0AE6-\u0AEF\u0AF9-\u0AFF\u0B01-\u0B03\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3C-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B5C\u0B5D\u0B5F-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C00-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C58-\u0C5A\u0C60-\u0C63\u0C66-\u0C6F\u0C80-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CDE\u0CE0-\u0CE3\u0CE6-\u0CEF\u0CF1\u0CF2\u0D00-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D44\u0D46-\u0D48\u0D4A-\u0D4E\u0D54-\u0D57\u0D5F-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DE6-\u0DEF\u0DF2\u0DF3\u0E01-\u0E3A\u0E40-\u0E4E\u0E50-\u0E59\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB9\u0EBB-\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u1049\u1050-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1714\u1720-\u1734\u1740-\u1753\u1760-\u176C\u176E-\u1770\u1772\u1773\u1780-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18AA\u18B0-\u18F5\u1900-\u191E\u1920-\u192B\u1930-\u193B\u1946-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u19D0-\u19D9\u1A00-\u1A1B\u1A20-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1AB0-\u1ABD\u1B00-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1BF3\u1C00-\u1C37\u1C40-\u1C49\u1C4D-\u1C7D\u1C80-\u1C88\u1CD0-\u1CD2\u1CD4-\u1CF9\u1D00-\u1DF9\u1DFB-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u203F\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u2E2F\u3005-\u3007\u3021-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099\u309A\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312E\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FEA\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA62B\uA640-\uA66F\uA674-\uA67D\uA67F-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA827\uA840-\uA873\uA880-\uA8C5\uA8D0-\uA8D9\uA8E0-\uA8F7\uA8FB\uA8FD\uA900-\uA92D\uA930-\uA953\uA960-\uA97C\uA980-\uA9C0\uA9CF-\uA9D9\uA9E0-\uA9FE\uAA00-\uAA36\uAA40-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A-\uAAC2\uAADB-\uAADD\uAAE0-\uAAEF\uAAF2-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABEA\uABEC\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE2F\uFE33\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]|\uD800[\uDC00-\uDC0B\uDC0D-\uDC26\uDC28-\uDC3A\uDC3C\uDC3D\uDC3F-\uDC4D\uDC50-\uDC5D\uDC80-\uDCFA\uDD40-\uDD74\uDDFD\uDE80-\uDE9C\uDEA0-\uDED0\uDEE0\uDF00-\uDF1F\uDF2D-\uDF4A\uDF50-\uDF7A\uDF80-\uDF9D\uDFA0-\uDFC3\uDFC8-\uDFCF\uDFD1-\uDFD5]|\uD801[\uDC00-\uDC9D\uDCA0-\uDCA9\uDCB0-\uDCD3\uDCD8-\uDCFB\uDD00-\uDD27\uDD30-\uDD63\uDE00-\uDF36\uDF40-\uDF55\uDF60-\uDF67]|\uD802[\uDC00-\uDC05\uDC08\uDC0A-\uDC35\uDC37\uDC38\uDC3C\uDC3F-\uDC55\uDC60-\uDC76\uDC80-\uDC9E\uDCE0-\uDCF2\uDCF4\uDCF5\uDD00-\uDD15\uDD20-\uDD39\uDD80-\uDDB7\uDDBE\uDDBF\uDE00-\uDE03\uDE05\uDE06\uDE0C-\uDE13\uDE15-\uDE17\uDE19-\uDE33\uDE38-\uDE3A\uDE3F\uDE60-\uDE7C\uDE80-\uDE9C\uDEC0-\uDEC7\uDEC9-\uDEE6\uDF00-\uDF35\uDF40-\uDF55\uDF60-\uDF72\uDF80-\uDF91]|\uD803[\uDC00-\uDC48\uDC80-\uDCB2\uDCC0-\uDCF2]|\uD804[\uDC00-\uDC46\uDC66-\uDC6F\uDC7F-\uDCBA\uDCD0-\uDCE8\uDCF0-\uDCF9\uDD00-\uDD34\uDD36-\uDD3F\uDD50-\uDD73\uDD76\uDD80-\uDDC4\uDDCA-\uDDCC\uDDD0-\uDDDA\uDDDC\uDE00-\uDE11\uDE13-\uDE37\uDE3E\uDE80-\uDE86\uDE88\uDE8A-\uDE8D\uDE8F-\uDE9D\uDE9F-\uDEA8\uDEB0-\uDEEA\uDEF0-\uDEF9\uDF00-\uDF03\uDF05-\uDF0C\uDF0F\uDF10\uDF13-\uDF28\uDF2A-\uDF30\uDF32\uDF33\uDF35-\uDF39\uDF3C-\uDF44\uDF47\uDF48\uDF4B-\uDF4D\uDF50\uDF57\uDF5D-\uDF63\uDF66-\uDF6C\uDF70-\uDF74]|\uD805[\uDC00-\uDC4A\uDC50-\uDC59\uDC80-\uDCC5\uDCC7\uDCD0-\uDCD9\uDD80-\uDDB5\uDDB8-\uDDC0\uDDD8-\uDDDD\uDE00-\uDE40\uDE44\uDE50-\uDE59\uDE80-\uDEB7\uDEC0-\uDEC9\uDF00-\uDF19\uDF1D-\uDF2B\uDF30-\uDF39]|\uD806[\uDCA0-\uDCE9\uDCFF\uDE00-\uDE3E\uDE47\uDE50-\uDE83\uDE86-\uDE99\uDEC0-\uDEF8]|\uD807[\uDC00-\uDC08\uDC0A-\uDC36\uDC38-\uDC40\uDC50-\uDC59\uDC72-\uDC8F\uDC92-\uDCA7\uDCA9-\uDCB6\uDD00-\uDD06\uDD08\uDD09\uDD0B-\uDD36\uDD3A\uDD3C\uDD3D\uDD3F-\uDD47\uDD50-\uDD59]|\uD808[\uDC00-\uDF99]|\uD809[\uDC00-\uDC6E\uDC80-\uDD43]|[\uD80C\uD81C-\uD820\uD840-\uD868\uD86A-\uD86C\uD86F-\uD872\uD874-\uD879][\uDC00-\uDFFF]|\uD80D[\uDC00-\uDC2E]|\uD811[\uDC00-\uDE46]|\uD81A[\uDC00-\uDE38\uDE40-\uDE5E\uDE60-\uDE69\uDED0-\uDEED\uDEF0-\uDEF4\uDF00-\uDF36\uDF40-\uDF43\uDF50-\uDF59\uDF63-\uDF77\uDF7D-\uDF8F]|\uD81B[\uDF00-\uDF44\uDF50-\uDF7E\uDF8F-\uDF9F\uDFE0\uDFE1]|\uD821[\uDC00-\uDFEC]|\uD822[\uDC00-\uDEF2]|\uD82C[\uDC00-\uDD1E\uDD70-\uDEFB]|\uD82F[\uDC00-\uDC6A\uDC70-\uDC7C\uDC80-\uDC88\uDC90-\uDC99\uDC9D\uDC9E]|\uD834[\uDD65-\uDD69\uDD6D-\uDD72\uDD7B-\uDD82\uDD85-\uDD8B\uDDAA-\uDDAD\uDE42-\uDE44]|\uD835[\uDC00-\uDC54\uDC56-\uDC9C\uDC9E\uDC9F\uDCA2\uDCA5\uDCA6\uDCA9-\uDCAC\uDCAE-\uDCB9\uDCBB\uDCBD-\uDCC3\uDCC5-\uDD05\uDD07-\uDD0A\uDD0D-\uDD14\uDD16-\uDD1C\uDD1E-\uDD39\uDD3B-\uDD3E\uDD40-\uDD44\uDD46\uDD4A-\uDD50\uDD52-\uDEA5\uDEA8-\uDEC0\uDEC2-\uDEDA\uDEDC-\uDEFA\uDEFC-\uDF14\uDF16-\uDF34\uDF36-\uDF4E\uDF50-\uDF6E\uDF70-\uDF88\uDF8A-\uDFA8\uDFAA-\uDFC2\uDFC4-\uDFCB\uDFCE-\uDFFF]|\uD836[\uDE00-\uDE36\uDE3B-\uDE6C\uDE75\uDE84\uDE9B-\uDE9F\uDEA1-\uDEAF]|\uD838[\uDC00-\uDC06\uDC08-\uDC18\uDC1B-\uDC21\uDC23\uDC24\uDC26-\uDC2A]|\uD83A[\uDC00-\uDCC4\uDCD0-\uDCD6\uDD00-\uDD4A\uDD50-\uDD59]|\uD83B[\uDE00-\uDE03\uDE05-\uDE1F\uDE21\uDE22\uDE24\uDE27\uDE29-\uDE32\uDE34-\uDE37\uDE39\uDE3B\uDE42\uDE47\uDE49\uDE4B\uDE4D-\uDE4F\uDE51\uDE52\uDE54\uDE57\uDE59\uDE5B\uDE5D\uDE5F\uDE61\uDE62\uDE64\uDE67-\uDE6A\uDE6C-\uDE72\uDE74-\uDE77\uDE79-\uDE7C\uDE7E\uDE80-\uDE89\uDE8B-\uDE9B\uDEA1-\uDEA3\uDEA5-\uDEA9\uDEAB-\uDEBB]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D\uDC20-\uDFFF]|\uD873[\uDC00-\uDEA1\uDEB0-\uDFFF]|\uD87A[\uDC00-\uDFE0]|\uD87E[\uDC00-\uDE1D]|\uDB40[\uDD00-\uDDEF]/;
+var unicode = {
+  Space_Separator,
+  ID_Start,
+  ID_Continue
+};
+var util = {
+  isSpaceSeparator(c3) {
+    return typeof c3 === "string" && unicode.Space_Separator.test(c3);
+  },
+  isIdStartChar(c3) {
+    return typeof c3 === "string" && (c3 >= "a" && c3 <= "z" || c3 >= "A" && c3 <= "Z" || c3 === "$" || c3 === "_" || unicode.ID_Start.test(c3));
+  },
+  isIdContinueChar(c3) {
+    return typeof c3 === "string" && (c3 >= "a" && c3 <= "z" || c3 >= "A" && c3 <= "Z" || c3 >= "0" && c3 <= "9" || c3 === "$" || c3 === "_" || c3 === "\u200C" || c3 === "\u200D" || unicode.ID_Continue.test(c3));
+  },
+  isDigit(c3) {
+    return typeof c3 === "string" && /[0-9]/.test(c3);
+  },
+  isHexDigit(c3) {
+    return typeof c3 === "string" && /[0-9A-Fa-f]/.test(c3);
+  }
+};
+var source;
+var parseState;
+var stack;
+var pos;
+var line;
+var column;
+var token;
+var key;
+var root;
+var parse2 = function parse3(text2, reviver) {
+  source = String(text2);
+  parseState = "start";
+  stack = [];
+  pos = 0;
+  line = 1;
+  column = 0;
+  token = void 0;
+  key = void 0;
+  root = void 0;
+  do {
+    token = lex();
+    parseStates[parseState]();
+  } while (token.type !== "eof");
+  if (typeof reviver === "function") {
+    return internalize({ "": root }, "", reviver);
+  }
+  return root;
+};
+function internalize(holder, name, reviver) {
+  const value2 = holder[name];
+  if (value2 != null && typeof value2 === "object") {
+    if (Array.isArray(value2)) {
+      for (let i = 0; i < value2.length; i++) {
+        const key2 = String(i);
+        const replacement = internalize(value2, key2, reviver);
+        if (replacement === void 0) {
+          delete value2[key2];
+        } else {
+          Object.defineProperty(value2, key2, {
+            value: replacement,
+            writable: true,
+            enumerable: true,
+            configurable: true
+          });
+        }
+      }
+    } else {
+      for (const key2 in value2) {
+        const replacement = internalize(value2, key2, reviver);
+        if (replacement === void 0) {
+          delete value2[key2];
+        } else {
+          Object.defineProperty(value2, key2, {
+            value: replacement,
+            writable: true,
+            enumerable: true,
+            configurable: true
+          });
+        }
+      }
+    }
+  }
+  return reviver.call(holder, name, value2);
+}
+var lexState;
+var buffer;
+var doubleQuote;
+var sign;
+var c2;
+function lex() {
+  lexState = "default";
+  buffer = "";
+  doubleQuote = false;
+  sign = 1;
+  for (; ; ) {
+    c2 = peek();
+    const token2 = lexStates[lexState]();
+    if (token2) {
+      return token2;
+    }
+  }
+}
+function peek() {
+  if (source[pos]) {
+    return String.fromCodePoint(source.codePointAt(pos));
+  }
+}
+function read() {
+  const c3 = peek();
+  if (c3 === "\n") {
+    line++;
+    column = 0;
+  } else if (c3) {
+    column += c3.length;
+  } else {
+    column++;
+  }
+  if (c3) {
+    pos += c3.length;
+  }
+  return c3;
+}
+var lexStates = {
+  default() {
+    switch (c2) {
+      case "	":
+      case "\v":
+      case "\f":
+      case " ":
+      case "\xA0":
+      case "\uFEFF":
+      case "\n":
+      case "\r":
+      case "\u2028":
+      case "\u2029":
+        read();
+        return;
+      case "/":
+        read();
+        lexState = "comment";
+        return;
+      case void 0:
+        read();
+        return newToken("eof");
+    }
+    if (util.isSpaceSeparator(c2)) {
+      read();
+      return;
+    }
+    return lexStates[parseState]();
+  },
+  comment() {
+    switch (c2) {
+      case "*":
+        read();
+        lexState = "multiLineComment";
+        return;
+      case "/":
+        read();
+        lexState = "singleLineComment";
+        return;
+    }
+    throw invalidChar(read());
+  },
+  multiLineComment() {
+    switch (c2) {
+      case "*":
+        read();
+        lexState = "multiLineCommentAsterisk";
+        return;
+      case void 0:
+        throw invalidChar(read());
+    }
+    read();
+  },
+  multiLineCommentAsterisk() {
+    switch (c2) {
+      case "*":
+        read();
+        return;
+      case "/":
+        read();
+        lexState = "default";
+        return;
+      case void 0:
+        throw invalidChar(read());
+    }
+    read();
+    lexState = "multiLineComment";
+  },
+  singleLineComment() {
+    switch (c2) {
+      case "\n":
+      case "\r":
+      case "\u2028":
+      case "\u2029":
+        read();
+        lexState = "default";
+        return;
+      case void 0:
+        read();
+        return newToken("eof");
+    }
+    read();
+  },
+  value() {
+    switch (c2) {
+      case "{":
+      case "[":
+        return newToken("punctuator", read());
+      case "n":
+        read();
+        literal("ull");
+        return newToken("null", null);
+      case "t":
+        read();
+        literal("rue");
+        return newToken("boolean", true);
+      case "f":
+        read();
+        literal("alse");
+        return newToken("boolean", false);
+      case "-":
+      case "+":
+        if (read() === "-") {
+          sign = -1;
+        }
+        lexState = "sign";
+        return;
+      case ".":
+        buffer = read();
+        lexState = "decimalPointLeading";
+        return;
+      case "0":
+        buffer = read();
+        lexState = "zero";
+        return;
+      case "1":
+      case "2":
+      case "3":
+      case "4":
+      case "5":
+      case "6":
+      case "7":
+      case "8":
+      case "9":
+        buffer = read();
+        lexState = "decimalInteger";
+        return;
+      case "I":
+        read();
+        literal("nfinity");
+        return newToken("numeric", Infinity);
+      case "N":
+        read();
+        literal("aN");
+        return newToken("numeric", NaN);
+      case '"':
+      case "'":
+        doubleQuote = read() === '"';
+        buffer = "";
+        lexState = "string";
+        return;
+    }
+    throw invalidChar(read());
+  },
+  identifierNameStartEscape() {
+    if (c2 !== "u") {
+      throw invalidChar(read());
+    }
+    read();
+    const u = unicodeEscape();
+    switch (u) {
+      case "$":
+      case "_":
+        break;
+      default:
+        if (!util.isIdStartChar(u)) {
+          throw invalidIdentifier();
+        }
+        break;
+    }
+    buffer += u;
+    lexState = "identifierName";
+  },
+  identifierName() {
+    switch (c2) {
+      case "$":
+      case "_":
+      case "\u200C":
+      case "\u200D":
+        buffer += read();
+        return;
+      case "\\":
+        read();
+        lexState = "identifierNameEscape";
+        return;
+    }
+    if (util.isIdContinueChar(c2)) {
+      buffer += read();
+      return;
+    }
+    return newToken("identifier", buffer);
+  },
+  identifierNameEscape() {
+    if (c2 !== "u") {
+      throw invalidChar(read());
+    }
+    read();
+    const u = unicodeEscape();
+    switch (u) {
+      case "$":
+      case "_":
+      case "\u200C":
+      case "\u200D":
+        break;
+      default:
+        if (!util.isIdContinueChar(u)) {
+          throw invalidIdentifier();
+        }
+        break;
+    }
+    buffer += u;
+    lexState = "identifierName";
+  },
+  sign() {
+    switch (c2) {
+      case ".":
+        buffer = read();
+        lexState = "decimalPointLeading";
+        return;
+      case "0":
+        buffer = read();
+        lexState = "zero";
+        return;
+      case "1":
+      case "2":
+      case "3":
+      case "4":
+      case "5":
+      case "6":
+      case "7":
+      case "8":
+      case "9":
+        buffer = read();
+        lexState = "decimalInteger";
+        return;
+      case "I":
+        read();
+        literal("nfinity");
+        return newToken("numeric", sign * Infinity);
+      case "N":
+        read();
+        literal("aN");
+        return newToken("numeric", NaN);
+    }
+    throw invalidChar(read());
+  },
+  zero() {
+    switch (c2) {
+      case ".":
+        buffer += read();
+        lexState = "decimalPoint";
+        return;
+      case "e":
+      case "E":
+        buffer += read();
+        lexState = "decimalExponent";
+        return;
+      case "x":
+      case "X":
+        buffer += read();
+        lexState = "hexadecimal";
+        return;
+    }
+    return newToken("numeric", sign * 0);
+  },
+  decimalInteger() {
+    switch (c2) {
+      case ".":
+        buffer += read();
+        lexState = "decimalPoint";
+        return;
+      case "e":
+      case "E":
+        buffer += read();
+        lexState = "decimalExponent";
+        return;
+    }
+    if (util.isDigit(c2)) {
+      buffer += read();
+      return;
+    }
+    return newToken("numeric", sign * Number(buffer));
+  },
+  decimalPointLeading() {
+    if (util.isDigit(c2)) {
+      buffer += read();
+      lexState = "decimalFraction";
+      return;
+    }
+    throw invalidChar(read());
+  },
+  decimalPoint() {
+    switch (c2) {
+      case "e":
+      case "E":
+        buffer += read();
+        lexState = "decimalExponent";
+        return;
+    }
+    if (util.isDigit(c2)) {
+      buffer += read();
+      lexState = "decimalFraction";
+      return;
+    }
+    return newToken("numeric", sign * Number(buffer));
+  },
+  decimalFraction() {
+    switch (c2) {
+      case "e":
+      case "E":
+        buffer += read();
+        lexState = "decimalExponent";
+        return;
+    }
+    if (util.isDigit(c2)) {
+      buffer += read();
+      return;
+    }
+    return newToken("numeric", sign * Number(buffer));
+  },
+  decimalExponent() {
+    switch (c2) {
+      case "+":
+      case "-":
+        buffer += read();
+        lexState = "decimalExponentSign";
+        return;
+    }
+    if (util.isDigit(c2)) {
+      buffer += read();
+      lexState = "decimalExponentInteger";
+      return;
+    }
+    throw invalidChar(read());
+  },
+  decimalExponentSign() {
+    if (util.isDigit(c2)) {
+      buffer += read();
+      lexState = "decimalExponentInteger";
+      return;
+    }
+    throw invalidChar(read());
+  },
+  decimalExponentInteger() {
+    if (util.isDigit(c2)) {
+      buffer += read();
+      return;
+    }
+    return newToken("numeric", sign * Number(buffer));
+  },
+  hexadecimal() {
+    if (util.isHexDigit(c2)) {
+      buffer += read();
+      lexState = "hexadecimalInteger";
+      return;
+    }
+    throw invalidChar(read());
+  },
+  hexadecimalInteger() {
+    if (util.isHexDigit(c2)) {
+      buffer += read();
+      return;
+    }
+    return newToken("numeric", sign * Number(buffer));
+  },
+  string() {
+    switch (c2) {
+      case "\\":
+        read();
+        buffer += escape();
+        return;
+      case '"':
+        if (doubleQuote) {
+          read();
+          return newToken("string", buffer);
+        }
+        buffer += read();
+        return;
+      case "'":
+        if (!doubleQuote) {
+          read();
+          return newToken("string", buffer);
+        }
+        buffer += read();
+        return;
+      case "\n":
+      case "\r":
+        throw invalidChar(read());
+      case "\u2028":
+      case "\u2029":
+        separatorChar(c2);
+        break;
+      case void 0:
+        throw invalidChar(read());
+    }
+    buffer += read();
+  },
+  start() {
+    switch (c2) {
+      case "{":
+      case "[":
+        return newToken("punctuator", read());
+    }
+    lexState = "value";
+  },
+  beforePropertyName() {
+    switch (c2) {
+      case "$":
+      case "_":
+        buffer = read();
+        lexState = "identifierName";
+        return;
+      case "\\":
+        read();
+        lexState = "identifierNameStartEscape";
+        return;
+      case "}":
+        return newToken("punctuator", read());
+      case '"':
+      case "'":
+        doubleQuote = read() === '"';
+        lexState = "string";
+        return;
+    }
+    if (util.isIdStartChar(c2)) {
+      buffer += read();
+      lexState = "identifierName";
+      return;
+    }
+    throw invalidChar(read());
+  },
+  afterPropertyName() {
+    if (c2 === ":") {
+      return newToken("punctuator", read());
+    }
+    throw invalidChar(read());
+  },
+  beforePropertyValue() {
+    lexState = "value";
+  },
+  afterPropertyValue() {
+    switch (c2) {
+      case ",":
+      case "}":
+        return newToken("punctuator", read());
+    }
+    throw invalidChar(read());
+  },
+  beforeArrayValue() {
+    if (c2 === "]") {
+      return newToken("punctuator", read());
+    }
+    lexState = "value";
+  },
+  afterArrayValue() {
+    switch (c2) {
+      case ",":
+      case "]":
+        return newToken("punctuator", read());
+    }
+    throw invalidChar(read());
+  },
+  end() {
+    throw invalidChar(read());
+  }
+};
+function newToken(type, value2) {
+  return {
+    type,
+    value: value2,
+    line,
+    column
+  };
+}
+function literal(s) {
+  for (const c3 of s) {
+    const p4 = peek();
+    if (p4 !== c3) {
+      throw invalidChar(read());
+    }
+    read();
+  }
+}
+function escape() {
+  const c3 = peek();
+  switch (c3) {
+    case "b":
+      read();
+      return "\b";
+    case "f":
+      read();
+      return "\f";
+    case "n":
+      read();
+      return "\n";
+    case "r":
+      read();
+      return "\r";
+    case "t":
+      read();
+      return "	";
+    case "v":
+      read();
+      return "\v";
+    case "0":
+      read();
+      if (util.isDigit(peek())) {
+        throw invalidChar(read());
+      }
+      return "\0";
+    case "x":
+      read();
+      return hexEscape();
+    case "u":
+      read();
+      return unicodeEscape();
+    case "\n":
+    case "\u2028":
+    case "\u2029":
+      read();
+      return "";
+    case "\r":
+      read();
+      if (peek() === "\n") {
+        read();
+      }
+      return "";
+    case "1":
+    case "2":
+    case "3":
+    case "4":
+    case "5":
+    case "6":
+    case "7":
+    case "8":
+    case "9":
+      throw invalidChar(read());
+    case void 0:
+      throw invalidChar(read());
+  }
+  return read();
+}
+function hexEscape() {
+  let buffer2 = "";
+  let c3 = peek();
+  if (!util.isHexDigit(c3)) {
+    throw invalidChar(read());
+  }
+  buffer2 += read();
+  c3 = peek();
+  if (!util.isHexDigit(c3)) {
+    throw invalidChar(read());
+  }
+  buffer2 += read();
+  return String.fromCodePoint(parseInt(buffer2, 16));
+}
+function unicodeEscape() {
+  let buffer2 = "";
+  let count = 4;
+  while (count-- > 0) {
+    const c3 = peek();
+    if (!util.isHexDigit(c3)) {
+      throw invalidChar(read());
+    }
+    buffer2 += read();
+  }
+  return String.fromCodePoint(parseInt(buffer2, 16));
+}
+var parseStates = {
+  start() {
+    if (token.type === "eof") {
+      throw invalidEOF();
+    }
+    push();
+  },
+  beforePropertyName() {
+    switch (token.type) {
+      case "identifier":
+      case "string":
+        key = token.value;
+        parseState = "afterPropertyName";
+        return;
+      case "punctuator":
+        pop();
+        return;
+      case "eof":
+        throw invalidEOF();
+    }
+  },
+  afterPropertyName() {
+    if (token.type === "eof") {
+      throw invalidEOF();
+    }
+    parseState = "beforePropertyValue";
+  },
+  beforePropertyValue() {
+    if (token.type === "eof") {
+      throw invalidEOF();
+    }
+    push();
+  },
+  beforeArrayValue() {
+    if (token.type === "eof") {
+      throw invalidEOF();
+    }
+    if (token.type === "punctuator" && token.value === "]") {
+      pop();
+      return;
+    }
+    push();
+  },
+  afterPropertyValue() {
+    if (token.type === "eof") {
+      throw invalidEOF();
+    }
+    switch (token.value) {
+      case ",":
+        parseState = "beforePropertyName";
+        return;
+      case "}":
+        pop();
+    }
+  },
+  afterArrayValue() {
+    if (token.type === "eof") {
+      throw invalidEOF();
+    }
+    switch (token.value) {
+      case ",":
+        parseState = "beforeArrayValue";
+        return;
+      case "]":
+        pop();
+    }
+  },
+  end() {
+  }
+};
+function push() {
+  let value2;
+  switch (token.type) {
+    case "punctuator":
+      switch (token.value) {
+        case "{":
+          value2 = {};
+          break;
+        case "[":
+          value2 = [];
+          break;
+      }
+      break;
+    case "null":
+    case "boolean":
+    case "numeric":
+    case "string":
+      value2 = token.value;
+      break;
+  }
+  if (root === void 0) {
+    root = value2;
+  } else {
+    const parent = stack[stack.length - 1];
+    if (Array.isArray(parent)) {
+      parent.push(value2);
+    } else {
+      Object.defineProperty(parent, key, {
+        value: value2,
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+    }
+  }
+  if (value2 !== null && typeof value2 === "object") {
+    stack.push(value2);
+    if (Array.isArray(value2)) {
+      parseState = "beforeArrayValue";
+    } else {
+      parseState = "beforePropertyName";
+    }
+  } else {
+    const current = stack[stack.length - 1];
+    if (current == null) {
+      parseState = "end";
+    } else if (Array.isArray(current)) {
+      parseState = "afterArrayValue";
+    } else {
+      parseState = "afterPropertyValue";
+    }
+  }
+}
+function pop() {
+  stack.pop();
+  const current = stack[stack.length - 1];
+  if (current == null) {
+    parseState = "end";
+  } else if (Array.isArray(current)) {
+    parseState = "afterArrayValue";
+  } else {
+    parseState = "afterPropertyValue";
+  }
+}
+function invalidChar(c3) {
+  if (c3 === void 0) {
+    return syntaxError(`JSON5: invalid end of input at ${line}:${column}`);
+  }
+  return syntaxError(`JSON5: invalid character '${formatChar(c3)}' at ${line}:${column}`);
+}
+function invalidEOF() {
+  return syntaxError(`JSON5: invalid end of input at ${line}:${column}`);
+}
+function invalidIdentifier() {
+  column -= 5;
+  return syntaxError(`JSON5: invalid identifier character at ${line}:${column}`);
+}
+function separatorChar(c3) {
+  console.warn(`JSON5: '${formatChar(c3)}' in strings is not valid ECMAScript; consider escaping`);
+}
+function formatChar(c3) {
+  const replacements = {
+    "'": "\\'",
+    '"': '\\"',
+    "\\": "\\\\",
+    "\b": "\\b",
+    "\f": "\\f",
+    "\n": "\\n",
+    "\r": "\\r",
+    "	": "\\t",
+    "\v": "\\v",
+    "\0": "\\0",
+    "\u2028": "\\u2028",
+    "\u2029": "\\u2029"
+  };
+  if (replacements[c3]) {
+    return replacements[c3];
+  }
+  if (c3 < " ") {
+    const hexString = c3.charCodeAt(0).toString(16);
+    return "\\x" + ("00" + hexString).substring(hexString.length);
+  }
+  return c3;
+}
+function syntaxError(message) {
+  const err = new SyntaxError(message);
+  err.lineNumber = line;
+  err.columnNumber = column;
+  return err;
+}
+var stringify = function stringify2(value2, replacer, space) {
+  const stack2 = [];
+  let indent = "";
+  let propertyList;
+  let replacerFunc;
+  let gap = "";
+  let quote;
+  if (replacer != null && typeof replacer === "object" && !Array.isArray(replacer)) {
+    space = replacer.space;
+    quote = replacer.quote;
+    replacer = replacer.replacer;
+  }
+  if (typeof replacer === "function") {
+    replacerFunc = replacer;
+  } else if (Array.isArray(replacer)) {
+    propertyList = [];
+    for (const v of replacer) {
+      let item;
+      if (typeof v === "string") {
+        item = v;
+      } else if (typeof v === "number" || v instanceof String || v instanceof Number) {
+        item = String(v);
+      }
+      if (item !== void 0 && propertyList.indexOf(item) < 0) {
+        propertyList.push(item);
+      }
+    }
+  }
+  if (space instanceof Number) {
+    space = Number(space);
+  } else if (space instanceof String) {
+    space = String(space);
+  }
+  if (typeof space === "number") {
+    if (space > 0) {
+      space = Math.min(10, Math.floor(space));
+      gap = "          ".substr(0, space);
+    }
+  } else if (typeof space === "string") {
+    gap = space.substr(0, 10);
+  }
+  return serializeProperty("", { "": value2 });
+  function serializeProperty(key2, holder) {
+    let value3 = holder[key2];
+    if (value3 != null) {
+      if (typeof value3.toJSON5 === "function") {
+        value3 = value3.toJSON5(key2);
+      } else if (typeof value3.toJSON === "function") {
+        value3 = value3.toJSON(key2);
+      }
+    }
+    if (replacerFunc) {
+      value3 = replacerFunc.call(holder, key2, value3);
+    }
+    if (value3 instanceof Number) {
+      value3 = Number(value3);
+    } else if (value3 instanceof String) {
+      value3 = String(value3);
+    } else if (value3 instanceof Boolean) {
+      value3 = value3.valueOf();
+    }
+    switch (value3) {
+      case null:
+        return "null";
+      case true:
+        return "true";
+      case false:
+        return "false";
+    }
+    if (typeof value3 === "string") {
+      return quoteString(value3, false);
+    }
+    if (typeof value3 === "number") {
+      return String(value3);
+    }
+    if (typeof value3 === "object") {
+      return Array.isArray(value3) ? serializeArray(value3) : serializeObject(value3);
+    }
+    return void 0;
+  }
+  function quoteString(value3) {
+    const quotes = {
+      "'": 0.1,
+      '"': 0.2
+    };
+    const replacements = {
+      "'": "\\'",
+      '"': '\\"',
+      "\\": "\\\\",
+      "\b": "\\b",
+      "\f": "\\f",
+      "\n": "\\n",
+      "\r": "\\r",
+      "	": "\\t",
+      "\v": "\\v",
+      "\0": "\\0",
+      "\u2028": "\\u2028",
+      "\u2029": "\\u2029"
+    };
+    let product = "";
+    for (let i = 0; i < value3.length; i++) {
+      const c3 = value3[i];
+      switch (c3) {
+        case "'":
+        case '"':
+          quotes[c3]++;
+          product += c3;
+          continue;
+        case "\0":
+          if (util.isDigit(value3[i + 1])) {
+            product += "\\x00";
+            continue;
+          }
+      }
+      if (replacements[c3]) {
+        product += replacements[c3];
+        continue;
+      }
+      if (c3 < " ") {
+        let hexString = c3.charCodeAt(0).toString(16);
+        product += "\\x" + ("00" + hexString).substring(hexString.length);
+        continue;
+      }
+      product += c3;
+    }
+    const quoteChar = quote || Object.keys(quotes).reduce((a, b) => quotes[a] < quotes[b] ? a : b);
+    product = product.replace(new RegExp(quoteChar, "g"), replacements[quoteChar]);
+    return quoteChar + product + quoteChar;
+  }
+  function serializeObject(value3) {
+    if (stack2.indexOf(value3) >= 0) {
+      throw TypeError("Converting circular structure to JSON5");
+    }
+    stack2.push(value3);
+    let stepback = indent;
+    indent = indent + gap;
+    let keys = propertyList || Object.keys(value3);
+    let partial = [];
+    for (const key2 of keys) {
+      const propertyString = serializeProperty(key2, value3);
+      if (propertyString !== void 0) {
+        let member = serializeKey(key2) + ":";
+        if (gap !== "") {
+          member += " ";
+        }
+        member += propertyString;
+        partial.push(member);
+      }
+    }
+    let final;
+    if (partial.length === 0) {
+      final = "{}";
+    } else {
+      let properties;
+      if (gap === "") {
+        properties = partial.join(",");
+        final = "{" + properties + "}";
+      } else {
+        let separator = ",\n" + indent;
+        properties = partial.join(separator);
+        final = "{\n" + indent + properties + ",\n" + stepback + "}";
+      }
+    }
+    stack2.pop();
+    indent = stepback;
+    return final;
+  }
+  function serializeKey(key2) {
+    if (key2.length === 0) {
+      return quoteString(key2, true);
+    }
+    const firstChar = String.fromCodePoint(key2.codePointAt(0));
+    if (!util.isIdStartChar(firstChar)) {
+      return quoteString(key2, true);
+    }
+    for (let i = firstChar.length; i < key2.length; i++) {
+      if (!util.isIdContinueChar(String.fromCodePoint(key2.codePointAt(i)))) {
+        return quoteString(key2, true);
+      }
+    }
+    return key2;
+  }
+  function serializeArray(value3) {
+    if (stack2.indexOf(value3) >= 0) {
+      throw TypeError("Converting circular structure to JSON5");
+    }
+    stack2.push(value3);
+    let stepback = indent;
+    indent = indent + gap;
+    let partial = [];
+    for (let i = 0; i < value3.length; i++) {
+      const propertyString = serializeProperty(String(i), value3);
+      partial.push(propertyString !== void 0 ? propertyString : "null");
+    }
+    let final;
+    if (partial.length === 0) {
+      final = "[]";
+    } else {
+      if (gap === "") {
+        let properties = partial.join(",");
+        final = "[" + properties + "]";
+      } else {
+        let separator = ",\n" + indent;
+        let properties = partial.join(separator);
+        final = "[\n" + indent + properties + ",\n" + stepback + "]";
+      }
+    }
+    stack2.pop();
+    indent = stepback;
+    return final;
+  }
+};
+var JSON5 = {
+  parse: parse2,
+  stringify
+};
+var lib = JSON5;
+var dist_default = lib;
+
+// src/io/token-json.ts
+function isTokenFileName(name) {
+  return name.endsWith(".json") || name.endsWith(".json5");
+}
+function parseTokenText(text2, path) {
+  return path.endsWith(".json5") ? dist_default.parse(text2) : JSON.parse(text2);
+}
+
+// src/io/token-set.ts
 var EXCLUDED_DIRS = /* @__PURE__ */ new Set([
   "node_modules",
   ".git",
@@ -8149,21 +9441,26 @@ var EXCLUDED_DIRS = /* @__PURE__ */ new Set([
   ".next",
   ".ds-bridge"
 ]);
+var MODE_VARIANT = "(?:medium|high|low)-contrast|dimmed|colorblind|tritanopia|protanopia-deuteranopia";
+var MODE_RE = new RegExp(
+  `(?:^|[/._-])((?:light|dark)(?:[-.](?:${MODE_VARIANT}))*)(?=$|[/._-])`,
+  "g"
+);
 function modeOfTokenFile(relPath) {
-  const match = relPath.toLowerCase().replace(/\\/g, "/").match(
-    /(?:^|[/._-])((?:light|dark)(?:-(?:medium|high)-contrast)?)(?=$|[/._-])/
-  );
-  return match?.[1];
+  const path = relPath.toLowerCase().replace(/\\/g, "/");
+  const matches = [...path.matchAll(MODE_RE)];
+  const last = matches[matches.length - 1]?.[1];
+  return last?.replace(/\./g, "-");
 }
 function isConventionalTokenFile(name) {
-  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json");
+  return name === "tokens.json" || name === "design-tokens.json" || name.endsWith(".tokens.json") || name === "tokens.json5" || name.endsWith(".tokens.json5");
 }
 function isTokenDir(name) {
   return name === "tokens" || name === "design-tokens";
 }
 function readJson(path) {
   try {
-    return JSON.parse(readFileSync2(path, "utf8"));
+    return parseTokenText(readFileSync2(path, "utf8"), path);
   } catch {
     return void 0;
   }
@@ -8188,7 +9485,7 @@ function collectCandidates(dir, insideTokenDir, acc) {
       collectCandidates(full, insideTokenDir || isTokenDir(entry.name), acc);
       continue;
     }
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    if (!entry.isFile() || !isTokenFileName(entry.name)) continue;
     if (insideTokenDir || isConventionalTokenFile(entry.name)) acc.push(full);
   }
 }
@@ -8205,7 +9502,7 @@ function jsonFilesUnder(dir) {
       const full = join2(current, entry.name);
       if (entry.isDirectory()) {
         if (!EXCLUDED_DIRS.has(entry.name)) walk2(full);
-      } else if (entry.isFile() && entry.name.endsWith(".json") && !entry.name.startsWith("$")) {
+      } else if (entry.isFile() && isTokenFileName(entry.name) && !entry.name.startsWith("$")) {
         acc.push(full);
       }
     }
@@ -8214,11 +9511,18 @@ function jsonFilesUnder(dir) {
   return acc.sort();
 }
 var depthOf = (path) => path.split(sep).length;
-function findTokenSource(root) {
+function tokenDirOf(root2, path) {
+  const parts = relative(root2, path).split(sep);
+  const index = parts.findIndex(
+    (part, i) => i < parts.length - 1 && isTokenDir(part)
+  );
+  return index === -1 ? void 0 : join2(root2, ...parts.slice(0, index + 1));
+}
+function findTokenSource(root2) {
   const candidates = [];
-  collectCandidates(root, false, candidates);
+  collectCandidates(root2, false, candidates);
   const verified = candidates.map((path) => ({ path, format: formatOf(path) })).filter(
-    (c2) => c2.format !== void 0
+    (c3) => c3.format !== void 0
   ).sort((a, b) => {
     const depth = depthOf(a.path) - depthOf(b.path);
     return depth !== 0 ? depth : a.path < b.path ? -1 : 1;
@@ -8226,20 +9530,46 @@ function findTokenSource(root) {
   const first = verified[0];
   if (first === void 0) return void 0;
   if (first.format === "tokens-studio") return first.path;
-  const dir = dirname2(first.path);
-  const siblings = verified.filter(
-    (c2) => c2.format === first.format && c2.path.startsWith(dir + sep)
+  const sameFormatUnder = (dir2) => verified.filter(
+    (c3) => c3.format === first.format && c3.path.startsWith(dir2 + sep)
   );
-  return siblings.length >= 2 ? dir : first.path;
+  const tokenDir = tokenDirOf(root2, first.path);
+  if (tokenDir !== void 0 && sameFormatUnder(tokenDir).length >= 2) {
+    return tokenDir;
+  }
+  const dir = dirname2(first.path);
+  return sameFormatUnder(dir).length >= 2 ? dir : first.path;
 }
 function isPlainObject4(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
-function deepMerge(target, source) {
+function deepMerge(target, source2) {
   const out = { ...target };
-  for (const [key, value2] of Object.entries(source)) {
-    const existing = out[key];
-    out[key] = isPlainObject4(existing) && isPlainObject4(value2) ? deepMerge(existing, value2) : value2;
+  for (const [key2, value2] of Object.entries(source2)) {
+    const existing = out[key2];
+    out[key2] = isPlainObject4(existing) && isPlainObject4(value2) ? deepMerge(existing, value2) : value2;
+  }
+  return out;
+}
+function applyModeOverrides(node, chain) {
+  const out = {};
+  for (const [key2, value2] of Object.entries(node)) {
+    out[key2] = isPlainObject4(value2) && !key2.startsWith("$") ? applyModeOverrides(value2, chain) : value2;
+  }
+  const extensions = node.$extensions;
+  if ("$value" in node && isPlainObject4(extensions)) {
+    for (const [key2, ext] of Object.entries(extensions)) {
+      if (!key2.endsWith("overrides") || !isPlainObject4(ext)) continue;
+      const mode = [...chain].reverse().find((m) => m in ext);
+      if (mode === void 0) continue;
+      const override = ext[mode];
+      if (isPlainObject4(override) && "$value" in override) {
+        out.$value = override.$value;
+        if ("alpha" in override) out.alpha = override.alpha;
+      } else {
+        out.$value = override;
+      }
+    }
   }
   return out;
 }
@@ -8271,12 +9601,12 @@ function readTokenDocument(path) {
       };
     }
     try {
-      return { kind: "ok", doc: JSON.parse(raw), files: [path] };
+      return { kind: "ok", doc: parseTokenText(raw, path), files: [path] };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return {
         kind: "error",
-        message: `Token source "${path}" is not valid JSON: ${detail}`
+        message: `Token source "${path}" is not valid ${path.endsWith(".json5") ? "JSON5" : "JSON"}: ${detail}`
       };
     }
   }
@@ -8291,7 +9621,7 @@ function readTokenDocument(path) {
   if (docs.length === 0) {
     return {
       kind: "error",
-      message: `No token files found in "${path}". Expected W3C (DTCG), Tokens Studio, or Style Dictionary JSON.`
+      message: `No token files found in "${path}". Expected W3C (DTCG), Tokens Studio, or Style Dictionary JSON / JSON5.`
     };
   }
   const formats = [...new Set(docs.map((d) => d.format))];
@@ -8313,10 +9643,20 @@ function readTokenDocument(path) {
   }
   const files = docs.map((d) => d.file);
   if (byMode.size === 0) return { kind: "ok", doc: shared, files };
-  const modeDocs = [...byMode.keys()].sort((a, b) => modeRank(a) < modeRank(b) ? -1 : 1).map((mode) => ({
-    mode,
-    doc: (byMode.get(mode) ?? []).reduce(deepMerge, shared)
-  }));
+  const modeNames = [...byMode.keys()];
+  const baseOf = (mode) => modeNames.filter((m) => m !== mode && mode.startsWith(`${m}-`)).sort((a, b) => b.length - a.length)[0];
+  const layered = (mode) => {
+    const base = baseOf(mode);
+    const under = base === void 0 ? shared : layered(base);
+    return (byMode.get(mode) ?? []).reduce(deepMerge, under);
+  };
+  const modeDocs = modeNames.sort((a, b) => modeRank(a) < modeRank(b) ? -1 : 1).map((mode) => {
+    const chain = [];
+    for (let m = mode; m !== void 0; m = baseOf(m)) {
+      chain.unshift(m);
+    }
+    return { mode, doc: applyModeOverrides(layered(mode), chain) };
+  });
   return {
     kind: "ok",
     doc: modeDocs[0].doc,
@@ -8346,17 +9686,17 @@ function isPlainObject5(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
 }
 function loadTokens(path) {
-  const read = readTokenDocument(path);
-  if (read.kind === "error") return read;
-  const format = detectFormat(read.doc);
+  const read2 = readTokenDocument(path);
+  if (read2.kind === "error") return read2;
+  const format = detectFormat(read2.doc);
   if (format === "unknown") {
     return {
       kind: "error",
       message: `Could not detect a supported token format for "${path}". Expected W3C, Tokens Studio, or Style Dictionary.`
     };
   }
-  const parse2 = PARSERS[format];
-  const outcome = parse2(read.doc);
+  const parse4 = PARSERS[format];
+  const outcome = parse4(read2.doc);
   if (outcome.kind === "error") {
     return parseFailure(`token source "${path}"`, format, outcome);
   }
@@ -8365,12 +9705,12 @@ function loadTokens(path) {
     format,
     map: outcome.map,
     warnings: outcome.warnings,
-    files: read.files
+    files: read2.files
   };
-  if (read.modeDocs !== void 0) {
+  if (read2.modeDocs !== void 0) {
     const modes3 = [];
-    for (const { mode, doc } of read.modeDocs) {
-      const parsed = parse2(doc);
+    for (const { mode, doc } of read2.modeDocs) {
+      const parsed = parse4(doc);
       if (parsed.kind === "error") {
         return parseFailure(`mode "${mode}" of "${path}"`, format, parsed);
       }
@@ -8378,13 +9718,13 @@ function loadTokens(path) {
     }
     return { ...base, modes: modes3 };
   }
-  const themes = format === "tokens-studio" && isPlainObject5(read.doc) ? readThemes(read.doc) : void 0;
-  if (themes === void 0 || themes.length < 2 || !isPlainObject5(read.doc)) {
+  const themes = format === "tokens-studio" && isPlainObject5(read2.doc) ? readThemes(read2.doc) : void 0;
+  if (themes === void 0 || themes.length < 2 || !isPlainObject5(read2.doc)) {
     return base;
   }
   const modes2 = [];
   for (const theme of themes) {
-    const themed = parseTokensStudio(themeSubDocument(read.doc, theme));
+    const themed = parseTokensStudio(themeSubDocument(read2.doc, theme));
     if (themed.kind === "error") {
       return parseFailure(`theme "${theme.name}" of "${path}"`, format, themed);
     }
@@ -8517,27 +9857,27 @@ function isNumericCell(value2) {
 var pad = padToWidth;
 function renderTable(headers, rows, opts) {
   const columnCount = headers.length;
-  const cellAt = (row2, column) => terminalCell(row2[column] ?? "");
+  const cellAt = (row2, column2) => terminalCell(row2[column2] ?? "");
   headers = headers.map((header) => terminalCell(header));
   const widths = [];
-  for (let c2 = 0; c2 < columnCount; c2++) {
-    let width = displayWidth2(headers[c2] ?? "");
+  for (let c3 = 0; c3 < columnCount; c3++) {
+    let width = displayWidth2(headers[c3] ?? "");
     for (const row2 of rows) {
-      width = Math.max(width, displayWidth2(cellAt(row2, c2)));
+      width = Math.max(width, displayWidth2(cellAt(row2, c3)));
     }
     widths.push(width);
   }
   const numericColumn = [];
-  for (let c2 = 0; c2 < columnCount; c2++) {
-    const forced = opts.align?.[c2];
+  for (let c3 = 0; c3 < columnCount; c3++) {
+    const forced = opts.align?.[c3];
     numericColumn.push(
-      forced === "right" ? true : forced === "left" ? false : rows.length > 0 && rows.every((row2) => isNumericCell(cellAt(row2, c2)))
+      forced === "right" ? true : forced === "left" ? false : rows.length > 0 && rows.every((row2) => isNumericCell(cellAt(row2, c3)))
     );
   }
   const border = (left, mid, right) => left + widths.map((w) => "\u2500".repeat(w + 2)).join(mid) + right;
-  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell, c2) => {
-    const right = alignNumeric && (numericColumn[c2] ?? false);
-    return ` ${pad(cell, widths[c2] ?? 0, right)} `;
+  const dataRow = (cells, alignNumeric) => `\u2502${cells.map((cell, c3) => {
+    const right = alignNumeric && (numericColumn[c3] ?? false);
+    return ` ${pad(cell, widths[c3] ?? 0, right)} `;
   }).join("\u2502")}\u2502`;
   const lines = [];
   lines.push(border("\u250C", "\u252C", "\u2510"));
@@ -8546,7 +9886,7 @@ function renderTable(headers, rows, opts) {
   for (const row2 of rows) {
     lines.push(
       dataRow(
-        headers.map((_, c2) => cellAt(row2, c2)),
+        headers.map((_, c3) => cellAt(row2, c3)),
         true
       )
     );
@@ -8612,7 +9952,7 @@ function loadModeMaps(tokenPath) {
   };
 }
 function resolveTokenPath(target) {
-  const abs2 = resolve3(target);
+  const abs2 = resolve2(target);
   if (!existsSync2(abs2)) {
     return { kind: "error", message: `Path "${abs2}" does not exist.` };
   }
@@ -8746,7 +10086,7 @@ async function runA11y(path, options) {
     return;
   }
   const report = auditContrast(filtered.modes, { level });
-  const resolvedTarget = resolve3(path);
+  const resolvedTarget = resolve2(path);
   if (existsSync2(resolvedTarget) && statSync3(resolvedTarget).isDirectory()) {
     appendA11yHistory(resolvedTarget, report);
   }
@@ -8775,7 +10115,7 @@ function registerA11yCommand(program2) {
 
 // src/cli-commands/adoption.ts
 import { existsSync as existsSync3, readFileSync as readFileSync3, statSync as statSync4 } from "fs";
-import { dirname as dirname3, join as join4, resolve as resolve4 } from "path";
+import { dirname as dirname3, join as join4, resolve as resolve3 } from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // src/engines/registry/parts.ts
@@ -8885,7 +10225,7 @@ async function scanUsage(registry, projectDir) {
     globals.__filename = filename;
     globals.__dirname = dirname3(filename);
   }
-  const { mapCodeUsage } = await import("./usage-WXYAN2PV.mjs");
+  const { mapCodeUsage } = await import("./usage-XZ5TWVZQ.mjs");
   return mapCodeUsage({ registry, projectDir });
 }
 function appendAdoptionHistory(targetDir, coverage) {
@@ -8941,7 +10281,7 @@ async function runAdoption(path, options) {
     fail2(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return;
   }
-  const targetDir = resolve4(path);
+  const targetDir = resolve3(path);
   if (!existsSync3(targetDir) || !statSync4(targetDir).isDirectory()) {
     fail2(`Path "${targetDir}" is not a directory.`);
     return;
@@ -8975,7 +10315,7 @@ function registerAdoptionCommand(program2) {
 
 // src/cli-commands/analytics.ts
 import { existsSync as existsSync7, mkdirSync as mkdirSync3, statSync as statSync5, writeFileSync as writeFileSync3 } from "fs";
-import { join as join9, resolve as resolve6 } from "path";
+import { join as join9, resolve as resolve5 } from "path";
 
 // src/engines/report/debt.ts
 var WEIGHT = {
@@ -9156,27 +10496,27 @@ var DOMAIN_HINT = {
   git: "ds-bridge changelog",
   score: "ds-bridge record"
 };
-function isPresent(key, value2) {
+function isPresent(key2, value2) {
   if (value2 === void 0 || value2 === null) return false;
-  if (key === "dataFreshness") {
+  if (key2 === "dataFreshness") {
     return value2.some((r2) => r2.band !== "unknown");
   }
   if (Array.isArray(value2)) return value2.length > 0;
-  if (key === "breakingCalendar") {
+  if (key2 === "breakingCalendar") {
     return value2.entries.length > 0;
   }
-  if (key === "changeFrequency") {
+  if (key2 === "changeFrequency") {
     return value2.byKind.length > 0;
   }
-  if (key === "executive") return Object.keys(value2).length > 0;
+  if (key2 === "executive") return Object.keys(value2).length > 0;
   return true;
 }
 function domainSlice(domain, data) {
   const metrics = {};
-  for (const [key, owner] of Object.entries(DOMAIN_OF)) {
+  for (const [key2, owner] of Object.entries(DOMAIN_OF)) {
     if (owner !== domain) continue;
-    const value2 = data[key];
-    if (isPresent(key, value2)) metrics[key] = value2;
+    const value2 = data[key2];
+    if (isPresent(key2, value2)) metrics[key2] = value2;
   }
   return Object.keys(metrics).length > 0 ? { status: "ok", metrics } : { status: "no-data", metrics: {}, hint: DOMAIN_HINT[domain] };
 }
@@ -9208,8 +10548,8 @@ function sortKeys(value2) {
   if (Array.isArray(value2)) return value2.map(sortKeys);
   if (typeof value2 === "object" && value2 !== null) {
     const out = {};
-    for (const key of Object.keys(value2).sort()) {
-      out[key] = sortKeys(value2[key]);
+    for (const key2 of Object.keys(value2).sort()) {
+      out[key2] = sortKeys(value2[key2]);
     }
     return out;
   }
@@ -9269,7 +10609,7 @@ function renderAnalyticsTerm(doc) {
 
 // src/io/report-data.ts
 import { readFileSync as readFileSync7 } from "fs";
-import { basename, join as join8, resolve as resolve5 } from "path";
+import { basename, join as join8, resolve as resolve4 } from "path";
 
 // src/engines/figma/library-health.ts
 var LAYOUT_ONLY_FIELDS = /* @__PURE__ */ new Set([
@@ -9299,10 +10639,15 @@ var TEXT_CONTENT_FIELDS = /* @__PURE__ */ new Set([
   "lineTypes",
   "lineIndentations"
 ]);
+var USAGE_FIELDS = /* @__PURE__ */ new Set([
+  "name",
+  "componentProperties",
+  "componentPropertyReferences"
+]);
 function designFields(override) {
   const fields = override.overriddenFields ?? [];
   return fields.filter(
-    (field) => !LAYOUT_ONLY_FIELDS.has(field) && !TEXT_CONTENT_FIELDS.has(field)
+    (field) => !LAYOUT_ONLY_FIELDS.has(field) && !TEXT_CONTENT_FIELDS.has(field) && !USAGE_FIELDS.has(field)
   );
 }
 function isDesignOverride(override) {
@@ -9318,15 +10663,15 @@ function componentNameOf(file, componentId) {
   if (components === void 0) return void 0;
   return components[componentId]?.name;
 }
-function walk(root, visit) {
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
+function walk(root2, visit) {
+  const stack2 = [root2];
+  while (stack2.length > 0) {
+    const node = stack2.pop();
     visit(node);
     const children = node.children;
     if (Array.isArray(children)) {
       for (const child of children) {
-        if (child !== void 0) stack.push(child);
+        if (child !== void 0) stack2.push(child);
       }
     }
   }
@@ -9435,8 +10780,8 @@ function buildParity(registry) {
   for (const entry of unmatchedCode) {
     const parent = parentOf(entry.name, entry.importPath);
     if (parent === void 0) continue;
-    const key = `${entry.importPath}\0${parent}`;
-    partsByParent.set(key, [...partsByParent.get(key) ?? [], entry.name]);
+    const key2 = `${entry.importPath}\0${parent}`;
+    partsByParent.set(key2, [...partsByParent.get(key2) ?? [], entry.name]);
     isPart.add(`${entry.importPath}\0${entry.name}`);
   }
   const withParts = (detail, name, importPath) => {
@@ -9721,10 +11066,10 @@ function buildComponentHealth(input) {
     (a, b) => a.healthScore - b.healthScore || (a.component < b.component ? -1 : a.component > b.component ? 1 : 0)
   );
 }
-function matchByKeyOrName(components, aliases, key, signalValue) {
+function matchByKeyOrName(components, aliases, key2, signalValue) {
   if (aliases !== void 0) {
     for (const component of components) {
-      if (aliases[component]?.[key] === signalValue) return component;
+      if (aliases[component]?.[key2] === signalValue) return component;
     }
   }
   const needle = normalizeName(signalValue);
@@ -9790,13 +11135,13 @@ function buildConsistency(input) {
     present.push({ kind, score: score2, weight: weights[kind] });
   }
   if (present.length === 0) return { kind: "no-data" };
-  const totalWeight = present.reduce((sum, c2) => sum + c2.weight, 0);
-  const weightedSum = present.reduce((sum, c2) => sum + c2.score * c2.weight, 0);
+  const totalWeight = present.reduce((sum, c3) => sum + c3.weight, 0);
+  const weightedSum = present.reduce((sum, c3) => sum + c3.score * c3.weight, 0);
   const score = roundHalfUp(weightedSum / totalWeight);
-  const components = present.map((c2) => ({
-    kind: c2.kind,
-    score: roundHalfUp(c2.score),
-    weight: c2.weight
+  const components = present.map((c3) => ({
+    kind: c3.kind,
+    score: roundHalfUp(c3.score),
+    weight: c3.weight
   }));
   return { kind: "ok", score, components };
 }
@@ -10063,10 +11408,10 @@ function frameKeyResolver(records) {
     keysByName.set(name, keys);
   }
   return (record) => {
-    const key = frameKeyOf(record);
-    if (str(record.fileKey) !== void 0) return key;
+    const key2 = frameKeyOf(record);
+    if (str(record.fileKey) !== void 0) return key2;
     const keys = keysByName.get(str(record.frameName) ?? "");
-    return keys !== void 0 && keys.size === 1 ? keys.values().next().value ?? key : key;
+    return keys !== void 0 && keys.size === 1 ? keys.values().next().value ?? key2 : key2;
   };
 }
 function readinessByFrame(records, threshold) {
@@ -10074,15 +11419,15 @@ function readinessByFrame(records, threshold) {
   const rows = /* @__PURE__ */ new Map();
   for (const { kind, at, record } of records) {
     if (kind !== "handoff") continue;
-    const key = keyOf(record);
-    const prev = rows.get(key);
+    const key2 = keyOf(record);
+    const prev = rows.get(key2);
     const fileKey = str(record.fileKey) ?? prev?.fileKey;
     const nodeId = str(record.nodeId) ?? prev?.nodeId;
     const score = finite(record.score);
     if (score === void 0) continue;
     const frameName = str(record.frameName) ?? prev?.frameName ?? "";
     const row2 = {
-      key,
+      key: key2,
       frameName,
       ...fileKey !== void 0 ? { fileKey } : {},
       ...nodeId !== void 0 ? { nodeId } : {},
@@ -10093,7 +11438,7 @@ function readinessByFrame(records, threshold) {
       passRate: 0,
       ...isBlockedHandoff(record) ? { blocked: true } : {}
     };
-    rows.set(key, row2);
+    rows.set(key2, row2);
   }
   return [...rows.values()].sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0).map(({ passes, ...row2 }) => ({
     ...row2,
@@ -10113,12 +11458,12 @@ function buildFrameReadinessTrend(records, threshold, opts = {}) {
     if (kind !== "handoff") continue;
     const score = record.score;
     if (typeof score !== "number" || !Number.isFinite(score)) continue;
-    const key = keyOf(record);
+    const key2 = keyOf(record);
     const fileKey = str2(record.fileKey);
     const nodeId = str2(record.nodeId);
-    const prev = frames.get(key);
+    const prev = frames.get(key2);
     const row2 = prev ?? {
-      key,
+      key: key2,
       frameName: "",
       latest: score,
       first: score,
@@ -10133,7 +11478,7 @@ function buildFrameReadinessTrend(records, threshold, opts = {}) {
     row2.blocked = isBlockedHandoff(record);
     row2.runs += 1;
     if (at !== void 0) row2.byDate.set(at.slice(0, 10), score);
-    frames.set(key, row2);
+    frames.set(key2, row2);
   }
   if (frames.size === 0) return void 0;
   const rows = [...frames.values()].map(
@@ -10461,9 +11806,9 @@ function suggestArtifactIds(input, limit = 3) {
     index,
     prefix: id.startsWith(needle),
     distance: editDistance(needle, id)
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+  })).filter((c3) => c3.prefix || c3.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.id);
+  ).slice(0, limit).map((c3) => c3.id);
 }
 function lookupArtifact(id) {
   const artifact = CATALOG.find((a) => a.id === id);
@@ -10548,12 +11893,12 @@ function validateWeights(raw) {
   }
   const obj = raw;
   const weights = { ...DEFAULT_WEIGHTS };
-  for (const key of Object.keys(obj)) {
-    if (!COMPONENT_ORDER.includes(key)) {
-      return { kind: "unknown-key", key };
+  for (const key2 of Object.keys(obj)) {
+    if (!COMPONENT_ORDER.includes(key2)) {
+      return { kind: "unknown-key", key: key2 };
     }
-    const typedKey = key;
-    const value2 = obj[key];
+    const typedKey = key2;
+    const value2 = obj[key2];
     if (typeof value2 !== "number" || !Number.isFinite(value2)) {
       return { kind: "non-finite", key: typedKey };
     }
@@ -10651,15 +11996,15 @@ function combine(latest, weights) {
     components.push({ kind, score, weight: weights[kind] });
   }
   if (components.length === 0) return void 0;
-  const totalWeight = components.reduce((sum, c2) => sum + c2.weight, 0);
+  const totalWeight = components.reduce((sum, c3) => sum + c3.weight, 0);
   const weightedSum = components.reduce(
-    (sum, c2) => sum + c2.score * c2.weight,
+    (sum, c3) => sum + c3.score * c3.weight,
     0
   );
   const current = roundHalfUp3(weightedSum / totalWeight);
-  const display = components.map((c2) => ({
-    ...c2,
-    score: roundHalfUp3(c2.score)
+  const display = components.map((c3) => ({
+    ...c3,
+    score: roundHalfUp3(c3.score)
   }));
   return { current, components: display };
 }
@@ -10743,9 +12088,9 @@ function suggestAliases(input, aliases, limit = 3) {
     index,
     prefix: alias.toLowerCase().startsWith(needle),
     distance: editDistance2(needle, alias.toLowerCase())
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+  })).filter((c3) => c3.prefix || c3.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.alias);
+  ).slice(0, limit).map((c3) => c3.alias);
 }
 var FIGMA_KEY_MIN_LENGTH = 22;
 function looksLikeFigmaKey(value2) {
@@ -10848,9 +12193,9 @@ function suggestTargetMetrics(input, limit = 3) {
     index,
     prefix: metric.startsWith(needle),
     distance: editDistance3(needle, metric)
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+  })).filter((c3) => c3.prefix || c3.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.metric);
+  ).slice(0, limit).map((c3) => c3.metric);
 }
 function suggestFreshnessKinds(input, limit = 3) {
   const needle = input.toLowerCase();
@@ -10860,9 +12205,9 @@ function suggestFreshnessKinds(input, limit = 3) {
     index,
     prefix: kind.startsWith(needle),
     distance: editDistance3(needle, kind)
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+  })).filter((c3) => c3.prefix || c3.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.kind);
+  ).slice(0, limit).map((c3) => c3.kind);
 }
 function isPlainObject6(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
@@ -11050,20 +12395,20 @@ function parseProjectFile(text2) {
       };
     }
     const map = {};
-    for (const [alias, key] of Object.entries(obj.product_file_keys)) {
+    for (const [alias, key2] of Object.entries(obj.product_file_keys)) {
       if (alias === "") {
         return {
           kind: "invalid",
           message: "product_file_keys has an empty alias \u2014 every alias must be a non-empty string"
         };
       }
-      if (typeof key !== "string" || key === "") {
+      if (typeof key2 !== "string" || key2 === "") {
         return {
           kind: "invalid",
           message: `product_file_keys.${alias} must be a non-empty string (a Figma file key)`
         };
       }
-      map[alias] = key;
+      map[alias] = key2;
     }
     values.productFileKeys = map;
   }
@@ -11352,8 +12697,8 @@ function resolveConfig(inputs) {
   }
   const tokenValue = flags.figmaToken ?? env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN;
   const productFileKeys = {};
-  for (const [alias, key] of Object.entries(project.productFileKeys ?? {})) {
-    productFileKeys[alias] = extractFigmaFileKey(key);
+  for (const [alias, key2] of Object.entries(project.productFileKeys ?? {})) {
+    productFileKeys[alias] = extractFigmaFileKey(key2);
   }
   const PRODUCT_FILE_ENV_PREFIX = "FIGMA_PRODUCT_FILE_";
   for (const envKey of Object.keys(env)) {
@@ -11496,11 +12841,11 @@ function writeProjectConfig(dir, patch) {
     }
   }
   const merged = { ...existing };
-  for (const [key, value2] of Object.entries(patch)) {
+  for (const [key2, value2] of Object.entries(patch)) {
     if (value2 === void 0) {
-      delete merged[key];
+      delete merged[key2];
     } else {
-      merged[key] = value2;
+      merged[key2] = value2;
     }
   }
   atomicWriteJson(filePath, merged);
@@ -11603,9 +12948,9 @@ function buildHandoffPassRate(records, threshold) {
     const recorded = record.score;
     if (typeof recorded !== "number" || !Number.isFinite(recorded)) continue;
     const score = isBlockedHandoff(record) ? Number.NEGATIVE_INFINITY : recorded;
-    const key = keyOf(record);
-    latest.set(key, score);
-    if (at !== void 0) dated.push({ date: at.slice(0, 10), key, score });
+    const key2 = keyOf(record);
+    latest.set(key2, score);
+    if (at !== void 0) dated.push({ date: at.slice(0, 10), key: key2, score });
   }
   if (latest.size === 0) return void 0;
   const byDate = dated.map((entry, index) => ({ ...entry, index })).sort(
@@ -11621,7 +12966,7 @@ function buildHandoffPassRate(records, threshold) {
       upTo.set(entry.key, { score: entry.score, index: entry.index });
     }
     if (byDate[i + 1]?.date !== entry.date) {
-      const scores = new Map([...upTo].map(([key, v]) => [key, v.score]));
+      const scores = new Map([...upTo].map(([key2, v]) => [key2, v.score]));
       trend.push({ date: entry.date, ...tally(scores, threshold) });
     }
   }
@@ -11678,10 +13023,10 @@ function buildLibraryHotspotsTrend(records, opts = {}) {
     if (kind !== "library-health" || at === void 0) continue;
     const topN = typeof record.topN === "number" && Number.isFinite(record.topN) ? record.topN : void 0;
     const day = /* @__PURE__ */ new Map();
-    for (const { signal, key } of SIGNALS) {
-      const counts = parseList(record[key]);
+    for (const { signal, key: key2 } of SIGNALS) {
+      const counts = parseList(record[key2]);
       if (counts === void 0) continue;
-      const stored = Array.isArray(record[key]) ? record[key].length : 0;
+      const stored = Array.isArray(record[key2]) ? record[key2].length : 0;
       day.set(signal, {
         counts,
         full: topN === void 0 || stored >= topN
@@ -11884,9 +13229,9 @@ function rollupByOwner(byDirectory, ownership) {
 function parseCodeowners(text2) {
   const rules = [];
   for (const rawLine of text2.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "" || line.startsWith("#")) continue;
-    const tokens = line.split(/\s+/).filter((t) => t.length > 0);
+    const line2 = rawLine.trim();
+    if (line2 === "" || line2.startsWith("#")) continue;
+    const tokens = line2.split(/\s+/).filter((t) => t.length > 0);
     const path = tokens[0];
     const owners = tokens.slice(1);
     if (path === void 0 || path === "" || owners.length === 0) continue;
@@ -12003,7 +13348,7 @@ function evaluateReleaseReadiness(signals) {
     driftCheck(signals.drift),
     parityCheck(signals.parity)
   ];
-  return { go: checks.every((c2) => c2.pass), checks };
+  return { go: checks.every((c3) => c3.pass), checks };
 }
 
 // src/engines/report/targets.ts
@@ -12072,8 +13417,8 @@ function historyAsOf(text2, endOfDay) {
   const cutoff = Date.parse(endOfDay);
   if (Number.isNaN(cutoff)) return "";
   const kept = [];
-  for (const line of text2.split("\n")) {
-    const raw = line.trim();
+  for (const line2 of text2.split("\n")) {
+    const raw = line2.trim();
     if (raw === "") continue;
     let parsed;
     try {
@@ -12205,18 +13550,18 @@ function suggestViewNames(input, limit = 3) {
     index,
     prefix: name.startsWith(needle),
     distance: editDistance4(needle, name)
-  })).filter((c2) => c2.prefix || c2.distance <= MAX_DISTANCE).sort(
+  })).filter((c3) => c3.prefix || c3.distance <= MAX_DISTANCE).sort(
     (a, b) => Number(b.prefix) - Number(a.prefix) || a.distance - b.distance || a.index - b.index
-  ).slice(0, limit).map((c2) => c2.name);
+  ).slice(0, limit).map((c3) => c3.name);
 }
 function isPresetName(value2) {
   return Object.hasOwn(PRESETS, value2);
 }
-function resolveSource2(selection, source) {
+function resolveSource2(selection, source2) {
   const view = selection.view;
   const requested = selection.artifacts !== void 0 && selection.artifacts.length > 0 ? selection.artifacts : void 0;
   if (view !== void 0 && requested !== void 0) {
-    return { kind: "conflicting-selection", source };
+    return { kind: "conflicting-selection", source: source2 };
   }
   if (view !== void 0) {
     if (!isPresetName(view)) {
@@ -12229,7 +13574,7 @@ function resolveSource2(selection, source) {
     return {
       kind: "ok",
       artifacts: [...PRESETS[view]],
-      source,
+      source: source2,
       viewName: view,
       notices: []
     };
@@ -12258,7 +13603,7 @@ function resolveSource2(selection, source) {
     const notices = duplicates > 0 ? [
       `Removed ${duplicates} duplicate artifact id${duplicates === 1 ? "" : "s"} from the selection.`
     ] : [];
-    return { kind: "ok", artifacts: ordered, source, notices };
+    return { kind: "ok", artifacts: ordered, source: source2, notices };
   }
   return void 0;
 }
@@ -12390,8 +13735,8 @@ function parseArtifactsFlag(raw) {
   return raw.split(",").map((id) => id.trim()).filter((id) => id.length > 0);
 }
 function resolveDashboardSelection(targetDir, name, ctx) {
-  const read = readDashboardFile(targetDir, name);
-  if (read.kind === "not-found") {
+  const read2 = readDashboardFile(targetDir, name);
+  if (read2.kind === "not-found") {
     const names = listDashboards(targetDir).map((e4) => e4.name);
     const available = names.length > 0 ? ` Available: ${names.join(", ")}.` : " No saved dashboards in dashboards/.";
     return {
@@ -12399,13 +13744,13 @@ function resolveDashboardSelection(targetDir, name, ctx) {
       message: `Unknown dashboard "${name}".${available}`
     };
   }
-  if (read.kind === "invalid") {
+  if (read2.kind === "invalid") {
     return {
       kind: "error",
-      message: `Dashboard "${name}" is invalid: ${read.message}`
+      message: `Dashboard "${name}" is invalid: ${read2.message}`
     };
   }
-  const sel = read.dashboard.selection;
+  const sel = read2.dashboard.selection;
   const outcome = resolveView(
     sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
     {}
@@ -12431,7 +13776,7 @@ function resolveDashboardSelection(targetDir, name, ctx) {
   }
   for (const notice of outcome.notices) process.stderr.write(`${notice}
 `);
-  const dashWeights = read.dashboard.scoreWeights;
+  const dashWeights = read2.dashboard.scoreWeights;
   const validated = dashWeights !== void 0 ? validateWeights(dashWeights) : void 0;
   const effectiveWeights = validated?.kind === "ok" ? validated.weights : ctx.scoreWeights;
   const effectiveByView = dashWeights !== void 0 ? void 0 : ctx.scoreWeightsByView;
@@ -12441,8 +13786,8 @@ function resolveDashboardSelection(targetDir, name, ctx) {
     migrationSitesCap: ctx.migrationSitesCap,
     scoreVelocityWindow: ctx.scoreVelocityWindow,
     readinessThreshold: ctx.readinessThreshold,
-    viewLabel: read.dashboard.name,
-    ...read.dashboard.reportType !== void 0 ? { reportType: read.dashboard.reportType } : {},
+    viewLabel: read2.dashboard.name,
+    ...read2.dashboard.reportType !== void 0 ? { reportType: read2.dashboard.reportType } : {},
     ...viewName !== void 0 ? { viewName } : {},
     ...effectiveWeights !== void 0 ? { scoreWeights: effectiveWeights } : {},
     ...effectiveByView !== void 0 ? { scoreWeightsByView: effectiveByView } : {},
@@ -12818,7 +14163,7 @@ function resolveOwnership(targetDir, ownership, ownershipFile) {
   if (ownershipFile === void 0) return void 0;
   let text2;
   try {
-    text2 = readFileSync7(resolve5(targetDir, ownershipFile), "utf8");
+    text2 = readFileSync7(resolve4(targetDir, ownershipFile), "utf8");
   } catch {
     return void 0;
   }
@@ -13127,7 +14472,7 @@ function runAnalytics(path, options) {
     fail3("--out requires --emit <domain> (nothing is written without --emit).");
     return;
   }
-  const targetDir = resolve6(path);
+  const targetDir = resolve5(path);
   if (!existsSync7(targetDir) || !statSync5(targetDir).isDirectory()) {
     fail3(`Path "${targetDir}" is not a directory.`);
     return;
@@ -13146,7 +14491,7 @@ function runAnalytics(path, options) {
     process.exitCode = 0;
     return;
   }
-  const outDir = options.out !== void 0 ? resolve6(options.out) : join9(targetDir, ".ds-bridge", "analytics");
+  const outDir = options.out !== void 0 ? resolve5(options.out) : join9(targetDir, ".ds-bridge", "analytics");
   const files = emit.domains.map((domain) => [
     ARTIFACT_FILE[domain],
     buildDomainArtifact(domain, data)
@@ -13198,7 +14543,7 @@ import {
   statSync as statSync6,
   writeFileSync as writeFileSync4
 } from "fs";
-import { dirname as dirname4, join as join10, resolve as resolve7 } from "path";
+import { dirname as dirname4, join as join10, resolve as resolve6 } from "path";
 
 // src/render/html/badge.ts
 var DEFAULT_LABEL = "ds-bridge";
@@ -13290,7 +14635,7 @@ function weightProfileForConfig(cfg) {
   );
 }
 function runBadge(path, options) {
-  const targetDir = resolve7(path);
+  const targetDir = resolve6(path);
   if (!existsSync8(targetDir) || !statSync6(targetDir).isDirectory()) {
     fail4(`Path "${targetDir}" is not a directory.`);
     return;
@@ -13320,7 +14665,7 @@ function runBadge(path, options) {
     return;
   }
   const svg = renderBadge({ score: outcome.current });
-  const outPath = options.out !== void 0 ? resolve7(options.out) : join10(stateDir, "badge.svg");
+  const outPath = options.out !== void 0 ? resolve6(options.out) : join10(stateDir, "badge.svg");
   try {
     mkdirSync4(dirname4(outPath), { recursive: true });
     writeFileSync4(outPath, svg, "utf8");
@@ -13368,8 +14713,8 @@ function withinSince(dateIso, since) {
   if (Number.isNaN(at) || Number.isNaN(from)) return true;
   return at >= from;
 }
-function valuePreview(token) {
-  const { value: value2 } = token;
+function valuePreview(token2) {
+  const { value: value2 } = token2;
   if (typeof value2 === "string" || typeof value2 === "number")
     return String(value2);
   return JSON.stringify(value2);
@@ -13728,10 +15073,10 @@ function buildDigest(text2, sinceIso, audience, readinessThreshold2) {
   for (const kind of MOVEMENT_ORDER) {
     const tag = KIND_AUDIENCE[kind];
     if (!inAudience2(tag, audience)) continue;
-    const { slot, read } = METRICS[kind];
-    const current = read(inWindow[slot]);
+    const { slot, read: read2 } = METRICS[kind];
+    const current = read2(inWindow[slot]);
     if (current === void 0) continue;
-    const baseline = read(before[slot]);
+    const baseline = read2(before[slot]);
     movements.push({
       kind,
       audience: tag,
@@ -13782,7 +15127,7 @@ var DEFAULT_BASE_URL = "https://api.figma.com";
 var MAX_RETRIES = 3;
 var DEFAULT_RETRY_AFTER_SECONDS = 1;
 function defaultSleep(ms) {
-  return new Promise((resolve17) => setTimeout(resolve17, ms));
+  return new Promise((resolve16) => setTimeout(resolve16, ms));
 }
 function joinIds(ids) {
   return encodeURIComponent(ids.join(","));
@@ -13808,10 +15153,10 @@ function createFigmaClient(options) {
   const fetchImpl = options.fetch ?? fetch;
   const sleep = options.sleep ?? defaultSleep;
   const jitter = options.jitter ?? Math.random;
-  const { token } = options;
+  const { token: token2 } = options;
   const origin = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
   const BASE_URL = `${origin}/v1`;
-  const baseHeaders = { "X-Figma-Token": token };
+  const baseHeaders = { "X-Figma-Token": token2 };
   async function request(url, init) {
     let lastRetryAfter = DEFAULT_RETRY_AFTER_SECONDS;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
@@ -13876,27 +15221,27 @@ function createFigmaClient(options) {
     getMe() {
       return get(`${BASE_URL}/me`);
     },
-    getFile(key) {
-      return get(`${BASE_URL}/files/${key}`);
+    getFile(key2) {
+      return get(`${BASE_URL}/files/${key2}`);
     },
-    getFileNodes(key, ids) {
-      const url = `${BASE_URL}/files/${key}/nodes?ids=${joinIds(ids)}`;
+    getFileNodes(key2, ids) {
+      const url = `${BASE_URL}/files/${key2}/nodes?ids=${joinIds(ids)}`;
       return get(url);
     },
-    getComponents(key) {
+    getComponents(key2) {
       return get(
-        `${BASE_URL}/files/${key}/components`
+        `${BASE_URL}/files/${key2}/components`
       );
     },
-    getVersions(key) {
-      return get(`${BASE_URL}/files/${key}/versions`);
+    getVersions(key2) {
+      return get(`${BASE_URL}/files/${key2}/versions`);
     },
-    getComments(key) {
-      return get(`${BASE_URL}/files/${key}/comments`);
+    getComments(key2) {
+      return get(`${BASE_URL}/files/${key2}/comments`);
     },
-    postComment(key, message, clientMeta) {
+    postComment(key2, message, clientMeta) {
       const body = clientMeta === void 0 ? { message } : { message, client_meta: clientMeta };
-      return request(`${BASE_URL}/files/${key}/comments`, {
+      return request(`${BASE_URL}/files/${key2}/comments`, {
         method: "POST",
         headers: {
           ...baseHeaders,
@@ -13905,7 +15250,7 @@ function createFigmaClient(options) {
         body: JSON.stringify(body)
       });
     },
-    getImages(key, ids, opts) {
+    getImages(key2, ids, opts) {
       const parts = [`ids=${joinIds(ids)}`];
       if (opts?.format !== void 0) parts.push(`format=${opts.format}`);
       if (opts?.scale !== void 0) parts.push(`scale=${opts.scale}`);
@@ -13913,7 +15258,7 @@ function createFigmaClient(options) {
         parts.push(`svg_include_id=${opts.svg_include_id}`);
       }
       return get(
-        `${BASE_URL}/images/${key}?${parts.join("&")}`
+        `${BASE_URL}/images/${key2}?${parts.join("&")}`
       );
     }
   };
@@ -13930,8 +15275,8 @@ var HISTORY_RECENT_LIMIT = 12;
 function defaultDeps() {
   return {
     exec: spawnGitExec,
-    makeClient: (token) => createFigmaClient({
-      token,
+    makeClient: (token2) => createFigmaClient({
+      token: token2,
       baseUrl: process.env.FIGMA_API_BASE ?? DEFAULT_FIGMA_API_BASE
     }),
     env: process.env,
@@ -14180,13 +15525,13 @@ import { readFileSync as readFileSync9 } from "fs";
 function parseDotenv(text2) {
   const out = {};
   for (const rawLine of text2.split("\n")) {
-    const line = rawLine.trim();
-    if (line === "" || line.startsWith("#")) continue;
-    const eq = line.indexOf("=");
+    const line2 = rawLine.trim();
+    if (line2 === "" || line2.startsWith("#")) continue;
+    const eq = line2.indexOf("=");
     if (eq === -1) continue;
-    const key = line.slice(0, eq).trim();
-    if (key === "") continue;
-    out[key] = stripOneQuoteLayer(line.slice(eq + 1).trim());
+    const key2 = line2.slice(0, eq).trim();
+    if (key2 === "") continue;
+    out[key2] = stripOneQuoteLayer(line2.slice(eq + 1).trim());
   }
   return out;
 }
@@ -14206,10 +15551,10 @@ function loadDotenvInto(filePath, env) {
   } catch {
     return;
   }
-  for (const [key, value2] of Object.entries(parseDotenv(text2))) {
-    const current = env[key];
+  for (const [key2, value2] of Object.entries(parseDotenv(text2))) {
+    const current = env[key2];
     if (current === void 0 || current === "") {
-      env[key] = value2;
+      env[key2] = value2;
     }
   }
 }
@@ -14302,14 +15647,14 @@ function fail5(message) {
 `);
   process.exitCode = 2;
 }
-function maskToken(token) {
-  if (token.length <= 8) return "*".repeat(token.length);
-  const head = token.slice(0, 5);
-  const tail = token.slice(-4);
+function maskToken(token2) {
+  if (token2.length <= 8) return "*".repeat(token2.length);
+  const head = token2.slice(0, 5);
+  const tail = token2.slice(-4);
   return `${head}\u2026${tail}`;
 }
 function serializeDotenv(map) {
-  return `${Object.entries(map).map(([key, value2]) => `${key}=${value2}`).join("\n")}
+  return `${Object.entries(map).map(([key2, value2]) => `${key2}=${value2}`).join("\n")}
 `;
 }
 function writeEnvFileMerged(dir, updates) {
@@ -14332,8 +15677,8 @@ function writeEnvFileMerged(dir, updates) {
 }
 function runPersistToken(path) {
   const env = process.env;
-  const token = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN ?? void 0;
-  if (token === void 0 || token === "") {
+  const token2 = env.CLAUDE_PLUGIN_OPTION_FIGMA_TOKEN ?? env.FIGMA_TOKEN ?? void 0;
+  if (token2 === void 0 || token2 === "") {
     fail5(
       "No Figma token in this session's environment, so nothing was written. Either add it directly to .ds-bridge.env (FIGMA_TOKEN=figd_\u2026, gitignored) \u2014 the durable path the CLI auto-loads on every run \u2014 or set it in the plugin dialog (`/plugin configure`) and run this in the SAME session (before a restart: Claude Code drops the sensitive value on restart, #62442)."
     );
@@ -14342,7 +15687,7 @@ function runPersistToken(path) {
   const rawFileKey = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE ?? void 0;
   const fileKey = rawFileKey !== void 0 ? extractFigmaFileKey(rawFileKey) : void 0;
   const targetDir = resolvePath(path);
-  const updates = { FIGMA_TOKEN: token };
+  const updates = { FIGMA_TOKEN: token2 };
   if (fileKey !== void 0 && fileKey !== "") {
     updates.FIGMA_DESIGN_SYSTEM_FILE = fileKey;
   }
@@ -14357,7 +15702,7 @@ function runPersistToken(path) {
   }
   const savedKey = updates.FIGMA_DESIGN_SYSTEM_FILE !== void 0 ? " and the design-system file key" : "";
   process.stdout.write(
-    `Saved Figma token (${maskToken(token)})${savedKey} to ${join12(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
+    `Saved Figma token (${maskToken(token2)})${savedKey} to ${join12(targetDir, ENV_FILE_NAME)} (gitignored, mode 0600). It now survives a restart; the live plugin-dialog value still wins when present.
 ` + (gitignoreUpdated ? `Added ${ENV_FILE_NAME} to .gitignore.
 ` : "")
   );
@@ -14368,7 +15713,7 @@ function ensureGitignored(dir) {
   let existing = "";
   if (existsSync9(gitignorePath)) {
     existing = readFileSync10(gitignorePath, "utf8");
-    if (existing.split(/\r?\n/).some((line) => line.trim() === ENV_FILE_NAME)) {
+    if (existing.split(/\r?\n/).some((line2) => line2.trim() === ENV_FILE_NAME)) {
       return false;
     }
   }
@@ -14398,21 +15743,21 @@ function detectFileKeyDefault(dir) {
   const fromEnv = env.CLAUDE_PLUGIN_OPTION_FIGMA_FILE_KEY ?? env.FIGMA_DESIGN_SYSTEM_FILE;
   return fromEnv !== void 0 && fromEnv !== "" ? extractFigmaFileKey(fromEnv) : void 0;
 }
-function applyConnect(dir, token, fileKey) {
-  const updates = { FIGMA_TOKEN: token };
+function applyConnect(dir, token2, fileKey) {
+  const updates = { FIGMA_TOKEN: token2 };
   const trimmedKey = extractFigmaFileKey(fileKey);
   if (trimmedKey !== "") updates.FIGMA_DESIGN_SYSTEM_FILE = trimmedKey;
   writeEnvFileMerged(dir, updates);
   const gitignoreUpdated = ensureGitignored(dir);
   return {
     envPath: join12(dir, ENV_FILE_NAME),
-    masked: maskToken(token),
+    masked: maskToken(token2),
     fileKey: trimmedKey === "" ? void 0 : trimmedKey,
     gitignoreUpdated
   };
 }
 function promptHidden(question) {
-  return new Promise((resolve17) => {
+  return new Promise((resolve16) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -14428,19 +15773,19 @@ function promptHidden(question) {
     rl.question(question, (answer) => {
       rl.close();
       process.stdout.write("\n");
-      resolve17(answer.trim());
+      resolve16(answer.trim());
     });
   });
 }
 function promptLine(question) {
-  return new Promise((resolve17) => {
+  return new Promise((resolve16) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
     rl.question(question, (answer) => {
       rl.close();
-      resolve17(answer.trim());
+      resolve16(answer.trim());
     });
   });
 }
@@ -14460,12 +15805,12 @@ Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` inste
   process.stdout.write(
     "Connect ds-bridge to Figma. The token is written to .ds-bridge.env (gitignored, mode 0600) and is never echoed or printed in full.\n\n"
   );
-  const token = await promptHidden("Figma personal access token (hidden): ");
-  if (token === "") {
+  const token2 = await promptHidden("Figma personal access token (hidden): ");
+  if (token2 === "") {
     fail5("No token entered \u2014 nothing was written.");
     return;
   }
-  if (!token.startsWith("figd_") && !token.startsWith("figd-")) {
+  if (!token2.startsWith("figd_") && !token2.startsWith("figd-")) {
     process.stdout.write(
       "warning: that does not look like a Figma PAT (expected a figd_\u2026 value) \u2014 saving it anyway.\n"
     );
@@ -14476,7 +15821,7 @@ Already have FIGMA_TOKEN in your environment? Use \`config persist-token\` inste
   const fileKey = keyInput !== "" ? keyInput : defaultKey ?? "";
   let summary;
   try {
-    summary = applyConnect(targetDir, token, fileKey);
+    summary = applyConnect(targetDir, token2, fileKey);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail5(`Could not write ${join12(targetDir, ENV_FILE_NAME)}: ${detail}`);
@@ -14493,18 +15838,18 @@ Connected. Back in Claude Code, run /ds-bridge:ds-docs (or /ds-bridge:connect) \
 `
   );
   if (verify) {
-    await runVerify(token, summary.fileKey);
+    await runVerify(token2, summary.fileKey);
     return;
   }
   process.exitCode = 0;
 }
-async function runVerify(token, fileKey) {
+async function runVerify(token2, fileKey) {
   process.stdout.write("\nVerifying with Figma\u2026\n");
   let result;
   try {
     const apiBase = process.env.FIGMA_API_BASE;
     result = await verifyConnection({
-      token,
+      token: token2,
       ...fileKey !== void 0 ? { fileKey } : {},
       ...apiBase !== void 0 ? { baseUrl: apiBase } : {}
     });
@@ -14513,8 +15858,8 @@ async function runVerify(token, fileKey) {
     fail5(`Verification could not run: ${detail}`);
     return;
   }
-  for (const line of result.lines) {
-    process.stdout.write(`  ${line}
+  for (const line2 of result.lines) {
+    process.stdout.write(`  ${line2}
 `);
   }
   process.exitCode = result.ok ? 0 : 2;
@@ -14550,10 +15895,10 @@ function readProductFileKeys(dir) {
   }
   return out;
 }
-function envBacking(envFile, env, key) {
-  const value2 = env[key];
+function envBacking(envFile, env, key2) {
+  const value2 = env[key2];
   if (value2 === void 0 || value2 === "") return void 0;
-  return envFile[key] === value2 ? "file" : "env";
+  return envFile[key2] === value2 ? "file" : "env";
 }
 function productSourceLabel(env, alias) {
   const envKey = `FIGMA_PRODUCT_FILE_${alias.toUpperCase()}`;
@@ -14650,29 +15995,29 @@ function runShow(path) {
   process.exitCode = 0;
 }
 function runSetLibrary(value2, path) {
-  const key = extractFigmaFileKey(value2);
-  if (key === "") {
+  const key2 = extractFigmaFileKey(value2);
+  if (key2 === "") {
     fail5(
       "Provide a Figma library URL or file key, e.g. `config set-library https://www.figma.com/design/<KEY>/...`"
     );
     return;
   }
-  if (!/^[A-Za-z0-9]+$/.test(key)) {
+  if (!/^[A-Za-z0-9]+$/.test(key2)) {
     process.stdout.write(
-      `warning: "${key}" doesn't look like a bare Figma file key (letters/digits only) \u2014 saving it anyway.
+      `warning: "${key2}" doesn't look like a bare Figma file key (letters/digits only) \u2014 saving it anyway.
 `
     );
   }
   const dir = resolvePath(path);
   try {
-    writeProjectConfig(dir, { figma_file_key: key });
+    writeProjectConfig(dir, { figma_file_key: key2 });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     fail5(`Could not write ${join12(dir, PROJECT_FILE_NAME2)}: ${detail}`);
     return;
   }
   process.stdout.write(
-    `Set figma_file_key to ${key} in ${join12(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
+    `Set figma_file_key to ${key2} in ${join12(dir, PROJECT_FILE_NAME2)} (committed \u2014 share it with your team).
 `
   );
   const envPath = join12(dir, ENV_FILE_NAME);
@@ -14685,9 +16030,9 @@ function runSetLibrary(value2, path) {
     } catch {
       fromEnvFile = void 0;
     }
-    if (fromEnvFile !== void 0 && fromEnvFile !== "" && extractFigmaFileKey(fromEnvFile) !== key) {
+    if (fromEnvFile !== void 0 && fromEnvFile !== "" && extractFigmaFileKey(fromEnvFile) !== key2) {
       try {
-        writeEnvFileMerged(dir, { FIGMA_DESIGN_SYSTEM_FILE: key });
+        writeEnvFileMerged(dir, { FIGMA_DESIGN_SYSTEM_FILE: key2 });
         process.stdout.write(
           `Also updated FIGMA_DESIGN_SYSTEM_FILE in ${envPath} (was ${fromEnvFile}), which would have overridden it.
 `
@@ -14707,9 +16052,9 @@ function runSetLibrary(value2, path) {
   ]) {
     const value3 = process.env[name];
     if (value3 === void 0 || value3 === "" || value3 === fromEnvFile) continue;
-    if (extractFigmaFileKey(value3) === key) continue;
+    if (extractFigmaFileKey(value3) === key2) continue;
     process.stdout.write(
-      `warning: ${name}=${value3} is set in the environment and overrides this key \u2014 unset it, or set the plugin's figma_file_key option to ${key}.
+      `warning: ${name}=${value3} is set in the environment and overrides this key \u2014 unset it, or set the plugin's figma_file_key option to ${key2}.
 `
     );
   }
@@ -14721,8 +16066,8 @@ function runAddProduct(alias, value2, path) {
     fail5("Provide an alias, e.g. `config add-product web <url>`.");
     return;
   }
-  const key = extractFigmaFileKey(value2);
-  if (key === "") {
+  const key2 = extractFigmaFileKey(value2);
+  if (key2 === "") {
     fail5(
       `Provide a Figma URL or file key for "${cleanAlias}", e.g. \`config add-product web https://www.figma.com/design/<KEY>/...\``
     );
@@ -14730,7 +16075,7 @@ function runAddProduct(alias, value2, path) {
   }
   const dir = resolvePath(path);
   const existing = readProductFileKeys(dir);
-  const merged = { ...existing, [cleanAlias]: key };
+  const merged = { ...existing, [cleanAlias]: key2 };
   try {
     writeProjectConfig(dir, { product_file_keys: merged });
   } catch (error) {
@@ -14740,7 +16085,7 @@ function runAddProduct(alias, value2, path) {
   }
   const verb = Object.hasOwn(existing, cleanAlias) ? "Updated" : "Registered";
   process.stdout.write(
-    `${verb} product file "${cleanAlias}" \u2192 ${key} in ${join12(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
+    `${verb} product file "${cleanAlias}" \u2192 ${key2} in ${join12(dir, PROJECT_FILE_NAME2)}. Use it with --file-key ${cleanAlias} (e.g. ds-bridge impact --file-key ${cleanAlias}).
 `
   );
   process.exitCode = 0;
@@ -14838,10 +16183,10 @@ function matchPhrase(phrase) {
   for (const meta of CATALOG) {
     const haystack = `${meta.id} ${meta.title}`.toLowerCase();
     let score = 0;
-    for (const token of tokens) {
-      if (haystack.includes(token)) {
+    for (const token2 of tokens) {
+      if (haystack.includes(token2)) {
         score += 2;
-      } else if (suggestArtifactIds(token, 3).includes(meta.id)) {
+      } else if (suggestArtifactIds(token2, 3).includes(meta.id)) {
         score += 1;
       }
     }
@@ -14880,8 +16225,8 @@ function readExistingProductFileKeys(dir) {
       const pfk = raw.product_file_keys;
       if (typeof pfk === "object" && pfk !== null && !Array.isArray(pfk)) {
         const out = {};
-        for (const [alias, key] of Object.entries(pfk)) {
-          if (typeof key === "string") out[alias] = key;
+        for (const [alias, key2] of Object.entries(pfk)) {
+          if (typeof key2 === "string") out[alias] = key2;
         }
         return out;
       }
@@ -14895,13 +16240,13 @@ var LineReader = class {
   waiting;
   closed = false;
   constructor(rl) {
-    rl.on("line", (line) => {
+    rl.on("line", (line2) => {
       if (this.waiting !== void 0) {
-        const { resolve: resolve17 } = this.waiting;
+        const { resolve: resolve16 } = this.waiting;
         this.waiting = void 0;
-        resolve17(line);
+        resolve16(line2);
       } else {
-        this.queue.push(line);
+        this.queue.push(line2);
       }
     });
     rl.on("close", () => {
@@ -14918,8 +16263,8 @@ var LineReader = class {
     const buffered = this.queue.shift();
     if (buffered !== void 0) return Promise.resolve(buffered);
     if (this.closed) return Promise.reject(new EofError());
-    return new Promise((resolve17, reject) => {
-      this.waiting = { resolve: resolve17, reject };
+    return new Promise((resolve16, reject) => {
+      this.waiting = { resolve: resolve16, reject };
     });
   }
 };
@@ -14974,12 +16319,12 @@ async function captureFileKeys(reader, output, cwd5, persona) {
     "Name an alias for your product Figma file (e.g. web), or leave blank to skip: "
   )).trim();
   if (alias === "") return void 0;
-  const key = (await ask(reader, output, `Figma file key for "${alias}": `)).trim();
-  if (key === "") {
+  const key2 = (await ask(reader, output, `Figma file key for "${alias}": `)).trim();
+  if (key2 === "") {
     output.write("No file key entered \u2014 skipping the product file pin.\n");
     return void 0;
   }
-  return { ...readExistingProductFileKeys(cwd5), [alias]: key };
+  return { ...readExistingProductFileKeys(cwd5), [alias]: key2 };
 }
 async function runSetupWizard(deps) {
   const { input, output, cwd: cwd5, isTTY } = deps;
@@ -15226,16 +16571,16 @@ function runSet(path, options) {
 }
 var MATERIALIZE_NOTICE = "Your view is now an explicit list and will not auto-gain future preset artifacts.";
 function runEditDashboard(targetDir, name, id, mode) {
-  const read = readDashboardFile(targetDir, name);
-  if (read.kind === "not-found") {
+  const read2 = readDashboardFile(targetDir, name);
+  if (read2.kind === "not-found") {
     failUnknownDashboard(targetDir, name);
     return;
   }
-  if (read.kind === "invalid") {
-    fail6(`Dashboard "${name}" is invalid: ${read.message}`);
+  if (read2.kind === "invalid") {
+    fail6(`Dashboard "${name}" is invalid: ${read2.message}`);
     return;
   }
-  const sel = read.dashboard.selection;
+  const sel = read2.dashboard.selection;
   const resolved = resolveView(
     sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
     {}
@@ -15265,7 +16610,7 @@ function runEditDashboard(targetDir, name, id, mode) {
     targetDir,
     name,
     { artifacts: next },
-    { local, meta: metaFrom(read.dashboard) }
+    { local, meta: metaFrom(read2.dashboard) }
   );
   const verb = mode === "add" ? "Added" : "Removed";
   process.stdout.write(
@@ -15339,14 +16684,14 @@ function metaFrom(dashboard) {
 }
 function ensureLocalGitignore(targetDir) {
   const gitignorePath = join14(targetDir, ".gitignore");
-  const line = "dashboards/*.local.json";
+  const line2 = "dashboards/*.local.json";
   let existing = "";
   if (existsSync10(gitignorePath)) {
     existing = readFileSync12(gitignorePath, "utf8");
-    if (existing.split(/\r?\n/).some((l) => l.trim() === line)) return;
+    if (existing.split(/\r?\n/).some((l) => l.trim() === line2)) return;
   }
   const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
-  appendFileSync3(gitignorePath, `${prefix}${line}
+  appendFileSync3(gitignorePath, `${prefix}${line2}
 `, "utf8");
 }
 function runSave(name, path, options) {
@@ -15390,13 +16735,13 @@ function runSave(name, path, options) {
 }
 function runLoad(name, path) {
   const targetDir = resolvePath2(path);
-  const read = readDashboardFile(targetDir, name);
-  if (read.kind === "not-found") {
+  const read2 = readDashboardFile(targetDir, name);
+  if (read2.kind === "not-found") {
     failUnknownDashboard(targetDir, name);
     return;
   }
-  if (read.kind === "invalid") {
-    fail6(`Dashboard "${name}" is invalid: ${read.message}`);
+  if (read2.kind === "invalid") {
+    fail6(`Dashboard "${name}" is invalid: ${read2.message}`);
     return;
   }
   writeProjectConfig(targetDir, {
@@ -15556,7 +16901,7 @@ import {
   statSync as statSync7,
   writeFileSync as writeFileSync6
 } from "fs";
-import { dirname as dirname5, join as join15, resolve as resolve8 } from "path";
+import { dirname as dirname5, join as join15, resolve as resolve7 } from "path";
 import { cwd as processCwd2 } from "process";
 
 // src/engines/report/digest-md.ts
@@ -15924,7 +17269,7 @@ function kpiTile(label, value2, tone, sub) {
 function tableHtml(headers, rows) {
   const head = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("");
   const body = rows.map(
-    (r2) => `<tr>${r2.map((c2) => `<td>${typeof c2 === "string" ? escapeHtml(c2) : c2.html}</td>`).join("")}</tr>`
+    (r2) => `<tr>${r2.map((c3) => `<td>${typeof c3 === "string" ? escapeHtml(c3) : c3.html}</td>`).join("")}</tr>`
   ).join("");
   return `<table class="weights"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
@@ -16067,7 +17412,7 @@ function runDigest(path, options, deps) {
     process.exitCode = 2;
     return;
   }
-  const targetDir = resolve8(deps.cwd, path);
+  const targetDir = resolve7(deps.cwd, path);
   if (!existsSync11(targetDir) || !statSync7(targetDir).isDirectory()) {
     deps.stderr(`Path "${targetDir}" is not a directory.
 `);
@@ -16091,7 +17436,7 @@ function runDigest(path, options, deps) {
   );
   const markdown = format === "html" ? renderDigestHtml(model, audience.view) : renderDigestMarkdown(model, audience.view);
   if (options.out !== void 0) {
-    const outPath = resolve8(deps.cwd, options.out);
+    const outPath = resolve7(deps.cwd, options.out);
     try {
       mkdirSync5(dirname5(outPath), { recursive: true });
       writeFileSync6(outPath, markdown, "utf8");
@@ -16253,8 +17598,8 @@ function renderTokens(tokens) {
     return [...head, "", "_No tokens._"].join("\n");
   }
   const counts = /* @__PURE__ */ new Map();
-  for (const token of tokens.tokens) {
-    counts.set(token.type, (counts.get(token.type) ?? 0) + 1);
+  for (const token2 of tokens.tokens) {
+    counts.set(token2.type, (counts.get(token2.type) ?? 0) + 1);
   }
   const lines = [];
   for (const type of TOKEN_TYPE_ORDER) {
@@ -16378,10 +17723,16 @@ function fail7(message) {
 function normalizeName2(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
-async function scanCode(targetDir) {
+async function scanCode(targetDir, registry) {
   shimCjsGlobals();
-  const { scanCodeComponents } = await import("./scan-code-FRVT7GOJ.mjs");
-  return scanCodeComponents(targetDir);
+  const { scanCodeComponents, scanPackageComponents } = await import("./scan-code-HGZHV5GL.mjs");
+  const packaged = new Set(
+    registry.matches.filter((m) => !/\.(?:tsx?|jsx?)$/.test(m.importPath)).map((m) => normalizeName2(m.codeName))
+  );
+  return [
+    ...scanCodeComponents(targetDir),
+    ...scanPackageComponents(targetDir, packaged)
+  ];
 }
 function shimCjsGlobals() {
   const globals = globalThis;
@@ -16449,9 +17800,9 @@ function loadRegistry3(targetDir) {
   }
 }
 async function discoverTokens(targetDir) {
-  const source = findTokenSource(targetDir);
-  if (source === void 0) return EMPTY_TOKENS;
-  const loaded = loadTokens(source);
+  const source2 = findTokenSource(targetDir);
+  if (source2 === void 0) return EMPTY_TOKENS;
+  const loaded = loadTokens(source2);
   return loaded.kind === "ok" ? loaded.map : EMPTY_TOKENS;
 }
 function mdxFileName(component) {
@@ -16495,7 +17846,7 @@ async function runDocs(rawComponent, rawPath, options) {
   }
   const registry = loadRegistry3(targetDir);
   if (registry === void 0) return;
-  const code = await scanCode(targetDir);
+  const code = await scanCode(targetDir, registry);
   const tokens = await discoverTokens(targetDir);
   const merged = mergeComponentDocs({
     registry,
@@ -16578,7 +17929,7 @@ function registerDocsCommand(program2) {
 
 // src/cli-commands/frame-impl.ts
 import { existsSync as existsSync13, readFileSync as readFileSync15 } from "fs";
-import { isAbsolute, join as join17, resolve as resolve9 } from "path";
+import { isAbsolute, join as join17, resolve as resolve8 } from "path";
 import { cwd } from "process";
 
 // src/engines/tokens/normalize.ts
@@ -16608,11 +17959,11 @@ function normalizeDimension(raw, options) {
 }
 
 // src/engines/tokens/token-index.ts
-function canonicalValueKey(token) {
-  const { value: value2 } = token;
+function canonicalValueKey(token2) {
+  const { value: value2 } = token2;
   if (typeof value2 === "number") {
     const dim2 = normalizeDimension(value2);
-    return token.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
+    return token2.type === "dimension" && dim2 !== void 0 ? `${dim2.px}px` : String(value2);
   }
   if (typeof value2 !== "string") return void 0;
   const color = normalizeColor(value2);
@@ -16626,20 +17977,20 @@ function buildTokenIndex(tokens) {
   const byName2 = /* @__PURE__ */ new Map();
   const byValue = /* @__PURE__ */ new Map();
   const colorTokens = [];
-  for (const token of tokens) {
-    byName2.set(token.name, token);
-    const key = canonicalValueKey(token);
-    if (key !== void 0) {
-      const bucket = byValue.get(key);
+  for (const token2 of tokens) {
+    byName2.set(token2.name, token2);
+    const key2 = canonicalValueKey(token2);
+    if (key2 !== void 0) {
+      const bucket = byValue.get(key2);
       if (bucket === void 0) {
-        byValue.set(key, [token]);
+        byValue.set(key2, [token2]);
       } else {
-        bucket.push(token);
+        bucket.push(token2);
       }
     }
-    if (token.type === "color" && typeof token.value === "string") {
-      const parsed = parse_default(token.value);
-      if (parsed !== void 0) colorTokens.push({ token, parsed });
+    if (token2.type === "color" && typeof token2.value === "string") {
+      const parsed = parse_default(token2.value);
+      if (parsed !== void 0) colorTokens.push({ token: token2, parsed });
     }
   }
   return {
@@ -16648,8 +17999,8 @@ function buildTokenIndex(tokens) {
     nearest(rawColor, options) {
       const query = parse_default(rawColor);
       if (query === void 0) return [];
-      return colorTokens.map(({ token, parsed }) => ({
-        token,
+      return colorTokens.map(({ token: token2, parsed }) => ({
+        token: token2,
         deltaE: deltaE2000(query, parsed)
       })).filter((match) => match.deltaE <= options.maxDeltaE).sort((a, b) => a.deltaE - b.deltaE).slice(0, options.limit);
     }
@@ -16683,19 +18034,19 @@ function toRegistryFile(result, generatedAt) {
   const unmatchedCode = result.unmatchedCode.map((u) => ({
     name: u.code.name,
     importPath: u.code.importPath,
-    candidates: u.candidates.map((c2) => ({
-      figmaName: c2.figma.name,
-      nodeId: c2.figma.nodeId,
-      score: round3(c2.score)
+    candidates: u.candidates.map((c3) => ({
+      figmaName: c3.figma.name,
+      nodeId: c3.figma.nodeId,
+      score: round3(c3.score)
     }))
   })).sort((a, b) => byNameAsc4(a.name, b.name));
   const unmatchedFigma = result.unmatchedFigma.map((u) => ({
     name: u.figma.name,
     nodeId: u.figma.nodeId,
     ...describedBy(u.figma.description),
-    candidates: u.candidates.map((c2) => ({
-      codeName: c2.code.name,
-      score: round3(c2.score)
+    candidates: u.candidates.map((c3) => ({
+      codeName: c3.code.name,
+      score: round3(c3.score)
     }))
   })).sort((a, b) => byNameAsc4(a.name, b.name));
   return {
@@ -16755,7 +18106,8 @@ function pickPreferred(tokens) {
   return semantic ?? tokens[0];
 }
 function resolveComponent(requirement, registry) {
-  const byId = resolveEntry(registry, requirement.nodeId);
+  const byComponent = requirement.componentName !== void 0 ? resolveEntry(registry, requirement.componentName) : void 0;
+  const byId = byComponent !== void 0 && byComponent.kind !== "not-found" ? byComponent : resolveEntry(registry, requirement.nodeId);
   const outcome = byId.kind === "not-found" ? resolveEntry(registry, requirement.name) : byId;
   if (outcome.kind === "match") {
     return {
@@ -16768,7 +18120,7 @@ function resolveComponent(requirement, registry) {
     };
   }
   if (outcome.kind === "candidates") {
-    const candidates = outcome.entries.map((c2) => c2.codeName);
+    const candidates = outcome.entries.map((c3) => c3.codeName);
     const list = candidates.length > 0 ? ` (${candidates.join(", ")})` : "";
     return {
       requirement,
@@ -16811,15 +18163,15 @@ function resolveDimension(requirement, index) {
   const exact = bucket?.find((t) => t.type === "dimension");
   if (exact !== void 0) return tokenExact(requirement, exact.name);
   const near = [];
-  for (const token of index.byName.values()) {
-    if (token.type !== "dimension") continue;
+  for (const token2 of index.byName.values()) {
+    if (token2.type !== "dimension") continue;
     const tokenDim = normalizeDimension(
-      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
+      typeof token2.value === "number" || typeof token2.value === "string" ? token2.value : Number.NaN
     );
     if (tokenDim === void 0) continue;
     const distance = Math.abs(dim.px - tokenDim.px);
     if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
-    near.push({ name: token.name, distance });
+    near.push({ name: token2.name, distance });
   }
   if (near.length === 0) return noTokenMatch(requirement);
   near.sort(
@@ -16973,7 +18325,7 @@ function loadTokens2(targetDir) {
       });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        tokenPath = isAbsolute(src) ? src : resolve9(targetDir, src);
+        tokenPath = isAbsolute(src) ? src : resolve8(targetDir, src);
       }
     } catch {
       tokenPath = void 0;
@@ -16993,22 +18345,6 @@ Set token_source in .ds-bridge.json, or add a conventional token file (tokens.js
   if (loaded.kind === "error") return loaded;
   return { kind: "ok", tokens: loaded.map.tokens };
 }
-function collectNodes(root) {
-  const nodes = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    nodes.push(node);
-    const children = node.children;
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i -= 1) {
-        const child = children[i];
-        if (child !== void 0) stack.push(child);
-      }
-    }
-  }
-  return nodes;
-}
 function hasBoundFill(node) {
   const fills = node.boundVariables?.fills;
   return Array.isArray(fills) && fills.length > 0;
@@ -17023,14 +18359,25 @@ function firstSolidFillColor(node) {
   }
   return void 0;
 }
-function deriveRequirements(root) {
+function mainComponentName(node, maps) {
+  if (node.componentId === void 0) return void 0;
+  const component = maps.components?.[node.componentId];
+  if (component === void 0) return void 0;
+  const set = component.componentSetId !== void 0 ? maps.componentSets?.[component.componentSetId]?.name : void 0;
+  return set ?? component.name;
+}
+function deriveRequirements(root2, maps = {}) {
   const requirements = [];
-  for (const node of collectNodes(root)) {
+  const stack2 = [root2];
+  while (stack2.length > 0) {
+    const node = stack2.pop();
     if (node.type === "INSTANCE") {
+      const componentName = mainComponentName(node, maps);
       requirements.push({
         kind: "component",
         nodeId: node.id,
-        name: node.name
+        name: node.name,
+        ...componentName !== void 0 ? { componentName } : {}
       });
       continue;
     }
@@ -17043,6 +18390,13 @@ function deriveRequirements(root) {
           rawValue,
           valueKind: "color"
         });
+      }
+    }
+    const children = node.children;
+    if (Array.isArray(children)) {
+      for (let i = children.length - 1; i >= 0; i -= 1) {
+        const child = children[i];
+        if (child !== void 0) stack2.push(child);
       }
     }
   }
@@ -17062,20 +18416,35 @@ async function fetchRoot(client, fileKey, nodeId) {
     if (result2.kind !== "ok") {
       return { kind: "error", message: clientErrorMessage(result2) };
     }
-    const root = nodeFromFileNodes(result2.data.nodes, nodeId);
-    if (root === void 0) {
+    const root2 = nodeFromFileNodes(result2.data.nodes, nodeId);
+    if (root2 === void 0) {
       return {
         kind: "error",
         message: `Figma returned no node for "${nodeId}" in file ${fileKey}.`
       };
     }
-    return { kind: "ok", root };
+    const entry = result2.data.nodes[nodeId] ?? Object.values(result2.data.nodes)[0];
+    return {
+      kind: "ok",
+      root: root2,
+      maps: {
+        ...entry?.components !== void 0 ? { components: entry.components } : {},
+        ...entry?.componentSets !== void 0 ? { componentSets: entry.componentSets } : {}
+      }
+    };
   }
   const result = await client.getFile(fileKey);
   if (result.kind !== "ok") {
     return { kind: "error", message: clientErrorMessage(result) };
   }
-  return { kind: "ok", root: result.data.document };
+  return {
+    kind: "ok",
+    root: result.data.document,
+    maps: {
+      ...result.data.components !== void 0 ? { components: result.data.components } : {},
+      ...result.data.componentSets !== void 0 ? { componentSets: result.data.componentSets } : {}
+    }
+  };
 }
 function requirementLabel(requirement) {
   return requirement.kind === "component" ? requirement.name : `${requirement.property}: ${requirement.rawValue}`;
@@ -17200,7 +18569,7 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
     fail8(fetched.message);
     return;
   }
-  const requirements = deriveRequirements(fetched.root);
+  const requirements = deriveRequirements(fetched.root, fetched.maps);
   const gapsReport = findGaps({
     requirements,
     registry: registryOutcome.registry,
@@ -17313,8 +18682,8 @@ function isTypedText(node) {
   if (typeof style === "string" && style !== "") return true;
   const bound = node.boundVariables;
   if (bound === void 0) return false;
-  return TYPE_VARIABLES.some((key) => {
-    const value2 = bound[key];
+  return TYPE_VARIABLES.some((key2) => {
+    const value2 = bound[key2];
     return Array.isArray(value2) ? value2.length > 0 : value2 !== void 0;
   });
 }
@@ -17323,14 +18692,23 @@ function isStyleable(node) {
   const hasStrokes = Array.isArray(node.strokes) && node.strokes.length > 0;
   return hasFills || hasStrokes;
 }
+function solidCount(paints) {
+  if (!Array.isArray(paints)) return 0;
+  return paints.filter(
+    (p4) => typeof p4 === "object" && p4 !== null && p4.type === "SOLID" && p4.visible !== false
+  ).length;
+}
+function boundCount(value2) {
+  return Array.isArray(value2) ? value2.length : 0;
+}
 function isPaintBound(node) {
-  const bound = node.boundVariables;
-  if (bound === void 0) return false;
-  const fills = bound.fills;
-  const strokes = bound.strokes;
-  const boundFills = Array.isArray(fills) && fills.length > 0;
-  const boundStrokes = Array.isArray(strokes) && strokes.length > 0;
-  return boundFills || boundStrokes;
+  const bound = node.boundVariables ?? {};
+  const fills = solidCount(node.fills);
+  const strokes = solidCount(node.strokes);
+  const boundFills = boundCount(bound.fills);
+  const boundStrokes = boundCount(bound.strokes);
+  if (fills + strokes === 0) return boundFills + boundStrokes > 0;
+  return boundFills >= fills && boundStrokes >= strokes;
 }
 function isFrame(node) {
   return node.type === "FRAME";
@@ -17344,17 +18722,17 @@ function isComponentName(name) {
 function isDefaultName(name) {
   return DEFAULT_NAME.test(name);
 }
-function collect3(root) {
+function collect3(root2) {
   const nodes = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
+  const stack2 = [root2];
+  while (stack2.length > 0) {
+    const node = stack2.pop();
     nodes.push(node);
     const children = node.children;
     if (Array.isArray(children)) {
       for (let i = children.length - 1; i >= 0; i -= 1) {
         const child = children[i];
-        if (child !== void 0) stack.push(child);
+        if (child !== void 0) stack2.push(child);
       }
     }
   }
@@ -17370,8 +18748,8 @@ function deprecatedNameOf(node, options) {
   const name = setName ?? component.name;
   return DEFAULT_DEPRECATED_PATTERN.test(name) ? name : void 0;
 }
-function scoreReadiness(root, options = {}) {
-  const nodes = collect3(root);
+function scoreReadiness(root2, options = {}) {
+  const nodes = collect3(root2);
   const totalNodes = nodes.length;
   const styleable = nodes.filter(isStyleable);
   const unbound = styleable.filter((n) => !isPaintBound(n));
@@ -17660,10 +19038,10 @@ function nodeFromFileNodes2(nodes, nodeId) {
   );
   return entries[0];
 }
-function componentMaps(source) {
+function componentMaps(source2) {
   return {
-    ...source.components !== void 0 ? { components: source.components } : {},
-    ...source.componentSets !== void 0 ? { componentSets: source.componentSets } : {}
+    ...source2.components !== void 0 ? { components: source2.components } : {},
+    ...source2.componentSets !== void 0 ? { componentSets: source2.componentSets } : {}
   };
 }
 async function fetchRoot2(client, fileKey, nodeId) {
@@ -17809,7 +19187,7 @@ import {
   statSync as statSync9,
   writeFileSync as writeFileSync8
 } from "fs";
-import { join as join19, resolve as resolve10 } from "path";
+import { join as join19, resolve as resolve9 } from "path";
 
 // src/engines/history/compact.ts
 function canonical(value2) {
@@ -17862,10 +19240,10 @@ function compactHistory(text2, options = {}) {
       if (!keep[index] || entry.subject === void 0 || entry.at === void 0) {
         return;
       }
-      const key = `${entry.subject}\0${entry.at.slice(0, 10)}`;
-      const prev = lastByDay.get(key);
+      const key2 = `${entry.subject}\0${entry.at.slice(0, 10)}`;
+      const prev = lastByDay.get(key2);
       if (prev !== void 0) keep[prev] = false;
-      lastByDay.set(key, index);
+      lastByDay.set(key2, index);
     });
   }
   const kept = entries.filter((_, i) => keep[i]).map((e4) => e4.raw);
@@ -17899,15 +19277,15 @@ function stringOrNull(value2) {
   return typeof value2 === "string" ? value2 : null;
 }
 function identityOf(element) {
-  for (const key of IDENTITY_KEYS) {
-    const id = element[key];
+  for (const key2 of IDENTITY_KEYS) {
+    const id = element[key2];
     if (typeof id === "string") return id;
   }
   return void 0;
 }
 function numericLeaves(obj, prefix, out) {
-  for (const [key, value2] of Object.entries(obj)) {
-    const path = prefix === "" ? key : `${prefix}.${key}`;
+  for (const [key2, value2] of Object.entries(obj)) {
+    const path = prefix === "" ? key2 : `${prefix}.${key2}`;
     if (typeof value2 === "number") {
       if (Number.isFinite(value2)) out.push([path, value2]);
       continue;
@@ -18035,44 +19413,44 @@ function escapeChar(ch) {
   return /[.*+?^${}()|[\]\\/]/.test(ch) ? `\\${ch}` : ch;
 }
 function globToRegExp(glob) {
-  let source = "";
+  let source2 = "";
   let i = 0;
   while (i < glob.length) {
     const ch = glob[i];
     if (ch === "*" && glob[i + 1] === "*") {
       if (glob[i + 2] === "/") {
-        source += "(?:.*/)?";
+        source2 += "(?:.*/)?";
         i += 3;
       } else {
-        source += ".*";
+        source2 += ".*";
         i += 2;
       }
     } else if (ch === "*") {
-      source += "[^/]*";
+      source2 += "[^/]*";
       i += 1;
     } else if (ch === "?") {
-      source += "[^/]";
+      source2 += "[^/]";
       i += 1;
     } else if (ch === "[") {
       const end = glob.indexOf("]", i + 2);
       if (end === -1) {
-        source += "\\[";
+        source2 += "\\[";
         i += 1;
       } else {
         let body = glob.slice(i + 1, end);
         if (body.startsWith("!")) body = `^${body.slice(1)}`;
-        source += `[${body.replace(/\\/g, "\\\\")}]`;
+        source2 += `[${body.replace(/\\/g, "\\\\")}]`;
         i = end + 1;
       }
     } else if (ch === "\\" && i + 1 < glob.length) {
-      source += escapeChar(glob[i + 1]);
+      source2 += escapeChar(glob[i + 1]);
       i += 2;
     } else {
-      source += escapeChar(ch);
+      source2 += escapeChar(ch);
       i += 1;
     }
   }
-  return new RegExp(`^${source}$`);
+  return new RegExp(`^${source2}$`);
 }
 function patternMatchesTarget(pattern) {
   if (pattern.endsWith("/")) return false;
@@ -18082,12 +19460,12 @@ function patternMatchesTarget(pattern) {
   const anchored = pattern.startsWith("/") ? pattern.slice(1) : pattern;
   return globToRegExp(anchored).test(TARGET);
 }
-function mergeSetting(token) {
-  if (token === "merge" || token === "-merge" || token === "!merge") {
-    return token;
+function mergeSetting(token2) {
+  if (token2 === "merge" || token2 === "-merge" || token2 === "!merge") {
+    return token2;
   }
-  if (token === "binary") return "-merge";
-  if (token.startsWith("merge=")) return token;
+  if (token2 === "binary") return "-merge";
+  if (token2.startsWith("merge=")) return token2;
   return void 0;
 }
 function effectiveMerge(text2) {
@@ -18099,8 +19477,8 @@ function effectiveMerge(text2) {
       continue;
     }
     if (!patternMatchesTarget(pattern)) continue;
-    for (const token of fields.slice(1)) {
-      const setting = mergeSetting(token);
+    for (const token2 of fields.slice(1)) {
+      const setting = mergeSetting(token2);
       if (setting !== void 0) effective = setting;
     }
   }
@@ -18147,8 +19525,8 @@ function migrateHistory(text2) {
   const out = [];
   let migrated = 0;
   let unchanged = 0;
-  for (const line of text2.split("\n")) {
-    const raw = line.trim();
+  for (const line2 of text2.split("\n")) {
+    const raw = line2.trim();
     if (raw === "") continue;
     const next = migrateLine(raw);
     if (next === void 0) {
@@ -18218,7 +19596,7 @@ function prepare2(path, options) {
     fail10(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return void 0;
   }
-  const targetDir = resolve10(path);
+  const targetDir = resolve9(path);
   if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return void 0;
@@ -18461,7 +19839,7 @@ function runExport(path, options) {
     fail10(`Unknown --format "${format}". Expected "csv" or "jsonl".`);
     return;
   }
-  const targetDir = resolve10(path);
+  const targetDir = resolve9(path);
   if (!existsSync14(targetDir) || !statSync9(targetDir).isDirectory()) {
     fail10(`Path "${targetDir}" is not a directory.`);
     return;
@@ -18488,13 +19866,13 @@ function runExport(path, options) {
     filter.untilMs = until.untilMs;
     filter.untilExclusive = until.exclusive;
   }
-  const read = readText(historyFilePath(join19(targetDir, ".ds-bridge")));
-  if (read === null) return;
-  const text2 = read ?? "";
+  const read2 = readText(historyFilePath(join19(targetDir, ".ds-bridge")));
+  if (read2 === null) return;
+  const text2 = read2 ?? "";
   const rows = exportRows(text2, filter);
   const output = format === "csv" ? toCsv(rows) : toJsonl(rows);
   if (options.out !== void 0) {
-    const outPath = resolve10(options.out);
+    const outPath = resolve9(options.out);
     try {
       writeFileSync8(outPath, output, "utf8");
     } catch (error) {
@@ -18565,8 +19943,8 @@ function tokenize3(name) {
   const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
   const tokens = [];
   for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
-    const token = part.toLowerCase();
-    if (token.length > 0) tokens.push(token);
+    const token2 = part.toLowerCase();
+    if (token2.length > 0) tokens.push(token2);
   }
   return tokens;
 }
@@ -18575,8 +19953,8 @@ function nameSimilarity(a, b) {
   const setB = new Set(tokenize3(b));
   if (setA.size === 0 || setB.size === 0) return 0;
   let intersection = 0;
-  for (const token of setA) {
-    if (setB.has(token)) intersection += 1;
+  for (const token2 of setA) {
+    if (setB.has(token2)) intersection += 1;
   }
   return 2 * intersection / (setA.size + setB.size);
 }
@@ -18773,12 +20151,12 @@ function parseVariantName(name) {
   for (const pair of name.split(",")) {
     const eq = pair.indexOf("=");
     if (eq === -1) continue;
-    const key = pair.slice(0, eq).trim();
+    const key2 = pair.slice(0, eq).trim();
     const value2 = pair.slice(eq + 1).trim();
-    if (key.length === 0) continue;
-    const existing = props[key];
+    if (key2.length === 0) continue;
+    const existing = props[key2];
     if (existing === void 0) {
-      props[key] = [value2];
+      props[key2] = [value2];
     } else {
       existing.push(value2);
     }
@@ -18787,18 +20165,18 @@ function parseVariantName(name) {
 }
 function normalizeVariantProps(props) {
   const out = {};
-  for (const key of Object.keys(props).sort()) {
-    const values = props[key] ?? [];
-    out[key] = [...new Set(values)].sort();
+  for (const key2 of Object.keys(props).sort()) {
+    const values = props[key2] ?? [];
+    out[key2] = [...new Set(values)].sort();
   }
   return out;
 }
 function mergeVariantProps(into, from) {
-  for (const key of Object.keys(from)) {
-    const incoming = from[key] ?? [];
-    const existing = into[key];
+  for (const key2 of Object.keys(from)) {
+    const incoming = from[key2] ?? [];
+    const existing = into[key2];
     if (existing === void 0) {
-      into[key] = [...incoming];
+      into[key2] = [...incoming];
     } else {
       existing.push(...incoming);
     }
@@ -18866,9 +20244,9 @@ function variantPropsFromChildren(children) {
 function buildInline(document, publishedIds, descriptions) {
   if (document === void 0) return [];
   const byId = /* @__PURE__ */ new Map();
-  const stack = [document];
-  while (stack.length > 0) {
-    const node = stack.pop();
+  const stack2 = [document];
+  while (stack2.length > 0) {
+    const node = stack2.pop();
     const type = node.type;
     if (type === "COMPONENT_SET" || type === "COMPONENT") {
       const nodeId = asString2(node.id);
@@ -18888,7 +20266,7 @@ function buildInline(document, publishedIds, descriptions) {
     if (Array.isArray(children)) {
       for (let i = children.length - 1; i >= 0; i -= 1) {
         const child = children[i];
-        if (child !== void 0) stack.push(child);
+        if (child !== void 0) stack2.push(child);
       }
     }
   }
@@ -19006,7 +20384,7 @@ async function mapChangedUsage(registry, changedFigmaNames) {
     globals.__filename = filename;
     globals.__dirname = dirname7(filename);
   }
-  const { mapUsage } = await import("./usage-WXYAN2PV.mjs");
+  const { mapUsage } = await import("./usage-XZ5TWVZQ.mjs");
   return mapUsage({ registry, changedFigmaNames, projectDir: cwd3() });
 }
 function changedNames(diff) {
@@ -19020,7 +20398,7 @@ function changedNames(diff) {
 function hasBreaking(diff) {
   if (diff.removed.length > 0) return true;
   if (diff.renamed.length > 0) return true;
-  return diff.changed.some((c2) => c2.impact === "breaking");
+  return diff.changed.some((c3) => c3.impact === "breaking");
 }
 function countByImpact(diff) {
   const counts = { breaking: 0, additive: 0, cosmetic: 0 };
@@ -19108,23 +20486,23 @@ function diffRows(diff) {
       toName: r2.toName
     });
   }
-  for (const c2 of diff.changed) {
+  for (const c3 of diff.changed) {
     const parts = [];
-    if (c2.descriptionChanged) parts.push("description changed");
-    for (const vc of c2.variantChanges) {
+    if (c3.descriptionChanged) parts.push("description changed");
+    for (const vc of c3.variantChanges) {
       if (vc.kind === "axis-added") parts.push(`+axis ${vc.axis}`);
       else if (vc.kind === "axis-removed") parts.push(`-axis ${vc.axis}`);
       else if (vc.kind === "value-added") parts.push(`+${vc.axis}=${vc.value}`);
       else parts.push(`-${vc.axis}=${vc.value}`);
     }
     rows.push({
-      component: c2.name,
-      lookupName: c2.name,
+      component: c3.name,
+      lookupName: c3.name,
       category: "changed",
-      impact: c2.impact,
+      impact: c3.impact,
       detail: parts.join(", "),
-      fromName: c2.name,
-      toName: c2.name
+      fromName: c3.name,
+      toName: c3.name
     });
   }
   for (const a of diff.added) {
@@ -19711,7 +21089,7 @@ import {
   statSync as statSync10,
   writeFileSync as writeFileSync11
 } from "fs";
-import { isAbsolute as isAbsolute2, join as join23, relative as relative2, resolve as resolve11, sep as sep2 } from "path";
+import { isAbsolute as isAbsolute2, join as join23, relative as relative2, resolve as resolve10, sep as sep2 } from "path";
 
 // src/engines/lint/extract.ts
 var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
@@ -19836,10 +21214,10 @@ function extractCss(text2, lineBase, colBase) {
   const cleaned = blankComments(text2);
   const lines = cleaned.split("\n");
   for (let li = 0; li < lines.length; li++) {
-    const line = lines[li] ?? "";
+    const line2 = lines[li] ?? "";
     const colShift = li === 0 ? colBase : 0;
     const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
-    let m = decl.exec(line);
+    let m = decl.exec(line2);
     while (m !== null) {
       const property = m[1] ?? "";
       const value2 = m[2] ?? "";
@@ -19853,54 +21231,54 @@ function extractCss(text2, lineBase, colBase) {
           valueKind: hit.valueKind
         });
       }
-      m = decl.exec(line);
+      m = decl.exec(line2);
     }
   }
   return hits;
 }
-function indexToLineCol(source, index) {
-  let line = 1;
+function indexToLineCol(source2, index) {
+  let line2 = 1;
   let lineStart = 0;
   for (let i = 0; i < index; i++) {
-    if (source[i] === "\n") {
-      line += 1;
+    if (source2[i] === "\n") {
+      line2 += 1;
       lineStart = i + 1;
     }
   }
-  return { line, col: index - lineStart + 1 };
+  return { line: line2, col: index - lineStart + 1 };
 }
 var QUOTED_COLOR_RE = /(["'])(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)"']*\))\1/g;
 var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
-function styleRegions(source) {
+function styleRegions(source2) {
   const regions = [];
   const styleOpen = /style\s*=\s*\{\{/g;
-  for (const open of source.matchAll(styleOpen)) {
+  for (const open of source2.matchAll(styleOpen)) {
     const start = (open.index ?? 0) + open[0].length;
-    const close = source.indexOf("}}", start);
+    const close = source2.indexOf("}}", start);
     regions.push({
       kind: "style-object",
       start,
-      end: close === -1 ? source.length : close
+      end: close === -1 ? source2.length : close
     });
   }
   const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
-  for (const open of source.matchAll(styledOpen)) {
+  for (const open of source2.matchAll(styledOpen)) {
     const start = (open.index ?? 0) + open[0].length;
-    const close = source.indexOf("`", start);
+    const close = source2.indexOf("`", start);
     regions.push({
       kind: "styled-template",
       start,
-      end: close === -1 ? source.length : close
+      end: close === -1 ? source2.length : close
     });
   }
   return regions;
 }
-function extractTsx(source, file) {
+function extractTsx(source2, file) {
   const out = [];
-  for (const region of styleRegions(source)) {
+  for (const region of styleRegions(source2)) {
     if (region.kind !== "style-object") continue;
     const bodyStart = region.start;
-    const body = source.slice(region.start, region.end);
+    const body = source2.slice(region.start, region.end);
     STYLE_OBJ_PROP_RE.lastIndex = 0;
     let pm = STYLE_OBJ_PROP_RE.exec(body);
     while (pm !== null) {
@@ -19914,11 +21292,11 @@ function extractTsx(source, file) {
       if (quoted !== null) {
         const inner = quoted[2] ?? "";
         if (isColorLiteral(inner)) {
-          const pos = indexToLineCol(source, absValueIndex);
+          const pos2 = indexToLineCol(source2, absValueIndex);
           out.push({
             file,
-            line: pos.line,
-            col: pos.col,
+            line: pos2.line,
+            col: pos2.col,
             raw: rawValue,
             property,
             valueKind: "color",
@@ -19926,11 +21304,11 @@ function extractTsx(source, file) {
           });
         } else {
           for (const hit of scanValue(inner, property)) {
-            const pos = indexToLineCol(source, absValueIndex + 1 + hit.offset);
+            const pos2 = indexToLineCol(source2, absValueIndex + 1 + hit.offset);
             out.push({
               file,
-              line: pos.line,
-              col: pos.col,
+              line: pos2.line,
+              col: pos2.col,
               raw: hit.raw,
               property,
               valueKind: hit.valueKind,
@@ -19942,11 +21320,11 @@ function extractTsx(source, file) {
         if (isDimensionProperty(property)) {
           const num4 = Number.parseFloat(rawValue);
           if (Number.isFinite(num4) && num4 !== 0) {
-            const pos = indexToLineCol(source, absValueIndex);
+            const pos2 = indexToLineCol(source2, absValueIndex);
             out.push({
               file,
-              line: pos.line,
-              col: pos.col,
+              line: pos2.line,
+              col: pos2.col,
               raw: rawValue,
               property,
               valueKind: "dimension",
@@ -19957,11 +21335,11 @@ function extractTsx(source, file) {
       }
       if (quoted === null && !/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
         for (const lit of rawValue.matchAll(QUOTED_COLOR_RE)) {
-          const pos = indexToLineCol(source, absValueIndex + (lit.index ?? 0));
+          const pos2 = indexToLineCol(source2, absValueIndex + (lit.index ?? 0));
           out.push({
             file,
-            line: pos.line,
-            col: pos.col,
+            line: pos2.line,
+            col: pos2.col,
             raw: lit[0],
             property,
             valueKind: "color",
@@ -19972,12 +21350,12 @@ function extractTsx(source, file) {
       pm = STYLE_OBJ_PROP_RE.exec(body);
     }
   }
-  for (const region of styleRegions(source)) {
+  for (const region of styleRegions(source2)) {
     if (region.kind !== "styled-template") continue;
     const bodyStart = region.start;
-    const body = source.slice(region.start, region.end);
-    const pos = indexToLineCol(source, bodyStart);
-    const cssHits = extractCss(body, pos.line, pos.col - 1);
+    const body = source2.slice(region.start, region.end);
+    const pos2 = indexToLineCol(source2, bodyStart);
+    const cssHits = extractCss(body, pos2.line, pos2.col - 1);
     for (const hit of cssHits) {
       out.push({
         file,
@@ -20037,11 +21415,11 @@ function countTokenRefs(css) {
   while (refRe.exec(masked) !== null) count += 1;
   return count;
 }
-function countInlineStyleTokenRefs(source) {
+function countInlineStyleTokenRefs(source2) {
   const refRe = /\bvar\s*\(\s*--[\w-]+/gi;
   let count = 0;
-  for (const region of styleRegions(source)) {
-    const body = source.slice(region.start, region.end);
+  for (const region of styleRegions(source2)) {
+    const body = source2.slice(region.start, region.end);
     count += [...body.matchAll(refRe)].length;
   }
   return count;
@@ -20080,11 +21458,11 @@ function tallyAdoption(files) {
 }
 
 // src/engines/lint/fix.ts
-function isCompositeToken(token) {
-  return typeof token.value === "object" && token.value !== null;
+function isCompositeToken(token2) {
+  return typeof token2.value === "object" && token2.value !== null;
 }
-function toCssVar(token) {
-  return `var(--${token.name.replaceAll(".", "-")})`;
+function toCssVar(token2) {
+  return `var(--${token2.name.replaceAll(".", "-")})`;
 }
 function quoteOf(raw) {
   const first = raw[0];
@@ -20094,10 +21472,10 @@ function quoteOf(raw) {
   }
   return void 0;
 }
-function replacementFor(literal, token) {
-  const cssVar = toCssVar(token);
-  if (literal.context !== "style-object") return cssVar;
-  const quote = quoteOf(literal.raw);
+function replacementFor(literal2, token2) {
+  const cssVar = toCssVar(token2);
+  if (literal2.context !== "style-object") return cssVar;
+  const quote = quoteOf(literal2.raw);
   if (quote !== void 0) return `${quote}${cssVar}${quote}`;
   return `"${cssVar}"`;
 }
@@ -20108,15 +21486,15 @@ function compareEdits(a, b) {
 }
 function planFixes(findings) {
   const edits = [];
-  for (const { literal, match } of findings) {
+  for (const { literal: literal2, match } of findings) {
     if (match.kind !== "exact") continue;
     if (isCompositeToken(match.token)) continue;
     edits.push({
-      file: literal.file,
-      line: literal.line,
-      col: literal.col,
-      length: literal.raw.length,
-      replacement: replacementFor(literal, match.token)
+      file: literal2.file,
+      line: literal2.line,
+      col: literal2.col,
+      length: literal2.raw.length,
+      replacement: replacementFor(literal2, match.token)
     });
   }
   return edits.sort(compareEdits);
@@ -20130,8 +21508,8 @@ function applyEdits(content, edits) {
     if (bucket === void 0) byLine.set(edit.line, [edit]);
     else bucket.push(edit);
   }
-  for (const [line, lineEdits] of byLine) {
-    const index = line - 1;
+  for (const [line2, lineEdits] of byLine) {
+    const index = line2 - 1;
     const text2 = lines[index];
     if (text2 === void 0) continue;
     let next = text2;
@@ -20152,14 +21530,36 @@ var NEAR_LIMIT2 = 3;
 function pickPreferred2(tokens, property) {
   if (tokens.length === 0) return void 0;
   const role = propertyRole(property);
-  const candidates = role === void 0 ? tokens : tokens.filter((t) => isForegroundToken(t.name) === (role === "fg"));
-  const pool = candidates.length > 0 ? candidates : tokens;
   const names = new Set(tokens.map((t) => t.name));
-  const semantic = pool.filter(
-    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
-  );
-  const neutral = semantic.find((t) => !isStatusToken(t.name));
-  return neutral ?? semantic[0] ?? pool[0];
+  const score = (t) => [
+    roleScore(t.name, role),
+    roleDepth(t.name, role),
+    t.aliasOf !== void 0 && names.has(t.aliasOf) ? 0 : 1,
+    isStatusToken(t.name) ? 1 : 0,
+    t.name.split(/[.\-/]/).length
+  ];
+  return tokens.map((token2, order) => ({ token: token2, key: [...score(token2), order] })).sort((a, b) => {
+    for (let i = 0; i < a.key.length; i++) {
+      const d = a.key[i] - b.key[i];
+      if (d !== 0) return d;
+    }
+    return 0;
+  })[0]?.token;
+}
+function roleDepth(name, role) {
+  if (role === void 0) return 0;
+  const re = role === "fg" ? FG_SEGMENT : role === "bg" ? BG_TOKEN : BORDER_TOKEN;
+  const segments3 = name.split(/[.\-/]/);
+  const at = segments3.findIndex((s) => re.test(s));
+  return at === -1 ? segments3.length : at;
+}
+function roleScore(name, role) {
+  if (role === void 0) return 1;
+  const fg = isForegroundToken(name);
+  if (role === "fg") return fg ? 0 : 2;
+  if (fg) return 2;
+  const fits = role === "bg" ? BG_TOKEN.test(name) : BORDER_TOKEN.test(name);
+  return fits ? 0 : 1;
 }
 function isStatusToken(name) {
   return /(error|danger|warning|warn|success|destructive|critical)/i.test(name);
@@ -20175,7 +21575,7 @@ function dimensionFamily(property) {
   if (/^(?:padding|margin|gap|row-?gap|column-?gap|inset|top|right|bottom|left)/.test(
     p4.replace(/([a-z])([A-Z])/g, "$1-$2")
   )) {
-    return /(spacing|space|gap|gutter)/i;
+    return /(spacing|space|gap|gutter|padding|margin)/i;
   }
   return void 0;
 }
@@ -20185,18 +21585,20 @@ function propertyRole(property) {
   if (/^(?:color|caretcolor|textdecorationcolor|webkittextfillcolor)$/.test(p4)) {
     return "fg";
   }
-  if (/^(?:background|border|outline|boxshadow|columnrule)/.test(p4)) {
-    return "bg";
-  }
+  if (/^(?:border|outline|columnrule)/.test(p4)) return "border";
+  if (/^(?:background|boxshadow)/.test(p4)) return "bg";
   return void 0;
 }
 function isForegroundToken(name) {
-  return /(^|[.\-/])(?:foreground|fg|text|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
+  return /(^|[.\-/])(?:foreground|fg|fgcolor|text|textcolor|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
     name
-  );
+  ) || /(^|[.\-/])on[A-Z][A-Za-z]*([.\-/]|$)/.test(name);
 }
-function aliasRank(token) {
-  return token.aliasOf !== void 0 ? 0 : 1;
+var FG_SEGMENT = /^(?:foreground|fg|fgcolor|text|textcolor|on|on-[a-z0-9]+|on[A-Z][A-Za-z]*)$/i;
+var BG_TOKEN = /(^|[.\-/])(?:bg|bgcolor|background|backgroundcolor|surface|canvas)([.\-/]|$)/i;
+var BORDER_TOKEN = /(^|[.\-/])(?:border|bordercolor|outline|stroke)([.\-/]|$)/i;
+function aliasRank(token2) {
+  return token2.aliasOf !== void 0 ? 0 : 1;
 }
 function stripQuotes(raw) {
   const trimmed = raw.trim();
@@ -20206,18 +21608,25 @@ function stripQuotes(raw) {
   }
   return trimmed;
 }
-function matchColor(literal, index, options) {
-  const canonical3 = normalizeColor(stripQuotes(literal.raw));
+function matchColor(literal2, index, options) {
+  const canonical3 = normalizeColor(stripQuotes(literal2.raw));
   if (canonical3 === void 0) return { kind: "off-system" };
   const exact = index.byValue.get(canonical3);
   if (exact !== void 0 && exact.length > 0) {
-    const token = pickPreferred2(exact, literal.property);
-    if (token !== void 0) return { kind: "exact", token };
+    const role = propertyRole(literal2.property);
+    const fits = (t) => roleScore(t.name, role) === 0 && roleDepth(t.name, role) === 0;
+    if (role !== void 0 && !exact.some(fits)) {
+      const inExact = new Set(exact.map((t) => t.name));
+      const nearFit = index.nearest(canonical3, { maxDeltaE: COLOR_NEAR_DELTA_E2, limit: 50 }).filter((m) => !inExact.has(m.token.name) && fits(m.token)).map((m) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT2);
+      if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
+    }
+    const token2 = pickPreferred2(exact, literal2.property);
+    if (token2 !== void 0) return { kind: "exact", token: token2 };
   }
-  const composite = options?.compositeColors?.get(canonical3);
-  if (composite !== void 0 && composite.length > 0) {
-    const token = pickPreferred2(composite);
-    if (token !== void 0) return { kind: "exact", token };
+  const composite2 = options?.compositeColors?.get(canonical3);
+  if (composite2 !== void 0 && composite2.length > 0) {
+    const token2 = pickPreferred2(composite2);
+    if (token2 !== void 0) return { kind: "exact", token: token2 };
   }
   const near = index.nearest(canonical3, {
     maxDeltaE: COLOR_NEAR_DELTA_E2,
@@ -20239,8 +21648,8 @@ function setHasFamily(index, family) {
   const cached = byFamily.get(family.source);
   if (cached !== void 0) return cached;
   let found = false;
-  for (const token of index.byName.values()) {
-    if (token.type === "dimension" && family.test(token.name)) {
+  for (const token2 of index.byName.values()) {
+    if (token2.type === "dimension" && family.test(token2.name)) {
       found = true;
       break;
     }
@@ -20248,26 +21657,46 @@ function setHasFamily(index, family) {
   byFamily.set(family.source, found);
   return found;
 }
-function matchDimension(literal, index) {
-  const dim = normalizeDimension(stripQuotes(literal.raw));
+function pickDimension(tokens, property) {
+  const word = (property ?? "").replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().match(/^(padding|margin|gap|row-gap|column-gap)/)?.[1]?.replace(/^(row|column)-/, "");
+  const has = (name, re) => re.test(name) ? 0 : 1;
+  const named2 = word === void 0 ? void 0 : new RegExp(`(^|[.\\-/])${word}`, "i");
+  const key2 = (t) => [
+    has(t.name, /(^|[.\-/])(?:space|spacing)([.\-/]|$)/i),
+    named2 === void 0 ? 0 : has(t.name, named2),
+    t.name.split(/[.\-/]/).length
+  ];
+  return tokens.map((token2, order) => ({ token: token2, k: [...key2(token2), order] })).sort((a, b) => {
+    for (let i = 0; i < a.k.length; i++) {
+      const d = a.k[i] - b.k[i];
+      if (d !== 0) return d;
+    }
+    return 0;
+  })[0]?.token;
+}
+function matchDimension(literal2, index) {
+  const dim = normalizeDimension(stripQuotes(literal2.raw));
   if (dim === void 0) return { kind: "off-system" };
-  const family = dimensionFamily(literal.property);
-  const inFamily = family !== void 0 && setHasFamily(index, family) ? (token) => family.test(token.name) : () => true;
+  const family = dimensionFamily(literal2.property);
+  const inFamily = family !== void 0 && setHasFamily(index, family) ? (token2) => family.test(token2.name) : () => true;
   const bucket = index.byValue.get(`${dim.px}px`);
   if (bucket !== void 0) {
-    const exact = bucket.find((t) => t.type === "dimension" && inFamily(t));
+    const exact = pickDimension(
+      bucket.filter((t) => t.type === "dimension" && inFamily(t)),
+      literal2.property
+    );
     if (exact !== void 0) return { kind: "exact", token: exact };
   }
   const candidates = [];
-  for (const token of index.byName.values()) {
-    if (token.type !== "dimension" || !inFamily(token)) continue;
+  for (const token2 of index.byName.values()) {
+    if (token2.type !== "dimension" || !inFamily(token2)) continue;
     const tokenDim = normalizeDimension(
-      typeof token.value === "number" || typeof token.value === "string" ? token.value : Number.NaN
+      typeof token2.value === "number" || typeof token2.value === "string" ? token2.value : Number.NaN
     );
     if (tokenDim === void 0) continue;
     const distance = Math.abs(dim.px - tokenDim.px);
     if (distance === 0 || distance > DIMENSION_NEAR_PX2) continue;
-    candidates.push({ token, distance });
+    candidates.push({ token: token2, distance });
   }
   if (candidates.length === 0) return { kind: "off-system" };
   candidates.sort(
@@ -20281,8 +21710,8 @@ function hasRadiusScale(index) {
   const cached = radiusScaleCache.get(index);
   if (cached !== void 0) return cached;
   let found = false;
-  for (const token of index.byName.values()) {
-    if (token.type === "dimension" && RADIUS_TOKEN.test(token.name)) {
+  for (const token2 of index.byName.values()) {
+    if (token2.type === "dimension" && RADIUS_TOKEN.test(token2.name)) {
       found = true;
       break;
     }
@@ -20290,18 +21719,18 @@ function hasRadiusScale(index) {
   radiusScaleCache.set(index, found);
   return found;
 }
-function isLintable(literal, index) {
-  if (literal.valueKind !== "dimension") return true;
-  if (!isRadiusProperty(literal.property)) return true;
+function isLintable(literal2, index) {
+  if (literal2.valueKind !== "dimension") return true;
+  if (!isRadiusProperty(literal2.property)) return true;
   return hasRadiusScale(index);
 }
-function matchLiteral(literal, index, options) {
-  return literal.valueKind === "color" ? matchColor(literal, index, options) : matchDimension(literal, index);
+function matchLiteral(literal2, index, options) {
+  return literal2.valueKind === "color" ? matchColor(literal2, index, options) : matchDimension(literal2, index);
 }
 function buildCompositeColorLookup(tokens) {
   const lookup = /* @__PURE__ */ new Map();
-  for (const token of tokens) {
-    const { value: value2 } = token;
+  for (const token2 of tokens) {
+    const { value: value2 } = token2;
     if (typeof value2 !== "object" || value2 === null) continue;
     const inner = value2.color;
     if (typeof inner !== "string") continue;
@@ -20309,9 +21738,9 @@ function buildCompositeColorLookup(tokens) {
     if (canonical3 === void 0) continue;
     const bucket = lookup.get(canonical3);
     if (bucket === void 0) {
-      lookup.set(canonical3, [token]);
+      lookup.set(canonical3, [token2]);
     } else {
-      bucket.push(token);
+      bucket.push(token2);
     }
   }
   return lookup;
@@ -20410,7 +21839,7 @@ function walkLintableFiles(dir, acc) {
 }
 function resolveTokenSource(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve11(process.cwd(), flagTokens);
+    const abs2 = isAbsolute2(flagTokens) ? flagTokens : resolve10(process.cwd(), flagTokens);
     if (!existsSync17(abs2)) {
       return {
         kind: "error",
@@ -20431,7 +21860,7 @@ function resolveTokenSource(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute2(src) ? src : resolve11(targetDir, src);
+        const abs2 = isAbsolute2(src) ? src : resolve10(targetDir, src);
         if (existsSync17(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
@@ -20452,6 +21881,22 @@ function loadTokenMap(tokenPath) {
   const loaded = loadTokens(tokenPath);
   if (loaded.kind === "error") return loaded;
   return { kind: "ok", map: loaded.map };
+}
+function isTokenOutputFile(absPath, tokenKeys) {
+  if (!/\.(css|scss)$/i.test(absPath)) return false;
+  let text2;
+  try {
+    text2 = readFileSync19(absPath, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  } catch {
+    return false;
+  }
+  const declarations = [...text2.matchAll(/(?:^|[{;])\s*([\w-]+)\s*:/g)].map((m) => m[1]).filter((name) => !name.startsWith("--"));
+  const customProps = [...text2.matchAll(/(?:^|[{;])\s*--([\w-]+)\s*:/g)].map(
+    (m) => m[1].toLowerCase()
+  );
+  if (customProps.length === 0 || declarations.length > 0) return false;
+  const named2 = customProps.filter((name) => tokenKeys.has(name)).length;
+  return named2 / customProps.length >= 0.8;
 }
 function isGeneratedFile(absPath) {
   let head;
@@ -20475,12 +21920,12 @@ function lintFile(absPath, relPath, tokens) {
   }
   const literals = extractLiterals({ path: relPath, content });
   const findings = [];
-  for (const literal of literals) {
-    if (!isLintable(literal, tokens.index)) continue;
-    const match = matchLiteral(literal, tokens.index, {
+  for (const literal2 of literals) {
+    if (!isLintable(literal2, tokens.index)) continue;
+    const match = matchLiteral(literal2, tokens.index, {
       compositeColors: tokens.compositeColors
     });
-    findings.push({ literal, match });
+    findings.push({ literal: literal2, match });
   }
   return { kind: "ok", findings };
 }
@@ -20526,12 +21971,12 @@ function renderTerm10(findings, color) {
   for (const [file, fileFindings] of byFile) {
     const lines = [severityColor("ok", file, { color })];
     for (const finding of fileFindings) {
-      const { literal, match } = finding;
+      const { literal: literal2, match } = finding;
       const severity = KIND_SEVERITY[match.kind];
-      const position = `${literal.file}:${literal.line}:${literal.col}`;
+      const position = `${literal2.file}:${literal2.line}:${literal2.col}`;
       const label = severityColor(severity, match.kind, { color });
       lines.push(
-        `  ${position}  ${label}  ${literal.property}: ${literal.raw} \u2014 ${suggestionFor(match)}`
+        `  ${position}  ${label}  ${literal2.property}: ${literal2.raw} \u2014 ${suggestionFor(match)}`
       );
     }
     blocks.push(lines.join("\n"));
@@ -20563,7 +22008,7 @@ function changedFiles(targetDir) {
     };
   }
   const files = new Set(
-    result.stdout.split("\n").map((line) => line.trim()).filter((line) => line.length > 0).map((rel2) => resolve11(targetDir, rel2))
+    result.stdout.split("\n").map((line2) => line2.trim()).filter((line2) => line2.length > 0).map((rel2) => resolve10(targetDir, rel2))
   );
   return { kind: "ok", files };
 }
@@ -20618,7 +22063,7 @@ function registerLintCommand(program2) {
       );
       return;
     }
-    const targetPath = resolve11(path);
+    const targetPath = resolve10(path);
     if (!existsSync17(targetPath)) {
       fail13(`Path "${targetPath}" does not exist.`);
       return;
@@ -20659,8 +22104,14 @@ function registerLintCommand(program2) {
     const walked = [];
     if (isFile) walked.push(targetPath);
     else walkLintableFiles(targetDir, walked);
+    const tokenKeys = new Set(
+      loaded.map.tokens.map((t) => t.name.toLowerCase().replace(/\./g, "-"))
+    );
     for (let i = walked.length - 1; i >= 0; i--) {
-      if (isGeneratedFile(walked[i])) walked.splice(i, 1);
+      const file = walked[i];
+      if (isGeneratedFile(file) || isTokenOutputFile(file, tokenKeys)) {
+        walked.splice(i, 1);
+      }
     }
     let inScope = walked;
     if (options.changed) {
@@ -20979,7 +22430,7 @@ function registerParityCommand(program2) {
 import { spawnSync as spawnSync3 } from "child_process";
 import { randomUUID as randomUUID2 } from "crypto";
 import { existsSync as existsSync19, readFileSync as readFileSync21, statSync as statSync12 } from "fs";
-import { join as join25, resolve as resolve12 } from "path";
+import { join as join25, resolve as resolve11 } from "path";
 
 // src/engines/history/score-record.ts
 function scoreRecordPayload(text2, profile) {
@@ -21036,8 +22487,8 @@ function planRecordSteps(ctx) {
   ];
 }
 function handoffSteps(ctx) {
-  const token = ctx.figmaToken ?? ctx.figmaConfigured;
-  const runs = ctx.figma && token;
+  const token2 = ctx.figmaToken ?? ctx.figmaConfigured;
+  const runs = ctx.figma && token2;
   const reason = !ctx.figma ? "Figma checks need network \u2014 pass --figma" : "Figma token not configured";
   return (ctx.trackedFrames ?? []).map((frame) => ({
     id: "handoff",
@@ -21144,7 +22595,7 @@ function renderTerm12(result, color) {
     `ds-bridge record \xB7 run ${result.runId} \xB7 source ${result.source}`,
     ""
   ];
-  const width = Math.max(...result.checks.map((c2) => c2.id.length));
+  const width = Math.max(...result.checks.map((c3) => c3.id.length));
   for (const check of result.checks) {
     const name = check.id.padEnd(width);
     const frame = check.frame !== void 0 ? ` \xB7 ${check.frame}` : "";
@@ -21173,7 +22624,7 @@ function runRecord(path, options, deps) {
     fail15(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return 2;
   }
-  let source = "local";
+  let source2 = "local";
   if (options.source !== void 0) {
     const parsed = parseSource(options.source);
     if (parsed === void 0) {
@@ -21182,9 +22633,9 @@ function runRecord(path, options, deps) {
       );
       return 2;
     }
-    source = parsed;
+    source2 = parsed;
   } else {
-    source = parseSource(deps.env.DS_BRIDGE_SOURCE) ?? "local";
+    source2 = parseSource(deps.env.DS_BRIDGE_SOURCE) ?? "local";
   }
   let libraryTop;
   if (options.libraryTop !== void 0) {
@@ -21196,7 +22647,7 @@ function runRecord(path, options, deps) {
       return 2;
     }
   }
-  const targetDir = resolve12(path);
+  const targetDir = resolve11(path);
   if (!existsSync19(targetDir) || !statSync12(targetDir).isDirectory()) {
     fail15(`Path "${targetDir}" is not a directory.`);
     return 2;
@@ -21213,7 +22664,7 @@ function runRecord(path, options, deps) {
   const childEnv = {
     ...deps.env,
     DS_BRIDGE_RUN_ID: runId,
-    DS_BRIDGE_SOURCE: source
+    DS_BRIDGE_SOURCE: source2
   };
   const steps = planRecordSteps({
     hasRegistry: existsSync19(join25(stateDir, "registry.json")),
@@ -21253,7 +22704,7 @@ function runRecord(path, options, deps) {
     };
   });
   const ran = checks.filter((_c, index) => runs.has(index));
-  if (ran.length > 0 && ran.every((c2) => c2.status === "error")) {
+  if (ran.length > 0 && ran.every((c3) => c3.status === "error")) {
     fail15(
       `record: no check could be started (${ran[0]?.reason ?? "unknown error"}).`
     );
@@ -21263,7 +22714,7 @@ function runRecord(path, options, deps) {
   const payload = batchRecords.length > 0 ? scoreRecordPayload(readHistoryText3(stateDir), settings.profile) : void 0;
   if (payload !== void 0) {
     try {
-      appendHistoryRecord(stateDir, payload, { env: childEnv, source });
+      appendHistoryRecord(stateDir, payload, { env: childEnv, source: source2 });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       fail15(`Could not append the score record: ${detail}`);
@@ -21274,7 +22725,7 @@ function runRecord(path, options, deps) {
   }
   const result = {
     runId,
-    source,
+    source: source2,
     historyPath: historyFilePath(stateDir),
     checks,
     score
@@ -21335,8 +22786,8 @@ function tokenize4(name) {
   const spaced = name.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/([A-Za-z])([0-9])/g, "$1 $2").replace(/([0-9])([A-Za-z])/g, "$1 $2");
   const tokens = [];
   for (const part of spaced.split(/[^a-zA-Z0-9]+/)) {
-    const token = part.toLowerCase();
-    if (token.length > 0) tokens.push(token);
+    const token2 = part.toLowerCase();
+    if (token2.length > 0) tokens.push(token2);
   }
   return tokens;
 }
@@ -21345,8 +22796,8 @@ function tokenSetScore(a, b) {
   const setB = new Set(tokenize4(b));
   if (setA.size === 0 || setB.size === 0) return 0;
   let intersection = 0;
-  for (const token of setA) {
-    if (setB.has(token)) intersection += 1;
+  for (const token2 of setA) {
+    if (setB.has(token2)) intersection += 1;
   }
   return 2 * intersection / (setA.size + setB.size);
 }
@@ -21371,12 +22822,12 @@ function valueJaccard(a, b) {
 }
 function normalizedKeyIndex(variants) {
   const index = /* @__PURE__ */ new Map();
-  for (const key of Object.keys(variants)) {
-    const values = variants[key] ?? [];
-    const norm = normalizeName5(key);
+  for (const key2 of Object.keys(variants)) {
+    const values = variants[key2] ?? [];
+    const norm = normalizeName5(key2);
     const existing = index.get(norm);
     if (existing === void 0) {
-      index.set(norm, { key, values: [...values] });
+      index.set(norm, { key: key2, values: [...values] });
     } else {
       existing.values.push(...values);
     }
@@ -21393,43 +22844,43 @@ var AXIS_PAIR_THRESHOLD = 0.5;
 function pairAxes(codeVariants, figmaVariants) {
   const codeIndex = normalizedKeyIndex(codeVariants);
   const figmaIndex = normalizedKeyIndex(figmaVariants);
-  for (const [key, axis] of figmaIndex) {
+  for (const [key2, axis] of figmaIndex) {
     const boolean = axis.values.every((v) => /^(?:true|false)$/i.test(v));
-    if ((boolean || STATE_AXIS.has(key)) && !codeIndex.has(key)) {
-      figmaIndex.delete(key);
+    if ((boolean || STATE_AXIS.has(key2)) && !codeIndex.has(key2)) {
+      figmaIndex.delete(key2);
     }
   }
   const pairs = [];
   const codeLeft = new Map(codeIndex);
   const figmaLeft = new Map(figmaIndex);
-  for (const [key, codeAxis] of codeIndex) {
-    const figmaAxis = figmaIndex.get(key);
+  for (const [key2, codeAxis] of codeIndex) {
+    const figmaAxis = figmaIndex.get(key2);
     if (figmaAxis === void 0) continue;
     pairs.push({
       code: codeAxis,
       figma: figmaAxis,
       agreement: valueJaccard(codeAxis.values, figmaAxis.values)
     });
-    codeLeft.delete(key);
-    figmaLeft.delete(key);
+    codeLeft.delete(key2);
+    figmaLeft.delete(key2);
   }
   const candidates = [];
-  for (const [c2, codeAxis] of codeLeft) {
+  for (const [c3, codeAxis] of codeLeft) {
     for (const [f3, figmaAxis] of figmaLeft) {
       const agreement = valueJaccard(codeAxis.values, figmaAxis.values);
       if (agreement >= AXIS_PAIR_THRESHOLD)
-        candidates.push({ c: c2, f: f3, agreement });
+        candidates.push({ c: c3, f: f3, agreement });
     }
   }
   candidates.sort(
     (a, b) => a.agreement !== b.agreement ? b.agreement - a.agreement : byNameAsc6(`${a.c}\0${a.f}`, `${b.c}\0${b.f}`)
   );
-  for (const { c: c2, f: f3, agreement } of candidates) {
-    const codeAxis = codeLeft.get(c2);
+  for (const { c: c3, f: f3, agreement } of candidates) {
+    const codeAxis = codeLeft.get(c3);
     const figmaAxis = figmaLeft.get(f3);
     if (codeAxis === void 0 || figmaAxis === void 0) continue;
     pairs.push({ code: codeAxis, figma: figmaAxis, agreement });
-    codeLeft.delete(c2);
+    codeLeft.delete(c3);
     figmaLeft.delete(f3);
   }
   for (const axis of codeLeft.values())
@@ -21476,8 +22927,8 @@ function variantGaps(codeVariants, figmaVariants) {
       const extraFigma = missingFrom(figma.values, code.values);
       const extraCode = missingFrom(code.values, figma.values);
       if (extraFigma.length === 0 && extraCode.length === 0) continue;
-      const line = extraCode.length === 0 ? `${code.key}: Figma also has ${extraFigma.join("|")}` : extraFigma.length === 0 ? `${code.key}: code also has ${extraCode.join("|")}` : `${code.key}: code ${code.values.join("|")} \u2260 Figma ${figma.key} ${figma.values.join("|")}`;
-      codeKeyed.push({ key: code.key, line });
+      const line2 = extraCode.length === 0 ? `${code.key}: Figma also has ${extraFigma.join("|")}` : extraFigma.length === 0 ? `${code.key}: code also has ${extraCode.join("|")}` : `${code.key}: code ${code.values.join("|")} \u2260 Figma ${figma.key} ${figma.values.join("|")}`;
+      codeKeyed.push({ key: code.key, line: line2 });
     }
   }
   const byKey = (a, b) => byNameAsc6(a.key.toLowerCase(), b.key.toLowerCase());
@@ -21515,15 +22966,15 @@ function rankCodeCandidates(figmaModel, code) {
 }
 function matchComponents(code, figma) {
   const edges = [];
-  for (let c2 = 0; c2 < code.length; c2 += 1) {
-    const codeComponent = code[c2];
+  for (let c3 = 0; c3 < code.length; c3 += 1) {
+    const codeComponent = code[c3];
     if (codeComponent === void 0) continue;
     for (let f3 = 0; f3 < figma.length; f3 += 1) {
       const figmaModel = figma[f3];
       if (figmaModel === void 0) continue;
       const parts = scorePair(codeComponent, figmaModel);
       if (parts.score >= MATCH_THRESHOLD) {
-        edges.push({ codeIndex: c2, figmaIndex: f3, parts });
+        edges.push({ codeIndex: c3, figmaIndex: f3, parts });
       }
     }
   }
@@ -21578,9 +23029,9 @@ function matchComponents(code, figma) {
   }
   matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
   const unmatchedCode = [];
-  for (let c2 = 0; c2 < code.length; c2 += 1) {
-    if (matchedCode.has(c2)) continue;
-    const codeComponent = code[c2];
+  for (let c3 = 0; c3 < code.length; c3 += 1) {
+    if (matchedCode.has(c3)) continue;
+    const codeComponent = code[c3];
     if (codeComponent === void 0) continue;
     unmatchedCode.push({
       code: codeComponent,
@@ -21612,7 +23063,7 @@ async function scanCode2(targetDir, configuredPaths) {
   }
   const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
     [
-      import("./scan-code-FRVT7GOJ.mjs"),
+      import("./scan-code-HGZHV5GL.mjs"),
       import("./component-paths-DSRHTXXS.mjs")
     ]
   );
@@ -21633,6 +23084,11 @@ async function scanCode2(targetDir, configuredPaths) {
     (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : byPath(a, b)
   );
   return { code, scope };
+}
+async function scanPackages(targetDir, wanted) {
+  if (wanted.size === 0) return [];
+  const { scanPackageComponents } = await import("./scan-code-HGZHV5GL.mjs");
+  return scanPackageComponents(targetDir, wanted);
 }
 function byPath(a, b) {
   return a.importPath < b.importPath ? -1 : a.importPath > b.importPath ? 1 : 0;
@@ -21731,7 +23187,13 @@ async function runBuild(path, options) {
     ...fileResult.data.components !== void 0 ? { fileComponents: fileResult.data.components } : {},
     ...fileResult.data.componentSets !== void 0 ? { fileComponentSets: fileResult.data.componentSets } : {}
   });
-  const matchResult = matchComponents(code, figma);
+  const normalize = (name) => name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+  const local = new Set(code.map((c3) => normalize(c3.name)));
+  const wanted = new Set(
+    figma.map((f3) => normalize(f3.name)).filter((n) => !local.has(n))
+  );
+  const packaged = await scanPackages(targetDir, wanted);
+  const matchResult = matchComponents([...code, ...packaged], figma);
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const registry = toRegistryFile(matchResult, generatedAt);
   const stateDir = join26(targetDir, ".ds-bridge");
@@ -21882,7 +23344,7 @@ function registerRegistryCommand(program2) {
 
 // src/cli-commands/release-check.ts
 import { existsSync as existsSync21, readFileSync as readFileSync23, statSync as statSync14 } from "fs";
-import { join as join27, resolve as resolve13 } from "path";
+import { join as join27, resolve as resolve12 } from "path";
 function fail17(message) {
   process.stderr.write(`${message}
 `);
@@ -21914,7 +23376,7 @@ function runReleaseCheck(path, options) {
     fail17(`Unknown --format "${options.format}". Expected "term" or "json".`);
     return;
   }
-  const targetDir = resolve13(path);
+  const targetDir = resolve12(path);
   if (!existsSync21(targetDir) || !statSync14(targetDir).isDirectory()) {
     fail17(`Path "${targetDir}" is not a directory.`);
     return;
@@ -21954,7 +23416,7 @@ import {
   statSync as statSync15,
   writeFileSync as writeFileSync13
 } from "fs";
-import { dirname as dirname10, join as join28, resolve as resolve14 } from "path";
+import { dirname as dirname10, join as join28, resolve as resolve13 } from "path";
 import { platform } from "process";
 
 // src/engines/report/manager-report.ts
@@ -21962,7 +23424,7 @@ var TOP_N = 3;
 var LOW_CONSISTENCY = 50;
 var LOW_SCORE = 50;
 function top(candidates) {
-  return [...candidates].sort((a, b) => b.rank - a.rank).slice(0, TOP_N).map((c2) => c2.text);
+  return [...candidates].sort((a, b) => b.rank - a.rank).slice(0, TOP_N).map((c3) => c3.text);
 }
 function plural(n, one, many) {
   return n === 1 ? one : many;
@@ -22412,10 +23874,10 @@ function scoreFor(text2, weights) {
   if (outcome.kind === "no-data") return void 0;
   return {
     current: outcome.current,
-    components: outcome.components.map((c2) => ({
-      kind: c2.kind,
-      score: c2.score,
-      weight: c2.weight
+    components: outcome.components.map((c3) => ({
+      kind: c3.kind,
+      score: c3.score,
+      weight: c3.weight
     }))
   };
 }
@@ -22739,9 +24201,9 @@ function componentBlock(rows) {
     "| Component | Score | Weight |",
     "| --- | --- | --- |"
   ];
-  for (const c2 of scoreRow.components) {
+  for (const c3 of scoreRow.components) {
     lines.push(
-      `| ${COMPONENT_LABEL[c2.kind] ?? c2.kind} | ${c2.score} | ${c2.weight} |`
+      `| ${COMPONENT_LABEL[c3.kind] ?? c3.kind} | ${c3.score} | ${c3.weight} |`
     );
   }
   return lines;
@@ -23381,7 +24843,7 @@ function systemScoreSection(data, weightProfile) {
     }
   ];
   const legendRows = score.components.map(
-    (c2) => `<tr><td>${escapeHtml(COMPONENT_LABEL2[c2.kind] ?? c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
+    (c3) => `<tr><td>${escapeHtml(COMPONENT_LABEL2[c3.kind] ?? c3.kind)}</td><td class="num">${escapeHtml(String(c3.score))}</td><td class="num">${escapeHtml(String(c3.weight))}</td></tr>`
   ).join("");
   const legend = [
     '<table class="weights">',
@@ -23488,7 +24950,7 @@ function paritySection2(data) {
       intensity: PARITY_INTENSITY[cell.status]
     }))
   }));
-  const columns = parity.columns.length > 0 ? `<div class="cols">Columns: ${parity.columns.map((c2) => `<b>${escapeHtml(c2)}</b>`).join(" \xB7 ")}</div>` : "";
+  const columns = parity.columns.length > 0 ? `<div class="cols">Columns: ${parity.columns.map((c3) => `<b>${escapeHtml(c3)}</b>`).join(" \xB7 ")}</div>` : "";
   return panel(
     "Parity matrix",
     `<div class="chart">${heatGrid(rows)}</div>${columns}`
@@ -23722,7 +25184,7 @@ function consistencySection(data) {
     return panel("Consistency", emptyState2("lint <dir>"));
   }
   const rows = consistency.components.map(
-    (c2) => `<tr><td>${escapeHtml(c2.kind)}</td><td class="num">${escapeHtml(String(c2.score))}</td><td class="num">${escapeHtml(String(c2.weight))}</td></tr>`
+    (c3) => `<tr><td>${escapeHtml(c3.kind)}</td><td class="num">${escapeHtml(String(c3.score))}</td><td class="num">${escapeHtml(String(c3.weight))}</td></tr>`
   ).join("");
   return panel(
     "Consistency",
@@ -23790,7 +25252,7 @@ function sparkPrefix(values) {
   return values.length >= 2 ? `${sparkline(values)} ` : "";
 }
 function hotspotDetail(row2) {
-  const known = row2.points.map((p4) => p4.count).filter((c2) => c2 !== null);
+  const known = row2.points.map((p4) => p4.count).filter((c3) => c3 !== null);
   const delta = known.length > 1 ? row2.delta : void 0;
   return `${sparkPrefix(known)}${valueWithDelta(row2.latest, delta)} \xB7 ${STATUS_LABEL[row2.status]}`;
 }
@@ -23870,12 +25332,12 @@ function handoffPassRateSection(data) {
     return panel("Handoff pass rate", emptyState2("handoff <frame-url>"));
   }
   const tone = toneFor(rate.pct);
-  const line = passRateTrendLine(rate);
+  const line2 = passRateTrendLine(rate);
   return panel(
     "Handoff pass rate",
     [
       `<div class="stat"><span class="stat-value ${tone === "ok" ? "ok" : tone === "error" ? "error" : ""}">${escapeHtml(String(rate.pct))}%</span><span class="stat-sub">${escapeHtml(passRateSub(rate))}</span></div>`,
-      line === void 0 ? "" : `<div class="meta">${escapeHtml(line)}</div>`
+      line2 === void 0 ? "" : `<div class="meta">${escapeHtml(line2)}</div>`
     ].join("")
   );
 }
@@ -24477,7 +25939,7 @@ function kpis(data, selection) {
   }
   const release = data.releaseReadiness;
   if (on.has("release-readiness") && release !== void 0 && release.checks.length > 0) {
-    const passed = release.checks.filter((c2) => c2.pass).length;
+    const passed = release.checks.filter((c3) => c3.pass).length;
     out.push({
       label: "Release",
       value: release.go ? "Go" : "No-go",
@@ -24801,7 +26263,7 @@ function normalizeSnapshot(html) {
 // src/render/markdown/text.ts
 var ACTIVE = /[\\`*_[\]<>|~]/g;
 function mdText(text2) {
-  return text2.replace(/\s*\r?\n\s*/g, " ").replace(ACTIVE, (c2) => `\\${c2}`);
+  return text2.replace(/\s*\r?\n\s*/g, " ").replace(ACTIVE, (c3) => `\\${c3}`);
 }
 
 // src/render/markdown/manager.ts
@@ -24996,10 +26458,10 @@ function systemScoreTerminalSection(data, color) {
   const trend = sparkline(score.trend.map((point) => point.score));
   const legend = renderTable(
     ["Component", "Sub-score", "Weight"],
-    score.components.map((c2) => [
-      COMPONENT_LABEL3[c2.kind] ?? c2.kind,
-      String(c2.score),
-      String(c2.weight)
+    score.components.map((c3) => [
+      COMPONENT_LABEL3[c3.kind] ?? c3.kind,
+      String(c3.score),
+      String(c3.weight)
     ]),
     { color }
   );
@@ -25491,10 +26953,10 @@ function consistencyTerminalSection(data, color) {
   });
   const table3 = renderTable(
     ["Signal", "Score", "Weight"],
-    consistency.components.map((c2) => [
-      c2.kind,
-      String(c2.score),
-      String(c2.weight)
+    consistency.components.map((c3) => [
+      c3.kind,
+      String(c3.score),
+      String(c3.weight)
     ]),
     { color }
   );
@@ -25566,8 +27028,8 @@ function handoffPassRateTerminalSection(data, _color) {
     return panel2("Handoff pass rate", emptyState3("handoff <frame-url>"));
   }
   const lines = [`${rate.pct}% \xB7 ${passRateSub(rate)}`];
-  const line = passRateTrendLine(rate);
-  if (line !== void 0) lines.push(line);
+  const line2 = passRateTrendLine(rate);
+  if (line2 !== void 0) lines.push(line2);
   return panel2("Handoff pass rate", lines.join("\n"));
 }
 var SECTION_RENDERERS_TERMINAL = {
@@ -25674,7 +27136,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
   if (format === "exec") {
     const markdown = renderManagerMarkdown(report);
     if (options.out !== void 0) {
-      const outPath2 = resolve14(options.out);
+      const outPath2 = resolve13(options.out);
       const written2 = writeDashboard(outPath2, markdown);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -25688,7 +27150,7 @@ function runManagerReport(format, stateDir, options, selection, data, windowDays
     process.exitCode = 0;
     return;
   }
-  const outPath = options.out !== void 0 ? resolve14(options.out) : join28(stateDir, "reports", "exec.html");
+  const outPath = options.out !== void 0 ? resolve13(options.out) : join28(stateDir, "reports", "exec.html");
   const written = writeDashboard(outPath, renderManagerHtml(report));
   if (written.kind === "error") {
     failReport(written.message);
@@ -25855,7 +27317,7 @@ function runMarkdownReport(targetDir, options, selection) {
     ...baseBlocks !== void 0 ? { baseBlocks } : {}
   });
   if (options.out !== void 0) {
-    const outPath = resolve14(options.out);
+    const outPath = resolve13(options.out);
     const written = writeDashboard(outPath, markdown);
     if (written.kind === "error") {
       failReport(written.message);
@@ -25905,7 +27367,7 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode,
   const snapshot = mode === "snapshot";
   const suffix = snapshot ? ".snapshot.html" : ".html";
   const transform = snapshot ? normalizeSnapshot : (html) => html;
-  const outDir = options.out !== void 0 ? resolve14(options.out) : join28(stateDir, snapshot ? "snapshots" : "reports");
+  const outDir = options.out !== void 0 ? resolve13(options.out) : join28(stateDir, snapshot ? "snapshots" : "reports");
   const names = resolvePublishNames(targetDir, options);
   const entries = [];
   const writePage = (name, html) => {
@@ -25933,16 +27395,16 @@ function runSiteReport(targetDir, options, selection, data, weightProfile, mode,
     if (!writePage(name, html)) return;
   } else {
     for (const name of names) {
-      const read = readDashboardFile(targetDir, name);
-      if (read.kind === "not-found") {
+      const read2 = readDashboardFile(targetDir, name);
+      if (read2.kind === "not-found") {
         failReport(`Unknown dashboard "${name}" in the publish set.`);
         return;
       }
-      if (read.kind === "invalid") {
-        failReport(`Dashboard "${name}" is invalid: ${read.message}`);
+      if (read2.kind === "invalid") {
+        failReport(`Dashboard "${name}" is invalid: ${read2.message}`);
         return;
       }
-      const sel = read.dashboard.selection;
+      const sel = read2.dashboard.selection;
       const outcome = resolveView(
         sel.kind === "view" ? { view: sel.view } : { artifacts: sel.artifacts },
         {}
@@ -25983,7 +27445,7 @@ function runReport(path, options) {
     failReport(velocityWindowFlag.message);
     return;
   }
-  const targetDir = resolve14(path);
+  const targetDir = resolve13(path);
   if (!existsSync22(targetDir) || !statSync15(targetDir).isDirectory()) {
     failReport(`Path "${targetDir}" is not a directory.`);
     return;
@@ -26035,7 +27497,7 @@ function runReport(path, options) {
     )}
 `;
     if (options.out !== void 0) {
-      const outPath2 = resolve14(options.out);
+      const outPath2 = resolve13(options.out);
       const written2 = writeDashboard(outPath2, text2);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -26092,7 +27554,7 @@ function runReport(path, options) {
       ...selection.viewLabel !== void 0 ? { viewLabel: selection.viewLabel } : {}
     });
     if (options.out !== void 0) {
-      const outPath2 = resolve14(options.out);
+      const outPath2 = resolve13(options.out);
       const written2 = writeDashboard(outPath2, text2);
       if (written2.kind === "error") {
         failReport(written2.message);
@@ -26117,7 +27579,7 @@ function runReport(path, options) {
       ...weightProfile.name !== void 0 ? { name: weightProfile.name } : {}
     }
   });
-  const outPath = options.out !== void 0 ? resolve14(options.out) : join28(stateDir, "reports", "dashboard.html");
+  const outPath = options.out !== void 0 ? resolve13(options.out) : join28(stateDir, "reports", "dashboard.html");
   const written = writeDashboard(outPath, html);
   if (written.kind === "error") {
     failReport(written.message);
@@ -26181,7 +27643,7 @@ function registerReportCommand(program2) {
 
 // src/cli-commands/rollup.ts
 import { existsSync as existsSync23, mkdirSync as mkdirSync11, readFileSync as readFileSync26, writeFileSync as writeFileSync14 } from "fs";
-import { basename as basename2, dirname as dirname11, join as join30, resolve as resolve15 } from "path";
+import { basename as basename2, dirname as dirname11, join as join30, resolve as resolve14 } from "path";
 
 // src/engines/rollup/rollup.ts
 var ROLLUP_SCHEMA = "ds-bridge/rollup";
@@ -26402,8 +27864,8 @@ function aggregate(repos) {
   if (repos.some((r2) => r2.team !== void 0)) {
     const teams = /* @__PURE__ */ new Map();
     for (const r2 of repos) {
-      const key = r2.team ?? NO_TEAM;
-      teams.set(key, [...teams.get(key) ?? [], r2]);
+      const key2 = r2.team ?? NO_TEAM;
+      teams.set(key2, [...teams.get(key2) ?? [], r2]);
     }
     out.byTeam = [...teams.keys()].sort().map((team) => {
       const members = teams.get(team) ?? [];
@@ -26929,8 +28391,8 @@ function configBase(configPath) {
   return basename2(dir) === ".ds-bridge" ? dirname11(dir) : dir;
 }
 function specFor(raw, base) {
-  const spec = parseSourceArg(raw, (p4) => existsSync23(resolve15(base, p4)));
-  const out = { path: resolve15(base, spec.path), label: spec.path };
+  const spec = parseSourceArg(raw, (p4) => existsSync23(resolve14(base, p4)));
+  const out = { path: resolve14(base, spec.path), label: spec.path };
   if (spec.ref !== void 0) out.ref = spec.ref;
   return out;
 }
@@ -26967,7 +28429,7 @@ function runRollup(sources, options) {
   const cwd5 = process.cwd();
   const pending = [];
   const defaultConfig = join30(cwd5, ".ds-bridge", "rollup.json");
-  const configPath = options.config !== void 0 ? resolve15(options.config) : sources.length === 0 && existsSync23(defaultConfig) ? defaultConfig : void 0;
+  const configPath = options.config !== void 0 ? resolve14(options.config) : sources.length === 0 && existsSync23(defaultConfig) ? defaultConfig : void 0;
   if (configPath !== void 0) {
     const entries = loadConfig(configPath);
     if (entries === void 0) return;
@@ -26997,7 +28459,7 @@ function runRollup(sources, options) {
     process.exitCode = 0;
     return;
   }
-  const outPath = resolve15(options.out);
+  const outPath = resolve14(options.out);
   try {
     mkdirSync11(dirname11(outPath), { recursive: true });
     writeFileSync14(outPath, rendered, "utf8");
@@ -27037,7 +28499,7 @@ import {
   statSync as statSync17,
   writeFileSync as writeFileSync15
 } from "fs";
-import { isAbsolute as isAbsolute3, join as join31, relative as relative3, resolve as resolve16, sep as sep4 } from "path";
+import { isAbsolute as isAbsolute3, join as join31, relative as relative3, resolve as resolve15, sep as sep4 } from "path";
 
 // src/engines/tokens/drift.ts
 function nameKey(name) {
@@ -27051,9 +28513,99 @@ function canonical2(type, raw) {
     const dim = normalizeDimension(raw);
     if (dim !== void 0) return `${dim.px}px`;
   }
-  return String(raw).trim();
+  return looseCanonical(String(raw));
+}
+function looseCanonical(raw) {
+  return raw.trim().replace(/'/g, '"').replace(/#[0-9a-fA-F]{3,8}\b/g, (hex2) => normalizeColor(hex2) ?? hex2).replace(/(-?\d*\.?\d+)(rem|px)\b/g, (whole) => {
+    const dim = normalizeDimension(whole);
+    return dim === void 0 ? whole : `${Number(dim.px.toFixed(4))}px`;
+  }).replace(/\s*,\s*/g, ", ").replace(/\s+/g, " ");
 }
 var VAR_REF_RE = /var\(\s*--([A-Za-z0-9_-]+)/g;
+function substituteVars(raw, lookup, seen) {
+  let out = "";
+  let i = 0;
+  for (; ; ) {
+    const start = raw.indexOf("var(", i);
+    if (start === -1) return out + raw.slice(i);
+    out += raw.slice(i, start);
+    let depth = 0;
+    let end = start + 3;
+    for (; end < raw.length; end++) {
+      if (raw[end] === "(") depth += 1;
+      else if (raw[end] === ")") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    if (end >= raw.length) return void 0;
+    const inner = raw.slice(start + 4, end);
+    const comma = inner.indexOf(",");
+    const ref = (comma === -1 ? inner : inner.slice(0, comma)).trim();
+    const fallback = comma === -1 ? void 0 : inner.slice(comma + 1).trim();
+    const resolved = ref.startsWith("--") ? lookup(nameKey(ref.slice(2)), seen) : void 0;
+    const value2 = resolved ?? (fallback === void 0 ? void 0 : substituteVars(fallback, lookup, seen));
+    if (value2 === void 0) return void 0;
+    out += value2;
+    i = end + 1;
+  }
+}
+function resolvedOutputValues(outputsByKey) {
+  const memo = /* @__PURE__ */ new Map();
+  const lookup = (key2, seen) => {
+    if (memo.has(key2)) return memo.get(key2);
+    const output = outputsByKey.get(key2);
+    if (output === void 0 || seen.has(key2)) return void 0;
+    const value2 = output.raw.includes("var(") ? substituteVars(output.raw, lookup, /* @__PURE__ */ new Set([...seen, key2])) : output.raw;
+    memo.set(key2, value2);
+    return value2;
+  };
+  return (key2) => lookup(key2, /* @__PURE__ */ new Set());
+}
+function splitUnbuiltLayers(tokens, entries, emitted) {
+  const emittedTargets = new Set(
+    tokens.flatMap(
+      (t) => t.aliasOf === void 0 || !emitted.has(t.name) ? [] : [t.aliasOf]
+    )
+  );
+  const hasOutputUnder = (prefix) => {
+    for (const name of emitted) {
+      if (name === prefix || name.startsWith(`${prefix}.`)) return true;
+    }
+    return false;
+  };
+  const layerOf = /* @__PURE__ */ new Map();
+  const layerFor = (name) => {
+    if (layerOf.has(name)) return layerOf.get(name);
+    const parts = name.split(".");
+    let layer;
+    for (let k4 = 1; k4 < parts.length; k4++) {
+      const prefix = parts.slice(0, k4).join(".");
+      if (hasOutputUnder(prefix)) continue;
+      const members = tokens.filter((t) => t.name.startsWith(`${prefix}.`));
+      if (members.length >= 2 && members.some((t) => emittedTargets.has(t.name))) {
+        layer = prefix;
+      }
+      break;
+    }
+    layerOf.set(name, layer);
+    return layer;
+  };
+  const counts = /* @__PURE__ */ new Map();
+  const kept = [];
+  for (const entry of entries) {
+    const layer = entry.kind === "missing-output" ? layerFor(entry.token.name) : void 0;
+    if (layer === void 0 || entry.kind !== "missing-output") {
+      kept.push(entry);
+      continue;
+    }
+    const names = counts.get(layer) ?? /* @__PURE__ */ new Set();
+    names.add(entry.token.name);
+    counts.set(layer, names);
+  }
+  const unbuiltLayers = [...counts].map(([prefix, names]) => ({ prefix, tokens: names.size })).sort((a, b) => a.prefix < b.prefix ? -1 : 1);
+  return { entries: kept, unbuiltLayers };
+}
 function derivedAliasKeys(outputs, tokenKeys) {
   const known = new Set(tokenKeys);
   const derived = /* @__PURE__ */ new Set();
@@ -27061,14 +28613,14 @@ function derivedAliasKeys(outputs, tokenKeys) {
   while (changed) {
     changed = false;
     for (const output of outputs) {
-      const key = nameKey(output.name);
-      if (known.has(key)) continue;
+      const key2 = nameKey(output.name);
+      if (known.has(key2)) continue;
       const refs = [...output.raw.matchAll(VAR_REF_RE)].map(
         (m) => nameKey(m[1])
       );
       if (refs.length > 0 && refs.every((ref) => known.has(ref))) {
-        known.add(key);
-        derived.add(key);
+        known.add(key2);
+        derived.add(key2);
         changed = true;
       }
     }
@@ -27078,50 +28630,66 @@ function derivedAliasKeys(outputs, tokenKeys) {
 function entryName(entry) {
   return entry.kind === "orphan-output" ? entry.output.name : entry.token.name;
 }
-function classifyDrift(source, outputs) {
+function classifyDrift(source2, outputs) {
   const outputsByKey = /* @__PURE__ */ new Map();
   for (const output of outputs) {
     outputsByKey.set(nameKey(output.name), output);
   }
-  const entries = [];
+  const resolved = resolvedOutputValues(outputsByKey);
+  let entries = [];
   const matchedOutputKeys = /* @__PURE__ */ new Set();
+  const emitted = /* @__PURE__ */ new Set();
   let inSync = 0;
-  for (const token of source.tokens) {
-    if (typeof token.value === "object") continue;
-    const key = nameKey(token.name);
-    const output = outputsByKey.get(key);
+  for (const token2 of source2.tokens) {
+    if (typeof token2.value === "object") continue;
+    const key2 = nameKey(token2.name);
+    const output = outputsByKey.get(key2);
     if (output === void 0) {
-      entries.push({ kind: "missing-output", token });
+      entries.push({ kind: "missing-output", token: token2 });
       continue;
     }
-    matchedOutputKeys.add(key);
-    if (canonical2(token.type, token.value) === canonical2(token.type, output.raw)) {
+    matchedOutputKeys.add(key2);
+    emitted.add(token2.name);
+    if (canonical2(token2.type, token2.value) === canonical2(token2.type, resolved(key2) ?? output.raw)) {
       inSync += 1;
     } else {
-      entries.push({ kind: "stale-output", token, output });
+      const value2 = resolved(key2);
+      entries.push({
+        kind: "stale-output",
+        token: token2,
+        output,
+        ...value2 !== void 0 && value2 !== output.raw ? { resolved: value2 } : {}
+      });
     }
   }
-  const tokenKeys = new Set(source.tokens.map((t) => nameKey(t.name)));
+  const tokenKeys = new Set(source2.tokens.map((t) => nameKey(t.name)));
   const derived = derivedAliasKeys(outputs, tokenKeys);
   for (const output of outputs) {
-    const key = nameKey(output.name);
-    if (!matchedOutputKeys.has(key) && !derived.has(key)) {
+    const key2 = nameKey(output.name);
+    if (!matchedOutputKeys.has(key2) && !derived.has(key2)) {
       entries.push({ kind: "orphan-output", output });
     }
   }
+  const split = splitUnbuiltLayers(source2.tokens, entries, emitted);
+  entries = split.entries;
   entries.sort(
     (a, b) => nameKey(entryName(a)) < nameKey(entryName(b)) ? -1 : 1
   );
-  return { entries, inSync };
+  return {
+    entries,
+    inSync,
+    ...split.unbuiltLayers.length > 0 ? { unbuiltLayers: split.unbuiltLayers } : {}
+  };
 }
 function scopeSelectsMode(scope, mode) {
   const escaped = mode.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const withoutAttrNames = scope.toLowerCase().replace(/_/g, "-").replace(/\[\s*[\w-]+\s*(?=[~|^$*]?=|\])/g, "[");
   return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(
-    scope.toLowerCase()
+    withoutAttrNames
   );
 }
 function classifyDriftByMode(modes2, outputs) {
-  const modeNames = modes2.map((m) => m.mode);
+  const modeNames = modes2.map((m) => m.mode).sort((a, b) => b.length - a.length);
   const scopedMode = (output) => output.scope === void 0 ? void 0 : modeNames.find(
     (mode) => scopeSelectsMode(output.scope, mode)
   );
@@ -27130,16 +28698,17 @@ function classifyDriftByMode(modes2, outputs) {
   const skippedModes = [];
   const missingReported = /* @__PURE__ */ new Set();
   const tokenKeys = /* @__PURE__ */ new Set();
+  const unbuilt = /* @__PURE__ */ new Map();
   let inSync = 0;
   modes2.forEach(({ mode, map }, index) => {
-    for (const token of map.tokens) tokenKeys.add(nameKey(token.name));
+    for (const token2 of map.tokens) tokenKeys.add(nameKey(token2.name));
     let effective = base;
-    if (index > 0) {
-      const overrides = outputs.filter((o) => scopedMode(o) === mode);
-      if (overrides.length === 0) {
-        skippedModes.push(mode);
-        return;
-      }
+    const overrides = outputs.filter((o) => scopedMode(o) === mode);
+    if (index > 0 && overrides.length === 0) {
+      skippedModes.push(mode);
+      return;
+    }
+    if (overrides.length > 0) {
       const overridden = new Set(overrides.map((o) => nameKey(o.name)));
       effective = [
         ...base.filter((o) => !overridden.has(nameKey(o.name))),
@@ -27148,12 +28717,18 @@ function classifyDriftByMode(modes2, outputs) {
     }
     const result = classifyDrift(map, effective);
     inSync += result.inSync;
+    for (const layer of result.unbuiltLayers ?? []) {
+      unbuilt.set(
+        layer.prefix,
+        Math.max(unbuilt.get(layer.prefix) ?? 0, layer.tokens)
+      );
+    }
     for (const entry of result.entries) {
       if (entry.kind === "orphan-output") continue;
       if (entry.kind === "missing-output") {
-        const key = nameKey(entry.token.name);
-        if (missingReported.has(key)) continue;
-        missingReported.add(key);
+        const key2 = nameKey(entry.token.name);
+        if (missingReported.has(key2)) continue;
+        missingReported.add(key2);
       }
       entries.push({ ...entry, mode });
     }
@@ -27161,15 +28736,21 @@ function classifyDriftByMode(modes2, outputs) {
   const orphanSeen = /* @__PURE__ */ new Set();
   const derived = derivedAliasKeys(outputs, tokenKeys);
   for (const output of outputs) {
-    const key = nameKey(output.name);
-    if (tokenKeys.has(key) || derived.has(key) || orphanSeen.has(key)) continue;
-    orphanSeen.add(key);
+    const key2 = nameKey(output.name);
+    if (tokenKeys.has(key2) || derived.has(key2) || orphanSeen.has(key2)) continue;
+    orphanSeen.add(key2);
     entries.push({ kind: "orphan-output", output });
   }
   entries.sort(
     (a, b) => nameKey(entryName(a)) < nameKey(entryName(b)) ? -1 : 1
   );
-  return { entries, inSync, skippedModes };
+  const unbuiltLayers = [...unbuilt].map(([prefix, tokens]) => ({ prefix, tokens })).sort((a, b) => a.prefix < b.prefix ? -1 : 1);
+  return {
+    entries,
+    inSync,
+    skippedModes,
+    ...unbuiltLayers.length > 0 ? { unbuiltLayers } : {}
+  };
 }
 
 // src/engines/tokens/scan-outputs.ts
@@ -27192,6 +28773,7 @@ function finish(values, warnings) {
 }
 var CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
 var CUSTOM_PROP_RE = /^--([A-Za-z0-9_-]+)\s*:\s*([\s\S]+)$/;
+var CUSTOM_MEDIA_RE = /^@custom-media\s+--([A-Za-z0-9_-]+)\s+([\s\S]+)$/;
 var ROOT_SELECTORS = /* @__PURE__ */ new Set([":root", "html", ":host", "*"]);
 function isRootPrelude(prelude) {
   return prelude.split(",").every((part) => ROOT_SELECTORS.has(part.trim().toLowerCase()));
@@ -27199,33 +28781,33 @@ function isRootPrelude(prelude) {
 function scanCss(content) {
   const stripped = content.replace(CSS_COMMENT_RE, "");
   const values = [];
-  const stack = [];
-  let buffer = "";
+  const stack2 = [];
+  let buffer2 = "";
   const declaration = (text2) => {
-    const match = text2.trim().match(CUSTOM_PROP_RE);
+    const match = text2.trim().match(CUSTOM_PROP_RE) ?? text2.trim().match(CUSTOM_MEDIA_RE);
     if (match === null) return;
     const name = match[1];
     const raw = match[2].replace(/!important/g, "").trim();
     if (raw === "") return;
-    const scoped = stack.some((prelude) => !isRootPrelude(prelude));
-    values.push(scoped ? { name, raw, scope: stack.join(" ") } : { name, raw });
+    const scoped = stack2.some((prelude) => !isRootPrelude(prelude));
+    values.push(scoped ? { name, raw, scope: stack2.join(" ") } : { name, raw });
   };
   for (const char of stripped) {
     if (char === "{") {
-      stack.push(buffer.trim().replace(/\s+/g, " "));
-      buffer = "";
+      stack2.push(buffer2.trim().replace(/\s+/g, " "));
+      buffer2 = "";
     } else if (char === "}") {
-      declaration(buffer);
-      stack.pop();
-      buffer = "";
+      declaration(buffer2);
+      stack2.pop();
+      buffer2 = "";
     } else if (char === ";") {
-      declaration(buffer);
-      buffer = "";
+      declaration(buffer2);
+      buffer2 = "";
     } else {
-      buffer += char;
+      buffer2 += char;
     }
   }
-  declaration(buffer);
+  declaration(buffer2);
   return values;
 }
 var THEME_EXPORT_RE = /export\s+const\s+[\w$]+(?:\s*:\s*[^={]+?)?\s*=\s*\{/;
@@ -27302,29 +28884,29 @@ function scanTsTheme(content) {
         i += 1;
         continue;
       }
-      let key;
+      let key2;
       if (content[i] === '"' || content[i] === "'") {
-        key = parseString();
+        key2 = parseString();
       } else {
         const m = /^[\w$-]+/.exec(content.slice(i));
         if (m !== null) {
-          key = m[0];
+          key2 = m[0];
           i += m[0].length;
         }
       }
-      if (key === void 0) {
+      if (key2 === void 0) {
         warnings.push(`unparseable key near offset ${i} \u2014 stopping theme scan`);
         return;
       }
       skipTrivia();
       if (content[i] !== ":") {
-        warnings.push(`expected ":" after key "${key}" \u2014 skipping`);
+        warnings.push(`expected ":" after key "${key2}" \u2014 skipping`);
         skipExpression();
         continue;
       }
       i += 1;
       skipTrivia();
-      const name = prefix === "" ? key : `${prefix}.${key}`;
+      const name = prefix === "" ? key2 : `${prefix}.${key2}`;
       const ch = content[i];
       if (ch === "{") {
         i += 1;
@@ -27357,15 +28939,15 @@ function previewValue(value2) {
 }
 function countsByType(map) {
   const counts = /* @__PURE__ */ new Map();
-  for (const token of map.tokens) {
-    counts.set(token.type, (counts.get(token.type) ?? 0) + 1);
+  for (const token2 of map.tokens) {
+    counts.set(token2.type, (counts.get(token2.type) ?? 0) + 1);
   }
   return [...counts.entries()].map(([label, value2]) => ({ label, value: value2 })).sort((a, b) => b.value - a.value || (a.label < b.label ? -1 : 1));
 }
 function renderTerm14(filePath, map, color) {
   const heading = `${filePath} \u2014 format: ${map.format} \u2014 ${map.tokens.length} tokens`;
   const chart = renderBarChart(countsByType(map), { width: 24, color });
-  const rows = map.tokens.slice(0, TABLE_LIMIT).map((token) => [token.name, token.type, previewValue(token.value)]);
+  const rows = map.tokens.slice(0, TABLE_LIMIT).map((token2) => [token2.name, token2.type, previewValue(token2.value)]);
   const table3 = renderTable(["name", "type", "value"], rows, { color });
   const lines = [heading, "", chart, "", table3];
   if (map.tokens.length > TABLE_LIMIT) {
@@ -27425,7 +29007,7 @@ function walkOutputFiles(dir, acc) {
 }
 function resolveTokenSource2(targetDir, flagTokens) {
   if (flagTokens !== void 0) {
-    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve16(process.cwd(), flagTokens);
+    const abs2 = isAbsolute3(flagTokens) ? flagTokens : resolve15(process.cwd(), flagTokens);
     if (!existsSync24(abs2)) {
       return {
         kind: "error",
@@ -27446,7 +29028,7 @@ function resolveTokenSource2(targetDir, flagTokens) {
       const resolved = resolveConfig({ projectFileText });
       if (resolved.kind === "ok" && resolved.config.tokenSource !== void 0) {
         const src = resolved.config.tokenSource;
-        const abs2 = isAbsolute3(src) ? src : resolve16(targetDir, src);
+        const abs2 = isAbsolute3(src) ? src : resolve15(targetDir, src);
         if (existsSync24(abs2)) return { kind: "ok", path: abs2 };
         return {
           kind: "error",
@@ -27481,9 +29063,9 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
   const ownerByName = /* @__PURE__ */ new Map();
   const warnings = [];
   for (const file of files) {
-    const source = resolve16(tokenSourcePath);
-    const abs2 = resolve16(file);
-    if (abs2 === source || abs2.startsWith(source + sep4)) continue;
+    const source2 = resolve15(tokenSourcePath);
+    const abs2 = resolve15(file);
+    if (abs2 === source2 || abs2.startsWith(source2 + sep4)) continue;
     let content;
     try {
       content = readFileSync27(file, "utf8");
@@ -27496,15 +29078,15 @@ function scanMergedOutputs(outputsDir, tokenSourcePath) {
       warnings.push(`${relative3(outputsDir, file)}: ${warning}`);
     }
     for (const value2 of outcome.values) {
-      const key = `${value2.scope ?? ""}\0${value2.name}`;
-      const prior = ownerByName.get(key);
+      const key2 = `${value2.scope ?? ""}\0${value2.name}`;
+      const prior = ownerByName.get(key2);
       if (prior !== void 0 && prior !== file) {
         warnings.push(
           `output "${value2.name}" defined in both ${relative3(outputsDir, prior)} and ${relative3(outputsDir, file)} \u2014 later wins`
         );
       }
-      merged.set(key, value2);
-      ownerByName.set(key, file);
+      merged.set(key2, value2);
+      ownerByName.set(key2, file);
     }
   }
   const values = [...merged.values()].sort(
@@ -27537,7 +29119,7 @@ function driftDetail(entry) {
       return [
         withMode(entry.token.name, entry.mode),
         severityColorless(entry.kind),
-        `source ${String(entry.token.value)} \u2260 output ${entry.output.raw}`
+        `source ${String(entry.token.value)} \u2260 output ${entry.output.raw}${entry.resolved !== void 0 ? ` \u2192 ${entry.resolved}` : ""}`
       ];
     case "missing-output":
       return [
@@ -27556,12 +29138,12 @@ function driftDetail(entry) {
 function severityColorless(kind) {
   return kind;
 }
-function describeSource(source) {
-  const files = source.files === 1 ? "1 file" : `${source.files} files`;
-  const modes2 = source.modes.length > 0 ? ` \xB7 modes ${source.modes.join(", ")}` : "";
-  return `Token source: ${source.path} (${files}${modes2})`;
+function describeSource(source2) {
+  const files = source2.files === 1 ? "1 file" : `${source2.files} files`;
+  const modes2 = source2.modes.length > 0 ? ` \xB7 modes ${source2.modes.join(", ")}` : "";
+  return `Token source: ${source2.path} (${files}${modes2})`;
 }
-function renderCheckTerm(result, color, source) {
+function renderCheckTerm(result, color, source2) {
   const { stale, missing, orphan } = countByKind2(result);
   const countRows = [
     [severityColor("error", "stale-output", { color }), String(stale)],
@@ -27571,7 +29153,13 @@ function renderCheckTerm(result, color, source) {
   const countsTable = renderTable(["drift", "count"], countRows, { color });
   const total = result.entries.length;
   const heading = total === 0 ? `In sync \u2014 ${result.inSync} token${result.inSync === 1 ? "" : "s"} match output` : `${total} drift entr${total === 1 ? "y" : "ies"} (${result.inSync} in sync)`;
-  const lines = [heading, describeSource(source), "", countsTable];
+  const lines = [heading, describeSource(source2)];
+  for (const layer of result.unbuiltLayers ?? []) {
+    lines.push(
+      `Not built by design: ${layer.prefix}.* (${layer.tokens} token${layer.tokens === 1 ? "" : "s"}) \u2014 a reference-only layer the outputs reach through aliases`
+    );
+  }
+  lines.push("", countsTable);
   if (total > 0) {
     const rows = result.entries.map((entry) => {
       const [name, kind, detail] = driftDetail(entry);
@@ -27582,12 +29170,13 @@ function renderCheckTerm(result, color, source) {
   }
   return lines.join("\n");
 }
-function checkJson(result, skippedModes, source) {
+function checkJson(result, skippedModes, source2) {
   return JSON.stringify(
     {
       entries: result.entries,
       inSync: result.entries.length === 0,
-      source,
+      source: source2,
+      ...result.unbuiltLayers !== void 0 ? { unbuiltLayers: result.unbuiltLayers } : {},
       ...skippedModes.length > 0 ? { skippedModes } : {}
     },
     null,
@@ -27606,8 +29195,8 @@ function readDriftTrend(stateDir) {
     return [];
   }
   const points = [];
-  for (const line of text2.split("\n")) {
-    const trimmed = line.trim();
+  for (const line2 of text2.split("\n")) {
+    const trimmed = line2.trim();
     if (trimmed === "") continue;
     let record;
     try {
@@ -27653,7 +29242,7 @@ function runCheck(path, options) {
     );
     return;
   }
-  const targetDir = resolve16(path);
+  const targetDir = resolve15(path);
   if (!existsSync24(targetDir) || !statSync17(targetDir).isDirectory()) {
     failCheck(`Path "${targetDir}" is not a directory.`);
     return;
@@ -27668,7 +29257,7 @@ function runCheck(path, options) {
     failCheck(loaded.message);
     return;
   }
-  const outputsDir = options.outputs !== void 0 ? resolve16(options.outputs) : targetDir;
+  const outputsDir = options.outputs !== void 0 ? resolve15(options.outputs) : targetDir;
   if (!existsSync24(outputsDir) || !statSync17(outputsDir).isDirectory()) {
     failCheck(`Outputs path "${outputsDir}" is not a directory.`);
     return;
@@ -27700,17 +29289,17 @@ function runCheck(path, options) {
     inSync
   });
   const rel2 = relative3(targetDir, tokenSource.path);
-  const source = {
+  const source2 = {
     path: rel2 === "" ? "." : rel2.startsWith("..") ? tokenSource.path : rel2,
     files: loaded.files.length,
     modes: (loaded.modes ?? []).map((m) => m.mode)
   };
   if (format === "json") {
-    process.stdout.write(`${checkJson(result, skippedModes, source)}
+    process.stdout.write(`${checkJson(result, skippedModes, source2)}
 `);
   } else {
     const color = shouldColor(process.env, Boolean(process.stdout.isTTY));
-    process.stdout.write(`${renderCheckTerm(result, color, source)}
+    process.stdout.write(`${renderCheckTerm(result, color, source2)}
 `);
   }
   if (options.report) {
