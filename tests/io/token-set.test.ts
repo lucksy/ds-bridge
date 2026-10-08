@@ -278,11 +278,19 @@ describe("readTokenDocument — per-mode values in $extensions (Figma variable e
 		writeFileSync(file, JSON.stringify(doc));
 		const outcome = ok(readTokenDocument(file));
 		const modes = (outcome.modeDocs ?? []).map((m) => m.mode);
-		expect(modes).toEqual(["sds-light", "brand-b-light", "mobile", "sds-dark"]);
+		// Two mode axes: the default is named for both (colour / responsive).
+		expect(modes).toEqual([
+			"sds-light/desktop",
+			"brand-b-light",
+			"mobile",
+			"sds-dark",
+		]);
 		const byMode = Object.fromEntries(
 			(outcome.modeDocs ?? []).map((m) => [m.mode, m.doc]),
 		);
-		expect(tokenValue(byMode["sds-light"], "@color.bg")).toBe("#ffffff");
+		expect(tokenValue(byMode["sds-light/desktop"], "@color.bg")).toBe(
+			"#ffffff",
+		);
 		expect(tokenValue(byMode["sds-dark"], "@color.bg")).toBe("#1e1e1e");
 		// Collections a mode does not belong to keep their default value.
 		expect(tokenValue(byMode["sds-dark"], "@responsive.scale")).toBe(1);

@@ -130,6 +130,8 @@ interface LintRecord {
 	};
 	/** NEW (A2): css/scss adoption counts; absent on old/single-file runs. */
 	adoption?: LintAdoptionBlock;
+	/** The noisiest files, top 10 (1.20.5+). */
+	topFiles?: { file?: unknown; count?: unknown }[];
 }
 
 /** One `adoption` history record carrying the import-coverage census (A3b). */
@@ -299,7 +301,13 @@ function aggregateHistory(
 					near: asNumber(byKind.near),
 					offSystem: asNumber(byKind.offSystem),
 				},
-				topOffenders: [],
+				// The noisiest files the line recorded (absent on older lines).
+				topOffenders: (Array.isArray(r.topFiles) ? r.topFiles : []).flatMap(
+					(t) =>
+						typeof t?.file === "string"
+							? [{ file: t.file, count: asNumber(t.count) }]
+							: [],
+				),
 			};
 			// A lint line that CARRIES an adoption block contributes a dated trend
 			// point and refreshes the leaderboard (B3). A plain lint line touches

@@ -9684,9 +9684,14 @@ function extensionModeDocs(doc) {
   }
   if (collections.length === 0) return void 0;
   const primary = [...collections].sort((a, b) => b.tokens - a.tokens)[0];
-  const defaultMode = modeKey(
-    primary.modes[0]
-  );
+  const firstModes = [
+    ...new Set(
+      [primary, ...collections.filter((c3) => c3 !== primary)].map(
+        (c3) => modeKey(c3.modes[0])
+      )
+    )
+  ];
+  const defaultMode = firstModes.join("/");
   const others = [
     ...new Set(collections.flatMap((c3) => c3.modes.slice(1).map(modeKey)))
   ].filter((m) => m !== defaultMode).sort();
@@ -11530,6 +11535,22 @@ function buildBreakingCalendar(records) {
   const total = entries.reduce((sum, e4) => sum + e4.count, 0);
   return { entries, total };
 }
+var BOOKKEEPING = /* @__PURE__ */ new Set([
+  "v",
+  "at",
+  "kind",
+  "source",
+  "git",
+  "tool",
+  "runId"
+]);
+function measuredState(record) {
+  const measured = {};
+  for (const key2 of Object.keys(record).sort()) {
+    if (!BOOKKEEPING.has(key2)) measured[key2] = record[key2];
+  }
+  return JSON.stringify(measured);
+}
 var FREQUENCY_ORDER = [
   "tokens-check",
   "lint",
@@ -11544,10 +11565,16 @@ function buildChangeFrequency(records) {
   const counts = /* @__PURE__ */ new Map();
   let windowFirst;
   let windowLast;
-  for (const { kind, at } of records) {
+  const lastState = /* @__PURE__ */ new Map();
+  for (const { kind, at, record } of records) {
     if (FREQUENCY_KINDS.has(kind)) {
       const k4 = kind;
-      counts.set(k4, (counts.get(k4) ?? 0) + 1);
+      const subject = `${kind}\0${String(record.fileKey ?? "")}\0${String(record.nodeId ?? "")}`;
+      const state = measuredState(record);
+      if (lastState.get(subject) !== state) {
+        lastState.set(subject, state);
+        counts.set(k4, (counts.get(k4) ?? 0) + 1);
+      }
     }
     if (at !== void 0) {
       if (windowFirst === void 0 || at < windowFirst) windowFirst = at;
@@ -14387,7 +14414,10 @@ function aggregateHistory(text2, historyPath, onWarning) {
           near: asNumber11(byKind.near),
           offSystem: asNumber11(byKind.offSystem)
         },
-        topOffenders: []
+        // The noisiest files the line recorded (absent on older lines).
+        topOffenders: (Array.isArray(r2.topFiles) ? r2.topFiles : []).flatMap(
+          (t) => typeof t?.file === "string" ? [{ file: t.file, count: asNumber11(t.count) }] : []
+        )
       };
       const adoption = typeof r2.adoption === "object" && r2.adoption !== null ? r2.adoption : void 0;
       if (adoption !== void 0) {
@@ -22915,6 +22945,18 @@ var KIND_SEVERITY = {
   near: "warn",
   "off-system": "info"
 };
+function topFiles(findings) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const finding of findings) {
+    counts.set(
+      finding.literal.file,
+      (counts.get(finding.literal.file) ?? 0) + 1
+    );
+  }
+  return [...counts].map(([file, count]) => ({ file, count })).sort(
+    (a, b) => a.count !== b.count ? b.count - a.count : a.file < b.file ? -1 : 1
+  ).slice(0, 10);
+}
 function countByKind(findings) {
   const byKind = { exact: 0, near: 0, offSystem: 0 };
   for (const finding of findings) {
@@ -22966,7 +23008,8 @@ function appendLintHistory(targetDir, findings, files) {
     at: (/* @__PURE__ */ new Date()).toISOString(),
     kind: "lint",
     byKind: countByKind(findings),
-    adoption: computeAdoption(files, findings)
+    adoption: computeAdoption(files, findings),
+    ...findings.length > 0 ? { topFiles: topFiles(findings) } : {}
   };
   appendHistoryRecord(stateDir, record);
 }

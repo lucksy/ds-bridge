@@ -148,6 +148,26 @@ export interface ChangeFrequency {
 	windowLast?: string;
 }
 
+/** Bookkeeping fields every history line carries: not part of what it measured. */
+const BOOKKEEPING = new Set([
+	"v",
+	"at",
+	"kind",
+	"source",
+	"git",
+	"tool",
+	"runId",
+]);
+
+/** What a history line measured, as a comparable string (bookkeeping dropped). */
+function measuredState(record: Record<string, unknown>): string {
+	const measured: Record<string, unknown> = {};
+	for (const key of Object.keys(record).sort()) {
+		if (!BOOKKEEPING.has(key)) measured[key] = record[key];
+	}
+	return JSON.stringify(measured);
+}
+
 /** The tallied kinds, in fixed render order (the only ordering source). */
 const FREQUENCY_ORDER: readonly FrequencyKind[] = [
 	"tokens-check",
@@ -162,8 +182,9 @@ const FREQUENCY_ORDER: readonly FrequencyKind[] = [
 const FREQUENCY_KINDS = new Set<string>(FREQUENCY_ORDER);
 
 /**
- * Build the change-frequency view from `replayHistory` records: a count per
- * known history kind (fixed order, zero-count kinds OMITTED, unknown kinds
+ * Build the change-frequency view from `replayHistory` records: per known
+ * history kind, how many distinct measured states it went through (its first
+ * state, then each change — an identical re-run is not counted) (fixed order, zero-count kinds OMITTED, unknown kinds
  * ignored), plus the min/max DATED `at`. DATELESS records ARE COUNTED (the
  * asymmetry vs the calendar) but never bound the window. Empty → `{byKind: []}`.
  * Pure, deterministic (independent of source order for the window bounds).
@@ -175,10 +196,19 @@ export function buildChangeFrequency(
 	let windowFirst: string | undefined;
 	let windowLast: string | undefined;
 
-	for (const { kind, at } of records) {
+	// A re-run that measured the same thing is not churn: count a surface's
+	// first state and then each CHANGE of it (per frame for frame-level kinds),
+	// so `record` run five times on unchanged code reads 1, not 5.
+	const lastState = new Map<string, string>();
+	for (const { kind, at, record } of records) {
 		if (FREQUENCY_KINDS.has(kind)) {
 			const k = kind as FrequencyKind;
-			counts.set(k, (counts.get(k) ?? 0) + 1); // dateless COUNTED here
+			const subject = `${kind}\u0000${String(record.fileKey ?? "")}\u0000${String(record.nodeId ?? "")}`;
+			const state = measuredState(record);
+			if (lastState.get(subject) !== state) {
+				lastState.set(subject, state);
+				counts.set(k, (counts.get(k) ?? 0) + 1); // dateless COUNTED here
+			}
 		}
 		if (at !== undefined) {
 			if (windowFirst === undefined || at < windowFirst) windowFirst = at;

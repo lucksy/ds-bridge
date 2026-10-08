@@ -98,6 +98,27 @@ interface LintHistoryRecord {
 		offSystem: number;
 	};
 	adoption?: LintAdoption;
+	/** The noisiest files (top 10 by findings), so reports rebuilt from history name them. */
+	topFiles?: { file: string; count: number }[];
+}
+
+/** The files with the most findings, most first (ties by path), capped at 10. */
+function topFiles(
+	findings: ReportFinding[],
+): { file: string; count: number }[] {
+	const counts = new Map<string, number>();
+	for (const finding of findings) {
+		counts.set(
+			finding.literal.file,
+			(counts.get(finding.literal.file) ?? 0) + 1,
+		);
+	}
+	return [...counts]
+		.map(([file, count]) => ({ file, count }))
+		.sort((a, b) =>
+			a.count !== b.count ? b.count - a.count : a.file < b.file ? -1 : 1,
+		)
+		.slice(0, 10);
 }
 
 /** Tally findings into the by-kind history shape (offSystem is camelCased). */
@@ -198,6 +219,7 @@ function appendLintHistory(
 		kind: "lint",
 		byKind: countByKind(findings),
 		adoption: computeAdoption(files, findings),
+		...(findings.length > 0 ? { topFiles: topFiles(findings) } : {}),
 	};
 	appendHistoryRecord(stateDir, record);
 }

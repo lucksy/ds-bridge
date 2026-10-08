@@ -234,7 +234,7 @@ describe("buildChangeFrequency — per-kind counts", () => {
 				{ at: "2026-06-03T10:00:00Z", kind: "library-health", score: 1 },
 				{ at: "2026-06-01T10:00:00Z", kind: "lint", byKind: {} },
 				{ at: "2026-06-02T10:00:00Z", kind: "tokens-check", stale: 0 },
-				{ at: "2026-06-02T11:00:00Z", kind: "lint", byKind: {} },
+				{ at: "2026-06-02T11:00:00Z", kind: "lint", byKind: { exact: 1 } },
 				{ at: "2026-06-04T10:00:00Z", kind: "impact", breaking: 0 },
 			),
 		);
@@ -284,10 +284,10 @@ describe("buildChangeFrequency — dateless COUNTED (the asymmetry)", () => {
 	it("windowFirst/windowLast see only DATED records, never dateless ones", () => {
 		const result = buildChangeFrequency(
 			records(
-				{ kind: "lint", byKind: {} }, // dateless — counted, not windowed
-				{ at: "2026-06-05T10:00:00Z", kind: "lint", byKind: {} },
-				{ at: "2026-06-01T10:00:00Z", kind: "lint", byKind: {} },
-				{ at: "2026-06-09T10:00:00Z", kind: "lint", byKind: {} },
+				{ kind: "lint", byKind: { exact: 1 } }, // dateless — counted, not windowed
+				{ at: "2026-06-05T10:00:00Z", kind: "lint", byKind: { exact: 2 } },
+				{ at: "2026-06-01T10:00:00Z", kind: "lint", byKind: { exact: 3 } },
+				{ at: "2026-06-09T10:00:00Z", kind: "lint", byKind: { exact: 4 } },
 			),
 		);
 		expect(result.byKind).toEqual([{ kind: "lint", count: 4 }]);
@@ -348,5 +348,54 @@ describe("buildChangeFrequency — empty", () => {
 		expect(result.byKind).toEqual([]);
 		expect(Object.hasOwn(result, "windowFirst")).toBe(false);
 		expect(Object.hasOwn(result, "windowLast")).toBe(false);
+	});
+});
+
+describe("buildChangeFrequency — re-runs are not churn", () => {
+	it("counts a surface's first state and each change, not identical re-runs", () => {
+		const result = buildChangeFrequency(
+			records(
+				{
+					at: "2026-06-01T10:00:00Z",
+					kind: "lint",
+					byKind: { exact: 2 },
+					runId: "a",
+				},
+				{
+					at: "2026-06-01T11:00:00Z",
+					kind: "lint",
+					byKind: { exact: 2 },
+					runId: "b",
+				},
+				{
+					at: "2026-06-01T12:00:00Z",
+					kind: "lint",
+					byKind: { exact: 1 },
+					runId: "c",
+				},
+				{
+					at: "2026-06-01T10:00:00Z",
+					kind: "handoff",
+					score: 100,
+					nodeId: "1:1",
+				},
+				{
+					at: "2026-06-01T10:00:00Z",
+					kind: "handoff",
+					score: 71,
+					nodeId: "1:2",
+				},
+				{
+					at: "2026-06-01T11:00:00Z",
+					kind: "handoff",
+					score: 100,
+					nodeId: "1:1",
+				},
+			),
+		);
+		expect(result.byKind).toEqual([
+			{ kind: "lint", count: 2 },
+			{ kind: "handoff", count: 2 },
+		]);
 	});
 });

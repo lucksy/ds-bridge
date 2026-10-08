@@ -322,9 +322,18 @@ function extensionModeDocs(
 	}
 	if (collections.length === 0) return undefined;
 	const primary = [...collections].sort((a, b) => b.tokens - a.tokens)[0];
-	const defaultMode = modeKey(
-		(primary as { modes: string[] }).modes[0] as string,
-	);
+	// The default document is every collection's FIRST mode. With two mode
+	// axes (SDS: colour light/dark and responsive desktop/mobile/tablet) it is
+	// named for both — `sds-light/desktop` — so a responsive token is never
+	// labelled with a colour mode.
+	const firstModes = [
+		...new Set(
+			[primary, ...collections.filter((c) => c !== primary)].map((c) =>
+				modeKey((c as { modes: string[] }).modes[0] as string),
+			),
+		),
+	];
+	const defaultMode = firstModes.join("/");
 	const others = [
 		...new Set(collections.flatMap((c) => c.modes.slice(1).map(modeKey))),
 	]

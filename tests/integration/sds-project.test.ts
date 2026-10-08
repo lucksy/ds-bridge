@@ -59,7 +59,7 @@ describe("tokens check — a Figma variables export", () => {
 		};
 		expect(out.source.path).toBe("scripts/tokens/tokens.json");
 		expect(out.source.modes).toEqual([
-			"sds-light",
+			"sds-light/desktop",
 			"mobile",
 			"sds-dark",
 			"tablet",
@@ -173,5 +173,24 @@ describe("implementation hand-off — the project's own names", () => {
 			codeName: "Button",
 			importSpecifier: "primitives",
 		});
+	});
+});
+
+describe("lint history — the noisiest files survive into reports", () => {
+	it("records top files and the report rebuilt from history names them", async () => {
+		const fresh = await mkdtemp(join(tmpdir(), "ds-sds-top-"));
+		await cp(fixture, fresh, { recursive: true });
+		await runCli(["lint"], fresh);
+		const report = await runCli(["report", "--format", "json"], fresh);
+		const doc = JSON.parse(report.stdout) as {
+			data: {
+				lintSummary?: { topOffenders: { file: string; count: number }[] };
+			};
+		};
+		expect(doc.data.lintSummary?.topOffenders[0]).toEqual({
+			file: "src/team/Settings.tsx",
+			count: 5,
+		});
+		await rm(fresh, { recursive: true, force: true });
 	});
 });
