@@ -41,8 +41,14 @@ Read the `persist-token` result and respond:
    The clean way to connect is the plugin's **interactive** command, which prompts
    for the token with the input **hidden** and writes `.ds-bridge.env` for them — the
    PAT never enters this chat or their shell history. Tell the user to run this once
-   **in their own terminal** (substitute the real path from the `DS_BRIDGE_CLI=` line
-   in the block above):
+   **in their own terminal**:
+
+       ds-bridge config connect --verify
+
+   If their terminal says `ds-bridge: command not found`, they install the command
+   once with `npm i -g github:lucksy/ds-bridge#release` (only the bundled CLI, no
+   other dependencies), or skip the install and run the plugin's CLI directly —
+   substitute the real path from the `DS_BRIDGE_CLI=` line in the block above:
 
        node <DS_BRIDGE_CLI> config connect --verify
 

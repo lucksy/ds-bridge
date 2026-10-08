@@ -139,6 +139,21 @@ claude plugin install ds-bridge \
 Useful follow-ups: `claude plugin list`, `claude plugin details ds-bridge`,
 `claude plugin update ds-bridge`, `claude plugin uninstall ds-bridge`.
 
+**The `ds-bridge` command.** Inside Claude Code the plugin puts `ds-bridge` on
+the PATH of Claude's shell, so the `ds-bridge …` commands in this README run as
+written there. Two of them — `config connect` (hidden token prompt) and
+`dashboard setup` (a wizard) — need your **own terminal**; get the same command
+there once with:
+
+```bash
+npm i -g github:lucksy/ds-bridge#release   # installs only the bundled CLI
+ds-bridge --version
+```
+
+It installs nothing else (the CLI is self-contained). `npm i -g` the same line
+again to update it. Prefer no global install? `node <plugin>/dist/cli.mjs …`
+works anywhere — `/ds-bridge:connect` prints that path.
+
 > Run `claude plugin install --help` and `claude plugin marketplace add --help`
 > for the exact, current flag set — the CLI is the source of truth.
 
@@ -202,9 +217,10 @@ message, never a crash.
   Claude Code does **not** persist a plugin's sensitive config across restarts
   ([#62442](https://github.com/anthropics/claude-code/issues/62442)) — the value
   you type into `/plugin configure` lives only in that session and is gone after a
-  restart. To connect durably, run **`/ds-bridge:connect`** — it points you to the
-  interactive `ds-bridge config connect`, which prompts for the token with the input
-  **hidden**, then writes a gitignored `.ds-bridge.env` (mode `0600`) that the CLI
+  restart. To connect durably, run **`ds-bridge config connect --verify`** in your
+  terminal (see [the `ds-bridge` command](#a-install-as-a-plugin-git-url-via-a-marketplace)
+  for getting it there; `/ds-bridge:connect` walks you through it) — it prompts for
+  the token with the input **hidden**, then writes a gitignored `.ds-bridge.env` (mode `0600`) that the CLI
   auto-loads on every run. The token never enters the chat or your shell history.
   **Never** put the token in `.ds-bridge.json` (the config loader ignores a token
   there and warns).

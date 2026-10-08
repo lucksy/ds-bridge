@@ -1,0 +1,16 @@
+#!/bin/sh
+# `ds-bridge` on the PATH. Claude Code adds an enabled plugin's bin/ to the
+# Bash tool's PATH, so docs and slash commands can say `ds-bridge config
+# connect --verify` instead of a node path. (A plain terminal gets the same
+# command from `npm i -g github:lucksy/ds-bridge#release` — package.json "bin".)
+# Follows symlinks, so linking this file into ~/bin also works.
+self=$0
+while [ -L "$self" ]; do
+	link=$(readlink "$self")
+	case $link in
+	/*) self=$link ;;
+	*) self=$(dirname -- "$self")/$link ;;
+	esac
+done
+here=$(CDPATH= cd -- "$(dirname -- "$self")" && pwd -P)
+exec node "$here/../dist/cli.mjs" "$@"
