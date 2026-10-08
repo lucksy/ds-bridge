@@ -167,3 +167,36 @@ describe("deriveRequirements — main components and nesting", () => {
 		]);
 	});
 });
+
+// Primer testbed: the CLI said 100% while the frame had a raw fill override on
+// the Delete button instance and danger text whose exact hex is only a surface
+// token. Instance fill overrides are requirements; text fills are `color`.
+describe("deriveRequirements — overrides and text color", () => {
+	it("adds an instance's own unbound fill override, and names text fills `color`", () => {
+		const root: FigmaNode = {
+			id: "2:148",
+			name: "Settings",
+			type: "FRAME",
+			children: [
+				{
+					id: "2:170",
+					name: "Delete",
+					type: "INSTANCE",
+					componentId: "1:61",
+					fills: [solid(1, 0.92, 0.91)],
+					overrides: [{ id: "2:170", overriddenFields: ["fills"] }],
+				},
+				{
+					id: "2:176",
+					name: "Danger zone",
+					type: "TEXT",
+					fills: [solid(0.81, 0.13, 0.18)],
+				},
+			],
+		};
+		const reqs = deriveRequirements(root);
+		expect(reqs.map((r) => (r.kind === "token" ? r.property : r.kind))).toEqual(
+			["component", "fill", "color"],
+		);
+	});
+});

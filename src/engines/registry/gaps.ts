@@ -15,7 +15,9 @@
 // TokenIndex.byValue (preferring the alias-bearing semantic token), near-only
 // (color deltaE<=2.5 / dimension +-1px) as ranked candidates, nothing as a hard
 // no-token-match.
-import { normalizeColor, normalizeDimension } from "../tokens/normalize.js";
+
+import { matchLiteral } from "../lint/match.js";
+import { normalizeDimension } from "../tokens/normalize.js";
 import { buildTokenIndex, type TokenIndex } from "../tokens/token-index.js";
 import type { Token } from "../tokens/types.js";
 import { type RegistryFile, resolveEntry } from "./persist.js";
@@ -86,24 +88,8 @@ export interface GapsReport {
 
 // ── Token matching tuning (mirrors src/engines/lint/match.ts) ──
 
-const COLOR_NEAR_DELTA_E = 2.5;
 const DIMENSION_NEAR_PX = 1;
 const NEAR_LIMIT = 3;
-
-/**
- * Among tokens that share an exact value, prefer the semantic alias (a token
- * whose `aliasOf` points at another token in the same bucket) over the primitive
- * it dereferences — the token a system-aware suggestion should name. Falls back
- * to the first token when no alias is present. (Mirrors the lint matcher.)
- */
-function pickPreferred(tokens: readonly Token[]): Token | undefined {
-	if (tokens.length === 0) return undefined;
-	const names = new Set(tokens.map((t) => t.name));
-	const semantic = tokens.find(
-		(t) => t.aliasOf !== undefined && names.has(t.aliasOf),
-	);
-	return semantic ?? tokens[0];
-}
 
 // ── Component resolution ──
 
@@ -163,26 +149,27 @@ function resolveColor(
 	requirement: Extract<FrameRequirement, { kind: "token" }>,
 	index: TokenIndex,
 ): ResolvedRequirement | Gap {
-	const canonical = normalizeColor(requirement.rawValue);
-	if (canonical === undefined) return noTokenMatch(requirement);
-
-	const exact = index.byValue.get(canonical);
-	const preferred = pickPreferred(exact ?? []);
-	if (preferred !== undefined) {
-		return tokenExact(requirement, preferred.name);
-	}
-
-	const near = index.nearest(canonical, {
-		maxDeltaE: COLOR_NEAR_DELTA_E,
-		limit: NEAR_LIMIT,
-	});
-	if (near.length > 0) {
+	// The lint matcher's role-aware picks: a text color resolves to a text
+	// token, never to a surface token that happens to share its hex.
+	const match = matchLiteral(
+		{
+			file: "",
+			line: 0,
+			col: 0,
+			raw: requirement.rawValue,
+			property: requirement.property,
+			valueKind: "color",
+			context: "css-declaration",
+		},
+		index,
+	);
+	if (match.kind === "exact") return tokenExact(requirement, match.token.name);
+	if (match.kind === "near") {
 		return nearTokenOnly(
 			requirement,
-			near.map((m) => m.token.name),
+			match.candidates.map((c) => c.token.name),
 		);
 	}
-
 	return noTokenMatch(requirement);
 }
 

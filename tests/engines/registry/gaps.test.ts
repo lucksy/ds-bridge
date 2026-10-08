@@ -189,9 +189,10 @@ describe("findGaps — token requirements", () => {
 		expect(report.resolved).toEqual([]);
 		const [gap] = report.gaps;
 		expect(gap?.reason).toBe("near-token-only");
+		// Same distance: the semantic alias ranks ahead of its primitive, as in lint.
 		expect(gap?.candidates).toEqual([
-			"color.base.blue-500",
 			"color.brand.primary",
+			"color.base.blue-500",
 		]);
 		expect(gap?.suggestion).toContain("designer sign-off");
 	});
@@ -348,9 +349,9 @@ describe("findGaps — golden gaps report", () => {
 						valueKind: "color",
 					},
 					reason: "near-token-only",
-					candidates: ["color.base.blue-500", "color.brand.primary"],
+					candidates: ["color.brand.primary", "color.base.blue-500"],
 					suggestion:
-						'No exact token for "#3b82f7" — nearest is color.base.blue-500; use it only with designer sign-off, otherwise add a token.',
+						'No exact token for "#3b82f7" — nearest is color.brand.primary; use it only with designer sign-off, otherwise add a token.',
 				},
 				{
 					requirement: {
@@ -426,5 +427,43 @@ describe("findGaps — a deprecated instance whose component names its replaceme
 			importPath: "@primer/react",
 			replaces: { name: "Legacy Button", hint: "variant=primary" },
 		});
+	});
+});
+
+describe("findGaps — text colors resolve to text tokens", () => {
+	it("is near-token-only when the exact hex exists only as a surface token", () => {
+		const tokens: Token[] = [
+			{ name: "bgColor.danger.emphasis", type: "color", value: "#cf222e" },
+			{ name: "fgColor.danger", type: "color", value: "#d1242f" },
+		];
+		const registry: RegistryFile = {
+			schemaVersion: 1,
+			generatedAt: "2026-10-08T00:00:00.000Z",
+			matches: [],
+			unmatchedCode: [],
+			unmatchedFigma: [],
+		};
+		const report = findGaps({
+			requirements: [
+				{
+					kind: "token",
+					property: "color",
+					rawValue: "#cf222e",
+					valueKind: "color",
+				},
+				{
+					kind: "token",
+					property: "background",
+					rawValue: "#cf222e",
+					valueKind: "color",
+				},
+			],
+			registry,
+			tokens,
+		});
+		expect(report.gaps.map((g) => [g.reason, g.candidates[0]])).toEqual([
+			["near-token-only", "fgColor.danger"],
+		]);
+		expect(report.resolved).toHaveLength(1);
 	});
 });

@@ -311,6 +311,20 @@ export function deriveRequirements(
 				name: node.name,
 				...(componentName !== undefined ? { componentName } : {}),
 			});
+			// A fill overridden on the instance itself is the screen's own value,
+			// not the component's: it needs a token like any raw fill.
+			const fillOverride = node.overrides?.some(
+				(o) => o.id === node.id && o.overriddenFields?.includes("fills"),
+			);
+			const rawValue = fillOverride ? firstSolidFillColor(node) : undefined;
+			if (rawValue !== undefined && !hasBoundFill(node)) {
+				requirements.push({
+					kind: "token",
+					property: "fill",
+					rawValue,
+					valueKind: "color",
+				});
+			}
 			continue;
 		}
 		if (!hasBoundFill(node)) {
@@ -318,7 +332,8 @@ export function deriveRequirements(
 			if (rawValue !== undefined) {
 				requirements.push({
 					kind: "token",
-					property: "fill",
+					// A text fill is a text color: it resolves to text tokens only.
+					property: node.type === "TEXT" ? "color" : "fill",
 					rawValue,
 					valueKind: "color",
 				});
