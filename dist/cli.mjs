@@ -11688,7 +11688,8 @@ function frameAverager() {
     const lowName = typeof lowest.frameName === "string" ? lowest.frameName : String(lowest.nodeId);
     return {
       ...lowest,
-      score: mean2,
+      // Frame scores are whole numbers everywhere; so is their average.
+      score: Math.round(mean2),
       frameName: `mean of ${frames.length} frames \xB7 lowest ${lowName} ${Math.round(scoreOf(lowest))}`,
       frames: frames.length
     };

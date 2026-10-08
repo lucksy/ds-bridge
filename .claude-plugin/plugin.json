@@ -1,6 +1,6 @@
 {
 	"name": "ds-bridge",
-	"version": "1.20.3",
+	"version": "1.20.4",
 	"description": "Design-system analytics in Claude Code: measure adoption and health over time (recorded in CI, rolled up across repos, exported for BI), then find and fix what is off-system with token drift detection, DS-aware linting, design-to-code, and pre-handoff QA.",
 	"author": {
 		"name": "lucksy"
