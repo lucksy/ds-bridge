@@ -411,6 +411,16 @@ interface Implementability {
 	pct: number;
 	byReason: Record<string, number>;
 	topGaps: { reason: GapReason; requirement: string }[];
+	/** Deprecated instances resolved to the replacement their component names. */
+	replacements: Replacement[];
+}
+
+interface Replacement {
+	requirement: string;
+	deprecated: string;
+	use: string;
+	importPath: string;
+	hint?: string;
 }
 
 /** A short, human label for one requirement (for topGaps + the term report). */
@@ -437,7 +447,32 @@ function rollUp(report: GapsReport, frameName: string): Implementability {
 		requirement: requirementLabel(gap.requirement),
 	}));
 
-	return { frameName, resolvedCount, gapCount, pct, byReason, topGaps };
+	const replacements: Replacement[] = report.resolved.flatMap((r) =>
+		r.resolution.kind === "registry-match" &&
+		r.resolution.replaces !== undefined
+			? [
+					{
+						requirement: requirementLabel(r.requirement),
+						deprecated: r.resolution.replaces.name,
+						use: r.resolution.codeName,
+						importPath: r.resolution.importPath,
+						...(r.resolution.replaces.hint !== undefined
+							? { hint: r.resolution.replaces.hint }
+							: {}),
+					},
+				]
+			: [],
+	);
+
+	return {
+		frameName,
+		resolvedCount,
+		gapCount,
+		pct,
+		byReason,
+		topGaps,
+		replacements,
+	};
 }
 
 // ── Output ──
@@ -450,6 +485,21 @@ function renderTerm(impl: Implementability, color: boolean): string {
 		{ color },
 	);
 	const lines = [headline];
+	if (impl.replacements.length > 0) {
+		lines.push(
+			"",
+			"Deprecated components → the replacement their Figma description names:",
+			renderTable(
+				["requirement", "deprecated", "use"],
+				impl.replacements.map((r) => [
+					r.requirement,
+					r.deprecated,
+					`${r.use}${r.hint !== undefined ? ` (${r.hint})` : ""} from ${r.importPath}`,
+				]),
+				{ color },
+			),
+		);
+	}
 	if (impl.gapCount === 0) {
 		lines.push("", "No gaps — every requirement resolves to the system.");
 		return lines.join("\n");
@@ -608,6 +658,9 @@ async function runFrameImpl(
 					gapCount: impl.gapCount,
 					byReason: impl.byReason,
 					topGaps: impl.topGaps,
+					...(impl.replacements.length > 0
+						? { replacements: impl.replacements }
+						: {}),
 				},
 				null,
 				2,

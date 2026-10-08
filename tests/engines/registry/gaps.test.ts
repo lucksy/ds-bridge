@@ -382,3 +382,49 @@ describe("findGaps — golden gaps report", () => {
 		expect(report).toEqual(golden);
 	});
 });
+
+describe("findGaps — a deprecated instance whose component names its replacement", () => {
+	it("resolves to the replacement and carries the deprecation", () => {
+		const registry: RegistryFile = {
+			schemaVersion: 1,
+			generatedAt: "2026-10-08T00:00:00.000Z",
+			matches: [
+				{
+					codeName: "Button",
+					importPath: "@primer/react",
+					figmaName: "Button",
+					nodeId: "1:109",
+					score: 0.81,
+				},
+			],
+			unmatchedCode: [],
+			unmatchedFigma: [
+				{
+					name: "Legacy Button",
+					nodeId: "2:99",
+					description: "DEPRECATED — use Button (variant=primary).",
+					candidates: [{ codeName: "Button", score: 0.54 }],
+				},
+			],
+		};
+		const report = findGaps({
+			requirements: [
+				{
+					kind: "component",
+					nodeId: "2:168",
+					name: "Save (legacy)",
+					componentName: "Legacy Button",
+				},
+			],
+			registry,
+			tokens: [],
+		});
+		expect(report.gaps).toEqual([]);
+		expect(report.resolved[0]?.resolution).toEqual({
+			kind: "registry-match",
+			codeName: "Button",
+			importPath: "@primer/react",
+			replaces: { name: "Legacy Button", hint: "variant=primary" },
+		});
+	});
+});

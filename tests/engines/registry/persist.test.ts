@@ -364,3 +364,66 @@ describe("resolveEntry — match outcomes", () => {
 		expect(resolveEntry(file, "").kind).toBe("not-found");
 	});
 });
+
+// Primer testbed (frame-impl): an instance of the deprecated "Legacy Button",
+// whose Figma description says "DEPRECATED — use Button (variant=primary)",
+// resolved as ambiguous (Button 0.54 vs OldButton 0.5) and the page lost its
+// Save button. A deprecated component that names a matched replacement
+// resolves to that replacement, carrying the deprecation and the variant hint.
+describe("resolveEntry — deprecated component naming its replacement", () => {
+	const registry: RegistryFile = {
+		schemaVersion: 1,
+		generatedAt: "2026-10-08T00:00:00.000Z",
+		matches: [
+			{
+				codeName: "Button",
+				importPath: "@primer/react",
+				figmaName: "Button",
+				nodeId: "1:109",
+				score: 0.81,
+			},
+		],
+		unmatchedCode: [],
+		unmatchedFigma: [
+			{
+				name: "Legacy Button",
+				nodeId: "2:99",
+				description:
+					"DEPRECATED — use Button (variant=primary). Kept for the old Hub settings page.",
+				candidates: [
+					{ codeName: "Button", score: 0.542 },
+					{ codeName: "OldButton", score: 0.5 },
+				],
+			},
+			{
+				name: "Old Card",
+				nodeId: "3:1",
+				description: "Legacy — use NewCard instead.",
+				candidates: [{ codeName: "Card", score: 0.6 }],
+			},
+			{
+				name: "Promo",
+				nodeId: "4:1",
+				description: "Use this for marketing callouts.",
+				candidates: [{ codeName: "PromoBox", score: 0.6 }],
+			},
+		],
+	};
+
+	it("resolves to the named replacement with its hint", () => {
+		expect(resolveEntry(registry, "2:99")).toEqual({
+			kind: "match",
+			entry: registry.matches[0],
+			replaces: { name: "Legacy Button", hint: "variant=primary" },
+		});
+		expect(resolveEntry(registry, "Legacy Button").kind).toBe("match");
+	});
+
+	it("stays candidates when the named replacement is not in the registry", () => {
+		expect(resolveEntry(registry, "3:1").kind).toBe("candidates");
+	});
+
+	it("never reads 'use' in a description that is not a deprecation", () => {
+		expect(resolveEntry(registry, "4:1").kind).toBe("candidates");
+	});
+});

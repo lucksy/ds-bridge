@@ -406,6 +406,23 @@ function renderCheckTerm(
 	return lines.join("\n");
 }
 
+/**
+ * Plain-language notes on what the check deliberately did not compare, so a
+ * reader of the JSON (an agent, a CI summary) never reports intent as a gap.
+ */
+function notesFor(result: DriftResult, skippedModes: string[]): string[] {
+	const notes = (result.unbuiltLayers ?? []).map(
+		(layer) =>
+			`${layer.prefix}.* (${layer.tokens} tokens) is not built by design: a reference-only layer the outputs reach through aliases. Not a gap.`,
+	);
+	if (skippedModes.length > 0) {
+		notes.push(
+			`Themes with no output scoped to them were not compared: ${skippedModes.join(", ")}. Not drift.`,
+		);
+	}
+	return notes;
+}
+
 /** Serialize the drift result for --format=json. */
 function checkJson(
 	result: DriftResult,
@@ -419,6 +436,9 @@ function checkJson(
 			source,
 			...(result.unbuiltLayers !== undefined
 				? { unbuiltLayers: result.unbuiltLayers }
+				: {}),
+			...(notesFor(result, skippedModes).length > 0
+				? { notes: notesFor(result, skippedModes) }
 				: {}),
 			...(skippedModes.length > 0 ? { skippedModes } : {}),
 		},

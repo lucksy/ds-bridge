@@ -49,7 +49,13 @@ export interface GapsInput {
 
 /** How a satisfied requirement maps onto the system. */
 export type Resolution =
-	| { kind: "registry-match"; codeName: string; importPath: string }
+	| {
+			kind: "registry-match";
+			codeName: string;
+			importPath: string;
+			/** The deprecated component this replaces, and its variant hint. */
+			replaces?: { name: string; hint?: string };
+	  }
 	| { kind: "token-exact"; tokenName: string };
 
 export interface ResolvedRequirement {
@@ -125,6 +131,9 @@ function resolveComponent(
 				kind: "registry-match",
 				codeName: outcome.entry.codeName,
 				importPath: outcome.entry.importPath,
+				...(outcome.replaces !== undefined
+					? { replaces: outcome.replaces }
+					: {}),
 			},
 		};
 	}

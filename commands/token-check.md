@@ -35,6 +35,10 @@ Otherwise:
 3. **Explain each drift kind in one line** — stale = output drifted from source;
    missing = source token not yet built into an output; orphan = output with no
    source token.
+4. **`unbuiltLayers`** (when present) are reference-only layers — a primitive
+   palette like `base.color` the build never emits on purpose, reached through
+   aliases. Report them as "not built by design", never as missing or to-do.
+   **`skippedModes`** are themes the outputs don't scope — not compared.
 
 If any drift exists, use **AskUserQuestion** to offer:
 

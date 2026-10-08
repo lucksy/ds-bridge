@@ -35,6 +35,14 @@ const COLOR_NEAR_DELTA_E = 2.5;
 const DIMENSION_NEAR_PX = 1;
 /** Max candidates surfaced for a near match. */
 const NEAR_LIMIT = 3;
+/** Near candidates considered before ranking (deltaE ignores alpha and role). */
+const NEAR_SEARCH_LIMIT = 50;
+
+/** The alpha of a canonical hex color (1 when opaque). */
+function alphaOf(hex: string): number {
+	const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(hex.trim());
+	return m?.[1] === undefined ? 1 : Number.parseInt(m[1], 16) / 255;
+}
 
 /**
  * Among tokens that share an exact value, the one a linter should suggest:
@@ -225,22 +233,36 @@ function matchColor(
 		if (token !== undefined) return { kind: "exact", token };
 	}
 
-	// 3. Nearest simple color tokens within the deltaE threshold.
+	// 3. Nearest simple color tokens within the deltaE threshold. DeltaE
+	// ignores alpha and a large system has many tokens at one hue (Primer:
+	// `ansi.black`, `base.color.black`, `borderColor.translucent`), so search
+	// wide and rank like an exact hit: the property's role, global before
+	// component, the literal's alpha, then distance.
 	const near = index.nearest(canonical, {
 		maxDeltaE: COLOR_NEAR_DELTA_E,
-		limit: NEAR_LIMIT,
+		limit: NEAR_SEARCH_LIMIT,
 	});
 	if (near.length === 0) return { kind: "off-system" };
 
-	// nearest() already sorts ascending deltaE; re-rank ties so the semantic
-	// alias surfaces ahead of the primitive while preserving distance order.
+	const role = propertyRole(literal.property);
+	const alpha = alphaOf(canonical);
+	const key = (m: (typeof near)[number]): number[] => [
+		roleScore(m.token.name, role),
+		roleDepth(m.token.name, role),
+		Math.abs(alphaOf(String(m.token.value)) - alpha) > 0.02 ? 1 : 0,
+		m.deltaE,
+		aliasRank(m.token),
+	];
 	const candidates: MatchCandidate[] = near
-		.map((m) => ({ token: m.token, distance: m.deltaE }))
-		.sort((a, b) =>
-			a.distance !== b.distance
-				? a.distance - b.distance
-				: aliasRank(a.token) - aliasRank(b.token),
-		)
+		.map((m) => ({ m, k: key(m) }))
+		.sort((a, b) => {
+			for (let i = 0; i < a.k.length; i++) {
+				const d = (a.k[i] as number) - (b.k[i] as number);
+				if (d !== 0) return d;
+			}
+			return 0;
+		})
+		.map(({ m }) => ({ token: m.token, distance: m.deltaE }))
 		.slice(0, NEAR_LIMIT);
 
 	return { kind: "near", candidates };

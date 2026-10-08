@@ -137,17 +137,61 @@ export function toRegistryFile(
 // ── Resolution ──
 
 export type ResolveOutcome =
-	| { kind: "match"; entry: RegistryMatch }
+	| {
+			kind: "match";
+			entry: RegistryMatch;
+			/**
+			 * Set when the queried component is deprecated and its description
+			 * names this replacement ("DEPRECATED — use Button (variant=primary)"):
+			 * the deprecated name and the parenthesized hint, when given.
+			 */
+			replaces?: { name: string; hint?: string };
+	  }
 	| { kind: "candidates"; entries: { codeName: string; score: number }[] }
 	| { kind: "not-found" };
+
+/** A component the library marks as deprecated (name or description). */
+const DEPRECATED_RE = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
+/** "use Button (variant=primary)", "replaced by Card", "use `Button` instead". */
+const REPLACEMENT_RE =
+	/\b(?:use|replaced?\s+(?:with|by))\s+[`"'“]?([A-Za-z][\w-]*(?:\s?\/\s?[A-Za-z][\w-]*)*)[`"'”]?(?:\s*\(([^)]+)\))?/i;
+
+/**
+ * The matched replacement a deprecated component's description names, as a
+ * match outcome — or undefined when it is not deprecated, names nothing, or
+ * names a component the registry has not matched to code.
+ */
+function namedReplacement(
+	registry: RegistryFile,
+	entry: RegistryUnmatchedFigma,
+): ResolveOutcome | undefined {
+	const description = entry.description ?? "";
+	if (!DEPRECATED_RE.test(`${entry.name} ${description}`)) return undefined;
+	const named = REPLACEMENT_RE.exec(description);
+	const target = named?.[1];
+	if (target === undefined) return undefined;
+	const key = normalizeName(target);
+	const match = registry.matches.find(
+		(m) =>
+			normalizeName(m.figmaName) === key || normalizeName(m.codeName) === key,
+	);
+	if (match === undefined) return undefined;
+	const hint = named?.[2]?.trim();
+	return {
+		kind: "match",
+		entry: match,
+		replaces: { name: entry.name, ...(hint ? { hint } : {}) },
+	};
+}
 
 /**
  * Resolve a Figma node id OR (exact / normalized) name against a saved registry.
  *
  * A confident match always wins: it is checked first by exact nodeId, then exact
  * figmaName, then normalized name. Failing that, the same lookup is tried against
- * the unmatched-figma bucket, returning its ranked candidates. Anything else is
- * not-found. Never throws — odd queries (empty/whitespace) simply miss.
+ * the unmatched-figma bucket: a deprecated component whose description names a
+ * matched replacement resolves to it (`replaces` set); otherwise its ranked
+ * candidates. Anything else is not-found. Never throws — odd queries (empty/whitespace) simply miss.
  */
 export function resolveEntry(
 	registry: RegistryFile,
@@ -170,22 +214,18 @@ export function resolveEntry(
 		}
 	}
 
-	for (const entry of registry.unmatchedFigma) {
-		if (entry.nodeId === query) {
-			return { kind: "candidates", entries: entry.candidates };
-		}
-	}
-	for (const entry of registry.unmatchedFigma) {
-		if (entry.name === query) {
-			return { kind: "candidates", entries: entry.candidates };
-		}
-	}
-	if (normalizedQuery.length > 0) {
-		for (const entry of registry.unmatchedFigma) {
-			if (normalizeName(entry.name) === normalizedQuery) {
-				return { kind: "candidates", entries: entry.candidates };
-			}
-		}
+	const unmatched =
+		registry.unmatchedFigma.find((e) => e.nodeId === query) ??
+		registry.unmatchedFigma.find((e) => e.name === query) ??
+		(normalizedQuery.length > 0
+			? registry.unmatchedFigma.find(
+					(e) => normalizeName(e.name) === normalizedQuery,
+				)
+			: undefined);
+	if (unmatched !== undefined) {
+		const replacement = namedReplacement(registry, unmatched);
+		if (replacement !== undefined) return replacement;
+		return { kind: "candidates", entries: unmatched.candidates };
 	}
 
 	return { kind: "not-found" };

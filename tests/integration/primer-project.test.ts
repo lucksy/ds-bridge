@@ -57,6 +57,7 @@ describe("tokens check — Primer JSON5 set", () => {
 			source: { path: string; modes: string[] };
 			skippedModes?: string[];
 			unbuiltLayers?: { prefix: string; tokens: number }[];
+			notes?: string[];
 		};
 		expect(out.entries).toEqual([]);
 		expect(out.inSync).toBe(true);
@@ -69,6 +70,10 @@ describe("tokens check — Primer JSON5 set", () => {
 		]);
 		expect(out.skippedModes).toEqual(["dark-dimmed", "light-high-contrast"]);
 		expect(out.unbuiltLayers).toEqual([{ prefix: "base.color", tokens: 2 }]);
+		expect(out.notes).toEqual([
+			"base.color.* (2 tokens) is not built by design: a reference-only layer the outputs reach through aliases. Not a gap.",
+			"Themes with no output scoped to them were not compared: dark-dimmed, light-high-contrast. Not drift.",
+		]);
 		expect(run.code).toBe(0);
 	});
 });

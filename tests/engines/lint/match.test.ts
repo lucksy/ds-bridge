@@ -687,3 +687,46 @@ describe("matchLiteral — role-aware picks in a large camelCase system", () => 
 		expect(at("16px", "gap", noScale)).toBe("stack.gap.normal");
 	});
 });
+
+// Primer, v1.19.0 follow-up: near matches ranked by distance alone, so a
+// translucent border `#1b1f2326` suggested `ansi.black` (a terminal color) and
+// `avatar.borderColor` ahead of the global `borderColor.translucent`.
+describe("matchLiteral — role-aware near candidates", () => {
+	const t = (name: string, value: string, aliasOf?: string): Token =>
+		aliasOf === undefined
+			? { name, value, type: "color" }
+			: { name, value, type: "color", aliasOf };
+	const index = buildTokenIndex([
+		t("base.color.black", "#1f2328"),
+		t("ansi.black", "#1f2328", "base.color.black"),
+		t("avatar.borderColor", "#1f232826"),
+		t("borderColor.translucent", "#1f232826"),
+		t("fgColor.default", "#1f2328", "base.color.black"),
+	]);
+	const lit = (raw: string, property: string): ExtractedLiteral => ({
+		file: "a.css",
+		line: 1,
+		col: 1,
+		raw,
+		property,
+		valueKind: "color",
+		context: "css-declaration",
+	});
+
+	it("puts the global token of the property's role, at the literal's alpha, first", () => {
+		const m = matchLiteral(lit("#1b1f2326", "border"), index);
+		expect(m.kind).toBe("near");
+		if (m.kind !== "near") return;
+		expect(m.candidates.slice(0, 2).map((c) => c.token.name)).toEqual([
+			"borderColor.translucent",
+			"avatar.borderColor",
+		]);
+	});
+
+	it("puts a text color first for `color`", () => {
+		const m = matchLiteral(lit("#1b1f23", "color"), index);
+		expect(m.kind === "near" ? m.candidates[0]?.token.name : undefined).toBe(
+			"fgColor.default",
+		);
+	});
+});

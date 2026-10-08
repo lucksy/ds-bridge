@@ -404,7 +404,17 @@ function runResolve(nodeNameOrId: string, path: string): void {
 	const outcome = resolveEntry(registry, nodeNameOrId);
 	switch (outcome.kind) {
 		case "match":
-			process.stdout.write(`${JSON.stringify(outcome.entry, null, 2)}\n`);
+			// A deprecated component resolved to the replacement its description
+			// names: the entry plus `replaces` (deprecated name + variant hint).
+			process.stdout.write(
+				`${JSON.stringify(
+					outcome.replaces === undefined
+						? outcome.entry
+						: { ...outcome.entry, replaces: outcome.replaces },
+					null,
+					2,
+				)}\n`,
+			);
 			process.exitCode = 0;
 			return;
 		case "candidates":
