@@ -17958,6 +17958,563 @@ function normalizeDimension(raw, options) {
   return void 0;
 }
 
+// src/engines/lint/extract.ts
+var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
+var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
+var DIM_RE = /-?\d+(?:\.\d+)?(?:px|rem)?/;
+var OTHER_UNIT_RE = /^[a-zA-Z%]+/;
+var SPACING_PREFIXES = ["padding", "margin", "inset"];
+var SPACING_EXACT = /* @__PURE__ */ new Set([
+  "gap",
+  "row-gap",
+  "column-gap",
+  "rowGap",
+  "columnGap",
+  "top",
+  "right",
+  "bottom",
+  "left"
+]);
+function isRadiusProperty(property) {
+  return /^border(?:-?(?:top|bottom|start|end)-?(?:left|right|start|end))?-?radius$/i.test(
+    property
+  );
+}
+function isDimensionProperty(property) {
+  return isSpacingProperty(property) || isRadiusProperty(property);
+}
+function isSpacingProperty(property) {
+  const lower = property.toLowerCase();
+  if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
+  for (const prefix of SPACING_PREFIXES) {
+    if (lower === prefix || lower.startsWith(prefix)) return true;
+  }
+  return false;
+}
+function blankComments(text2) {
+  let out = "";
+  let i = 0;
+  while (i < text2.length) {
+    const ch = text2[i];
+    if (ch === "/" && text2[i + 1] === "*") {
+      const end = text2.indexOf("*/", i + 2);
+      const stop = end === -1 ? text2.length : end + 2;
+      for (let j = i; j < stop; j++) out += text2[j] === "\n" ? "\n" : " ";
+      i = stop;
+      continue;
+    }
+    if (ch === "/" && text2[i + 1] === "/" && text2[i - 1] !== ":") {
+      let j = i;
+      while (j < text2.length && text2[j] !== "\n") {
+        out += " ";
+        j += 1;
+      }
+      i = j;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      out += ch;
+      i += 1;
+      while (i < text2.length && text2[i] !== ch) {
+        out += text2[i] === "\n" ? "\n" : " ";
+        i += 1;
+      }
+      if (i < text2.length) {
+        out += text2[i];
+        i += 1;
+      }
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+function* scanValue(value2, property) {
+  const spacing = isDimensionProperty(property);
+  let i = 0;
+  while (i < value2.length) {
+    const rest = value2.slice(i);
+    if (/^var\s*\(/i.test(rest)) {
+      const close = value2.indexOf(")", i);
+      i = close === -1 ? value2.length : close + 1;
+      continue;
+    }
+    const fn5 = COLOR_FN_RE.exec(rest);
+    if (fn5 !== null && fn5.index === 0) {
+      yield { offset: i, raw: fn5[0], valueKind: "color" };
+      i += fn5[0].length;
+      continue;
+    }
+    if (value2[i] === "#") {
+      const hex2 = HEX_RE.exec(rest);
+      if (hex2 !== null && hex2.index === 0) {
+        yield { offset: i, raw: hex2[0], valueKind: "color" };
+        i += hex2[0].length;
+        continue;
+      }
+    }
+    if (spacing && (value2[i] === "-" || /\d/.test(value2[i] ?? ""))) {
+      const prev = value2[i - 1] ?? " ";
+      if (!/[a-zA-Z0-9.#-]/.test(prev)) {
+        const dim = DIM_RE.exec(rest);
+        if (dim !== null && dim.index === 0) {
+          const unit = OTHER_UNIT_RE.exec(value2.slice(i + dim[0].length));
+          if (unit !== null) {
+            i += dim[0].length + unit[0].length;
+            continue;
+          }
+          const px = Number.parseFloat(dim[0]);
+          if (Number.isFinite(px) && px !== 0) {
+            yield { offset: i, raw: dim[0], valueKind: "dimension" };
+          }
+          i += dim[0].length;
+          continue;
+        }
+      }
+    }
+    i += 1;
+  }
+}
+function extractCss(text2, lineBase, colBase) {
+  const hits = [];
+  const cleaned = blankComments(text2);
+  const lines = cleaned.split("\n");
+  for (let li = 0; li < lines.length; li++) {
+    const line2 = lines[li] ?? "";
+    const colShift = li === 0 ? colBase : 0;
+    const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
+    let m = decl.exec(line2);
+    while (m !== null) {
+      const property = m[1] ?? "";
+      const value2 = m[2] ?? "";
+      const valueStart = m.index + m[0].length - value2.length;
+      for (const hit of scanValue(value2, property)) {
+        hits.push({
+          line: lineBase + li,
+          col: colShift + valueStart + hit.offset + 1,
+          raw: hit.raw,
+          property,
+          valueKind: hit.valueKind
+        });
+      }
+      m = decl.exec(line2);
+    }
+  }
+  return hits;
+}
+function indexToLineCol(source2, index) {
+  let line2 = 1;
+  let lineStart = 0;
+  for (let i = 0; i < index; i++) {
+    if (source2[i] === "\n") {
+      line2 += 1;
+      lineStart = i + 1;
+    }
+  }
+  return { line: line2, col: index - lineStart + 1 };
+}
+var QUOTED_COLOR_RE = /(["'])(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)"']*\))\1/g;
+var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
+function styleRegions(source2) {
+  const regions = [];
+  const styleOpen = /style\s*=\s*\{\{/g;
+  for (const open of source2.matchAll(styleOpen)) {
+    const start = (open.index ?? 0) + open[0].length;
+    const close = source2.indexOf("}}", start);
+    regions.push({
+      kind: "style-object",
+      start,
+      end: close === -1 ? source2.length : close
+    });
+  }
+  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
+  for (const open of source2.matchAll(styledOpen)) {
+    const start = (open.index ?? 0) + open[0].length;
+    const close = source2.indexOf("`", start);
+    regions.push({
+      kind: "styled-template",
+      start,
+      end: close === -1 ? source2.length : close
+    });
+  }
+  return regions;
+}
+function extractTsx(source2, file) {
+  const out = [];
+  for (const region of styleRegions(source2)) {
+    if (region.kind !== "style-object") continue;
+    const bodyStart = region.start;
+    const body = source2.slice(region.start, region.end);
+    STYLE_OBJ_PROP_RE.lastIndex = 0;
+    let pm = STYLE_OBJ_PROP_RE.exec(body);
+    while (pm !== null) {
+      const property = pm[1] ?? "";
+      const valueCapture = pm[2] ?? "";
+      const rawValue = valueCapture.trim();
+      const leading = valueCapture.length - valueCapture.trimStart().length;
+      const valueIndexInBody = pm.index + pm[0].length - valueCapture.length + leading;
+      const absValueIndex = bodyStart + valueIndexInBody;
+      const quoted = /^(["'])(.*)\1$/.exec(rawValue);
+      if (quoted !== null) {
+        const inner = quoted[2] ?? "";
+        if (isColorLiteral(inner)) {
+          const pos2 = indexToLineCol(source2, absValueIndex);
+          out.push({
+            file,
+            line: pos2.line,
+            col: pos2.col,
+            raw: rawValue,
+            property,
+            valueKind: "color",
+            context: "style-object"
+          });
+        } else {
+          for (const hit of scanValue(inner, property)) {
+            const pos2 = indexToLineCol(source2, absValueIndex + 1 + hit.offset);
+            out.push({
+              file,
+              line: pos2.line,
+              col: pos2.col,
+              raw: hit.raw,
+              property,
+              valueKind: hit.valueKind,
+              context: "style-string"
+            });
+          }
+        }
+      } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
+        if (isDimensionProperty(property)) {
+          const num4 = Number.parseFloat(rawValue);
+          if (Number.isFinite(num4) && num4 !== 0) {
+            const pos2 = indexToLineCol(source2, absValueIndex);
+            out.push({
+              file,
+              line: pos2.line,
+              col: pos2.col,
+              raw: rawValue,
+              property,
+              valueKind: "dimension",
+              context: "style-object"
+            });
+          }
+        }
+      }
+      if (quoted === null && !/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
+        for (const lit of rawValue.matchAll(QUOTED_COLOR_RE)) {
+          const pos2 = indexToLineCol(source2, absValueIndex + (lit.index ?? 0));
+          out.push({
+            file,
+            line: pos2.line,
+            col: pos2.col,
+            raw: lit[0],
+            property,
+            valueKind: "color",
+            context: "style-object"
+          });
+        }
+      }
+      pm = STYLE_OBJ_PROP_RE.exec(body);
+    }
+  }
+  for (const region of styleRegions(source2)) {
+    if (region.kind !== "styled-template") continue;
+    const bodyStart = region.start;
+    const body = source2.slice(region.start, region.end);
+    const pos2 = indexToLineCol(source2, bodyStart);
+    const cssHits = extractCss(body, pos2.line, pos2.col - 1);
+    for (const hit of cssHits) {
+      out.push({
+        file,
+        line: hit.line,
+        col: hit.col,
+        raw: hit.raw,
+        property: hit.property,
+        valueKind: hit.valueKind,
+        context: "styled-template"
+      });
+    }
+  }
+  return out;
+}
+var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
+var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
+function isColorLiteral(value2) {
+  const v = value2.trim();
+  return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
+}
+function extensionOf(path) {
+  const dot = path.lastIndexOf(".");
+  return dot === -1 ? "" : path.slice(dot).toLowerCase();
+}
+function byLineThenCol(a, b) {
+  if (a.line !== b.line) return a.line - b.line;
+  return a.col - b.col;
+}
+function extractLiterals(file) {
+  const ext = extensionOf(file.path);
+  let result = [];
+  try {
+    if (ext === ".css" || ext === ".scss") {
+      result = extractCss(file.content, 1, 0).map((hit) => ({
+        file: file.path,
+        line: hit.line,
+        col: hit.col,
+        raw: hit.raw,
+        property: hit.property,
+        valueKind: hit.valueKind,
+        context: "css-declaration"
+      }));
+    } else if (ext === ".tsx" || ext === ".jsx") {
+      result = extractTsx(file.content, file.path);
+    }
+  } catch {
+    return [];
+  }
+  return result.sort(byLineThenCol);
+}
+
+// src/engines/lint/match.ts
+var COLOR_NEAR_DELTA_E = 2.5;
+var DIMENSION_NEAR_PX = 1;
+var NEAR_LIMIT = 3;
+var NEAR_SEARCH_LIMIT = 50;
+function alphaOf(hex2) {
+  const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(hex2.trim());
+  return m?.[1] === void 0 ? 1 : Number.parseInt(m[1], 16) / 255;
+}
+function pickPreferred(tokens, property) {
+  if (tokens.length === 0) return void 0;
+  const role = propertyRole(property);
+  const names = new Set(tokens.map((t) => t.name));
+  const score = (t) => [
+    roleScore(t.name, role),
+    roleDepth(t.name, role),
+    t.aliasOf !== void 0 && names.has(t.aliasOf) ? 0 : 1,
+    isStatusToken(t.name) ? 1 : 0,
+    t.name.split(/[.\-/]/).length
+  ];
+  return tokens.map((token2, order) => ({ token: token2, key: [...score(token2), order] })).sort((a, b) => {
+    for (let i = 0; i < a.key.length; i++) {
+      const d = a.key[i] - b.key[i];
+      if (d !== 0) return d;
+    }
+    return 0;
+  })[0]?.token;
+}
+function roleDepth(name, role) {
+  if (role === void 0) return 0;
+  const re = role === "fg" ? FG_SEGMENT : role === "bg" ? BG_TOKEN : BORDER_TOKEN;
+  const segments3 = name.split(/[.\-/]/);
+  const at = segments3.findIndex((s) => re.test(s));
+  return at === -1 ? segments3.length : at;
+}
+function roleScore(name, role) {
+  if (role === void 0) return 1;
+  const fg = isForegroundToken(name);
+  if (role === "fg") return fg ? 0 : 2;
+  if (fg) return 2;
+  const fits = role === "bg" ? BG_TOKEN.test(name) : BORDER_TOKEN.test(name);
+  return fits ? 0 : 1;
+}
+function isStatusToken(name) {
+  return /(error|danger|warning|warn|success|destructive|critical)/i.test(name);
+}
+function dimensionFamily(property) {
+  if (property === void 0) return void 0;
+  const p4 = property.toLowerCase();
+  if (/radius/.test(p4)) return /(radius|corner|rounded|shape)/i;
+  if (/^font-?size$|^fontsize$/.test(p4))
+    return /(font-?size|typescale.*size|\.size$|text)/i;
+  if (/line-?height/.test(p4)) return /(line-?height|leading)/i;
+  if (/letter-?spacing/.test(p4)) return /(letter-?spacing|tracking)/i;
+  if (/^(?:padding|margin|gap|row-?gap|column-?gap|inset|top|right|bottom|left)/.test(
+    p4.replace(/([a-z])([A-Z])/g, "$1-$2")
+  )) {
+    return /(spacing|space|gap|gutter|padding|margin)/i;
+  }
+  return void 0;
+}
+function propertyRole(property) {
+  if (property === void 0) return void 0;
+  const p4 = property.replace(/-/g, "").toLowerCase();
+  if (/^(?:color|caretcolor|textdecorationcolor|webkittextfillcolor)$/.test(p4)) {
+    return "fg";
+  }
+  if (/^(?:border|outline|columnrule)/.test(p4)) return "border";
+  if (/^(?:background|boxshadow)/.test(p4)) return "bg";
+  return void 0;
+}
+function isForegroundToken(name) {
+  return /(^|[.\-/])(?:foreground|fg|fgcolor|text|textcolor|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
+    name
+  ) || /(^|[.\-/])on[A-Z][A-Za-z]*([.\-/]|$)/.test(name);
+}
+var FG_SEGMENT = /^(?:foreground|fg|fgcolor|text|textcolor|on|on-[a-z0-9]+|on[A-Z][A-Za-z]*)$/i;
+var BG_TOKEN = /(^|[.\-/])(?:bg|bgcolor|background|backgroundcolor|surface|canvas)([.\-/]|$)/i;
+var BORDER_TOKEN = /(^|[.\-/])(?:border|bordercolor|outline|stroke)([.\-/]|$)/i;
+function aliasRank(token2) {
+  return token2.aliasOf !== void 0 ? 0 : 1;
+}
+function stripQuotes(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (trimmed.length >= 2 && (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+function matchColor(literal2, index, options) {
+  const canonical3 = normalizeColor(stripQuotes(literal2.raw));
+  if (canonical3 === void 0) return { kind: "off-system" };
+  const exact = index.byValue.get(canonical3);
+  if (exact !== void 0 && exact.length > 0) {
+    const role2 = propertyRole(literal2.property);
+    const fits = (t) => roleScore(t.name, role2) === 0 && roleDepth(t.name, role2) === 0;
+    if (role2 !== void 0 && !exact.some(fits)) {
+      const inExact = new Set(exact.map((t) => t.name));
+      const nearFit = index.nearest(canonical3, { maxDeltaE: COLOR_NEAR_DELTA_E, limit: 50 }).filter((m) => !inExact.has(m.token.name) && fits(m.token)).map((m) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT);
+      if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
+    }
+    const token2 = pickPreferred(exact, literal2.property);
+    if (token2 !== void 0) return { kind: "exact", token: token2 };
+  }
+  const composite2 = options?.compositeColors?.get(canonical3);
+  if (composite2 !== void 0 && composite2.length > 0) {
+    const token2 = pickPreferred(composite2);
+    if (token2 !== void 0) return { kind: "exact", token: token2 };
+  }
+  const near = index.nearest(canonical3, {
+    maxDeltaE: COLOR_NEAR_DELTA_E,
+    limit: NEAR_SEARCH_LIMIT
+  });
+  if (near.length === 0) return { kind: "off-system" };
+  const role = propertyRole(literal2.property);
+  const alpha = alphaOf(canonical3);
+  const key2 = (m) => [
+    roleScore(m.token.name, role),
+    roleDepth(m.token.name, role),
+    Math.abs(alphaOf(String(m.token.value)) - alpha) > 0.02 ? 1 : 0,
+    m.deltaE,
+    aliasRank(m.token)
+  ];
+  const candidates = near.map((m) => ({ m, k: key2(m) })).sort((a, b) => {
+    for (let i = 0; i < a.k.length; i++) {
+      const d = a.k[i] - b.k[i];
+      if (d !== 0) return d;
+    }
+    return 0;
+  }).map(({ m }) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT);
+  return { kind: "near", candidates };
+}
+var familyCache = /* @__PURE__ */ new WeakMap();
+function setHasFamily(index, family) {
+  let byFamily = familyCache.get(index);
+  if (byFamily === void 0) {
+    byFamily = /* @__PURE__ */ new Map();
+    familyCache.set(index, byFamily);
+  }
+  const cached = byFamily.get(family.source);
+  if (cached !== void 0) return cached;
+  let found = false;
+  for (const token2 of index.byName.values()) {
+    if (token2.type === "dimension" && family.test(token2.name)) {
+      found = true;
+      break;
+    }
+  }
+  byFamily.set(family.source, found);
+  return found;
+}
+function pickDimension(tokens, property) {
+  const word = (property ?? "").replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().match(/^(padding|margin|gap|row-gap|column-gap)/)?.[1]?.replace(/^(row|column)-/, "");
+  const has = (name, re) => re.test(name) ? 0 : 1;
+  const named2 = word === void 0 ? void 0 : new RegExp(`(^|[.\\-/])${word}`, "i");
+  const key2 = (t) => [
+    has(t.name, /(^|[.\-/])(?:space|spacing)([.\-/]|$)/i),
+    named2 === void 0 ? 0 : has(t.name, named2),
+    t.name.split(/[.\-/]/).length
+  ];
+  return tokens.map((token2, order) => ({ token: token2, k: [...key2(token2), order] })).sort((a, b) => {
+    for (let i = 0; i < a.k.length; i++) {
+      const d = a.k[i] - b.k[i];
+      if (d !== 0) return d;
+    }
+    return 0;
+  })[0]?.token;
+}
+function matchDimension(literal2, index) {
+  const dim = normalizeDimension(stripQuotes(literal2.raw));
+  if (dim === void 0) return { kind: "off-system" };
+  const family = dimensionFamily(literal2.property);
+  const inFamily = family !== void 0 && setHasFamily(index, family) ? (token2) => family.test(token2.name) : () => true;
+  const bucket = index.byValue.get(`${dim.px}px`);
+  if (bucket !== void 0) {
+    const exact = pickDimension(
+      bucket.filter((t) => t.type === "dimension" && inFamily(t)),
+      literal2.property
+    );
+    if (exact !== void 0) return { kind: "exact", token: exact };
+  }
+  const candidates = [];
+  for (const token2 of index.byName.values()) {
+    if (token2.type !== "dimension" || !inFamily(token2)) continue;
+    const tokenDim = normalizeDimension(
+      typeof token2.value === "number" || typeof token2.value === "string" ? token2.value : Number.NaN
+    );
+    if (tokenDim === void 0) continue;
+    const distance = Math.abs(dim.px - tokenDim.px);
+    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
+    candidates.push({ token: token2, distance });
+  }
+  if (candidates.length === 0) return { kind: "off-system" };
+  candidates.sort(
+    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
+  );
+  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT) };
+}
+var RADIUS_TOKEN = /(radius|corner|rounded)/i;
+var radiusScaleCache = /* @__PURE__ */ new WeakMap();
+function hasRadiusScale(index) {
+  const cached = radiusScaleCache.get(index);
+  if (cached !== void 0) return cached;
+  let found = false;
+  for (const token2 of index.byName.values()) {
+    if (token2.type === "dimension" && RADIUS_TOKEN.test(token2.name)) {
+      found = true;
+      break;
+    }
+  }
+  radiusScaleCache.set(index, found);
+  return found;
+}
+function isLintable(literal2, index) {
+  if (literal2.valueKind !== "dimension") return true;
+  if (!isRadiusProperty(literal2.property)) return true;
+  return hasRadiusScale(index);
+}
+function matchLiteral(literal2, index, options) {
+  return literal2.valueKind === "color" ? matchColor(literal2, index, options) : matchDimension(literal2, index);
+}
+function buildCompositeColorLookup(tokens) {
+  const lookup = /* @__PURE__ */ new Map();
+  for (const token2 of tokens) {
+    const { value: value2 } = token2;
+    if (typeof value2 !== "object" || value2 === null) continue;
+    const inner = value2.color;
+    if (typeof inner !== "string") continue;
+    const canonical3 = normalizeColor(inner);
+    if (canonical3 === void 0) continue;
+    const bucket = lookup.get(canonical3);
+    if (bucket === void 0) {
+      lookup.set(canonical3, [token2]);
+    } else {
+      bucket.push(token2);
+    }
+  }
+  return lookup;
+}
+
 // src/engines/tokens/token-index.ts
 function canonicalValueKey(token2) {
   const { value: value2 } = token2;
@@ -18105,17 +18662,8 @@ function resolveEntry(registry, nodeNameOrId) {
 }
 
 // src/engines/registry/gaps.ts
-var COLOR_NEAR_DELTA_E = 2.5;
-var DIMENSION_NEAR_PX = 1;
-var NEAR_LIMIT = 3;
-function pickPreferred(tokens) {
-  if (tokens.length === 0) return void 0;
-  const names = new Set(tokens.map((t) => t.name));
-  const semantic = tokens.find(
-    (t) => t.aliasOf !== void 0 && names.has(t.aliasOf)
-  );
-  return semantic ?? tokens[0];
-}
+var DIMENSION_NEAR_PX2 = 1;
+var NEAR_LIMIT2 = 3;
 function resolveComponent(requirement, registry) {
   const byComponent = requirement.componentName !== void 0 ? resolveEntry(registry, requirement.componentName) : void 0;
   const byId = byComponent !== void 0 && byComponent.kind !== "not-found" ? byComponent : resolveEntry(registry, requirement.nodeId);
@@ -18149,21 +18697,23 @@ function resolveComponent(requirement, registry) {
   };
 }
 function resolveColor(requirement, index) {
-  const canonical3 = normalizeColor(requirement.rawValue);
-  if (canonical3 === void 0) return noTokenMatch(requirement);
-  const exact = index.byValue.get(canonical3);
-  const preferred = pickPreferred(exact ?? []);
-  if (preferred !== void 0) {
-    return tokenExact(requirement, preferred.name);
-  }
-  const near = index.nearest(canonical3, {
-    maxDeltaE: COLOR_NEAR_DELTA_E,
-    limit: NEAR_LIMIT
-  });
-  if (near.length > 0) {
+  const match = matchLiteral(
+    {
+      file: "",
+      line: 0,
+      col: 0,
+      raw: requirement.rawValue,
+      property: requirement.property,
+      valueKind: "color",
+      context: "css-declaration"
+    },
+    index
+  );
+  if (match.kind === "exact") return tokenExact(requirement, match.token.name);
+  if (match.kind === "near") {
     return nearTokenOnly(
       requirement,
-      near.map((m) => m.token.name)
+      match.candidates.map((c3) => c3.token.name)
     );
   }
   return noTokenMatch(requirement);
@@ -18182,7 +18732,7 @@ function resolveDimension(requirement, index) {
     );
     if (tokenDim === void 0) continue;
     const distance = Math.abs(dim.px - tokenDim.px);
-    if (distance === 0 || distance > DIMENSION_NEAR_PX) continue;
+    if (distance === 0 || distance > DIMENSION_NEAR_PX2) continue;
     near.push({ name: token2.name, distance });
   }
   if (near.length === 0) return noTokenMatch(requirement);
@@ -18191,7 +18741,7 @@ function resolveDimension(requirement, index) {
   );
   return nearTokenOnly(
     requirement,
-    near.slice(0, NEAR_LIMIT).map((n) => n.name)
+    near.slice(0, NEAR_LIMIT2).map((n) => n.name)
   );
 }
 function tokenExact(requirement, tokenName) {
@@ -18391,6 +18941,18 @@ function deriveRequirements(root2, maps = {}) {
         name: node.name,
         ...componentName !== void 0 ? { componentName } : {}
       });
+      const fillOverride = node.overrides?.some(
+        (o) => o.id === node.id && o.overriddenFields?.includes("fills")
+      );
+      const rawValue = fillOverride ? firstSolidFillColor(node) : void 0;
+      if (rawValue !== void 0 && !hasBoundFill(node)) {
+        requirements.push({
+          kind: "token",
+          property: "fill",
+          rawValue,
+          valueKind: "color"
+        });
+      }
       continue;
     }
     if (!hasBoundFill(node)) {
@@ -18398,7 +18960,8 @@ function deriveRequirements(root2, maps = {}) {
       if (rawValue !== void 0) {
         requirements.push({
           kind: "token",
-          property: "fill",
+          // A text fill is a text color: it resolves to text tokens only.
+          property: node.type === "TEXT" ? "color" : "fill",
           rawValue,
           valueKind: "color"
         });
@@ -21138,322 +21701,6 @@ import {
 } from "fs";
 import { isAbsolute as isAbsolute2, join as join23, relative as relative2, resolve as resolve10, sep as sep2 } from "path";
 
-// src/engines/lint/extract.ts
-var HEX_RE = /#[0-9a-fA-F]{3,8}\b/;
-var COLOR_FN_RE = /\b(?:rgba?|hsla?)\([^)]*\)/i;
-var DIM_RE = /-?\d+(?:\.\d+)?(?:px|rem)?/;
-var OTHER_UNIT_RE = /^[a-zA-Z%]+/;
-var SPACING_PREFIXES = ["padding", "margin", "inset"];
-var SPACING_EXACT = /* @__PURE__ */ new Set([
-  "gap",
-  "row-gap",
-  "column-gap",
-  "rowGap",
-  "columnGap",
-  "top",
-  "right",
-  "bottom",
-  "left"
-]);
-function isRadiusProperty(property) {
-  return /^border(?:-?(?:top|bottom|start|end)-?(?:left|right|start|end))?-?radius$/i.test(
-    property
-  );
-}
-function isDimensionProperty(property) {
-  return isSpacingProperty(property) || isRadiusProperty(property);
-}
-function isSpacingProperty(property) {
-  const lower = property.toLowerCase();
-  if (SPACING_EXACT.has(property) || SPACING_EXACT.has(lower)) return true;
-  for (const prefix of SPACING_PREFIXES) {
-    if (lower === prefix || lower.startsWith(prefix)) return true;
-  }
-  return false;
-}
-function blankComments(text2) {
-  let out = "";
-  let i = 0;
-  while (i < text2.length) {
-    const ch = text2[i];
-    if (ch === "/" && text2[i + 1] === "*") {
-      const end = text2.indexOf("*/", i + 2);
-      const stop = end === -1 ? text2.length : end + 2;
-      for (let j = i; j < stop; j++) out += text2[j] === "\n" ? "\n" : " ";
-      i = stop;
-      continue;
-    }
-    if (ch === "/" && text2[i + 1] === "/" && text2[i - 1] !== ":") {
-      let j = i;
-      while (j < text2.length && text2[j] !== "\n") {
-        out += " ";
-        j += 1;
-      }
-      i = j;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      out += ch;
-      i += 1;
-      while (i < text2.length && text2[i] !== ch) {
-        out += text2[i] === "\n" ? "\n" : " ";
-        i += 1;
-      }
-      if (i < text2.length) {
-        out += text2[i];
-        i += 1;
-      }
-      continue;
-    }
-    out += ch;
-    i += 1;
-  }
-  return out;
-}
-function* scanValue(value2, property) {
-  const spacing = isDimensionProperty(property);
-  let i = 0;
-  while (i < value2.length) {
-    const rest = value2.slice(i);
-    if (/^var\s*\(/i.test(rest)) {
-      const close = value2.indexOf(")", i);
-      i = close === -1 ? value2.length : close + 1;
-      continue;
-    }
-    const fn5 = COLOR_FN_RE.exec(rest);
-    if (fn5 !== null && fn5.index === 0) {
-      yield { offset: i, raw: fn5[0], valueKind: "color" };
-      i += fn5[0].length;
-      continue;
-    }
-    if (value2[i] === "#") {
-      const hex2 = HEX_RE.exec(rest);
-      if (hex2 !== null && hex2.index === 0) {
-        yield { offset: i, raw: hex2[0], valueKind: "color" };
-        i += hex2[0].length;
-        continue;
-      }
-    }
-    if (spacing && (value2[i] === "-" || /\d/.test(value2[i] ?? ""))) {
-      const prev = value2[i - 1] ?? " ";
-      if (!/[a-zA-Z0-9.#-]/.test(prev)) {
-        const dim = DIM_RE.exec(rest);
-        if (dim !== null && dim.index === 0) {
-          const unit = OTHER_UNIT_RE.exec(value2.slice(i + dim[0].length));
-          if (unit !== null) {
-            i += dim[0].length + unit[0].length;
-            continue;
-          }
-          const px = Number.parseFloat(dim[0]);
-          if (Number.isFinite(px) && px !== 0) {
-            yield { offset: i, raw: dim[0], valueKind: "dimension" };
-          }
-          i += dim[0].length;
-          continue;
-        }
-      }
-    }
-    i += 1;
-  }
-}
-function extractCss(text2, lineBase, colBase) {
-  const hits = [];
-  const cleaned = blankComments(text2);
-  const lines = cleaned.split("\n");
-  for (let li = 0; li < lines.length; li++) {
-    const line2 = lines[li] ?? "";
-    const colShift = li === 0 ? colBase : 0;
-    const decl = /([\w-]+)\s*:\s*([^;}]*)/g;
-    let m = decl.exec(line2);
-    while (m !== null) {
-      const property = m[1] ?? "";
-      const value2 = m[2] ?? "";
-      const valueStart = m.index + m[0].length - value2.length;
-      for (const hit of scanValue(value2, property)) {
-        hits.push({
-          line: lineBase + li,
-          col: colShift + valueStart + hit.offset + 1,
-          raw: hit.raw,
-          property,
-          valueKind: hit.valueKind
-        });
-      }
-      m = decl.exec(line2);
-    }
-  }
-  return hits;
-}
-function indexToLineCol(source2, index) {
-  let line2 = 1;
-  let lineStart = 0;
-  for (let i = 0; i < index; i++) {
-    if (source2[i] === "\n") {
-      line2 += 1;
-      lineStart = i + 1;
-    }
-  }
-  return { line: line2, col: index - lineStart + 1 };
-}
-var QUOTED_COLOR_RE = /(["'])(?:#[0-9a-fA-F]{3,8}|(?:rgba?|hsla?)\([^)"']*\))\1/g;
-var STYLE_OBJ_PROP_RE = /([A-Za-z][A-Za-z0-9]*)\s*:\s*("[^"]*"|'[^']*'|[^,}]*)/g;
-function styleRegions(source2) {
-  const regions = [];
-  const styleOpen = /style\s*=\s*\{\{/g;
-  for (const open of source2.matchAll(styleOpen)) {
-    const start = (open.index ?? 0) + open[0].length;
-    const close = source2.indexOf("}}", start);
-    regions.push({
-      kind: "style-object",
-      start,
-      end: close === -1 ? source2.length : close
-    });
-  }
-  const styledOpen = /\bstyled(?:\.[A-Za-z][\w]*|\([^)]*\))\s*`/g;
-  for (const open of source2.matchAll(styledOpen)) {
-    const start = (open.index ?? 0) + open[0].length;
-    const close = source2.indexOf("`", start);
-    regions.push({
-      kind: "styled-template",
-      start,
-      end: close === -1 ? source2.length : close
-    });
-  }
-  return regions;
-}
-function extractTsx(source2, file) {
-  const out = [];
-  for (const region of styleRegions(source2)) {
-    if (region.kind !== "style-object") continue;
-    const bodyStart = region.start;
-    const body = source2.slice(region.start, region.end);
-    STYLE_OBJ_PROP_RE.lastIndex = 0;
-    let pm = STYLE_OBJ_PROP_RE.exec(body);
-    while (pm !== null) {
-      const property = pm[1] ?? "";
-      const valueCapture = pm[2] ?? "";
-      const rawValue = valueCapture.trim();
-      const leading = valueCapture.length - valueCapture.trimStart().length;
-      const valueIndexInBody = pm.index + pm[0].length - valueCapture.length + leading;
-      const absValueIndex = bodyStart + valueIndexInBody;
-      const quoted = /^(["'])(.*)\1$/.exec(rawValue);
-      if (quoted !== null) {
-        const inner = quoted[2] ?? "";
-        if (isColorLiteral(inner)) {
-          const pos2 = indexToLineCol(source2, absValueIndex);
-          out.push({
-            file,
-            line: pos2.line,
-            col: pos2.col,
-            raw: rawValue,
-            property,
-            valueKind: "color",
-            context: "style-object"
-          });
-        } else {
-          for (const hit of scanValue(inner, property)) {
-            const pos2 = indexToLineCol(source2, absValueIndex + 1 + hit.offset);
-            out.push({
-              file,
-              line: pos2.line,
-              col: pos2.col,
-              raw: hit.raw,
-              property,
-              valueKind: hit.valueKind,
-              context: "style-string"
-            });
-          }
-        }
-      } else if (/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
-        if (isDimensionProperty(property)) {
-          const num4 = Number.parseFloat(rawValue);
-          if (Number.isFinite(num4) && num4 !== 0) {
-            const pos2 = indexToLineCol(source2, absValueIndex);
-            out.push({
-              file,
-              line: pos2.line,
-              col: pos2.col,
-              raw: rawValue,
-              property,
-              valueKind: "dimension",
-              context: "style-object"
-            });
-          }
-        }
-      }
-      if (quoted === null && !/^-?\d+(?:\.\d+)?$/.test(rawValue)) {
-        for (const lit of rawValue.matchAll(QUOTED_COLOR_RE)) {
-          const pos2 = indexToLineCol(source2, absValueIndex + (lit.index ?? 0));
-          out.push({
-            file,
-            line: pos2.line,
-            col: pos2.col,
-            raw: lit[0],
-            property,
-            valueKind: "color",
-            context: "style-object"
-          });
-        }
-      }
-      pm = STYLE_OBJ_PROP_RE.exec(body);
-    }
-  }
-  for (const region of styleRegions(source2)) {
-    if (region.kind !== "styled-template") continue;
-    const bodyStart = region.start;
-    const body = source2.slice(region.start, region.end);
-    const pos2 = indexToLineCol(source2, bodyStart);
-    const cssHits = extractCss(body, pos2.line, pos2.col - 1);
-    for (const hit of cssHits) {
-      out.push({
-        file,
-        line: hit.line,
-        col: hit.col,
-        raw: hit.raw,
-        property: hit.property,
-        valueKind: hit.valueKind,
-        context: "styled-template"
-      });
-    }
-  }
-  return out;
-}
-var HEX_FULL_RE = /^#[0-9a-fA-F]{3,8}$/;
-var COLOR_FN_FULL_RE = /^(?:rgba?|hsla?)\([^)]*\)$/i;
-function isColorLiteral(value2) {
-  const v = value2.trim();
-  return HEX_FULL_RE.test(v) || COLOR_FN_FULL_RE.test(v);
-}
-function extensionOf(path) {
-  const dot = path.lastIndexOf(".");
-  return dot === -1 ? "" : path.slice(dot).toLowerCase();
-}
-function byLineThenCol(a, b) {
-  if (a.line !== b.line) return a.line - b.line;
-  return a.col - b.col;
-}
-function extractLiterals(file) {
-  const ext = extensionOf(file.path);
-  let result = [];
-  try {
-    if (ext === ".css" || ext === ".scss") {
-      result = extractCss(file.content, 1, 0).map((hit) => ({
-        file: file.path,
-        line: hit.line,
-        col: hit.col,
-        raw: hit.raw,
-        property: hit.property,
-        valueKind: hit.valueKind,
-        context: "css-declaration"
-      }));
-    } else if (ext === ".tsx" || ext === ".jsx") {
-      result = extractTsx(file.content, file.path);
-    }
-  } catch {
-    return [];
-  }
-  return result.sort(byLineThenCol);
-}
-
 // src/engines/lint/adoption.ts
 function countTokenRefs(css) {
   const masked = blankComments(css);
@@ -21568,247 +21815,6 @@ function applyEdits(content, edits) {
     lines[index] = next;
   }
   return lines.join("\n");
-}
-
-// src/engines/lint/match.ts
-var COLOR_NEAR_DELTA_E2 = 2.5;
-var DIMENSION_NEAR_PX2 = 1;
-var NEAR_LIMIT2 = 3;
-var NEAR_SEARCH_LIMIT = 50;
-function alphaOf(hex2) {
-  const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(hex2.trim());
-  return m?.[1] === void 0 ? 1 : Number.parseInt(m[1], 16) / 255;
-}
-function pickPreferred2(tokens, property) {
-  if (tokens.length === 0) return void 0;
-  const role = propertyRole(property);
-  const names = new Set(tokens.map((t) => t.name));
-  const score = (t) => [
-    roleScore(t.name, role),
-    roleDepth(t.name, role),
-    t.aliasOf !== void 0 && names.has(t.aliasOf) ? 0 : 1,
-    isStatusToken(t.name) ? 1 : 0,
-    t.name.split(/[.\-/]/).length
-  ];
-  return tokens.map((token2, order) => ({ token: token2, key: [...score(token2), order] })).sort((a, b) => {
-    for (let i = 0; i < a.key.length; i++) {
-      const d = a.key[i] - b.key[i];
-      if (d !== 0) return d;
-    }
-    return 0;
-  })[0]?.token;
-}
-function roleDepth(name, role) {
-  if (role === void 0) return 0;
-  const re = role === "fg" ? FG_SEGMENT : role === "bg" ? BG_TOKEN : BORDER_TOKEN;
-  const segments3 = name.split(/[.\-/]/);
-  const at = segments3.findIndex((s) => re.test(s));
-  return at === -1 ? segments3.length : at;
-}
-function roleScore(name, role) {
-  if (role === void 0) return 1;
-  const fg = isForegroundToken(name);
-  if (role === "fg") return fg ? 0 : 2;
-  if (fg) return 2;
-  const fits = role === "bg" ? BG_TOKEN.test(name) : BORDER_TOKEN.test(name);
-  return fits ? 0 : 1;
-}
-function isStatusToken(name) {
-  return /(error|danger|warning|warn|success|destructive|critical)/i.test(name);
-}
-function dimensionFamily(property) {
-  if (property === void 0) return void 0;
-  const p4 = property.toLowerCase();
-  if (/radius/.test(p4)) return /(radius|corner|rounded|shape)/i;
-  if (/^font-?size$|^fontsize$/.test(p4))
-    return /(font-?size|typescale.*size|\.size$|text)/i;
-  if (/line-?height/.test(p4)) return /(line-?height|leading)/i;
-  if (/letter-?spacing/.test(p4)) return /(letter-?spacing|tracking)/i;
-  if (/^(?:padding|margin|gap|row-?gap|column-?gap|inset|top|right|bottom|left)/.test(
-    p4.replace(/([a-z])([A-Z])/g, "$1-$2")
-  )) {
-    return /(spacing|space|gap|gutter|padding|margin)/i;
-  }
-  return void 0;
-}
-function propertyRole(property) {
-  if (property === void 0) return void 0;
-  const p4 = property.replace(/-/g, "").toLowerCase();
-  if (/^(?:color|caretcolor|textdecorationcolor|webkittextfillcolor)$/.test(p4)) {
-    return "fg";
-  }
-  if (/^(?:border|outline|columnrule)/.test(p4)) return "border";
-  if (/^(?:background|boxshadow)/.test(p4)) return "bg";
-  return void 0;
-}
-function isForegroundToken(name) {
-  return /(^|[.\-/])(?:foreground|fg|fgcolor|text|textcolor|on-[a-z0-9]+|on)([.\-/]|$)/i.test(
-    name
-  ) || /(^|[.\-/])on[A-Z][A-Za-z]*([.\-/]|$)/.test(name);
-}
-var FG_SEGMENT = /^(?:foreground|fg|fgcolor|text|textcolor|on|on-[a-z0-9]+|on[A-Z][A-Za-z]*)$/i;
-var BG_TOKEN = /(^|[.\-/])(?:bg|bgcolor|background|backgroundcolor|surface|canvas)([.\-/]|$)/i;
-var BORDER_TOKEN = /(^|[.\-/])(?:border|bordercolor|outline|stroke)([.\-/]|$)/i;
-function aliasRank(token2) {
-  return token2.aliasOf !== void 0 ? 0 : 1;
-}
-function stripQuotes(raw) {
-  const trimmed = raw.trim();
-  const quote = trimmed[0];
-  if (trimmed.length >= 2 && (quote === '"' || quote === "'") && trimmed[trimmed.length - 1] === quote) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
-function matchColor(literal2, index, options) {
-  const canonical3 = normalizeColor(stripQuotes(literal2.raw));
-  if (canonical3 === void 0) return { kind: "off-system" };
-  const exact = index.byValue.get(canonical3);
-  if (exact !== void 0 && exact.length > 0) {
-    const role2 = propertyRole(literal2.property);
-    const fits = (t) => roleScore(t.name, role2) === 0 && roleDepth(t.name, role2) === 0;
-    if (role2 !== void 0 && !exact.some(fits)) {
-      const inExact = new Set(exact.map((t) => t.name));
-      const nearFit = index.nearest(canonical3, { maxDeltaE: COLOR_NEAR_DELTA_E2, limit: 50 }).filter((m) => !inExact.has(m.token.name) && fits(m.token)).map((m) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT2);
-      if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
-    }
-    const token2 = pickPreferred2(exact, literal2.property);
-    if (token2 !== void 0) return { kind: "exact", token: token2 };
-  }
-  const composite2 = options?.compositeColors?.get(canonical3);
-  if (composite2 !== void 0 && composite2.length > 0) {
-    const token2 = pickPreferred2(composite2);
-    if (token2 !== void 0) return { kind: "exact", token: token2 };
-  }
-  const near = index.nearest(canonical3, {
-    maxDeltaE: COLOR_NEAR_DELTA_E2,
-    limit: NEAR_SEARCH_LIMIT
-  });
-  if (near.length === 0) return { kind: "off-system" };
-  const role = propertyRole(literal2.property);
-  const alpha = alphaOf(canonical3);
-  const key2 = (m) => [
-    roleScore(m.token.name, role),
-    roleDepth(m.token.name, role),
-    Math.abs(alphaOf(String(m.token.value)) - alpha) > 0.02 ? 1 : 0,
-    m.deltaE,
-    aliasRank(m.token)
-  ];
-  const candidates = near.map((m) => ({ m, k: key2(m) })).sort((a, b) => {
-    for (let i = 0; i < a.k.length; i++) {
-      const d = a.k[i] - b.k[i];
-      if (d !== 0) return d;
-    }
-    return 0;
-  }).map(({ m }) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT2);
-  return { kind: "near", candidates };
-}
-var familyCache = /* @__PURE__ */ new WeakMap();
-function setHasFamily(index, family) {
-  let byFamily = familyCache.get(index);
-  if (byFamily === void 0) {
-    byFamily = /* @__PURE__ */ new Map();
-    familyCache.set(index, byFamily);
-  }
-  const cached = byFamily.get(family.source);
-  if (cached !== void 0) return cached;
-  let found = false;
-  for (const token2 of index.byName.values()) {
-    if (token2.type === "dimension" && family.test(token2.name)) {
-      found = true;
-      break;
-    }
-  }
-  byFamily.set(family.source, found);
-  return found;
-}
-function pickDimension(tokens, property) {
-  const word = (property ?? "").replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().match(/^(padding|margin|gap|row-gap|column-gap)/)?.[1]?.replace(/^(row|column)-/, "");
-  const has = (name, re) => re.test(name) ? 0 : 1;
-  const named2 = word === void 0 ? void 0 : new RegExp(`(^|[.\\-/])${word}`, "i");
-  const key2 = (t) => [
-    has(t.name, /(^|[.\-/])(?:space|spacing)([.\-/]|$)/i),
-    named2 === void 0 ? 0 : has(t.name, named2),
-    t.name.split(/[.\-/]/).length
-  ];
-  return tokens.map((token2, order) => ({ token: token2, k: [...key2(token2), order] })).sort((a, b) => {
-    for (let i = 0; i < a.k.length; i++) {
-      const d = a.k[i] - b.k[i];
-      if (d !== 0) return d;
-    }
-    return 0;
-  })[0]?.token;
-}
-function matchDimension(literal2, index) {
-  const dim = normalizeDimension(stripQuotes(literal2.raw));
-  if (dim === void 0) return { kind: "off-system" };
-  const family = dimensionFamily(literal2.property);
-  const inFamily = family !== void 0 && setHasFamily(index, family) ? (token2) => family.test(token2.name) : () => true;
-  const bucket = index.byValue.get(`${dim.px}px`);
-  if (bucket !== void 0) {
-    const exact = pickDimension(
-      bucket.filter((t) => t.type === "dimension" && inFamily(t)),
-      literal2.property
-    );
-    if (exact !== void 0) return { kind: "exact", token: exact };
-  }
-  const candidates = [];
-  for (const token2 of index.byName.values()) {
-    if (token2.type !== "dimension" || !inFamily(token2)) continue;
-    const tokenDim = normalizeDimension(
-      typeof token2.value === "number" || typeof token2.value === "string" ? token2.value : Number.NaN
-    );
-    if (tokenDim === void 0) continue;
-    const distance = Math.abs(dim.px - tokenDim.px);
-    if (distance === 0 || distance > DIMENSION_NEAR_PX2) continue;
-    candidates.push({ token: token2, distance });
-  }
-  if (candidates.length === 0) return { kind: "off-system" };
-  candidates.sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : a.token.name < b.token.name ? -1 : a.token.name > b.token.name ? 1 : 0
-  );
-  return { kind: "near", candidates: candidates.slice(0, NEAR_LIMIT2) };
-}
-var RADIUS_TOKEN = /(radius|corner|rounded)/i;
-var radiusScaleCache = /* @__PURE__ */ new WeakMap();
-function hasRadiusScale(index) {
-  const cached = radiusScaleCache.get(index);
-  if (cached !== void 0) return cached;
-  let found = false;
-  for (const token2 of index.byName.values()) {
-    if (token2.type === "dimension" && RADIUS_TOKEN.test(token2.name)) {
-      found = true;
-      break;
-    }
-  }
-  radiusScaleCache.set(index, found);
-  return found;
-}
-function isLintable(literal2, index) {
-  if (literal2.valueKind !== "dimension") return true;
-  if (!isRadiusProperty(literal2.property)) return true;
-  return hasRadiusScale(index);
-}
-function matchLiteral(literal2, index, options) {
-  return literal2.valueKind === "color" ? matchColor(literal2, index, options) : matchDimension(literal2, index);
-}
-function buildCompositeColorLookup(tokens) {
-  const lookup = /* @__PURE__ */ new Map();
-  for (const token2 of tokens) {
-    const { value: value2 } = token2;
-    if (typeof value2 !== "object" || value2 === null) continue;
-    const inner = value2.color;
-    if (typeof inner !== "string") continue;
-    const canonical3 = normalizeColor(inner);
-    if (canonical3 === void 0) continue;
-    const bucket = lookup.get(canonical3);
-    if (bucket === void 0) {
-      lookup.set(canonical3, [token2]);
-    } else {
-      bucket.push(token2);
-    }
-  }
-  return lookup;
 }
 
 // src/cli-commands/lint.ts
