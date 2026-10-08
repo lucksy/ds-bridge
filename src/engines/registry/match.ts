@@ -108,8 +108,29 @@ function normValue(value: string): string {
 	return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+/**
+ * Values with a namespace every one of them shares dropped: `danger-primary`,
+ * `danger-subtle` → `primary`, `subtle` (Figma names them inside the Button
+ * Danger set). Unchanged for fewer than two values or no shared word.
+ */
+function unprefixed(values: readonly string[]): string[] {
+	if (values.length < 2) return [...values];
+	const first = /^([a-z0-9]+)[-_ ]/i.exec(values[0] as string)?.[1];
+	if (first === undefined) return [...values];
+	const prefix = new RegExp(`^${first}[-_ ]`, "i");
+	if (!values.every((v) => prefix.test(v))) return [...values];
+	return values.map((v) => v.replace(prefix, ""));
+}
+
 /** Value-set Jaccard over normalized values: |A∩B| / |A∪B|. Empty/empty -> 0. */
 function valueJaccard(a: readonly string[], b: readonly string[]): number {
+	const plain = jaccardOf(a, b);
+	return plain === 1
+		? 1
+		: Math.max(plain, jaccardOf(unprefixed(a), unprefixed(b)));
+}
+
+function jaccardOf(a: readonly string[], b: readonly string[]): number {
 	const setA = new Set(a.map(normValue));
 	const setB = new Set(b.map(normValue));
 	if (setA.size === 0 && setB.size === 0) return 0;
@@ -153,6 +174,78 @@ const STATE_AXIS = new Set([
 	"interactionstate",
 ]);
 
+/** Two-state values Figma uses where code has a boolean prop. */
+const BOOLEAN_VALUE =
+	/^(?:true|false|on|off|yes|no|checked|unchecked|indeterminate|enabled|disabled|selected|unselected|open|closed|active|inactive|expanded|collapsed)$/i;
+/** Axes that model the viewport — code answers them with CSS, not a prop. */
+const RESPONSIVE_AXIS = new Set([
+	"platform",
+	"device",
+	"breakpoint",
+	"viewport",
+	"screen",
+	"screensize",
+]);
+const RESPONSIVE_VALUE = /^(?:desktop|mobile|tablet|web|ios|android|phone)$/i;
+/**
+ * Values that model content presence (an empty field vs. a filled one). An
+ * axis is content state when it has a Placeholder value, or only these —
+ * `Style: Filled|Tonal` is a real style axis.
+ */
+const CONTENT_VALUE = /^(?:placeholder|filled|empty|default)$/i;
+/**
+ * Code string unions that are HTML attributes or the rendered element, not
+ * design variants (`type: "button" | "submit"`, `elementType: "section"`).
+ */
+const HTML_ATTRIBUTE_AXIS = new Set([
+	"type",
+	"as",
+	"elementtype",
+	"tag",
+	"component",
+	"dir",
+	"target",
+	"rel",
+	"method",
+	"enctype",
+	"autocomplete",
+	"autocapitalize",
+	"inputmode",
+	"enterkeyhint",
+	"loading",
+	"decoding",
+	"wrap",
+]);
+
+/**
+ * A Figma-only axis that is a modelling convention, not a prop code owes:
+ * a boolean pair (`Checked|Unchecked`), a value naming a code boolean
+ * (`Shape: Circle|Square` beside `square: boolean`), the viewport
+ * (`Platform: Desktop|Mobile`) or content presence (`Default|Placeholder`).
+ */
+function isConventionAxis(
+	key: string,
+	values: readonly string[],
+	codeBooleans: ReadonlySet<string>,
+): boolean {
+	if (STATE_AXIS.has(key)) return true;
+	if (values.length > 0 && values.every((v) => BOOLEAN_VALUE.test(v.trim())))
+		return true;
+	if (values.some((v) => codeBooleans.has(normalizeName(v)))) return true;
+	if (codeBooleans.has(key)) return true;
+	if (
+		RESPONSIVE_AXIS.has(key) ||
+		(values.length > 0 && values.every((v) => RESPONSIVE_VALUE.test(v.trim())))
+	)
+		return true;
+	return (
+		values.some((v) => /^placeholder$/i.test(v.trim())) ||
+		(values.length > 0 &&
+			values.every((v) => CONTENT_VALUE.test(v.trim())) &&
+			!values.every((v) => /^default$/i.test(v.trim())))
+	);
+}
+
 /** Below this value agreement two differently named axes are not the same axis. */
 const AXIS_PAIR_THRESHOLD = 0.5;
 
@@ -172,15 +265,25 @@ interface AxisPair {
 function pairAxes(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
+	codeBooleans: ReadonlySet<string> = new Set(),
 ): { pairs: AxisPair[]; codeEmpty: boolean; figmaEmpty: boolean } {
 	const codeIndex = normalizedKeyIndex(codeVariants);
 	const figmaIndex = normalizedKeyIndex(figmaVariants);
-	// A Figma axis of only true/false (`checked=true`) is how Figma models a
-	// boolean; in code it is a boolean prop, which is never a string variant —
-	// so it carries no shape signal unless code has a string axis of that name.
+	for (const [key, axis] of [...codeIndex]) {
+		if (figmaIndex.has(key)) continue;
+		// HTML attributes, and spacing-scale steps (`padding: 600|800`), are
+		// layout / platform API, not design variants.
+		const scaleSteps = axis.values.every((v) => /^(?:negative-)?\d+$/.test(v));
+		if (HTML_ATTRIBUTE_AXIS.has(key) || scaleSteps) codeIndex.delete(key);
+	}
+	// A Figma axis that is a modelling convention (a boolean pair, a state,
+	// the viewport, content presence) carries no shape signal unless code has
+	// a string axis of that name.
 	for (const [key, axis] of figmaIndex) {
-		const boolean = axis.values.every((v) => /^(?:true|false)$/i.test(v));
-		if ((boolean || STATE_AXIS.has(key)) && !codeIndex.has(key)) {
+		if (
+			!codeIndex.has(key) &&
+			isConventionAxis(key, axis.values, codeBooleans)
+		) {
 			figmaIndex.delete(key);
 		}
 	}
@@ -241,10 +344,12 @@ function pairAxes(
 function shapeScore(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
+	codeBooleans: ReadonlySet<string> = new Set(),
 ): number {
 	const { pairs, codeEmpty, figmaEmpty } = pairAxes(
 		codeVariants,
 		figmaVariants,
+		codeBooleans,
 	);
 	if (codeEmpty && figmaEmpty) return 0.5;
 	if (codeEmpty || figmaEmpty) return 0.25;
@@ -268,8 +373,9 @@ function missingFrom(a: readonly string[], b: readonly string[]): string[] {
 export function variantGaps(
 	codeVariants: Record<string, string[]>,
 	figmaVariants: Record<string, string[]>,
+	codeBooleans: ReadonlySet<string> = new Set(),
 ): string[] {
-	const { pairs } = pairAxes(codeVariants, figmaVariants);
+	const { pairs } = pairAxes(codeVariants, figmaVariants, codeBooleans);
 	const codeKeyed: { key: string; line: string }[] = [];
 	const figmaOnly: { key: string; line: string }[] = [];
 	for (const { code, figma } of pairs) {
@@ -284,8 +390,14 @@ export function variantGaps(
 				line: `${figma.key}: Figma only (${figma.values.join("|")})`,
 			});
 		} else if (code !== undefined && figma !== undefined) {
-			const extraFigma = missingFrom(figma.values, code.values);
-			const extraCode = missingFrom(code.values, figma.values);
+			const plain =
+				missingFrom(figma.values, code.values).length +
+					missingFrom(code.values, figma.values).length ===
+				0;
+			const codeValues = plain ? code.values : unprefixed(code.values);
+			const figmaValues = plain ? figma.values : unprefixed(figma.values);
+			const extraFigma = missingFrom(figmaValues, codeValues);
+			const extraCode = missingFrom(codeValues, figmaValues);
 			if (extraFigma.length === 0 && extraCode.length === 0) continue;
 			const line =
 				extraCode.length === 0
@@ -301,6 +413,22 @@ export function variantGaps(
 	return [...codeKeyed.sort(byKey), ...figmaOnly.sort(byKey)].map(
 		(g) => g.line,
 	);
+}
+
+/**
+ * A code component's boolean props, normalized, with any `is` / `has` /
+ * `show` prefix dropped too (`isSelected` → `isselected` and `selected`).
+ */
+function booleanProps(component: CodeComponent): Set<string> {
+	const out = new Set<string>();
+	for (const prop of component.props ?? []) {
+		if (prop.type !== "boolean") continue;
+		const key = normalizeName(prop.name);
+		out.add(key);
+		const bare = key.replace(/^(?:is|has|show|default)/, "");
+		if (bare !== "" && bare !== key) out.add(bare);
+	}
+	return out;
 }
 
 // ── Combined scoring ──
@@ -332,7 +460,11 @@ function scorePair(
 	const name = isIconName(codeComponent.name, figmaModel)
 		? 1
 		: nameScore(codeComponent.name, figmaModel.name);
-	const shape = shapeScore(codeComponent.variants, figmaModel.variantProps);
+	const shape = shapeScore(
+		codeComponent.variants,
+		figmaModel.variantProps,
+		booleanProps(codeComponent),
+	);
 	return {
 		nameScore: name,
 		shapeScore: shape,
@@ -433,8 +565,16 @@ export function matchComponents(
 			figma: figmaModel,
 			score: 1,
 			nameScore: 1,
-			shapeScore: shapeScore(codeComponent.variants, figmaModel.variantProps),
-			variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps),
+			shapeScore: shapeScore(
+				codeComponent.variants,
+				figmaModel.variantProps,
+				booleanProps(codeComponent),
+			),
+			variantGaps: variantGaps(
+				codeComponent.variants,
+				figmaModel.variantProps,
+				booleanProps(codeComponent),
+			),
 		});
 	}
 
@@ -514,7 +654,11 @@ export function matchComponents(
 			score: edge.parts.score,
 			nameScore: edge.parts.nameScore,
 			shapeScore: edge.parts.shapeScore,
-			variantGaps: variantGaps(codeComponent.variants, figmaModel.variantProps),
+			variantGaps: variantGaps(
+				codeComponent.variants,
+				figmaModel.variantProps,
+				booleanProps(codeComponent),
+			),
 		});
 	}
 

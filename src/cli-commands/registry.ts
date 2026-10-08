@@ -56,16 +56,25 @@ import {
  * resolving the import we backfill those globals from `import.meta.url`, which
  * the bundle's ESM scope otherwise leaves undefined.
  */
-async function scanCode(
-	targetDir: string,
-	configuredPaths: string[] | undefined,
-): Promise<{ code: CodeComponent[]; scope: ComponentPaths | undefined }> {
+/**
+ * ts-morph's bundled TypeScript reads the CJS globals `__filename` /
+ * `__dirname` at module init; the single-file ESM bundle has neither. Set them
+ * from `import.meta.url` before any lazy import that reaches ts-morph.
+ */
+function backfillCjsGlobals(): void {
 	const globals = globalThis as Record<string, unknown>;
 	if (typeof globals.__filename !== "string") {
 		const filename = fileURLToPath(import.meta.url);
 		globals.__filename = filename;
 		globals.__dirname = dirname(filename);
 	}
+}
+
+async function scanCode(
+	targetDir: string,
+	configuredPaths: string[] | undefined,
+): Promise<{ code: CodeComponent[]; scope: ComponentPaths | undefined }> {
+	backfillCjsGlobals();
 	const [{ scanCodeComponents }, { resolveComponentPaths }] = await Promise.all(
 		[
 			import("../engines/registry/scan-code.js"),
@@ -429,7 +438,7 @@ function loadRegistry(targetDir: string): RegistryFile | undefined {
 }
 
 /** Execute `registry resolve <nodeNameOrId> [path]`. */
-function runResolve(nodeNameOrId: string, path: string): void {
+async function runResolve(nodeNameOrId: string, path: string): Promise<void> {
 	const targetDir = resolvePath(path);
 	if (!existsSync(targetDir) || !statSync(targetDir).isDirectory()) {
 		fail(`Path "${targetDir}" is not a directory.`);
@@ -441,20 +450,33 @@ function runResolve(nodeNameOrId: string, path: string): void {
 
 	const outcome = resolveEntry(registry, nodeNameOrId);
 	switch (outcome.kind) {
-		case "match":
+		case "match": {
+			// How the project imports it (`primitives`, `@/components/ui/button`)
+			// when a tsconfig alias covers the file — what an implementer writes.
+			backfillCjsGlobals();
+			const { aliasSpecifier } = await import("../io/tsconfig-paths.js");
+			const importSpecifier = aliasSpecifier(
+				targetDir,
+				outcome.entry.importPath,
+			);
 			// A deprecated component resolved to the replacement its description
 			// names: the entry plus `replaces` (deprecated name + variant hint).
 			process.stdout.write(
 				`${JSON.stringify(
-					outcome.replaces === undefined
-						? outcome.entry
-						: { ...outcome.entry, replaces: outcome.replaces },
+					{
+						...outcome.entry,
+						...(importSpecifier !== undefined ? { importSpecifier } : {}),
+						...(outcome.replaces !== undefined
+							? { replaces: outcome.replaces }
+							: {}),
+					},
 					null,
 					2,
 				)}\n`,
 			);
 			process.exitCode = 0;
 			return;
+		}
 		case "candidates":
 			process.stdout.write(
 				`${JSON.stringify(
@@ -504,7 +526,7 @@ export function registerRegistryCommand(program: Command): void {
 			"project directory holding .ds-bridge/registry.json",
 			".",
 		)
-		.action((nodeNameOrId: string, path: string) => {
-			runResolve(nodeNameOrId, path);
+		.action(async (nodeNameOrId: string, path: string) => {
+			await runResolve(nodeNameOrId, path);
 		});
 }

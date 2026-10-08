@@ -6,8 +6,10 @@
 // graph IS the domain logic here, so it lives with the registry engine. It is
 // still side-effect-free beyond reading the supplied root and NEVER throws:
 // weird/unreadable files are skipped, never fatal.
-import { isAbsolute, relative, resolve, sep } from "node:path";
-import { Node, Project, type Type } from "ts-morph";
+import { existsSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { Node, Project, type Type, ts } from "ts-morph";
+import { readPathAliases } from "../../io/tsconfig-paths.js";
 
 /** A single component prop, as resolved from its props type. */
 export interface CodeProp {
@@ -280,6 +282,13 @@ export function scanCodeComponents(
 							allowJs: true,
 							strict: true,
 							noEmit: true,
+							// Resolve imports the way the project's bundler does, through its
+							// tsconfig `paths` aliases: an unresolved `import { X } from
+							// "utils"` turns every type built on X into `any`, and the
+							// component loses all its props (Figma's SDS Button).
+							module: ts.ModuleKind.ESNext,
+							moduleResolution: ts.ModuleResolutionKind.Bundler,
+							...projectAliases(root),
 						},
 					});
 	} catch {
@@ -327,6 +336,24 @@ export function scanCodeComponents(
 
 	components.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 	return components;
+}
+
+/**
+ * The `paths` / `baseUrl` of the nearest tsconfig at or above `root` (the scan
+ * often starts in a design-system folder such as `src/ui`), stopping at the
+ * package root. `{}` when there is none.
+ */
+function projectAliases(root: string): {
+	paths?: ts.MapLike<string[]>;
+	baseUrl?: string;
+} {
+	for (let dir = root; ; ) {
+		if (existsSync(join(dir, "tsconfig.json"))) return readPathAliases(dir);
+		if (existsSync(join(dir, "package.json"))) return {};
+		const parent = dirname(dir);
+		if (parent === dir) return {};
+		dir = parent;
+	}
 }
 
 /** Strip non-alphanumerics and lowercase — how names are compared across tools. */

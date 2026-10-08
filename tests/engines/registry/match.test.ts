@@ -596,3 +596,83 @@ describe("matchComponents — icon libraries and Code Connect", () => {
 		expect(result.matches.every((m) => m.score === 1)).toBe(true);
 	});
 });
+
+describe("variantGaps — conventions that are not API gaps (Simple Design System)", () => {
+	const withBooleans = (
+		name: string,
+		variants: Record<string, string[]>,
+		booleans: string[],
+	): CodeComponent => ({
+		...code(name, variants),
+		props: booleans.map((b) => ({ name: b, type: "boolean", required: false })),
+	});
+
+	it("drops boolean-pair, responsive, content-state and HTML-attribute axes", () => {
+		const result = matchComponents(
+			[
+				withBooleans("Avatar", { size: ["small", "large"] }, ["square"]),
+				withBooleans("SwitchField", {}, ["isSelected"]),
+				code("Button", {
+					type: ["button", "submit", "reset"],
+					size: ["small", "medium"],
+				}),
+				code("InputField", { elementType: ["div", "section"] }),
+				code("Header"),
+			],
+			[
+				figma("Avatar", {
+					Size: ["Small", "Large"],
+					Shape: ["Circle", "Square"],
+				}),
+				figma("SwitchField", { "Value Type": ["Checked", "Unchecked"] }),
+				figma("Button", { Size: ["Medium", "Small"] }),
+				figma("InputField", { "Value Type": ["Default", "Placeholder"] }),
+				figma("Header", { Platform: ["Desktop", "Mobile"] }),
+			],
+		);
+		expect(
+			Object.fromEntries(
+				result.matches.map((m) => [m.code.name, m.variantGaps]),
+			),
+		).toEqual({
+			Avatar: [],
+			SwitchField: [],
+			Button: [],
+			InputField: [],
+			Header: [],
+		});
+	});
+
+	it("still reports a real Figma-only axis", () => {
+		const result = matchComponents(
+			[code("Tooltip", { size: ["sm"] })],
+			[figma("Tooltip", { Size: ["sm"], Placement: ["Top", "Bottom"] })],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([
+			"Placement: Figma only (Top|Bottom)",
+		]);
+	});
+});
+
+describe("variantGaps — namespaced values and spacing-scale props", () => {
+	it("reads `danger-primary` as Figma's `Primary` when every value shares the prefix", () => {
+		const result = matchComponents(
+			[code("ButtonDanger", { variant: ["danger-primary", "danger-subtle"] })],
+			[figma("Button Danger", { Variant: ["Primary", "Subtle"] })],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([]);
+	});
+
+	it("drops a code-only axis of spacing-scale steps (`padding: 600|800`)", () => {
+		const result = matchComponents(
+			[
+				code("Section", {
+					padding: ["600", "800", "1200"],
+					tone: ["brand", "neutral"],
+				}),
+			],
+			[figma("Section", { Tone: ["Brand", "Neutral"] })],
+		);
+		expect(result.matches[0]?.variantGaps).toEqual([]);
+	});
+});

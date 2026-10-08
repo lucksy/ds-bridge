@@ -381,3 +381,16 @@ describe("plan + apply — idempotency seed (T2.5) on real button.css", () => {
 		expect(fixed).toContain("var(--color-brand-primary)");
 	});
 });
+
+describe("planFixes — the variable the build emits (Simple Design System)", () => {
+	it("uses the given emitted variable, and never writes an invalid `--@…` name", () => {
+		const lit = literal({ raw: "16px", context: "css-declaration" });
+		const token = dimToken("@size.space.400", "16px");
+		const [emitted] = planFixes([exactFinding(lit, token)], (t) =>
+			t.name === "@size.space.400" ? "sds-size-space-400" : undefined,
+		);
+		expect(emitted?.replacement).toBe("var(--sds-size-space-400)");
+		const [fallback] = planFixes([exactFinding(lit, token)]);
+		expect(fallback?.replacement).toBe("var(--size-space-400)");
+	});
+});

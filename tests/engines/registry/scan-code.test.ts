@@ -234,3 +234,42 @@ describe("scanCodeComponents — readable prop types", () => {
 		expect(variant?.type).toBe('"filled" | "tonal" | "outlined"');
 	});
 });
+
+describe("scanCodeComponents — tsconfig path aliases (Simple Design System)", () => {
+	it("resolves props built from a type imported through a `paths` alias", async () => {
+		const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const { join: j } = await import("node:path");
+		const dir = mkdtempSync(j(tmpdir(), "scan-alias-"));
+		writeFileSync(
+			j(dir, "tsconfig.json"),
+			JSON.stringify({
+				compilerOptions: {
+					jsx: "react-jsx",
+					baseUrl: "./src",
+					paths: { utils: ["./ui/utils"] },
+				},
+			}),
+		);
+		mkdirSync(j(dir, "src", "ui", "utils"), { recursive: true });
+		mkdirSync(j(dir, "src", "ui", "primitives"), { recursive: true });
+		writeFileSync(
+			j(dir, "src", "ui", "utils", "index.ts"),
+			"export type AnchorOrButtonProps = { href: string } | { onPress?: () => void };\n",
+		);
+		writeFileSync(
+			j(dir, "src", "ui", "primitives", "Button.tsx"),
+			[
+				'import { type AnchorOrButtonProps } from "utils";',
+				'type ButtonBaseProps = { size?: "small" | "medium"; variant?: "primary" | "neutral" | "danger" } & AnchorOrButtonProps;',
+				'export type ButtonProps = Omit<ButtonBaseProps, "variant"> & { variant?: Exclude<ButtonBaseProps["variant"], "danger"> };',
+				"export function Button({ size, variant }: ButtonProps) { return null; }",
+			].join("\n"),
+		);
+		const [button] = scanCodeComponents(j(dir, "src", "ui"));
+		expect(button?.variants).toEqual({
+			size: ["small", "medium"],
+			variant: ["primary", "neutral"],
+		});
+	});
+});

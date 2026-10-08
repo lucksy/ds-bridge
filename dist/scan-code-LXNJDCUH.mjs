@@ -2,15 +2,17 @@
 import { createRequire as __createRequire } from "node:module";
 const require = __createRequire(import.meta.url);
 import {
+  readPathAliases,
   require_ts_morph
-} from "./chunk-ZZB7XIWQ.mjs";
+} from "./chunk-YIKF2YBI.mjs";
 import {
   __toESM
 } from "./chunk-VL4BT7E7.mjs";
 
 // src/engines/registry/scan-code.ts
 var import_ts_morph = __toESM(require_ts_morph(), 1);
-import { isAbsolute, relative, resolve, sep } from "path";
+import { existsSync } from "fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "path";
 function toForwardSlashes(path) {
   return sep === "/" ? path : path.split(sep).join("/");
 }
@@ -147,7 +149,14 @@ function scanCodeComponents(rootDir, options) {
         jsx: 4,
         allowJs: true,
         strict: true,
-        noEmit: true
+        noEmit: true,
+        // Resolve imports the way the project's bundler does, through its
+        // tsconfig `paths` aliases: an unresolved `import { X } from
+        // "utils"` turns every type built on X into `any`, and the
+        // component loses all its props (Figma's SDS Button).
+        module: import_ts_morph.ts.ModuleKind.ESNext,
+        moduleResolution: import_ts_morph.ts.ModuleResolutionKind.Bundler,
+        ...projectAliases(root)
       }
     });
   } catch {
@@ -185,6 +194,15 @@ function scanCodeComponents(rootDir, options) {
   }
   components.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
   return components;
+}
+function projectAliases(root) {
+  for (let dir = root; ; ) {
+    if (existsSync(join(dir, "tsconfig.json"))) return readPathAliases(dir);
+    if (existsSync(join(dir, "package.json"))) return {};
+    const parent = dirname(dir);
+    if (parent === dir) return {};
+    dir = parent;
+  }
 }
 function normalizeComponentName(name) {
   return name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();

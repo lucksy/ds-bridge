@@ -101,8 +101,11 @@ If it reports a missing Figma file key or PAT, surface that one fix
 ### 4. Write code — resolved only
 
 Generate the implementation **exclusively** from resolved entries: import each
-registered component from its exact `importPath`; reference each exact token by
-its `name`. Do not write a component the registry did not match. Do not emit a
+registered component from its `importSpecifier` (the project's alias) when
+`registry resolve` gives one, else its exact `importPath`; reference each exact
+token through the variable the build emits — `var(--<cssVar>)` from
+`tokens parse` (run from the project root) — never a variable derived from the
+token `name`. Do not write a component the registry did not match. Do not emit a
 raw hex/px because no token matched.
 
 ### 5. Emit the gaps report — never invent UI

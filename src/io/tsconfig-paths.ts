@@ -4,7 +4,7 @@
 // no one can import. Reads `<root>/tsconfig.json` and, when it declares no
 // paths (Vite's solution-style root), its `references` in order; `extends`
 // chains are followed by TypeScript itself. Never throws.
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { ts } from "ts-morph";
 
@@ -80,6 +80,9 @@ export function aliasSpecifier(
 			const base = resolve(baseUrl, mapping);
 			if (!pattern.includes("*")) {
 				if (base.replace(SOURCE_EXTENSION, "") === target) return pattern;
+				// An alias to a barrel folder (`"primitives": ["./ui/primitives"]`)
+				// covers every file its index re-exports.
+				if (barrelExports(base, target)) return pattern;
 				continue;
 			}
 			const [prefix = "", suffix = ""] = base.split("*");
@@ -89,6 +92,41 @@ export function aliasSpecifier(
 		}
 	}
 	return undefined;
+}
+
+const INDEX_FILES = ["index.ts", "index.tsx", "index.js", "index.mjs"];
+const REEXPORT_RE =
+	/export\s+(?:\*|\{[^}]*\}|type\s+\{[^}]*\})\s+from\s+["'](\.[^"']+)["']/g;
+
+/** The extensionless module path a relative re-export points at. */
+function moduleTarget(fromDir: string, spec: string): string {
+	return resolve(fromDir, spec)
+		.replace(SOURCE_EXTENSION, "")
+		.replace(/[\\/]index$/, "");
+}
+
+/**
+ * Whether the barrel folder `dir` re-exports the module `target`
+ * (extensionless), following nested barrels a few levels deep.
+ */
+function barrelExports(dir: string, target: string, depth = 0): boolean {
+	if (depth > 4) return false;
+	const index = INDEX_FILES.map((f) => resolve(dir, f)).find((f) =>
+		existsSync(f),
+	);
+	if (index === undefined) return false;
+	let text: string;
+	try {
+		text = readFileSync(index, "utf8");
+	} catch {
+		return false;
+	}
+	for (const match of text.matchAll(REEXPORT_RE)) {
+		const next = moduleTarget(dir, match[1] as string);
+		if (next === target) return true;
+		if (barrelExports(next, target, depth + 1)) return true;
+	}
+	return false;
 }
 
 /**

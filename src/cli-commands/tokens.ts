@@ -28,6 +28,7 @@ import {
 	scanOutputs,
 } from "../engines/tokens/scan-outputs.js";
 import type { Token, TokenMap } from "../engines/tokens/types.js";
+import { emittedVarNames } from "../io/emitted-vars.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
 import { loadTokens } from "../io/load-tokens.js";
 import { findTokenSource } from "../io/token-set.js";
@@ -136,6 +137,8 @@ interface HistoryRecord {
 	missing: number;
 	orphan: number;
 	inSync: boolean;
+	/** Token/output pairs in sync — the size the drift sub-score scales by. */
+	inSyncCount?: number;
 }
 
 function hasOutputExtension(name: string): boolean {
@@ -598,6 +601,7 @@ function runCheck(path: string, options: CheckOptions): void {
 		missing,
 		orphan,
 		inSync,
+		inSyncCount: result.inSync,
 	});
 
 	const rel = relative(targetDir, tokenSource.path);
@@ -665,7 +669,17 @@ export function registerTokensCommand(program: Command): void {
 			if (map === undefined) return; // exit code + stderr already set
 
 			if (format === "json") {
-				process.stdout.write(`${JSON.stringify(map, null, 2)}\n`);
+				// Each token the project's build emits carries its custom property
+				// (`cssVar`), so an implementer writes `var(--sds-size-space-400)`,
+				// not a guess from the token path.
+				const emitted = emittedVarNames(process.cwd(), map.tokens);
+				const tokens = map.tokens.map((token) => {
+					const cssVar = emitted(token);
+					return cssVar === undefined ? token : { ...token, cssVar };
+				});
+				process.stdout.write(
+					`${JSON.stringify({ ...map, tokens }, null, 2)}\n`,
+				);
 				return;
 			}
 

@@ -232,6 +232,9 @@ function renderTerm(
 
 	if (report.overrideHotspots.length > 0) {
 		lines.push("", "Top override hotspots:");
+		// Identical lines (the same component overridden the same way in several
+		// places) print once with a count.
+		const grouped = new Map<string, number>();
 		for (const h of report.overrideHotspots) {
 			const named =
 				h.componentName !== undefined ? ` (${h.componentName})` : "";
@@ -239,9 +242,11 @@ function renderTerm(
 				h.fields !== undefined && h.fields.length > 0
 					? ` — ${h.fields.join(", ")}`
 					: "";
-			lines.push(
-				`  ${h.name}${named}: ${h.overrideCount} override(s)${fields}`,
-			);
+			const line = `  ${h.name}${named}: ${h.overrideCount} override(s)${fields}`;
+			grouped.set(line, (grouped.get(line) ?? 0) + 1);
+		}
+		for (const [line, count] of grouped) {
+			lines.push(count > 1 ? `${line}  ×${count}` : line);
 		}
 	}
 

@@ -41,7 +41,8 @@ import {
 	matchLiteral,
 } from "../engines/lint/match.js";
 import { buildTokenIndex } from "../engines/tokens/token-index.js";
-import type { TokenMap } from "../engines/tokens/types.js";
+import type { Token, TokenMap } from "../engines/tokens/types.js";
+import { emittedVarNames } from "../io/emitted-vars.js";
 import { appendHistoryRecord } from "../io/history-writer.js";
 import { loadTokens } from "../io/load-tokens.js";
 import { findTokenSource } from "../io/token-set.js";
@@ -212,12 +213,16 @@ interface TokenContext {
 	map: TokenMap;
 	index: ReturnType<typeof buildTokenIndex>;
 	compositeColors: ReturnType<typeof buildCompositeColorLookup>;
+	/** The custom property the build emits a token as, when the build is found. */
+	emittedName?: (token: Token) => string | undefined;
 }
 
 /** A finding enriched with the relative path for reporting. */
 interface ReportFinding {
 	literal: ExtractedLiteral;
 	match: LiteralMatch;
+	/** For an exact match: the custom property to write (`--sds-size-space-400`). */
+	cssVar?: string;
 }
 
 function hasExtension(name: string): boolean {
@@ -407,6 +412,8 @@ interface JsonFinding {
 	property: string;
 	kind: LiteralMatch["kind"];
 	expectedToken?: string;
+	/** The `var(--…)` the fix writes for `expectedToken`. */
+	expectedVar?: string;
 	expectedCandidates?: string[];
 }
 
@@ -422,6 +429,8 @@ function toJsonFinding(finding: ReportFinding): JsonFinding {
 	};
 	if (finding.match.kind === "exact") {
 		base.expectedToken = finding.match.token.name;
+		if (finding.cssVar !== undefined)
+			base.expectedVar = `var(--${finding.cssVar})`;
 	} else if (finding.match.kind === "near") {
 		base.expectedCandidates = candidateNames(finding.match);
 	}
@@ -429,10 +438,12 @@ function toJsonFinding(finding: ReportFinding): JsonFinding {
 }
 
 /** Human-readable suggestion text for a finding. */
-function suggestionFor(match: LiteralMatch): string {
+function suggestionFor(match: LiteralMatch, cssVar?: string): string {
 	switch (match.kind) {
 		case "exact":
-			return `use token ${match.token.name}`;
+			return cssVar === undefined
+				? `use token ${match.token.name}`
+				: `use token ${match.token.name} — var(--${cssVar})`;
 		case "near": {
 			const names = candidateNames(match).join(", ");
 			return `near token(s): ${names}`;
@@ -457,12 +468,12 @@ function renderTerm(findings: ReportFinding[], color: boolean): string {
 	for (const [file, fileFindings] of byFile) {
 		const lines = [severityColor("ok", file, { color })];
 		for (const finding of fileFindings) {
-			const { literal, match } = finding;
+			const { literal, match, cssVar } = finding;
 			const severity = KIND_SEVERITY[match.kind];
 			const position = `${literal.file}:${literal.line}:${literal.col}`;
 			const label = severityColor(severity, match.kind, { color });
 			lines.push(
-				`  ${position}  ${label}  ${literal.property}: ${literal.raw} — ${suggestionFor(match)}`,
+				`  ${position}  ${label}  ${literal.property}: ${literal.raw} — ${suggestionFor(match, cssVar)}`,
 			);
 		}
 		blocks.push(lines.join("\n"));
@@ -567,6 +578,13 @@ function lintAll(
 		if (result.kind === "error") return result;
 		all.push(...result.findings);
 	}
+	if (tokens.emittedName !== undefined) {
+		for (const finding of all) {
+			if (finding.match.kind !== "exact") continue;
+			const name = tokens.emittedName(finding.match.token);
+			if (name !== undefined) finding.cssVar = name;
+		}
+	}
 	return { kind: "ok", findings: all };
 }
 
@@ -649,6 +667,7 @@ export function registerLintCommand(program: Command): void {
 				map: loaded.map,
 				index: buildTokenIndex(loaded.map.tokens),
 				compositeColors: buildCompositeColorLookup(loaded.map.tokens),
+				emittedName: emittedVarNames(projectDir, loaded.map.tokens),
 			};
 
 			// File scope: a single file lints only itself; a directory walks for
@@ -761,7 +780,7 @@ function runFix(
 		literal: f.literal,
 		match: f.match,
 	}));
-	const edits = planFixes(engineFindings);
+	const edits = planFixes(engineFindings, tokens.emittedName);
 
 	const editsByFile = new Map<string, TextEdit[]>();
 	for (const edit of edits) {

@@ -99,3 +99,74 @@ describe("lint — Figma FLOAT spacing and default roles", () => {
 		);
 	});
 });
+
+describe("lint --fix — writes the variable the build emits", () => {
+	it("rewrites to var(--sds-…), never to an invalid --@… name", async () => {
+		const { readFile } = await import("node:fs/promises");
+		const json = await runCli(["lint", "--format", "json"], project);
+		const findings = JSON.parse(json.stdout) as {
+			raw: string;
+			expectedVar?: string;
+		}[];
+		expect(findings.find((f) => f.raw === "16px")?.expectedVar).toBe(
+			"var(--sds-size-space-400)",
+		);
+		await runCli(["lint", "--fix"], project);
+		const fixed = await readFile(
+			join(project, "src", "team", "Settings.tsx"),
+			"utf8",
+		);
+		expect(fixed).toContain('padding: "var(--sds-size-space-400)"');
+		expect(fixed).toContain(
+			'background: "var(--sds-color-background-default-secondary)"',
+		);
+		expect(fixed).not.toContain("--@");
+	});
+});
+
+describe("implementation hand-off — the project's own names", () => {
+	it("tokens parse names the variable the build emits for each token", async () => {
+		const run = await runCli(
+			["tokens", "parse", "scripts/tokens/tokens.json", "--format", "json"],
+			project,
+		);
+		const { tokens } = JSON.parse(run.stdout) as {
+			tokens: { name: string; cssVar?: string }[];
+		};
+		expect(tokens.find((t) => t.name === "@size.space.400")?.cssVar).toBe(
+			"sds-size-space-400",
+		);
+		expect(
+			tokens.find((t) => t.name === "@color_primitives.gray.100")?.cssVar,
+		).toBe("sds-color-gray-100");
+	});
+
+	it("registry resolve gives the tsconfig alias the project imports from", async () => {
+		const { mkdir, writeFile } = await import("node:fs/promises");
+		await mkdir(join(project, ".ds-bridge"), { recursive: true });
+		await writeFile(
+			join(project, ".ds-bridge", "registry.json"),
+			JSON.stringify({
+				schemaVersion: 1,
+				generatedAt: "2026-10-08T00:00:00.000Z",
+				matches: [
+					{
+						codeName: "Button",
+						importPath: "src/ui/primitives/Button/Button.tsx",
+						figmaName: "Button",
+						nodeId: "4185:3778",
+						score: 1,
+					},
+				],
+				unmatchedCode: [],
+				unmatchedFigma: [],
+			}),
+		);
+		const run = await runCli(["registry", "resolve", "4185:3778"], project);
+		expect(run.code).toBe(0);
+		expect(JSON.parse(run.stdout)).toMatchObject({
+			codeName: "Button",
+			importSpecifier: "primitives",
+		});
+	});
+});

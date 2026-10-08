@@ -36,9 +36,24 @@ function isCompositeToken(token: Token): boolean {
 	return typeof token.value === "object" && token.value !== null;
 }
 
-/** CSS custom-property reference for a token, e.g. color.brand.primary → var(--color-brand-primary). */
-function toCssVar(token: Token): string {
-	return `var(--${token.name.replaceAll(".", "-")})`;
+/**
+ * The custom property a token is emitted as when the build is unknown:
+ * `color.brand.primary` → `color-brand-primary`. Collection markers (`@`, `$`)
+ * and spaces never reach CSS — `--@size-space-400` is not a valid name.
+ */
+export function defaultCssVarName(token: Token): string {
+	return token.name
+		.split(".")
+		.map((segment) => segment.replace(/^[@$]/, "").trim().replace(/\s+/g, "-"))
+		.join("-");
+}
+
+/** CSS custom-property reference for a token: the emitted name when known. */
+function toCssVar(
+	token: Token,
+	emittedName?: (token: Token) => string | undefined,
+): string {
+	return `var(--${emittedName?.(token) ?? defaultCssVarName(token)})`;
 }
 
 /** The surrounding quote char of a quote-wrapped raw value, or undefined if bare. */
@@ -60,8 +75,12 @@ function quoteOf(raw: string): '"' | "'" | undefined {
  *   - style-object, bare number          → "var(...)" (a quoted string; CSS custom
  *     properties are valid JSX inline-style values)
  */
-function replacementFor(literal: ExtractedLiteral, token: Token): string {
-	const cssVar = toCssVar(token);
+function replacementFor(
+	literal: ExtractedLiteral,
+	token: Token,
+	emittedName?: (token: Token) => string | undefined,
+): string {
+	const cssVar = toCssVar(token, emittedName);
 	if (literal.context !== "style-object") return cssVar;
 
 	const quote = quoteOf(literal.raw);
@@ -84,7 +103,11 @@ function compareEdits(a: TextEdit, b: TextEdit): number {
  * ascending then line/col descending within each file so they can be applied
  * from the end of each file without invalidating earlier positions.
  */
-export function planFixes(findings: readonly Finding[]): TextEdit[] {
+export function planFixes(
+	findings: readonly Finding[],
+	/** The custom property the build emits a token as (`sds-size-space-400`). */
+	emittedName?: (token: Token) => string | undefined,
+): TextEdit[] {
 	const edits: TextEdit[] = [];
 	for (const { literal, match } of findings) {
 		if (match.kind !== "exact") continue;
@@ -94,7 +117,7 @@ export function planFixes(findings: readonly Finding[]): TextEdit[] {
 			line: literal.line,
 			col: literal.col,
 			length: literal.raw.length,
-			replacement: replacementFor(literal, match.token),
+			replacement: replacementFor(literal, match.token, emittedName),
 		});
 	}
 	return edits.sort(compareEdits);

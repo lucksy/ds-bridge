@@ -921,3 +921,52 @@ describe("resolveWeightProfile — C2 by-view precedence", () => {
 		expect(profile.weights).toEqual(DEFAULT_WEIGHTS);
 	});
 });
+
+describe("scoreFromHistory — sub-scores scale with the system's size", () => {
+	// Real-user finding (Figma Simple Design System, 2026-10-08): 12 drift
+	// entries against 666 in-sync tokens scored 20/100, and 27 lint findings
+	// among 921 style values scored 6/100. Penalties now count per 100 values.
+	it("drift: the penalty per 100 compared tokens when the in-sync count is recorded", () => {
+		const text = line({
+			at: "2026-06-01",
+			kind: "tokens-check",
+			stale: 0,
+			missing: 4,
+			orphan: 8,
+			inSyncCount: 666,
+		});
+		const outcome = scoreFromHistory(text);
+		if (outcome.kind !== "ok") throw new Error("no score");
+		// 100 − (10·4 + 5·8) · 100 / 678
+		expect(outcome.components.find((c) => c.kind === "drift")?.score).toBe(
+			Math.round(100 - (80 * 100) / 678),
+		);
+	});
+
+	it("lint: the penalty per 100 style values measured", () => {
+		const text = line({
+			at: "2026-06-01",
+			kind: "lint",
+			byKind: { exact: 22, near: 0, offSystem: 5 },
+			adoption: { refs: 894, literals: 27 },
+		});
+		const outcome = scoreFromHistory(text);
+		if (outcome.kind !== "ok") throw new Error("no score");
+		// 100 − (10·5 + 2·22) · 100 / 921
+		expect(outcome.components.find((c) => c.kind === "lint")?.score).toBe(
+			Math.round(100 - (94 * 100) / 921),
+		);
+	});
+
+	it("leaves a system of 100 values or fewer scored as before", () => {
+		const text = line({
+			at: "2026-06-01",
+			kind: "lint",
+			byKind: { exact: 5, near: 2, offSystem: 1 },
+			adoption: { refs: 3, literals: 8 },
+		});
+		const outcome = scoreFromHistory(text);
+		if (outcome.kind !== "ok") throw new Error("no score");
+		expect(outcome.components.find((c) => c.kind === "lint")?.score).toBe(70);
+	});
+});

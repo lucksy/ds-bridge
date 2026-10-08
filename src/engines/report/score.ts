@@ -189,14 +189,37 @@ export function validateWeights(raw: unknown): WeightsOutcome {
 	return { kind: "ok", weights };
 }
 
-/** Drift sub-score: 100 − 25·stale − 10·missing − 5·orphan, clamped at 0. */
-function driftScore(r: Record<string, unknown>): number {
-	const penalty =
-		25 * asNumber(r.stale) + 10 * asNumber(r.missing) + 5 * asNumber(r.orphan);
-	return Math.max(0, 100 - penalty);
+/**
+ * Per-item penalties count per 100 measured values: a system measured on more
+ * than 100 values (tokens compared, style values scanned) has its penalty
+ * scaled down by size, so 12 drift entries among 678 tokens are not scored like
+ * 12 among 20. At or under 100 values the penalty applies as is.
+ */
+function perHundred(penalty: number, measured: number): number {
+	return measured > 100 ? (penalty * 100) / measured : penalty;
 }
 
-/** Lint sub-score: 100 − 10·offSystem − 5·near − 2·exact, clamped at 0. */
+/**
+ * Drift sub-score: 100 − 25·stale − 10·missing − 5·orphan, per 100 compared
+ * tokens when the in-sync count is recorded (1.20.1+), clamped at 0.
+ */
+function driftScore(r: Record<string, unknown>): number {
+	const stale = asNumber(r.stale);
+	const missing = asNumber(r.missing);
+	const orphan = asNumber(r.orphan);
+	const penalty = 25 * stale + 10 * missing + 5 * orphan;
+	const measured =
+		typeof r.inSyncCount === "number" && Number.isFinite(r.inSyncCount)
+			? r.inSyncCount + stale + missing + orphan
+			: 0;
+	return Math.max(0, 100 - perHundred(penalty, measured));
+}
+
+/**
+ * Lint sub-score: 100 − 10·offSystem − 5·near − 2·exact, per 100 style values
+ * measured (token references + literals, from the line's adoption block),
+ * clamped at 0.
+ */
 function lintScore(r: Record<string, unknown>): number {
 	const byKind =
 		typeof r.byKind === "object" && r.byKind !== null
@@ -206,7 +229,15 @@ function lintScore(r: Record<string, unknown>): number {
 		10 * asNumber(byKind.offSystem) +
 		5 * asNumber(byKind.near) +
 		2 * asNumber(byKind.exact);
-	return Math.max(0, 100 - penalty);
+	const adoption =
+		typeof r.adoption === "object" && r.adoption !== null
+			? (r.adoption as Record<string, unknown>)
+			: undefined;
+	const measured =
+		adoption === undefined
+			? 0
+			: asNumber(adoption.refs) + asNumber(adoption.literals);
+	return Math.max(0, 100 - perHundred(penalty, measured));
 }
 
 /** Readiness sub-score: the recorded score verbatim, clamped to 0–100. */

@@ -36,3 +36,41 @@ describe("aliasSpecifier", () => {
 		).toBeUndefined();
 	});
 });
+
+describe("aliasSpecifier — an exact alias to a barrel folder (Simple Design System)", () => {
+	it("names the alias when the folder's index re-exports the file", async () => {
+		const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+		const { tmpdir } = await import("node:os");
+		const { join: j } = await import("node:path");
+		const dir = mkdtempSync(j(tmpdir(), "alias-barrel-"));
+		writeFileSync(
+			j(dir, "tsconfig.json"),
+			JSON.stringify({
+				compilerOptions: {
+					baseUrl: "./src",
+					paths: { primitives: ["./ui/primitives"] },
+				},
+			}),
+		);
+		mkdirSync(j(dir, "src", "ui", "primitives", "Button"), { recursive: true });
+		mkdirSync(j(dir, "src", "ui", "primitives", "Secret"), { recursive: true });
+		writeFileSync(
+			j(dir, "src", "ui", "primitives", "index.ts"),
+			'export * from "./Button/Button";\n',
+		);
+		writeFileSync(
+			j(dir, "src", "ui", "primitives", "Button", "Button.tsx"),
+			"export const Button = 1;",
+		);
+		writeFileSync(
+			j(dir, "src", "ui", "primitives", "Secret", "Secret.tsx"),
+			"export const Secret = 1;",
+		);
+		expect(aliasSpecifier(dir, "src/ui/primitives/Button/Button.tsx")).toBe(
+			"primitives",
+		);
+		expect(
+			aliasSpecifier(dir, "src/ui/primitives/Secret/Secret.tsx"),
+		).toBeUndefined();
+	});
+});

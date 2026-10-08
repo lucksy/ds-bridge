@@ -1,7 +1,8 @@
 // T1.8 — integration: the built CLI's `tokens parse <path>` command.
 // Spawns dist/cli.mjs (acceptance is against the bundle, like cli-shell.test.ts).
 import { execFile } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
@@ -27,6 +28,7 @@ function isExecError(value: unknown): value is ExecError {
 }
 
 const FIXTURES = ["w3c", "tokens-studio", "style-dictionary"] as const;
+const emptyCwd = mkdtempSync(join(tmpdir(), "ds-parse-cwd-"));
 
 describe("ds-bridge tokens parse (built dist/cli.mjs)", () => {
 	describe("--format=json deep-equals the golden twin (checkpoint C1)", () => {
@@ -34,13 +36,13 @@ describe("ds-bridge tokens parse (built dist/cli.mjs)", () => {
 			it(`${fixture}: JSON output matches expected.json`, async () => {
 				const tokensPath = join(fixturesRoot, fixture, "tokens.json");
 				const expectedPath = join(fixturesRoot, fixture, "expected.json");
-				const { stdout } = await execFileAsync(process.execPath, [
-					cliPath,
-					"tokens",
-					"parse",
-					tokensPath,
-					"--format=json",
-				]);
+				// From a directory with no built CSS: `cssVar` is added only for
+				// tokens the cwd project's build emits (see sds-project.test.ts).
+				const { stdout } = await execFileAsync(
+					process.execPath,
+					[cliPath, "tokens", "parse", tokensPath, "--format=json"],
+					{ cwd: emptyCwd },
+				);
 				const actual = JSON.parse(stdout);
 				const expected = JSON.parse(readFileSync(expectedPath, "utf8"));
 				expect(actual).toEqual(expected);
