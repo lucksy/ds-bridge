@@ -1008,3 +1008,17 @@ describe("scoreFromHistory — readiness across tracked frames", () => {
 		);
 	});
 });
+
+describe("frameAverager — whole-number readiness", () => {
+	it("rounds the mean of frame scores (85.5 → 86)", async () => {
+		const { frameAverager } = await import(
+			"../../../src/engines/report/frame-average.js"
+		);
+		const average = frameAverager();
+		average({ kind: "handoff", score: 100, fileKey: "K", nodeId: "1:1" });
+		expect(
+			average({ kind: "handoff", score: 71, fileKey: "K", nodeId: "1:2" })
+				.score,
+		).toBe(86);
+	});
+});

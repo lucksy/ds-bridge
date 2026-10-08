@@ -33,7 +33,8 @@ export function frameAverager(): (
 				: String(lowest.nodeId);
 		return {
 			...lowest,
-			score: mean,
+			// Frame scores are whole numbers everywhere; so is their average.
+			score: Math.round(mean),
 			frameName: `mean of ${frames.length} frames · lowest ${lowName} ${Math.round(scoreOf(lowest))}`,
 			frames: frames.length,
 		};
