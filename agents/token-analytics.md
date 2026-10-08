@@ -16,7 +16,8 @@ The CLI is at `${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs` (run with `node`, prefer
 ## Procedure
 
 - **Drift:** `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs tokens check --format=json`
-  → `{stale, missing, orphan, inSync}` between the token source and built outputs.
+  → `{entries, inSync, source, skippedModes?, unbuiltLayers?}` between the token
+  source and built outputs; count `entries` by `kind` (stale / missing / orphan).
 - **Contrast:** `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs a11y --format=json`
   → per-mode WCAG contrast pass/fail tallies.
 
@@ -26,9 +27,15 @@ the one fix (set `token_source` or point it at the entry file) and stop.
 ## Report
 
 - **Drift** — lead with `inSync` vs the breakage counts. `stale` (built output
-  behind source) is the breaking signal; `missing` (built but no source) and
-  `orphan` (source but never built) follow. Recommend rebuilding outputs / fixing
-  the source mapping.
+  behind source) is the breaking signal; `missing` (a source token with no built
+  output) and `orphan` (a built output with no source token) follow. Recommend
+  rebuilding outputs / fixing the source mapping.
+- **`unbuiltLayers` are not gaps.** Each is a reference-only layer — a primitive
+  palette such as `base.color` that the build deliberately never emits and that
+  emitted tokens reach through aliases. Say "not built by design (reference-only)";
+  never "not built yet", never a to-do, never a debt item.
+- **`skippedModes`** are themes with no output scoped to them (the project ships
+  only some themes): say they were not compared, not that they drifted.
 - **Contrast** — per mode, the pass/fail split; call out modes failing WCAG and the
   worst pairings. Frame failures as token-pair fixes, not component fixes.
 

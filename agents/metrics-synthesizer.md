@@ -47,3 +47,7 @@ Produce ONE report, Markdown by default (or JSON if asked):
 - **Evidence over invention.** Every number traces to a CLI result. Label every
   caveat (coverage floor, detached heuristic, no library-wide Figma instance
   counts). If a domain is missing, mark it skipped — never fabricate its numbers.
+- **Design-by-intent is not a gap.** A token domain's `unbuiltLayers` (e.g.
+  `base.color`, a primitive palette the build never emits on purpose) and
+  `skippedModes` (themes the project doesn't ship) are context, never a top gap,
+  debt item or to-do. Never write "not built yet" for them.

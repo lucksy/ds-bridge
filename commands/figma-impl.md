@@ -83,7 +83,12 @@ If it reports a missing Figma file key or PAT, surface that one fix
 (`/plugin configure` + restart) and stop. Then resolve every component node:
 
 - For each component node: `node ${CLAUDE_PLUGIN_ROOT}/dist/cli.mjs registry resolve <nodeId>`.
-  - **match** (exit 0) → resolved: use `codeName` + `importPath`.
+  - **match** (exit 0) → resolved: use `codeName` + `importPath`. When the match
+    carries `replaces` (`{ name, hint }`), the node is an instance of a
+    deprecated component whose Figma description names this replacement:
+    implement the replacement, applying the `hint` (e.g. `variant=primary`) as
+    its props, and list it in the summary as "deprecated X → Y" so the designer
+    swaps the instance too. This is a resolution, not a gap.
   - **candidates** (exit 1) → gap `ambiguous-registry-match` (list the
     candidate code names; do **not** pick one).
   - **not-found** (exit 1) → gap `no-registry-match`.

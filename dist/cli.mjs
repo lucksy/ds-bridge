@@ -18057,6 +18057,26 @@ function toRegistryFile(result, generatedAt) {
     unmatchedFigma
   };
 }
+var DEPRECATED_RE = /deprecat|legacy|do[\s-]?not[\s-]?use/i;
+var REPLACEMENT_RE = /\b(?:use|replaced?\s+(?:with|by))\s+[`"'“]?([A-Za-z][\w-]*(?:\s?\/\s?[A-Za-z][\w-]*)*)[`"'”]?(?:\s*\(([^)]+)\))?/i;
+function namedReplacement(registry, entry) {
+  const description = entry.description ?? "";
+  if (!DEPRECATED_RE.test(`${entry.name} ${description}`)) return void 0;
+  const named2 = REPLACEMENT_RE.exec(description);
+  const target = named2?.[1];
+  if (target === void 0) return void 0;
+  const key2 = normalizeName3(target);
+  const match = registry.matches.find(
+    (m) => normalizeName3(m.figmaName) === key2 || normalizeName3(m.codeName) === key2
+  );
+  if (match === void 0) return void 0;
+  const hint = named2?.[2]?.trim();
+  return {
+    kind: "match",
+    entry: match,
+    replaces: { name: entry.name, ...hint ? { hint } : {} }
+  };
+}
 function resolveEntry(registry, nodeNameOrId) {
   const query = nodeNameOrId;
   const normalizedQuery = normalizeName3(query);
@@ -18073,22 +18093,13 @@ function resolveEntry(registry, nodeNameOrId) {
       }
     }
   }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.nodeId === query) {
-      return { kind: "candidates", entries: entry.candidates };
-    }
-  }
-  for (const entry of registry.unmatchedFigma) {
-    if (entry.name === query) {
-      return { kind: "candidates", entries: entry.candidates };
-    }
-  }
-  if (normalizedQuery.length > 0) {
-    for (const entry of registry.unmatchedFigma) {
-      if (normalizeName3(entry.name) === normalizedQuery) {
-        return { kind: "candidates", entries: entry.candidates };
-      }
-    }
+  const unmatched = registry.unmatchedFigma.find((e4) => e4.nodeId === query) ?? registry.unmatchedFigma.find((e4) => e4.name === query) ?? (normalizedQuery.length > 0 ? registry.unmatchedFigma.find(
+    (e4) => normalizeName3(e4.name) === normalizedQuery
+  ) : void 0);
+  if (unmatched !== void 0) {
+    const replacement = namedReplacement(registry, unmatched);
+    if (replacement !== void 0) return replacement;
+    return { kind: "candidates", entries: unmatched.candidates };
   }
   return { kind: "not-found" };
 }
@@ -18115,7 +18126,8 @@ function resolveComponent(requirement, registry) {
       resolution: {
         kind: "registry-match",
         codeName: outcome.entry.codeName,
-        importPath: outcome.entry.importPath
+        importPath: outcome.entry.importPath,
+        ...outcome.replaces !== void 0 ? { replaces: outcome.replaces } : {}
       }
     };
   }
@@ -18462,7 +18474,26 @@ function rollUp(report, frameName) {
     reason: gap.reason,
     requirement: requirementLabel(gap.requirement)
   }));
-  return { frameName, resolvedCount, gapCount, pct: pct5, byReason, topGaps };
+  const replacements = report.resolved.flatMap(
+    (r2) => r2.resolution.kind === "registry-match" && r2.resolution.replaces !== void 0 ? [
+      {
+        requirement: requirementLabel(r2.requirement),
+        deprecated: r2.resolution.replaces.name,
+        use: r2.resolution.codeName,
+        importPath: r2.resolution.importPath,
+        ...r2.resolution.replaces.hint !== void 0 ? { hint: r2.resolution.replaces.hint } : {}
+      }
+    ] : []
+  );
+  return {
+    frameName,
+    resolvedCount,
+    gapCount,
+    pct: pct5,
+    byReason,
+    topGaps,
+    replacements
+  };
 }
 function renderTerm6(impl, color) {
   const severity = impl.pct >= 80 ? "ok" : impl.pct >= 50 ? "warn" : "error";
@@ -18472,6 +18503,21 @@ function renderTerm6(impl, color) {
     { color }
   );
   const lines = [headline2];
+  if (impl.replacements.length > 0) {
+    lines.push(
+      "",
+      "Deprecated components \u2192 the replacement their Figma description names:",
+      renderTable(
+        ["requirement", "deprecated", "use"],
+        impl.replacements.map((r2) => [
+          r2.requirement,
+          r2.deprecated,
+          `${r2.use}${r2.hint !== void 0 ? ` (${r2.hint})` : ""} from ${r2.importPath}`
+        ]),
+        { color }
+      )
+    );
+  }
   if (impl.gapCount === 0) {
     lines.push("", "No gaps \u2014 every requirement resolves to the system.");
     return lines.join("\n");
@@ -18601,7 +18647,8 @@ Expected a Figma frame URL like https://www.figma.com/design/<key>/<name>?node-i
           resolvedCount: impl.resolvedCount,
           gapCount: impl.gapCount,
           byReason: impl.byReason,
-          topGaps: impl.topGaps
+          topGaps: impl.topGaps,
+          ...impl.replacements.length > 0 ? { replacements: impl.replacements } : {}
         },
         null,
         2
@@ -21527,6 +21574,11 @@ function applyEdits(content, edits) {
 var COLOR_NEAR_DELTA_E2 = 2.5;
 var DIMENSION_NEAR_PX2 = 1;
 var NEAR_LIMIT2 = 3;
+var NEAR_SEARCH_LIMIT = 50;
+function alphaOf(hex2) {
+  const m = /^#[0-9a-f]{6}([0-9a-f]{2})$/i.exec(hex2.trim());
+  return m?.[1] === void 0 ? 1 : Number.parseInt(m[1], 16) / 255;
+}
 function pickPreferred2(tokens, property) {
   if (tokens.length === 0) return void 0;
   const role = propertyRole(property);
@@ -21613,9 +21665,9 @@ function matchColor(literal2, index, options) {
   if (canonical3 === void 0) return { kind: "off-system" };
   const exact = index.byValue.get(canonical3);
   if (exact !== void 0 && exact.length > 0) {
-    const role = propertyRole(literal2.property);
-    const fits = (t) => roleScore(t.name, role) === 0 && roleDepth(t.name, role) === 0;
-    if (role !== void 0 && !exact.some(fits)) {
+    const role2 = propertyRole(literal2.property);
+    const fits = (t) => roleScore(t.name, role2) === 0 && roleDepth(t.name, role2) === 0;
+    if (role2 !== void 0 && !exact.some(fits)) {
       const inExact = new Set(exact.map((t) => t.name));
       const nearFit = index.nearest(canonical3, { maxDeltaE: COLOR_NEAR_DELTA_E2, limit: 50 }).filter((m) => !inExact.has(m.token.name) && fits(m.token)).map((m) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT2);
       if (nearFit.length > 0) return { kind: "near", candidates: nearFit };
@@ -21630,12 +21682,25 @@ function matchColor(literal2, index, options) {
   }
   const near = index.nearest(canonical3, {
     maxDeltaE: COLOR_NEAR_DELTA_E2,
-    limit: NEAR_LIMIT2
+    limit: NEAR_SEARCH_LIMIT
   });
   if (near.length === 0) return { kind: "off-system" };
-  const candidates = near.map((m) => ({ token: m.token, distance: m.deltaE })).sort(
-    (a, b) => a.distance !== b.distance ? a.distance - b.distance : aliasRank(a.token) - aliasRank(b.token)
-  ).slice(0, NEAR_LIMIT2);
+  const role = propertyRole(literal2.property);
+  const alpha = alphaOf(canonical3);
+  const key2 = (m) => [
+    roleScore(m.token.name, role),
+    roleDepth(m.token.name, role),
+    Math.abs(alphaOf(String(m.token.value)) - alpha) > 0.02 ? 1 : 0,
+    m.deltaE,
+    aliasRank(m.token)
+  ];
+  const candidates = near.map((m) => ({ m, k: key2(m) })).sort((a, b) => {
+    for (let i = 0; i < a.k.length; i++) {
+      const d = a.k[i] - b.k[i];
+      if (d !== 0) return d;
+    }
+    return 0;
+  }).map(({ m }) => ({ token: m.token, distance: m.deltaE })).slice(0, NEAR_LIMIT2);
   return { kind: "near", candidates };
 }
 var familyCache = /* @__PURE__ */ new WeakMap();
@@ -23298,8 +23363,14 @@ function runResolve(nodeNameOrId, path) {
   const outcome = resolveEntry(registry, nodeNameOrId);
   switch (outcome.kind) {
     case "match":
-      process.stdout.write(`${JSON.stringify(outcome.entry, null, 2)}
-`);
+      process.stdout.write(
+        `${JSON.stringify(
+          outcome.replaces === void 0 ? outcome.entry : { ...outcome.entry, replaces: outcome.replaces },
+          null,
+          2
+        )}
+`
+      );
       process.exitCode = 0;
       return;
     case "candidates":
@@ -29170,6 +29241,17 @@ function renderCheckTerm(result, color, source2) {
   }
   return lines.join("\n");
 }
+function notesFor(result, skippedModes) {
+  const notes = (result.unbuiltLayers ?? []).map(
+    (layer) => `${layer.prefix}.* (${layer.tokens} tokens) is not built by design: a reference-only layer the outputs reach through aliases. Not a gap.`
+  );
+  if (skippedModes.length > 0) {
+    notes.push(
+      `Themes with no output scoped to them were not compared: ${skippedModes.join(", ")}. Not drift.`
+    );
+  }
+  return notes;
+}
 function checkJson(result, skippedModes, source2) {
   return JSON.stringify(
     {
@@ -29177,6 +29259,7 @@ function checkJson(result, skippedModes, source2) {
       inSync: result.entries.length === 0,
       source: source2,
       ...result.unbuiltLayers !== void 0 ? { unbuiltLayers: result.unbuiltLayers } : {},
+      ...notesFor(result, skippedModes).length > 0 ? { notes: notesFor(result, skippedModes) } : {},
       ...skippedModes.length > 0 ? { skippedModes } : {}
     },
     null,
