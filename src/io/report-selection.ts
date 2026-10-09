@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
 	type ComponentAliases,
+	type ExceptionEntry,
 	type FreshnessThresholds,
 	type MetricTargets,
 	type OwnershipMap,
@@ -54,6 +55,8 @@ export interface ResolvedSelection {
 	ownership?: OwnershipMap;
 	/** Path to a CODEOWNERS file (`ownership_file`, C9); undefined when absent. */
 	ownershipFile?: string;
+	/** Logged recurring-deviation decisions (`exceptions`, X1); undefined when absent. */
+	exceptions?: ExceptionEntry[];
 	/**
 	 * A saved dashboard's DEFAULT render target (`report_type`, §7, M9.3); only set
 	 * when a `--dashboard`/`dashboard_default` selection is active. The `--format`
@@ -94,6 +97,7 @@ interface DashboardContext {
 	componentAliases: ComponentAliases | undefined;
 	ownership: OwnershipMap | undefined;
 	ownershipFile: string | undefined;
+	exceptions: ExceptionEntry[] | undefined;
 }
 
 /**
@@ -198,6 +202,7 @@ function resolveDashboardSelection(
 		...(ctx.ownershipFile !== undefined
 			? { ownershipFile: ctx.ownershipFile }
 			: {}),
+		...(ctx.exceptions !== undefined ? { exceptions: ctx.exceptions } : {}),
 	};
 }
 
@@ -222,6 +227,7 @@ export function resolveSelection(
 	let componentAliases: ComponentAliases | undefined;
 	let ownership: OwnershipMap | undefined;
 	let ownershipFile: string | undefined;
+	let exceptions: ExceptionEntry[] | undefined;
 	// Default to the config's own defaults (200, C7 / 30, C8) when there is no file.
 	const defaults = resolveConfig({});
 	let migrationSitesCap =
@@ -260,6 +266,7 @@ export function resolveSelection(
 		componentAliases = resolved.config.componentAliases;
 		ownership = resolved.config.ownership;
 		ownershipFile = resolved.config.ownershipFile;
+		exceptions = resolved.config.exceptions;
 	}
 
 	const flagArtifacts = parseArtifactsFlag(options.artifacts);
@@ -291,6 +298,7 @@ export function resolveSelection(
 			componentAliases,
 			ownership,
 			ownershipFile,
+			exceptions,
 		});
 	}
 
@@ -366,6 +374,7 @@ export function resolveSelection(
 				...(componentAliases !== undefined ? { componentAliases } : {}),
 				...(ownership !== undefined ? { ownership } : {}),
 				...(ownershipFile !== undefined ? { ownershipFile } : {}),
+				...(exceptions !== undefined ? { exceptions } : {}),
 			};
 		}
 	}

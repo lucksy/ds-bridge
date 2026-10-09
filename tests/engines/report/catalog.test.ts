@@ -1,6 +1,6 @@
 // M0.1 — Artifact catalog (fresh product: 24 artifacts, 6 clean personas;
 // X3 / AN5 appends the executive layer → 27; F5 appends the Figma/frame
-// trends → 30).
+// trends → 30; X3 appends the recurring-exceptions review → 31).
 // Test-first: the ArtifactId contract, completeness against ReportData's
 // optional sections, the six-persona tagging, and nearest-match lookup are
 // spec'd here before implementation.
@@ -49,6 +49,7 @@ const SECTION_KEYS: readonly SectionKey[] = [
 	"libraryHotspotsTrend",
 	"frameReadinessTrend",
 	"handoffPassRate",
+	"exceptionsReview",
 ];
 
 const PERSONAS: readonly Persona[] = [
@@ -91,13 +92,14 @@ const EXPECTED_ORDER: readonly ArtifactId[] = [
 	"library-hotspots-trend",
 	"frame-readiness-trend",
 	"handoff-pass-rate",
+	"exceptions-review",
 ];
 
-describe("CATALOG (30-artifact catalog)", () => {
-	it("has exactly 30 artifacts in the authored order (13 base + 11 metric + 3 executive-layer + 3 Figma/frame-trend artifacts)", () => {
+describe("CATALOG (31-artifact catalog)", () => {
+	it("has exactly 31 artifacts in the authored order (13 base + 11 metric + 3 executive-layer + 3 Figma/frame-trend + 1 exceptions artifacts)", () => {
 		expect(CATALOG.map((a) => a.id)).toEqual([...EXPECTED_ORDER]);
 		expect(ALL_ARTIFACT_IDS).toEqual([...EXPECTED_ORDER]);
-		expect(ALL_ARTIFACT_IDS).toHaveLength(30);
+		expect(ALL_ARTIFACT_IDS).toHaveLength(31);
 	});
 
 	it("covers every optional ReportData section exactly once via reportDataKey", () => {
@@ -173,6 +175,11 @@ describe("CATALOG (30-artifact catalog)", () => {
 			title: "Frame readiness trend",
 			reportDataKey: "frameReadinessTrend",
 			personas: ["ds-designer", "product-designer", "product-manager"],
+		});
+		expect(entry("exceptions-review")).toMatchObject({
+			title: "Recurring exceptions",
+			reportDataKey: "exceptionsReview",
+			personas: ["ds-designer", "ds-manager"],
 		});
 		expect(entry("handoff-pass-rate")).toMatchObject({
 			title: "Handoff pass rate",

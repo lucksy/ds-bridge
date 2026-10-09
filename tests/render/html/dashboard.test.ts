@@ -300,6 +300,26 @@ const fullData: ReportData = {
 			{ date: "2026-06-05", frames: 2, passing: 1, pct: 50 },
 		],
 	},
+	exceptionsReview: {
+		dates: ["2026-06-01", "2026-06-05"],
+		rows: [
+			{
+				signal: "overrides",
+				name: "Card",
+				runs: 2,
+				latest: 7,
+				state: "needs-owner",
+			},
+		],
+		totals: {
+			needsOwner: 1,
+			overdue: 0,
+			inReview: 0,
+			decided: 0,
+			resolved: 0,
+			notSeen: 0,
+		},
+	},
 };
 
 const emptyData: ReportData = {
@@ -609,7 +629,7 @@ describe("renderDashboard — empty data", () => {
 	const html = renderDashboard(emptyData);
 
 	it("renders all thirteen empty-state panels", () => {
-		expect(countMatches(html, /No data yet/gi)).toBe(30);
+		expect(countMatches(html, /No data yet/gi)).toBe(31);
 	});
 
 	it("emits zero <svg> charts", () => {
@@ -656,7 +676,7 @@ describe("renderDashboard — partial mixes", () => {
 		// two charts present, eleven empty states (incl. absent system-score + the
 		// three owner sections + library-health + the two B6 consumer sections).
 		expect(countMatches(html, /<svg\b/g)).toBe(2);
-		expect(countMatches(html, /No data yet/gi)).toBe(28);
+		expect(countMatches(html, /No data yet/gi)).toBe(29);
 	});
 
 	it("treats an empty driftTrend array as an empty state", () => {
@@ -671,7 +691,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// only lint renders a chart; drift's empty array → empty state.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(29);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 	});
 
 	it("treats an empty parity rows array as an empty state", () => {
@@ -681,7 +701,7 @@ describe("renderDashboard — partial mixes", () => {
 			parity: { columns: ["a", "b"], rows: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(30);
+		expect(countMatches(html, /No data yet/gi)).toBe(31);
 	});
 
 	it("treats an empty a11y modes array as an empty state (T7.22)", () => {
@@ -691,7 +711,7 @@ describe("renderDashboard — partial mixes", () => {
 			a11y: { level: "AA", modes: [] },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(30);
+		expect(countMatches(html, /No data yet/gi)).toBe(31);
 	});
 
 	it("renders an all-clear impact run as a real chart, not an empty state (T7.22)", () => {
@@ -701,7 +721,7 @@ describe("renderDashboard — partial mixes", () => {
 			impact: { breaking: 0, additive: 0, cosmetic: 0, touchedCallSites: 0 },
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(29);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 	});
 
 	it("treats an empty adoptionTrend / leaderboard array as an empty state (B2)", () => {
@@ -712,7 +732,7 @@ describe("renderDashboard — partial mixes", () => {
 			leaderboard: [],
 		});
 		expect(countMatches(html, /<svg\b/g)).toBe(0);
-		expect(countMatches(html, /No data yet/gi)).toBe(30);
+		expect(countMatches(html, /No data yet/gi)).toBe(31);
 	});
 
 	it("renders import coverage even when nothing is uncovered (B2)", () => {
@@ -728,7 +748,7 @@ describe("renderDashboard — partial mixes", () => {
 		});
 		// the donut gauge renders (a real chart), the other twelve sections stay empty.
 		expect(countMatches(html, /<svg\b/g)).toBe(1);
-		expect(countMatches(html, /No data yet/gi)).toBe(29);
+		expect(countMatches(html, /No data yet/gi)).toBe(30);
 		expect(html).toMatch(/<text[^>]*>100<\/text>/);
 	});
 });
@@ -824,6 +844,8 @@ const TITLE_FOR: Record<ArtifactId, RegExp> = {
 	"library-hotspots-trend": /<h2>Library hotspots trend<\/h2>/,
 	"frame-readiness-trend": /<h2>Frame readiness trend<\/h2>/,
 	"handoff-pass-rate": /<h2>Handoff pass rate<\/h2>/,
+	// Recurring exceptions (X3).
+	"exceptions-review": /<h2>Recurring exceptions<\/h2>/,
 };
 
 describe("renderDashboard — default-call equivalence", () => {

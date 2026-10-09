@@ -294,4 +294,35 @@ export const FULL_REPORT_DATA: Required<ReportData> = {
 		pct: 50,
 		trend: [{ date: "2026-06-05", frames: 2, passing: 1, pct: 50 }],
 	},
+	exceptionsReview: {
+		dates: ["2026-06-01", "2026-06-05"],
+		rows: [
+			{
+				signal: "overrides",
+				name: "Card",
+				runs: 2,
+				latest: 7,
+				state: "needs-owner",
+			},
+			{
+				signal: "overrides",
+				name: "Button",
+				runs: 2,
+				latest: 3,
+				state: "evolve-component",
+				owner: "@checkout-design",
+				decision: "evolve-component",
+				note: "Needs a compact size",
+				reviewBy: "2026-07-01",
+			},
+		],
+		totals: {
+			needsOwner: 1,
+			overdue: 0,
+			inReview: 0,
+			decided: 1,
+			resolved: 0,
+			notSeen: 0,
+		},
+	},
 };

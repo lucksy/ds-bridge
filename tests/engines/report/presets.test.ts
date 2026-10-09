@@ -37,6 +37,7 @@ describe("PRESETS", () => {
 			"library-hotspots-trend",
 			"frame-readiness-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 		]);
 	});
 
@@ -62,6 +63,7 @@ describe("PRESETS", () => {
 			"executive",
 			"library-hotspots-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 		]);
 	});
 
@@ -144,10 +146,10 @@ describe("PRESETS", () => {
 		]);
 	});
 
-	it("defines `everything` as all thirty artifacts in catalog order (system-score leads)", () => {
+	it("defines `everything` as all thirty-one artifacts in catalog order (system-score leads)", () => {
 		expect(PRESETS.everything).toEqual([...ALL_ARTIFACT_IDS]);
 		expect(PRESETS.everything[0]).toBe("system-score");
-		expect(PRESETS.everything).toHaveLength(30);
+		expect(PRESETS.everything).toHaveLength(31);
 	});
 
 	it("defines `exec` as the curated leadership view (SPEC-analytics §4 M-AN4)", () => {

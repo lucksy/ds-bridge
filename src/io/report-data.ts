@@ -20,6 +20,7 @@ import {
 	buildChangeFrequency,
 } from "../engines/report/consumer.js";
 import { buildDebt } from "../engines/report/debt.js";
+import { buildExceptionsReview } from "../engines/report/exceptions-review.js";
 import { buildExecutive } from "../engines/report/executive.js";
 import { executiveInputs } from "../engines/report/executive-inputs.js";
 import {
@@ -1183,6 +1184,15 @@ export function assembleReportData(
 		systemScore,
 		aggregation.importCoverage,
 	);
+	// Recurring exceptions (X2, SPEC-exceptions §3): the hotspot trend's
+	// recurring rows joined with the logged `exceptions` owners + decisions. A
+	// record only — never changes a count or a score. Present only when a row is
+	// listed (absent-not-empty).
+	const exceptionsReview = buildExceptionsReview(
+		figmaTrends.libraryHotspotsTrend,
+		selection.exceptions,
+		generatedAt.slice(0, 10),
+	);
 	const data: ReportData = {
 		generatedAt,
 		project: basename(targetDir),
@@ -1222,6 +1232,7 @@ export function assembleReportData(
 		...(releaseReadiness.checks.length > 0 ? { releaseReadiness } : {}),
 		...executiveLayer,
 		...figmaTrends,
+		...(exceptionsReview !== undefined ? { exceptionsReview } : {}),
 	};
 	return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
 }

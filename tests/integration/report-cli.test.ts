@@ -940,7 +940,9 @@ describe("ds-bridge report (built dist/cli.mjs)", () => {
 		// F6: of the three Figma/frame trend sections, the seed's handoff line
 		// populates frame-readiness-trend + handoff-pass-rate (text, no svg); its
 		// counts-only library-health line leaves library-hotspots-trend empty → 7.
-		expect(html.split("No data yet").length - 1).toBe(7);
+		// X3: with no stored top-N lists there is no recurring exception either, so
+		// exceptions-review is the eighth empty state → 8.
+		expect(html.split("No data yet").length - 1).toBe(8);
 	});
 
 	it("T7.22: an a11y history line populates the contrast section", async () => {

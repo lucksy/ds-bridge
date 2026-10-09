@@ -71,13 +71,13 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
-		expect(parsed.artifacts).toHaveLength(30);
+		expect(parsed.artifacts).toHaveLength(31);
 		expect(parsed.artifacts.every((a) => a.enabled)).toBe(true);
 		expect(parsed.view.source).toBe("default");
 		expect(parsed.view.viewName).toBe("everything");
 	});
 
-	it("emits the thirty artifacts in catalog order with stable metadata", async () => {
+	it("emits the thirty-one artifacts in catalog order with stable metadata", async () => {
 		const result = await run(["dashboard", "list", "--format=json", dir]);
 		expect(result.code).toBe(0);
 		const parsed = JSON.parse(result.stdout) as JsonList;
@@ -112,6 +112,7 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"library-hotspots-trend",
 			"frame-readiness-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 		]);
 		// system-score leads; drift-trend is second.
 		const score = parsed.artifacts[0];
@@ -149,6 +150,7 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 			"library-hotspots-trend",
 			"frame-readiness-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 		]);
 		expect(parsed.view.source).toBe("project");
 		expect(parsed.view.viewName).toBe("ds-designer");
@@ -213,7 +215,7 @@ describe("ds-bridge dashboard list (built dist/cli.mjs)", () => {
 		]);
 		// `everything` is the 30-artifact catch-all.
 		const everything = parsed.presets.find((p) => p.name === "everything");
-		expect(everything?.artifacts).toHaveLength(30);
+		expect(everything?.artifacts).toHaveLength(31);
 		// ds-designer names its real §3.2 set, not hand-prose.
 		const dsDesigner = parsed.presets.find((p) => p.name === "ds-designer");
 		expect(dsDesigner?.artifacts).toContain("component-health");
@@ -342,6 +344,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 			"library-hotspots-trend",
 			"frame-readiness-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 			"impact",
 		]);
 		expect(written.dashboard_view).toBeUndefined();
@@ -377,6 +380,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 			"library-hotspots-trend",
 			"frame-readiness-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 		]);
 	});
 
@@ -437,6 +441,7 @@ describe("ds-bridge dashboard add/remove (built dist/cli.mjs)", () => {
 			"library-hotspots-trend",
 			"frame-readiness-trend",
 			"handoff-pass-rate",
+			"exceptions-review",
 			"impact",
 		]);
 		// order preserved: unrelated keys first, dashboard_artifacts at the end

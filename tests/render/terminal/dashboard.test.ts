@@ -22,13 +22,13 @@ const BARE: ReportData = {
 const OPTS = { generatedAt: "2026-06-10T00:00:00.000Z", color: false } as const;
 
 describe("renderTerminalDashboard", () => {
-	it("renders the header + a block per selected artifact (all 30)", () => {
+	it("renders the header + a block per selected artifact (all 31)", () => {
 		const out = renderTerminalDashboard(BARE, ALL_ARTIFACT_IDS, OPTS);
 		expect(out).toContain("ds-bridge report · demo");
 		expect(out).toContain("Generated 2026-06-10T00:00:00.000Z");
 		// One block per selected artifact: every selected-but-empty section keeps
-		// its empty-state, so the count proves all 30 rendered.
-		expect(out.match(/No data yet/g)?.length).toBe(30);
+		// its empty-state, so the count proves all 31 rendered.
+		expect(out.match(/No data yet/g)?.length).toBe(31);
 		// Spot-check representative panel titles across the catalog.
 		for (const title of [
 			"System score",

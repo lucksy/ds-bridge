@@ -226,3 +226,7 @@ Frame readiness trend
 Handoff pass rate
 ─────────────────
 0% · 0 of 1 frame ≥ 80
+
+Recurring exceptions
+────────────────────
+No data yet — run `ds-bridge library-health` to populate this section.

@@ -47,6 +47,9 @@
 				},
 				"frameImplementability": {
 					"description": "ReportData.frameImplementability — the same shape as data.frameImplementability in schemas/report.v1.schema.json."
+				},
+				"exceptionsReview": {
+					"description": "ReportData.exceptionsReview — the same shape as data.exceptionsReview in schemas/report.v1.schema.json."
 				}
 			}
 		},

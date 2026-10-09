@@ -92,7 +92,7 @@ export const PRESET_DESCRIPTIONS = {
 	"product-engineer":
 		"Builds product UI from the DS-code package; works a migration queue of breaking changes.",
 	everything:
-		"The full 30-artifact catalog — the no-setup escape for an unconfigured repo.",
+		"The full 31-artifact catalog — the no-setup escape for an unconfigured repo.",
 	exec: "Leadership one-glance: score, executive rollup (health · adoption · consistency · debt), adoption trend, targets, breaking changes.",
 	org: "Org rollup drill-down: one repo's score, velocity, executive rollup, adoption, targets and data freshness — open it from ds-bridge rollup.",
 } satisfies Record<PresetName, string>;

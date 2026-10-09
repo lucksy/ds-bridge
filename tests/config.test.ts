@@ -1657,3 +1657,110 @@ describe("component_paths config key", () => {
 		}
 	});
 });
+
+describe("resolveConfig — exceptions (X1, SPEC-exceptions §2)", () => {
+	const parse = (exceptions: unknown) =>
+		resolveConfig({ projectFileText: JSON.stringify({ exceptions }) });
+
+	it("leaves exceptions undefined when absent", () => {
+		const outcome = resolveConfig({
+			projectFileText: JSON.stringify({ figma_file_key: "lib" }),
+		});
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.exceptions).toBeUndefined();
+	});
+
+	it("reads a full entry (snake_case review_by → reviewBy)", () => {
+		const outcome = parse([
+			{
+				component: "Card",
+				owner: "@checkout-design",
+				decision: "evolve-component",
+				note: "Needs a compact layout",
+				review_by: "2026-11-15",
+				signal: "overrides",
+			},
+			{ component: "Button", owner: "@core", decision: "investigating" },
+		]);
+		expect(outcome.kind).toBe("ok");
+		if (outcome.kind !== "ok") return;
+		expect(outcome.config.exceptions).toEqual([
+			{
+				component: "Card",
+				owner: "@checkout-design",
+				decision: "evolve-component",
+				note: "Needs a compact layout",
+				reviewBy: "2026-11-15",
+				signal: "overrides",
+			},
+			{ component: "Button", owner: "@core", decision: "investigating" },
+		]);
+	});
+
+	it.each([
+		["a non-array", { Card: "@team" }, "exceptions must be an array"],
+		["a non-object entry", ["Card"], "exceptions[0] must be an object"],
+		[
+			"an empty component",
+			[{ component: "", owner: "@a", decision: "investigating" }],
+			"exceptions[0].component",
+		],
+		[
+			"a missing owner",
+			[{ component: "Card", decision: "investigating" }],
+			"exceptions[0].owner",
+		],
+		[
+			"an unknown decision",
+			[{ component: "Card", owner: "@a", decision: "ignore" }],
+			"exceptions[0].decision must be one of investigating | fix-implementation | evolve-component",
+		],
+		[
+			"an empty note",
+			[{ component: "Card", owner: "@a", decision: "investigating", note: "" }],
+			"exceptions[0].note",
+		],
+		[
+			"a malformed review_by",
+			[
+				{
+					component: "Card",
+					owner: "@a",
+					decision: "investigating",
+					review_by: "15/11/2026",
+				},
+			],
+			"exceptions[0].review_by must be a YYYY-MM-DD date",
+		],
+		[
+			"an impossible review_by",
+			[
+				{
+					component: "Card",
+					owner: "@a",
+					decision: "investigating",
+					review_by: "2026-02-30",
+				},
+			],
+			"exceptions[0].review_by",
+		],
+		[
+			"an unknown signal",
+			[
+				{
+					component: "Card",
+					owner: "@a",
+					decision: "investigating",
+					signal: "colors",
+				},
+			],
+			"exceptions[0].signal must be one of overrides | deprecated | detached",
+		],
+	])("rejects %s with a typed error", (_label, exceptions, message) => {
+		const outcome = parse(exceptions);
+		expect(outcome.kind).toBe("invalid-project-file");
+		if (outcome.kind !== "invalid-project-file") return;
+		expect(outcome.message).toContain(message);
+	});
+});

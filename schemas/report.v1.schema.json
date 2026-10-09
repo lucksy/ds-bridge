@@ -151,6 +151,9 @@
 				},
 				"handoffPassRate": {
 					"$ref": "#/$defs/HandoffPassRate"
+				},
+				"exceptionsReview": {
+					"$ref": "#/$defs/ExceptionsReview"
 				}
 			}
 		}
@@ -1162,6 +1165,100 @@
 								"minimum": 0,
 								"maximum": 100
 							}
+						}
+					}
+				}
+			}
+		},
+		"ExceptionsReview": {
+			"type": "object",
+			"description": "X2 recurring-exceptions triage queue (SPEC-exceptions §3): override/deprecated/detached hotspots seen on 2+ runs, joined with the owner + decision logged in the `exceptions` config. A record only — exceptions never change a count or a score.",
+			"required": ["dates", "rows", "totals"],
+			"properties": {
+				"dates": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/IsoDate"
+					}
+				},
+				"rows": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"required": ["signal", "name", "runs", "latest", "state"],
+						"properties": {
+							"signal": {
+								"enum": ["overrides", "deprecated", "detached"]
+							},
+							"name": {
+								"type": "string"
+							},
+							"runs": {
+								"type": "number",
+								"description": "Trend dates on which the component had a count > 0."
+							},
+							"latest": {
+								"type": ["number", "null"],
+								"description": "Latest count; null when unknown (below the stored top-N) or not seen."
+							},
+							"state": {
+								"enum": [
+									"needs-owner",
+									"overdue",
+									"investigating",
+									"fix-implementation",
+									"evolve-component",
+									"resolved",
+									"not-seen"
+								]
+							},
+							"owner": {
+								"type": "string"
+							},
+							"decision": {
+								"enum": [
+									"investigating",
+									"fix-implementation",
+									"evolve-component"
+								]
+							},
+							"note": {
+								"type": "string"
+							},
+							"reviewBy": {
+								"$ref": "#/$defs/IsoDate"
+							}
+						}
+					}
+				},
+				"totals": {
+					"type": "object",
+					"required": [
+						"needsOwner",
+						"overdue",
+						"inReview",
+						"decided",
+						"resolved",
+						"notSeen"
+					],
+					"properties": {
+						"needsOwner": {
+							"type": "number"
+						},
+						"overdue": {
+							"type": "number"
+						},
+						"inReview": {
+							"type": "number"
+						},
+						"decided": {
+							"type": "number"
+						},
+						"resolved": {
+							"type": "number"
+						},
+						"notSeen": {
+							"type": "number"
 						}
 					}
 				}

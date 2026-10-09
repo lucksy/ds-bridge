@@ -24,6 +24,7 @@ export const DOMAIN_OF: Record<ReportSectionKey, AnalyticsDomain> = {
 	libraryHealth: "figma",
 	libraryHealthTrend: "figma",
 	libraryHotspotsTrend: "figma",
+	exceptionsReview: "figma",
 	frameReadinessTrend: "figma",
 	handoffPassRate: "figma",
 	readiness: "figma",

@@ -17,6 +17,9 @@ import type {
 import {
 	belowGateMeta,
 	dateSpan,
+	EXCEPTIONS_NOTE,
+	exceptionDetail,
+	exceptionsMeta,
 	frameDetail,
 	frameOverflow,
 	hotspotDetail,
@@ -920,6 +923,26 @@ function libraryHotspotsTrendTerminalSection(
 	return panel("Library hotspots trend", lines.join("\n"));
 }
 
+function exceptionsReviewTerminalSection(
+	data: ReportData,
+	_color: boolean,
+): string {
+	const review = data.exceptionsReview;
+	if (review === undefined || review.rows.length === 0) {
+		return panel("Recurring exceptions", emptyState("library-health"));
+	}
+	const width = Math.max(...review.rows.map((r) => displayWidth(r.name)));
+	const lines = [
+		exceptionsMeta(review),
+		...review.rows.map(
+			(row) =>
+				`  ${padToWidth(row.name, width)}  ${exceptionDetail(row, review.dates.length)}`,
+		),
+		EXCEPTIONS_NOTE,
+	];
+	return panel("Recurring exceptions", lines.join("\n"));
+}
+
 function frameReadinessTrendTerminalSection(
 	data: ReportData,
 	_color: boolean,
@@ -993,6 +1016,7 @@ const SECTION_RENDERERS_TERMINAL: Record<
 	"library-hotspots-trend": libraryHotspotsTrendTerminalSection,
 	"frame-readiness-trend": frameReadinessTrendTerminalSection,
 	"handoff-pass-rate": handoffPassRateTerminalSection,
+	"exceptions-review": exceptionsReviewTerminalSection,
 };
 
 /** Options for the terminal composer: the injected render instant + color + label. */

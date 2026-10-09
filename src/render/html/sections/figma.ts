@@ -2,6 +2,9 @@ import type { ReportData } from "../../../engines/report/types.js";
 import {
 	belowGateMeta,
 	dateSpan,
+	EXCEPTIONS_NOTE,
+	exceptionDetail,
+	exceptionsMeta,
 	frameDetail,
 	frameOverflow,
 	hotspotDetail,
@@ -43,6 +46,32 @@ export function libraryHotspotsTrendSection(data: ReportData): string {
 		[
 			`<div class="meta">Top components per signal · ${escapeHtml(dateSpan(trend.dates))}</div>`,
 			...blocks,
+		].join(""),
+		"wide",
+	);
+}
+
+/**
+ * Recurring exceptions (X3) → one row per recurring deviation, the ones still
+ * needing an owner first: component · signal · latest · runs · state · owner.
+ */
+export function exceptionsReviewSection(data: ReportData): string {
+	const review = data.exceptionsReview;
+	if (review === undefined || review.rows.length === 0) {
+		return panel("Recurring exceptions", emptyState("library-health"));
+	}
+	const items = review.rows
+		.map(
+			(row) =>
+				`<li><code>${escapeHtml(row.name)}</code><span class="detail">${escapeHtml(exceptionDetail(row, review.dates.length))}</span></li>`,
+		)
+		.join("");
+	return panel(
+		"Recurring exceptions",
+		[
+			`<div class="meta">${escapeHtml(exceptionsMeta(review))}</div>`,
+			`<ul class="calendar stack">${items}</ul>`,
+			`<div class="meta">${escapeHtml(EXCEPTIONS_NOTE)}</div>`,
 		].join(""),
 		"wide",
 	);

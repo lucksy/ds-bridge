@@ -76,6 +76,7 @@ describe("buildDomainArtifact", () => {
 				libraryHotspotsTrend: FULL_REPORT_DATA.libraryHotspotsTrend,
 				frameReadinessTrend: FULL_REPORT_DATA.frameReadinessTrend,
 				handoffPassRate: FULL_REPORT_DATA.handoffPassRate,
+				exceptionsReview: FULL_REPORT_DATA.exceptionsReview,
 			},
 		});
 	});
@@ -214,7 +215,7 @@ describe("renderAnalyticsTerm", () => {
 		expect(text).not.toContain("lower is better");
 		expect(text).toContain("ds-bridge analytics --emit all");
 		expect(text).not.toContain("Nothing recorded yet");
-		expect(text).toContain("figma   ok (7 sections)");
+		expect(text).toContain("figma   ok (8 sections)");
 		expect(text).toContain("score   ok (7 sections)");
 	});
 

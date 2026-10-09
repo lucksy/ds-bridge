@@ -9546,8 +9546,8 @@ var MODE_RE = new RegExp(
 );
 function modeOfTokenFile(relPath) {
   const path = relPath.toLowerCase().replace(/\\/g, "/");
-  const matches = [...path.matchAll(MODE_RE)];
-  const last = matches[matches.length - 1]?.[1];
+  const matches2 = [...path.matchAll(MODE_RE)];
+  const last = matches2[matches2.length - 1]?.[1];
   return last?.replace(/\./g, "-");
 }
 function isConventionalTokenFile(name) {
@@ -10406,10 +10406,10 @@ function compoundParent(entry, all) {
   return parent;
 }
 function codeExports(registry) {
-  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const matches2 = Array.isArray(registry?.matches) ? registry.matches : [];
   const unmatched = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
   return [
-    ...matches.map((m) => ({ name: m.codeName, importPath: m.importPath })),
+    ...matches2.map((m) => ({ name: m.codeName, importPath: m.importPath })),
     ...unmatched.map((u) => ({ name: u.name, importPath: u.importPath }))
   ];
 }
@@ -10739,6 +10739,7 @@ var DOMAIN_OF = {
   libraryHealth: "figma",
   libraryHealthTrend: "figma",
   libraryHotspotsTrend: "figma",
+  exceptionsReview: "figma",
   frameReadinessTrend: "figma",
   handoffPassRate: "figma",
   readiness: "figma",
@@ -11173,7 +11174,7 @@ function show(score) {
   return String(Math.round(score * 1e3) / 1e3);
 }
 function buildParity(registry) {
-  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const matches2 = Array.isArray(registry?.matches) ? registry.matches : [];
   const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
   const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
   const codeSide = codeExports(registry);
@@ -11192,7 +11193,7 @@ function buildParity(registry) {
     return parts === void 0 ? detail : `${detail} Parts: ${[...parts].sort(byNameAsc2).join(", ")}.`;
   };
   const rows = [];
-  for (const match of matches) {
+  for (const match of matches2) {
     const score = typeof match.score === "number" ? match.score : 0;
     const gaps = Array.isArray(match.variantGaps) ? match.variantGaps : [];
     if (score >= OK_THRESHOLD && gaps.length === 0) {
@@ -11674,6 +11675,94 @@ function buildChangeFrequency(records) {
   if (windowFirst !== void 0) result.windowFirst = windowFirst;
   if (windowLast !== void 0) result.windowLast = windowLast;
   return result;
+}
+
+// src/engines/report/exceptions-review.ts
+var STATE_ORDER = [
+  "needs-owner",
+  "overdue",
+  "investigating",
+  "fix-implementation",
+  "evolve-component",
+  "resolved",
+  "not-seen"
+];
+var SIGNAL_ORDER = [
+  "overrides",
+  "deprecated",
+  "detached"
+];
+var norm = (name) => name.trim().toLowerCase();
+function matches(entry, row2) {
+  return norm(entry.component) === norm(row2.name) && (entry.signal === void 0 || entry.signal === row2.signal);
+}
+function entryFields(entry) {
+  return {
+    owner: entry.owner,
+    decision: entry.decision,
+    ...entry.note !== void 0 ? { note: entry.note } : {},
+    ...entry.reviewBy !== void 0 ? { reviewBy: entry.reviewBy } : {}
+  };
+}
+function stateFor(row2, entry, today) {
+  if (entry === void 0) return "needs-owner";
+  if (row2.latest === 0) return "resolved";
+  if (entry.reviewBy !== void 0 && entry.reviewBy < today) return "overdue";
+  return entry.decision;
+}
+function compareNames(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function buildExceptionsReview(trend, exceptions, today) {
+  const entries = exceptions ?? [];
+  const trendRows = trend?.rows ?? [];
+  const rows = [];
+  const used = /* @__PURE__ */ new Set();
+  for (const hotspot of trendRows) {
+    const runs = hotspot.points.filter(
+      (p4) => p4.count !== null && p4.count > 0
+    ).length;
+    const entry = entries.find((e4) => matches(e4, hotspot));
+    if (entry !== void 0) used.add(entry);
+    const recurring = runs >= 2 && hotspot.latest !== 0;
+    if (!recurring && entry === void 0) continue;
+    rows.push({
+      signal: hotspot.signal,
+      name: hotspot.name,
+      runs,
+      latest: hotspot.latest,
+      state: stateFor(hotspot, entry, today),
+      ...entry !== void 0 ? entryFields(entry) : {}
+    });
+  }
+  for (const entry of entries) {
+    if (used.has(entry)) continue;
+    rows.push({
+      signal: entry.signal ?? "overrides",
+      name: entry.component.trim(),
+      runs: 0,
+      latest: null,
+      state: "not-seen",
+      ...entryFields(entry)
+    });
+  }
+  if (rows.length === 0) return void 0;
+  rows.sort(
+    (a, b) => STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state) || (b.latest ?? -1) - (a.latest ?? -1) || SIGNAL_ORDER.indexOf(a.signal) - SIGNAL_ORDER.indexOf(b.signal) || compareNames(a.name, b.name)
+  );
+  const count = (...states) => rows.filter((r2) => states.includes(r2.state)).length;
+  return {
+    dates: trend?.dates ?? [],
+    rows,
+    totals: {
+      needsOwner: count("needs-owner"),
+      overdue: count("overdue"),
+      inReview: count("investigating"),
+      decided: count("fix-implementation", "evolve-component"),
+      resolved: count("resolved"),
+      notSeen: count("not-seen")
+    }
+  };
 }
 
 // src/engines/report/executive.ts
@@ -12271,6 +12360,13 @@ var CATALOG = [
       "product-manager"
     ],
     reportDataKey: "handoffPassRate"
+  },
+  // ─── Recurring exceptions (X3) — appended (everything keeps catalog order) ──
+  {
+    id: "exceptions-review",
+    title: "Recurring exceptions",
+    personas: ["ds-designer", "ds-manager"],
+    reportDataKey: "exceptionsReview"
   }
 ];
 var ALL_ARTIFACT_IDS = CATALOG.map((a) => a.id);
@@ -12648,6 +12744,16 @@ var TARGET_METRICS = [
   "readiness",
   "system-score"
 ];
+var EXCEPTION_DECISIONS = [
+  "investigating",
+  "fix-implementation",
+  "evolve-component"
+];
+var EXCEPTION_SIGNALS = [
+  "overrides",
+  "deprecated",
+  "detached"
+];
 var FRESHNESS_KINDS = [
   "drift",
   "lint",
@@ -12723,6 +12829,59 @@ function suggestFreshnessKinds(input, limit = 3) {
 }
 function isPlainObject6(value2) {
   return typeof value2 === "object" && value2 !== null && !Array.isArray(value2);
+}
+function isCalendarDate(value2) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value2)) return false;
+  const date = /* @__PURE__ */ new Date(`${value2}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value2);
+}
+function parseExceptions(raw) {
+  if (!Array.isArray(raw)) {
+    return "exceptions must be an array of { component, owner, decision } entries";
+  }
+  const entries = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i];
+    const at = `exceptions[${i}]`;
+    if (!isPlainObject6(item)) {
+      return `${at} must be an object { component, owner, decision, note?, review_by?, signal? }`;
+    }
+    for (const field of ["component", "owner"]) {
+      if (typeof item[field] !== "string" || item[field].trim() === "") {
+        return `${at}.${field} must be a non-empty string`;
+      }
+    }
+    const decision = EXCEPTION_DECISIONS.find((d) => d === item.decision);
+    if (decision === void 0) {
+      return `${at}.decision must be one of ${EXCEPTION_DECISIONS.join(" | ")}, got ${JSON.stringify(item.decision)}`;
+    }
+    const entry = {
+      component: item.component,
+      owner: item.owner,
+      decision
+    };
+    if (item.note !== void 0) {
+      if (typeof item.note !== "string" || item.note.trim() === "") {
+        return `${at}.note must be a non-empty string`;
+      }
+      entry.note = item.note;
+    }
+    if (item.review_by !== void 0) {
+      if (typeof item.review_by !== "string" || !isCalendarDate(item.review_by)) {
+        return `${at}.review_by must be a YYYY-MM-DD date, got ${JSON.stringify(item.review_by)}`;
+      }
+      entry.reviewBy = item.review_by;
+    }
+    if (item.signal !== void 0) {
+      const signal = EXCEPTION_SIGNALS.find((s) => s === item.signal);
+      if (signal === void 0) {
+        return `${at}.signal must be one of ${EXCEPTION_SIGNALS.join(" | ")}, got ${JSON.stringify(item.signal)}`;
+      }
+      entry.signal = signal;
+    }
+    entries.push(entry);
+  }
+  return entries;
 }
 var REPORT_STYLES = ["html", "terminal", "both"];
 var DEFAULTS = {
@@ -13115,6 +13274,11 @@ function parseProjectFile(text2) {
     }
     values.ownershipFile = obj.ownership_file;
   }
+  if (obj.exceptions !== void 0) {
+    const parsed = parseExceptions(obj.exceptions);
+    if (typeof parsed === "string") return { kind: "invalid", message: parsed };
+    values.exceptions = parsed;
+  }
   if (obj.component_aliases !== void 0) {
     if (!isPlainObject6(obj.component_aliases)) {
       return {
@@ -13250,6 +13414,7 @@ function resolveConfig(inputs) {
     freshnessThresholds: project.freshnessThresholds,
     ownership: project.ownership,
     ownershipFile: project.ownershipFile,
+    exceptions: project.exceptions,
     componentAliases: project.componentAliases,
     migrationSitesCap: project.migrationSitesCap ?? DEFAULT_MIGRATION_SITES_CAP,
     scoreVelocityWindow: project.scoreVelocityWindow ?? DEFAULT_SCORE_VELOCITY_WINDOW,
@@ -13525,7 +13690,7 @@ function parseList(value2) {
   }
   return counts;
 }
-function compareNames(a, b) {
+function compareNames2(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 function buildLibraryHotspotsTrend(records, opts = {}) {
@@ -13558,7 +13723,7 @@ function buildLibraryHotspotsTrend(records, opts = {}) {
   for (const { date, fileKey, day } of lines) {
     if (fileKey === target) byDate.set(date, day);
   }
-  const dates = [...byDate.keys()].sort(compareNames);
+  const dates = [...byDate.keys()].sort(compareNames2);
   const rows = [];
   for (const { signal } of SIGNALS) {
     const names = /* @__PURE__ */ new Set();
@@ -13576,7 +13741,7 @@ function buildLibraryHotspotsTrend(records, opts = {}) {
       signalRows.push(rowFor(signal, name, points));
     }
     signalRows.sort(
-      (a, b) => (b.latest ?? -1) - (a.latest ?? -1) || compareNames(a.name, b.name)
+      (a, b) => (b.latest ?? -1) - (a.latest ?? -1) || compareNames2(a.name, b.name)
     );
     rows.push(...signalRows.slice(0, Math.max(0, limit)));
   }
@@ -14028,7 +14193,7 @@ var PRESET_DESCRIPTIONS = {
   "product-designer": "Designs product screens by consuming the library; tracks what is safe to build on and when it breaks.",
   "product-manager": "Delivery/risk owner; tracks adoption and upstream breakage against targets.",
   "product-engineer": "Builds product UI from the DS-code package; works a migration queue of breaking changes.",
-  everything: "The full 30-artifact catalog \u2014 the no-setup escape for an unconfigured repo.",
+  everything: "The full 31-artifact catalog \u2014 the no-setup escape for an unconfigured repo.",
   exec: "Leadership one-glance: score, executive rollup (health \xB7 adoption \xB7 consistency \xB7 debt), adoption trend, targets, breaking changes.",
   org: "Org rollup drill-down: one repo's score, velocity, executive rollup, adoption, targets and data freshness \u2014 open it from ds-bridge rollup."
 };
@@ -14307,7 +14472,8 @@ function resolveDashboardSelection(targetDir, name, ctx) {
     ...ctx.freshnessThresholds !== void 0 ? { freshnessThresholds: ctx.freshnessThresholds } : {},
     ...ctx.componentAliases !== void 0 ? { componentAliases: ctx.componentAliases } : {},
     ...ctx.ownership !== void 0 ? { ownership: ctx.ownership } : {},
-    ...ctx.ownershipFile !== void 0 ? { ownershipFile: ctx.ownershipFile } : {}
+    ...ctx.ownershipFile !== void 0 ? { ownershipFile: ctx.ownershipFile } : {},
+    ...ctx.exceptions !== void 0 ? { exceptions: ctx.exceptions } : {}
   };
 }
 function resolveSelection(targetDir, options) {
@@ -14321,6 +14487,7 @@ function resolveSelection(targetDir, options) {
   let componentAliases;
   let ownership;
   let ownershipFile;
+  let exceptions;
   const defaults = resolveConfig({});
   let migrationSitesCap = defaults.kind === "ok" ? defaults.config.migrationSitesCap : 200;
   let scoreVelocityWindow = defaults.kind === "ok" ? defaults.config.scoreVelocityWindow : 30;
@@ -14354,6 +14521,7 @@ function resolveSelection(targetDir, options) {
     componentAliases = resolved.config.componentAliases;
     ownership = resolved.config.ownership;
     ownershipFile = resolved.config.ownershipFile;
+    exceptions = resolved.config.exceptions;
   }
   const flagArtifacts = parseArtifactsFlag(options.artifacts);
   const activeDashboard = options.dashboard ?? dashboardDefault;
@@ -14374,7 +14542,8 @@ function resolveSelection(targetDir, options) {
       freshnessThresholds,
       componentAliases,
       ownership,
-      ownershipFile
+      ownershipFile,
+      exceptions
     });
   }
   const outcome = resolveView(
@@ -14427,7 +14596,8 @@ function resolveSelection(targetDir, options) {
         ...freshnessThresholds !== void 0 ? { freshnessThresholds } : {},
         ...componentAliases !== void 0 ? { componentAliases } : {},
         ...ownership !== void 0 ? { ownership } : {},
-        ...ownershipFile !== void 0 ? { ownershipFile } : {}
+        ...ownershipFile !== void 0 ? { ownershipFile } : {},
+        ...exceptions !== void 0 ? { exceptions } : {}
       };
     }
   }
@@ -14936,6 +15106,11 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) 
     systemScore,
     aggregation.importCoverage
   );
+  const exceptionsReview = buildExceptionsReview(
+    figmaTrends.libraryHotspotsTrend,
+    selection.exceptions,
+    generatedAt.slice(0, 10)
+  );
   const data = {
     generatedAt,
     project: basename(targetDir),
@@ -14964,7 +15139,8 @@ function assembleReportData(targetDir, selection, velocityWindowFlagDays, asOf) 
     ...ownershipLeaderboard.length > 0 ? { ownershipLeaderboard } : {},
     ...releaseReadiness.checks.length > 0 ? { releaseReadiness } : {},
     ...executiveLayer,
-    ...figmaTrends
+    ...figmaTrends,
+    ...exceptionsReview !== void 0 ? { exceptionsReview } : {}
   };
   return { data, stateDir, generatedAt, velocityWindowDays, weightProfile };
 }
@@ -16723,7 +16899,7 @@ function tokenize2(phrase) {
 function matchPhrase(phrase) {
   const tokens = tokenize2(phrase);
   if (tokens.length === 0) return [];
-  const matches = [];
+  const matches2 = [];
   for (const meta of CATALOG) {
     const haystack = `${meta.id} ${meta.title}`.toLowerCase();
     let score = 0;
@@ -16734,9 +16910,9 @@ function matchPhrase(phrase) {
         score += 1;
       }
     }
-    if (score > 0) matches.push({ id: meta.id, title: meta.title, score });
+    if (score > 0) matches2.push({ id: meta.id, title: meta.title, score });
   }
-  return matches.sort((a, b) => b.score - a.score);
+  return matches2.sort((a, b) => b.score - a.score);
 }
 
 // src/cli-commands/dashboard-wizard.ts
@@ -17329,18 +17505,18 @@ function runRm(name, path, options) {
   process.exitCode = 0;
 }
 function runSuggest(phrase) {
-  const matches = matchPhrase(phrase);
-  if (matches.length === 0) {
+  const matches2 = matchPhrase(phrase);
+  if (matches2.length === 0) {
     process.stdout.write(`No artifacts matched "${phrase}".
 `);
     process.exitCode = 0;
     return;
   }
-  for (const m of matches) {
+  for (const m of matches2) {
     process.stdout.write(`${m.id}	${m.title}
 `);
   }
-  const ids = matches.map((m) => m.id).join(",");
+  const ids = matches2.map((m) => m.id).join(",");
   process.stdout.write(
     `
 Save with: dashboard save <name> --artifacts ${ids}
@@ -18067,13 +18243,13 @@ function resolveCode(importPath, rich, figmaFallbackVariants) {
 }
 function mergeComponentDocs(input) {
   const { registry } = input;
-  const matches = Array.isArray(registry?.matches) ? registry.matches : [];
+  const matches2 = Array.isArray(registry?.matches) ? registry.matches : [];
   const unmatchedCode = Array.isArray(registry?.unmatchedCode) ? registry.unmatchedCode : [];
   const unmatchedFigma = Array.isArray(registry?.unmatchedFigma) ? registry.unmatchedFigma : [];
   const codeByName = indexCode(input.code);
   const figmaById = indexFigma(input.figma);
   const docs = [];
-  for (const match of matches) {
+  for (const match of matches2) {
     const richCode = codeByName.get(match.codeName);
     const richFigma = figmaById.get(match.nodeId);
     const description = richFigma?.description || match.description || "";
@@ -19223,7 +19399,7 @@ function byNameAsc4(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 function toRegistryFile(result, generatedAt) {
-  const matches = result.matches.map((m) => ({
+  const matches2 = result.matches.map((m) => ({
     codeName: m.code.name,
     importPath: m.code.importPath,
     figmaName: m.figma.name,
@@ -19271,7 +19447,7 @@ function toRegistryFile(result, generatedAt) {
   return {
     schemaVersion: 1,
     generatedAt,
-    matches,
+    matches: matches2,
     unmatchedCode,
     unmatchedFigma,
     ...composed.length > 0 ? { composed } : {}
@@ -21743,16 +21919,16 @@ function matchRenames(removedCandidates, addedCandidates) {
   });
   const usedBefore = /* @__PURE__ */ new Set();
   const usedAfter = /* @__PURE__ */ new Set();
-  const matches = [];
+  const matches2 = [];
   for (const edge of edges) {
     if (usedBefore.has(edge.beforeIndex) || usedAfter.has(edge.afterIndex)) {
       continue;
     }
     usedBefore.add(edge.beforeIndex);
     usedAfter.add(edge.afterIndex);
-    matches.push(edge);
+    matches2.push(edge);
   }
-  return matches;
+  return matches2;
 }
 function diffComponents(before, after) {
   const beforeById = /* @__PURE__ */ new Map();
@@ -21828,7 +22004,7 @@ function diffComponents(before, after) {
 }
 
 // src/engines/impact/variant-sites.ts
-var norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+var norm2 = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 function openingTags(source2, codeName) {
   const out = [];
   const re = new RegExp(`<${codeName}(?=[\\s/>])`, "g");
@@ -21857,14 +22033,14 @@ function literalProps(attrs) {
   const re = /([A-Za-z_$][\w$-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*["'`]([^"'`]*)["'`]\s*\})/g;
   for (const m of attrs.matchAll(re)) {
     const name = m[1];
-    props.set(norm(name), { name, value: m[2] ?? m[3] ?? m[4] ?? "" });
+    props.set(norm2(name), { name, value: m[2] ?? m[3] ?? m[4] ?? "" });
   }
   return props;
 }
 function propNames(attrs) {
   const names = /* @__PURE__ */ new Map();
   for (const m of attrs.matchAll(/([A-Za-z_$][\w$-]*)\s*=/g)) {
-    names.set(norm(m[1]), m[1]);
+    names.set(norm2(m[1]), m[1]);
   }
   return names;
 }
@@ -21879,10 +22055,10 @@ function variantUsageLines(source2, codeName, changes) {
     const literals = literalProps(tag.attrs);
     const names = propNames(tag.attrs);
     for (const change of breaking) {
-      const key2 = norm(change.axis);
+      const key2 = norm2(change.axis);
       if (change.kind === "value-removed") {
         const prop = literals.get(key2);
-        if (prop !== void 0 && norm(prop.value) === norm(change.value)) {
+        if (prop !== void 0 && norm2(prop.value) === norm2(change.value)) {
           lines.push({
             line: line2,
             reason: `passes ${prop.name}="${prop.value}" (${change.axis}=${change.value} removed)`
@@ -24341,10 +24517,10 @@ function normalizedKeyIndex(variants) {
   const index = /* @__PURE__ */ new Map();
   for (const key2 of Object.keys(variants)) {
     const values = variants[key2] ?? [];
-    const norm2 = normalizeName5(key2);
-    const existing = index.get(norm2);
+    const norm3 = normalizeName5(key2);
+    const existing = index.get(norm3);
     if (existing === void 0) {
-      index.set(norm2, { key: key2, values: [...values] });
+      index.set(norm3, { key: key2, values: [...values] });
     } else {
       existing.values.push(...values);
     }
@@ -24577,7 +24753,7 @@ function rankCodeCandidates(figmaModel, code) {
 function matchComponents(code, figma, options = {}) {
   const matchedCode = /* @__PURE__ */ new Set();
   const matchedFigma = /* @__PURE__ */ new Set();
-  const matches = [];
+  const matches2 = [];
   const figmaIndexById = /* @__PURE__ */ new Map();
   figma.forEach((model, i) => {
     for (const id of [model.nodeId, ...model.aliasNodeIds ?? []]) {
@@ -24630,7 +24806,7 @@ function matchComponents(code, figma, options = {}) {
     );
     matchedCode.add(c3);
     matchedFigma.add(primary);
-    matches.push({
+    matches2.push({
       code: codeComponent,
       figma: figmaModel,
       // The pairing is declared, so the name is certain; the shape is not.
@@ -24699,7 +24875,7 @@ function matchComponents(code, figma, options = {}) {
     matchedFigma.add(edge.figmaIndex);
     const figmaModel = figma[edge.figmaIndex];
     if (figmaModel === void 0) continue;
-    matches.push({
+    matches2.push({
       code: codeComponent,
       figma: figmaModel,
       score: edge.parts.score,
@@ -24713,7 +24889,7 @@ function matchComponents(code, figma, options = {}) {
       )
     });
   }
-  matches.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
+  matches2.sort((a, b) => byNameAsc6(a.code.name, b.code.name));
   const unmatchedCode = [];
   for (let c3 = 0; c3 < code.length; c3 += 1) {
     if (matchedCode.has(c3)) continue;
@@ -24737,7 +24913,7 @@ function matchComponents(code, figma, options = {}) {
   }
   unmatchedFigma.sort((a, b) => byNameAsc6(a.figma.name, b.figma.name));
   return {
-    matches,
+    matches: matches2,
     unmatchedCode,
     unmatchedFigma,
     ...composed.length > 0 ? {
@@ -27113,7 +27289,7 @@ var SIGNAL_LABEL = {
   deprecated: "Deprecated",
   detached: "Detached \u2014 heuristic, REST cannot truly detect detachment"
 };
-var SIGNAL_ORDER = [
+var SIGNAL_ORDER2 = [
   "overrides",
   "deprecated",
   "detached"
@@ -27167,6 +27343,53 @@ function passRateTrendLine(rate) {
   const last = rate.trend[rate.trend.length - 1];
   return `${sparkline(rate.trend.map((p4) => p4.pct))} ${first?.pct ?? 0}% \u2192 ${last?.pct ?? 0}% (${dateSpan(rate.trend.map((p4) => p4.date))})`;
 }
+var EXCEPTION_STATE_LABEL = {
+  "needs-owner": "\u2691 needs an owner",
+  overdue: "\u23F0 review overdue",
+  investigating: "\u25D4 investigating",
+  "fix-implementation": "\u2192 fix the implementation",
+  "evolve-component": "\u2192 evolve the component",
+  resolved: "\u2713 resolved \u2014 close this exception",
+  "not-seen": "? not in the stored hotspots (check the name)"
+};
+var EXCEPTION_QUESTION = {
+  overrides: "fix the usage, or evolve the component?",
+  deprecated: "migrate off it, or does the replacement miss a use case?",
+  detached: "re-attach it, or does the component miss a use case?"
+};
+function exceptionsMeta(review) {
+  const { totals } = review;
+  const parts = [
+    [totals.needsOwner, "needs an owner", "need an owner"],
+    [totals.overdue, "overdue", "overdue"],
+    [totals.inReview, "investigating", "investigating"],
+    [totals.decided, "decided", "decided"],
+    [totals.resolved, "resolved", "resolved"],
+    [totals.notSeen, "not seen", "not seen"]
+  ];
+  const counted = parts.filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+  return [`${review.rows.length} listed`, ...counted].join(" \xB7 ");
+}
+var EXCEPTIONS_NOTE = "Exceptions stay counted in every score \u2014 logging one records who owns it and what was decided; it never hides the drift.";
+function exceptionDetail(row2, totalRuns) {
+  const parts = [row2.signal];
+  if (row2.state !== "not-seen") {
+    parts.push(
+      `${row2.latest === null ? "\u2014" : row2.latest} latest`,
+      `${row2.runs} of ${totalRuns} run${totalRuns === 1 ? "" : "s"}`
+    );
+  }
+  parts.push(
+    row2.state === "needs-owner" ? `${EXCEPTION_STATE_LABEL[row2.state]} \u2014 ${EXCEPTION_QUESTION[row2.signal]}` : EXCEPTION_STATE_LABEL[row2.state]
+  );
+  if (row2.state === "overdue" && row2.decision !== void 0) {
+    parts.push(`was: ${row2.decision}`);
+  }
+  if (row2.owner !== void 0) parts.push(`owner ${row2.owner}`);
+  if (row2.reviewBy !== void 0) parts.push(`review by ${row2.reviewBy}`);
+  if (row2.note !== void 0) parts.push(`\u201C${row2.note}\u201D`);
+  return parts.join(" \xB7 ");
+}
 
 // src/render/html/sections/figma.ts
 function libraryHotspotsTrendSection(data) {
@@ -27174,7 +27397,7 @@ function libraryHotspotsTrendSection(data) {
   if (trend === void 0 || trend.rows.length === 0) {
     return panel("Library hotspots trend", emptyState2("library-health"));
   }
-  const blocks = SIGNAL_ORDER.flatMap((signal) => {
+  const blocks = SIGNAL_ORDER2.flatMap((signal) => {
     const rows = trend.rows.filter((r2) => r2.signal === signal);
     if (rows.length === 0) return [];
     const items = rows.map(
@@ -27190,6 +27413,24 @@ function libraryHotspotsTrendSection(data) {
     [
       `<div class="meta">Top components per signal \xB7 ${escapeHtml(dateSpan(trend.dates))}</div>`,
       ...blocks
+    ].join(""),
+    "wide"
+  );
+}
+function exceptionsReviewSection(data) {
+  const review = data.exceptionsReview;
+  if (review === void 0 || review.rows.length === 0) {
+    return panel("Recurring exceptions", emptyState2("library-health"));
+  }
+  const items = review.rows.map(
+    (row2) => `<li><code>${escapeHtml(row2.name)}</code><span class="detail">${escapeHtml(exceptionDetail(row2, review.dates.length))}</span></li>`
+  ).join("");
+  return panel(
+    "Recurring exceptions",
+    [
+      `<div class="meta">${escapeHtml(exceptionsMeta(review))}</div>`,
+      `<ul class="calendar stack">${items}</ul>`,
+      `<div class="meta">${escapeHtml(EXCEPTIONS_NOTE)}</div>`
     ].join(""),
     "wide"
   );
@@ -27772,7 +28013,9 @@ var SECTION_RENDERERS = {
   // Figma + per-frame trends (F6) — the completeness gate is now 30.
   "library-hotspots-trend": libraryHotspotsTrendSection,
   "frame-readiness-trend": frameReadinessTrendSection,
-  "handoff-pass-rate": handoffPassRateSection
+  "handoff-pass-rate": handoffPassRateSection,
+  // Recurring exceptions (X3) — the completeness gate is now 31.
+  "exceptions-review": exceptionsReviewSection
 };
 function signed2(delta) {
   if (delta > 0) return `+${delta}`;
@@ -28914,7 +29157,7 @@ function libraryHotspotsTrendTerminalSection(data, _color) {
     return panel2("Library hotspots trend", emptyState3("library-health"));
   }
   const lines = [`Top components per signal \xB7 ${dateSpan(trend.dates)}`];
-  for (const signal of SIGNAL_ORDER) {
+  for (const signal of SIGNAL_ORDER2) {
     const rows = trend.rows.filter((r2) => r2.signal === signal);
     if (rows.length === 0) continue;
     const width = Math.max(...rows.map((r2) => displayWidth2(r2.name)));
@@ -28924,6 +29167,21 @@ function libraryHotspotsTrendTerminalSection(data, _color) {
     }
   }
   return panel2("Library hotspots trend", lines.join("\n"));
+}
+function exceptionsReviewTerminalSection(data, _color) {
+  const review = data.exceptionsReview;
+  if (review === void 0 || review.rows.length === 0) {
+    return panel2("Recurring exceptions", emptyState3("library-health"));
+  }
+  const width = Math.max(...review.rows.map((r2) => displayWidth2(r2.name)));
+  const lines = [
+    exceptionsMeta(review),
+    ...review.rows.map(
+      (row2) => `  ${padToWidth(row2.name, width)}  ${exceptionDetail(row2, review.dates.length)}`
+    ),
+    EXCEPTIONS_NOTE
+  ];
+  return panel2("Recurring exceptions", lines.join("\n"));
 }
 function frameReadinessTrendTerminalSection(data, _color) {
   const trend = data.frameReadinessTrend;
@@ -28984,7 +29242,8 @@ var SECTION_RENDERERS_TERMINAL = {
   executive: executiveTerminalSection,
   "library-hotspots-trend": libraryHotspotsTrendTerminalSection,
   "frame-readiness-trend": frameReadinessTrendTerminalSection,
-  "handoff-pass-rate": handoffPassRateTerminalSection
+  "handoff-pass-rate": handoffPassRateTerminalSection,
+  "exceptions-review": exceptionsReviewTerminalSection
 };
 function renderTerminalDashboard(data, selection, opts) {
   const headerLines = [`ds-bridge report \xB7 ${data.project}`];

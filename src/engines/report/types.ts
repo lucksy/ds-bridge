@@ -14,6 +14,7 @@ import type {
 } from "../figma/library-health.js";
 import type { ConsistencySub } from "./consistency.js";
 import type { DebtRollup } from "./debt.js";
+import type { ExceptionsReview } from "./exceptions-review.js";
 import type { ExecutiveRollup } from "./executive.js";
 import type { FrameReadinessTrend } from "./frame-readiness-trend.js";
 import type { HandoffPassRate } from "./handoff-pass-rate.js";
@@ -433,4 +434,6 @@ export interface ReportData {
 	frameReadinessTrend?: FrameReadinessTrend;
 	/** F4 — share of frames at/above the readiness gate (latest per frame). */
 	handoffPassRate?: HandoffPassRate;
+	/** X2 — recurring deviations with their owner + decision (or none yet). */
+	exceptionsReview?: ExceptionsReview;
 }

@@ -39,6 +39,7 @@ import {
 	executiveSection,
 } from "./sections/executive.js";
 import {
+	exceptionsReviewSection,
 	frameReadinessTrendSection,
 	handoffPassRateSection,
 	libraryHotspotsTrendSection,
@@ -107,6 +108,8 @@ const SECTION_RENDERERS: Record<ArtifactId, (data: ReportData) => string> = {
 	"library-hotspots-trend": libraryHotspotsTrendSection,
 	"frame-readiness-trend": frameReadinessTrendSection,
 	"handoff-pass-rate": handoffPassRateSection,
+	// Recurring exceptions (X3) — the completeness gate is now 31.
+	"exceptions-review": exceptionsReviewSection,
 };
 
 /** One headline number in the summary strip above the cards. */

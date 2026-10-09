@@ -41,7 +41,9 @@ export type ArtifactId =
 	// Figma + per-frame trends (F5, SPEC-figma-trends §3):
 	| "library-hotspots-trend"
 	| "frame-readiness-trend"
-	| "handoff-pass-rate";
+	| "handoff-pass-rate"
+	// Recurring exceptions (X3, SPEC-exceptions §4):
+	| "exceptions-review";
 
 /**
  * Persona tags used by presets and `dashboard list` — the six clean roles
@@ -287,6 +289,13 @@ export const CATALOG = [
 			"product-manager",
 		],
 		reportDataKey: "handoffPassRate",
+	},
+	// ─── Recurring exceptions (X3) — appended (everything keeps catalog order) ──
+	{
+		id: "exceptions-review",
+		title: "Recurring exceptions",
+		personas: ["ds-designer", "ds-manager"],
+		reportDataKey: "exceptionsReview",
 	},
 ] as const satisfies readonly ArtifactMeta[];
 

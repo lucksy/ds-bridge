@@ -65,6 +65,38 @@ export interface OwnerRule {
  */
 export type OwnershipMap = OwnerRule[];
 
+/** What an exception's owner decided (SPEC-exceptions §2). */
+export const EXCEPTION_DECISIONS = [
+	"investigating",
+	"fix-implementation",
+	"evolve-component",
+] as const;
+export type ExceptionDecision = (typeof EXCEPTION_DECISIONS)[number];
+
+/** The library-health signals an exception may be scoped to. */
+export const EXCEPTION_SIGNALS = [
+	"overrides",
+	"deprecated",
+	"detached",
+] as const;
+export type ExceptionSignal = (typeof EXCEPTION_SIGNALS)[number];
+
+/**
+ * One logged exception (X1, SPEC-exceptions §2): a recurring deviation on a
+ * component, the person/team who owns the conversation about it, and what they
+ * decided. Purely a record — it never changes a count or a score.
+ */
+export interface ExceptionEntry {
+	component: string;
+	owner: string;
+	decision: ExceptionDecision;
+	note?: string;
+	/** `YYYY-MM-DD` — past it (and still present) the entry is overdue. */
+	reviewBy?: string;
+	/** Scope to one signal; absent = every signal for the component. */
+	signal?: ExceptionSignal;
+}
+
 /**
  * The canonical LOGICAL check-kinds data-freshness tracks (C4), the vocabulary a
  * `freshness_thresholds` map may key on. These are the dashboard-facing names —
@@ -228,6 +260,69 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** True for a real calendar date written `YYYY-MM-DD` (rejects 2026-02-30). */
+function isCalendarDate(value: string): boolean {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+	const date = new Date(`${value}T00:00:00.000Z`);
+	return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+}
+
+/**
+ * Validate the `exceptions` array (X1, SPEC-exceptions §2). Returns the parsed
+ * entries, or the first error message (the caller wraps it as invalid).
+ */
+function parseExceptions(raw: unknown): ExceptionEntry[] | string {
+	if (!Array.isArray(raw)) {
+		return "exceptions must be an array of { component, owner, decision } entries";
+	}
+	const entries: ExceptionEntry[] = [];
+	for (let i = 0; i < raw.length; i += 1) {
+		const item: unknown = raw[i];
+		const at = `exceptions[${i}]`;
+		if (!isPlainObject(item)) {
+			return `${at} must be an object { component, owner, decision, note?, review_by?, signal? }`;
+		}
+		for (const field of ["component", "owner"] as const) {
+			if (typeof item[field] !== "string" || item[field].trim() === "") {
+				return `${at}.${field} must be a non-empty string`;
+			}
+		}
+		const decision = EXCEPTION_DECISIONS.find((d) => d === item.decision);
+		if (decision === undefined) {
+			return `${at}.decision must be one of ${EXCEPTION_DECISIONS.join(" | ")}, got ${JSON.stringify(item.decision)}`;
+		}
+		const entry: ExceptionEntry = {
+			component: item.component as string,
+			owner: item.owner as string,
+			decision,
+		};
+		if (item.note !== undefined) {
+			if (typeof item.note !== "string" || item.note.trim() === "") {
+				return `${at}.note must be a non-empty string`;
+			}
+			entry.note = item.note;
+		}
+		if (item.review_by !== undefined) {
+			if (
+				typeof item.review_by !== "string" ||
+				!isCalendarDate(item.review_by)
+			) {
+				return `${at}.review_by must be a YYYY-MM-DD date, got ${JSON.stringify(item.review_by)}`;
+			}
+			entry.reviewBy = item.review_by;
+		}
+		if (item.signal !== undefined) {
+			const signal = EXCEPTION_SIGNALS.find((s) => s === item.signal);
+			if (signal === undefined) {
+				return `${at}.signal must be one of ${EXCEPTION_SIGNALS.join(" | ")}, got ${JSON.stringify(item.signal)}`;
+			}
+			entry.signal = signal;
+		}
+		entries.push(entry);
+	}
+	return entries;
+}
+
 export interface ResolvedConfig {
 	figmaFileKey: string | undefined;
 	figmaToken: FigmaToken;
@@ -291,6 +386,12 @@ export interface ResolvedConfig {
 	ownership: OwnershipMap | undefined;
 	/** Path to a CODEOWNERS-style ownership file (C9), or `undefined` when absent. */
 	ownershipFile: string | undefined;
+	/**
+	 * Logged recurring-deviation decisions (X1, SPEC-exceptions §2): component →
+	 * owner + decision. A record only — never changes a count or a score.
+	 * `undefined` when absent.
+	 */
+	exceptions: ExceptionEntry[] | undefined;
 	/**
 	 * Component alias join-keys (C5): component/alias name → optional explicit
 	 * join keys `{ frameName?, contrastMode? }` that raise the readiness/a11y
@@ -356,6 +457,7 @@ interface ProjectFileValues {
 	freshnessThresholds?: FreshnessThresholds;
 	ownership?: OwnershipMap;
 	ownershipFile?: string;
+	exceptions?: ExceptionEntry[];
 	componentAliases?: ComponentAliases;
 	migrationSitesCap?: number;
 	scoreVelocityWindow?: number;
@@ -832,6 +934,15 @@ function parseProjectFile(text: string): ProjectFileOutcome {
 		values.ownershipFile = obj.ownership_file;
 	}
 
+	// exceptions: an ARRAY of { component, owner, decision, note?, review_by?,
+	// signal? } (X1, SPEC-exceptions §2) — the owner + decision logged for a
+	// recurring deviation. A record only: it never changes a count or a score.
+	if (obj.exceptions !== undefined) {
+		const parsed = parseExceptions(obj.exceptions);
+		if (typeof parsed === "string") return { kind: "invalid", message: parsed };
+		values.exceptions = parsed;
+	}
+
 	// component_aliases: { <component>: { frameName?, contrastMode? } } (C5,
 	// SPEC-personas §5). The OBJECT-value shape: each component/alias name maps to
 	// optional explicit join keys raising the readiness/a11y heuristic to an exact
@@ -1018,6 +1129,7 @@ export function resolveConfig(inputs: ResolveInputs): ResolveOutcome {
 		freshnessThresholds: project.freshnessThresholds,
 		ownership: project.ownership,
 		ownershipFile: project.ownershipFile,
+		exceptions: project.exceptions,
 		componentAliases: project.componentAliases,
 		migrationSitesCap: project.migrationSitesCap ?? DEFAULT_MIGRATION_SITES_CAP,
 		scoreVelocityWindow:
