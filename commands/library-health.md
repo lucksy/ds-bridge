@@ -53,6 +53,10 @@ Otherwise:
    signal (each run stores the top 10; `--top <n>` changes it) — so a designer
    can see whether a specific component is getting better or worse (run
    `ds-bridge report` to render them).
+4. **Recurring hotspots are a conversation.** A component overridden run after
+   run may be missing a use case rather than being misused. Point at
+   `/ds-bridge:exceptions`, which lists recurring hotspots with their owner and
+   decision (or *needs an owner*) and helps log one in `.ds-bridge.json`.
 
 ## Rules
 

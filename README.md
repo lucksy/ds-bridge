@@ -63,6 +63,7 @@ saved to your repo's history, and the analytics replay it into trends.
 | **Handoff readiness** per Figma frame, the **pass rate**, and each frame's trend | `handoff` | dashboard, manager report |
 | **Parity** (Figma ↔ code) and **library health** (overrides, deprecated use, detached candidates) with per-component **hotspot trends** | `registry build`, `library-health` | dashboard |
 | **Consistency** (0–100) and the **design-debt index** (0–100, weighted, capped) | derived | dashboard, `analytics`, manager report |
+| **Recurring exceptions**: components overridden (or deprecated / detached) run after run, each with the owner and decision logged in `.ds-bridge.json` (`exceptions`). A recurring deviation is a conversation, not a failure. Logging one never changes a count or score. | `library-health` + `exceptions` config | dashboard, `/ds-bridge:exceptions` |
 
 Anything never recorded reads "not measured", never 0.
 
@@ -267,6 +268,28 @@ committed `.ds-bridge.json` and the whole team shares them.
   of the same name. Its props and variant axes come from the package's own
   typings, so parity, import coverage, `impact` call sites and `docs` all work
   without a local wrapper.
+- **Recurring exceptions, with an owner:** when a component keeps getting
+  overridden across recorded `library-health` runs, the dashboard's *Recurring
+  exceptions* panel flags it as **needs an owner**. Not every deviation is a
+  mistake: it may be a use case the library is missing. Log who owns the
+  conversation and what they decided in `exceptions`:
+
+  ```json
+  "exceptions": [
+    { "component": "Card", "owner": "@checkout-design",
+      "decision": "evolve-component",
+      "note": "Needs a compact layout for order lists",
+      "review_by": "2026-11-15" }
+  ]
+  ```
+
+  `decision` is `investigating`, `fix-implementation` or `evolve-component`.
+  `review_by` (optional) marks the entry *overdue* once it passes. `signal`
+  (optional: `overrides`, `deprecated` or `detached`) scopes an entry to one
+  signal. When the component's count drops to 0, the entry shows as *resolved*,
+  ready to close. A name that matches nothing shows as *not seen*, so typos
+  surface. Exceptions are a record, not a waiver: they never change a count or
+  a score, so the number can't be improved by hiding drift.
 - **Check what resolved:** `ds-bridge config show` prints the effective config
   (token masked) and **which source won** each value — flag, env, `.ds-bridge.env`,
   or `.ds-bridge.json`.
@@ -288,6 +311,7 @@ that runs the CLI and interprets its `--format=json` output. The CLI exits
 | `/ds-bridge:token-check [--report] [path]` | `ds-bridge tokens check [path] [--report] [--tokens] [--outputs] [--format]` | Detect drift between the token source and built outputs (stale / missing / orphan); `--report` writes the dashboard. Outputs that reference other outputs (`var(--…)`, Style Dictionary `outputReferences`) are resolved before comparing; a primitive layer the build never emits but reaches through aliases (Primer's `base.color.*`) is reported once as *not built by design*. | 0 in-sync · 1 drift · 2 error |
 | `/ds-bridge:dashboard [--setup] [path]` | `ds-bridge report [path] [--view] [--open] [--out] [--no-timeline]` | Render the offline HTML dashboard from `.ds-bridge/history.jsonl`; `--open` launches the browser; `--setup` composes a persona view (`--view exec` is the leadership view). The header timeline shows the whole dashboard as it was at the end of each earlier day with records (newest 11 days + Now; script-free); `--no-timeline` leaves it out for a smaller file. Snapshots never carry it. | 0 ok · 2 error |
 | `/ds-bridge:record [--figma] [path]` | `ds-bridge record [path] [--figma] [--library-top <n>] [--source] [--format]` | Run every configured check as one batch (shared `runId`) and store the system score; skipped checks name the command that un-skips them. | 0 recorded · 2 internal error |
+| `/ds-bridge:exceptions [path]` | `ds-bridge report [path] --artifacts exceptions-review --format json` | Review **recurring exceptions**: components that keep showing up as override hotspots (or deprecated / detached) across recorded runs. Each is listed with its owner and decision (`investigating`, `fix-implementation` or `evolve-component`), or flagged *needs an owner*. Helps log a decision into the `exceptions` array in `.ds-bridge.json`, but only after you confirm. Exceptions stay counted in every score. | 0 ok · 2 invalid `exceptions` entry |
 | `/ds-bridge:analytics` | `ds-bridge analytics [path] [--format]` | The analytics headline (health · adoption · consistency · debt + per-domain status), then the full fan-out report, prioritized fixes, the manager one-pager (`report --format exec`) or the JSON artifacts (`analytics --emit all`). | 0 ok · 2 error |
 | `/ds-bridge:rollup [sources...]` | `ds-bridge rollup [sources...] [--config] --format md` | The local org view: repos ranked by system score from their recorded history (`.ds-bridge/rollup.json` when no sources are given). | 0 ok · 2 no sources / bad config |
 | `/ds-bridge:handoff-qa <url> [--threshold N]` | `ds-bridge handoff <url> [--threshold] [--comment --yes] [--format]` | Score a Figma frame's handoff readiness (0–100) over five rules — variable binding 35, auto layout 20, component usage 20, typography (text styles) 15, naming 10. A deprecated component in the frame is a **blocker**: the gate fails whatever the score. `--comment --yes` posts one Figma comment after confirmation. | 0 ≥ threshold, no blockers · 1 below or blocked · 2 error |
